@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 
-import yaml
+from ruamel.yaml import YAML
 
 # Inits the logging system. Only shell logging, and exception and warning catching.
 # File logging can be started by calling log.start_file_logger(name).
@@ -28,6 +28,7 @@ NAME = 'jaeger'
 
 
 # Loads config
+yaml = YAML(typ='safe')
 config = yaml.load(open(os.path.dirname(__file__) + '/etc/{0}.yml'.format(NAME)))
 
 # If there is a custom configuration file, updates the defaults using it.
