@@ -5,10 +5,10 @@
 #
 # @Author: Brian Cherinka
 # @Date:   2017-12-05 12:01:21
-# @Last modified by:   Brian Cherinka
+# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
 # @Last Modified time: 2017-12-05 12:19:32
 
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import, division, print_function
 
 
 class JaegerError(Exception):
@@ -33,21 +33,18 @@ class JaegerNotImplemented(JaegerError):
         super(JaegerNotImplemented, self).__init__(message)
 
 
-class JaegerAPIError(JaegerError):
-    """A custom exception for API errors"""
+class JaegerCANError(JaegerError):
+    """Exception class for CAN-related errors."""
 
-    def __init__(self, message=None):
-        if not message:
-            message = 'Error with Http Response from Jaeger API'
-        else:
-            message = 'Http response error from Jaeger API. {0}'.format(message)
+    def __init__(self, message=None, serial_reply=None):
 
-        super(JaegerAPIError, self).__init__(message)
+        if message is None:
+            message = ''
 
+        if serial_reply is not None:
+            message = message.strip() + ' ' + serial_reply
 
-class JaegerApiAuthError(JaegerAPIError):
-    """A custom exception for API authentication errors"""
-    pass
+        super(JaegerCANError, self).__init__(message)
 
 
 class JaegerMissingDependency(JaegerError):
