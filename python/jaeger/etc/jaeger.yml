@@ -1,9 +1,7 @@
 ---
 
-option1:
-    suboption1: 1
-    suboption2: "some text"
-    suboption3:
-        subsuboption1: [1, 2, 3]
-
-option2: 2.0
+CAN:
+    default:
+        interface: slcanBus
+        baudrate: 1000000
+        baudrate_code: S8
