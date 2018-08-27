@@ -1,88 +1,109 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
-# @Author: José Sánchez-Gallego
-# @Date: Oct 12, 2017
-# @Filename: main.py
-# @License: BSD 3-Clause
-# @Copyright: José Sánchez-Gallego
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Date: 2018-08-27
+# @Filename: can.py
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+#
+# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Last modified time: 2018-08-27 14:04:38
+
+from jaeger import config, log
+from jaeger.core import exceptions
 
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-import operator
+#: Accepted CAN interfaces
+VALID_INTERFACES = ['slcanBus']
 
 
-__all__ = ('math', 'MyClass')
+def CAN(interface, autoinit=True, *args, **kwargs):
+    """Initialises a CAN interface.
 
+    Returns a CAN bus instance using the appropriate class for the input
+    ``interface``. The returned instance is also a subclass of `.BaseCAN`.
 
-def math(arg1, arg2, arith_operator='+'):
-    """Performs an arithmetic operation.
+    Parameters
+    ----------
+    interface : str
+        One of `~jaeger.can.VALID_INTERFACES`.
+        Defines the type of interface to use and the class from
+        `python-can <https://python-can.readthedocs.io/en/stable/>`_
+        to import.
+    autoinit : bool
+        Whether to call `.BaseCAN.initialise` after instantiating the bus.
+    args,kwargs
+        Arguments and keyword arguments to pass to the interface when
+        initialising it (e.g., the channel, baudrate, etc).
 
-    This function accepts to numbers and performs an arithmetic operation
-    with them. The arithmetic operation can be passed as a string. By default,
-    the addition operator is assumed.
-
-    Parameters:
-        arg1,arg2 (float):
-            The numbers that we will sub/subtract/multiply/divide.
-        arith_operator ({'+', '-', '*', '/'}):
-            A string indicating the arithmetic operation to perform.
-
-    Returns:
-        result (float):
-            The result of the arithmetic operation.
-
-    Example:
-      >>> math(2, 2, arith_operator='*')
-      >>> 4
-
-    """
-
-    str_to_operator = {'+': operator.add,
-                       '-': operator.sub,
-                       '*': operator.mul,
-                       '/': operator.truediv}
-
-    return str_to_operator[arith_operator](arg1, arg2)
-
-
-class MyClass(object):
-    """A description of the class.
-
-    The top docstring in a class describes the class in general, and the
-    parameters to be passed to the class ``__init__``.
-
-    Parameters:
-        arg1 (float):
-            The first argument.
-        arg2 (int):
-            The second argument.
-        kwarg1 (str):
-            A keyword argument.
-
-    Attributes:
-        name (str): A description of what names gives acces to.
+    Returns
+    -------
+    bus
+        A bus class instance, subclassing from the appropriate `python-can`_
+        interface (ultimately a subclass of `~can.BusABC` itself) and
+        `.BaseCAN`.
 
     """
 
-    def __init__(self, arg1, arg2, kwarg1='a'):
+    if interface == 'slcanBus':
+        log.debug(f'using interface {interface}')
+        from can.interface.slcan import slcanBus
+        interface = slcanBus
 
-        self.name = arg1
+    bus_class = type('CAN', (interface, BaseCAN), {})
+    bus_instance = bus_class(*args, **kwargs)
+    log.debug('created bus instance {id(bus_instance)}')
 
-    def do_something(self):
-        """A description of what this method does."""
+    if autoinit:
+        bus_instance.initialise()
 
-        pass
+    return bus_instance
 
-    def do_something_else(self, param):
-        """A description of what this method does.
 
-        If the class only has one or two arguments, you can describe them
-        inline. ``param`` is the parameter that we use to do something else.
+class BaseCAN(object):
+    """Expands `can.bus.BusABC`."""
+
+    def initialise(self, baudrate=None):
+        """Prepares the device to receive commands.
+
+        .. warning::
+            This method will need to be modified to support interfaces other
+            than :ref:`slcanBus <can:slcan>`.
 
         """
 
-        pass
+        my_id = id(self)
+
+        # Clear buffer
+        self.serialPortOrig.read_all()
+
+        # Close the device in preparation for sending commands.
+        self.write('C')
+        log.debug(f'Bus {my_id}: closing device')
+
+        reply = self.serialPortOrig.read_all()
+        if reply != '\r':
+            log.debug(f'Bus {my_id}: failed to close device. Device was probably closed.')
+
+        # Sends the baudrate
+        assert isinstance(baudrate, str) or baudrate is None, 'invalid baudrate'
+
+        if baudrate is None:
+            baudrate = config['CAN']['default']['baudrate_code']
+
+        self.write(baudrate)
+        log.debug(f'Bus {my_id}: setting baudrate {baudrate!r}')
+
+        reply = self.serialPortOrig.read_all()
+        if reply != '\r':
+            raise exceptions.JaegerCANError(f'Bus {my_id}: failed to set baudrate {baudrate!r}.',
+                                            serial_reply=reply)
+
+        # Open the device
+        self.write('O')
+        log.debug(f'Bus {my_id}: opening device')
+
+        reply = self.serialPortOrig.read_all()
+        if reply != '\r':
+            raise exceptions.JaegerCANError(f'Bus {my_id}: failed to open device.',
+                                            serial_reply=reply)
