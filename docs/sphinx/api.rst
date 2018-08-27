@@ -2,14 +2,13 @@
 .. _api:
 
 jaeger Reference
-=========================
+================
 
-.. _api-main:
+.. _api-can:
 
-Main
-----
+jaeger.can
+----------
 
-.. automodule:: jaeger.main
+.. automodule:: jaeger.can
    :members:
-   :undoc-members:
    :show-inheritance:
