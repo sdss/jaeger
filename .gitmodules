@@ -1,3 +1,0 @@
-[submodule "python/jaeger/extern/python-can"]
-	path = python/jaeger/extern/python-can
-	url = https://github.com/hardbyte/python-can
