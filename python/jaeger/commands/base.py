@@ -12,6 +12,7 @@
 import abc
 
 import can
+from jaeger import log
 from jaeger.core import exceptions
 
 
