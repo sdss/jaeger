@@ -19,7 +19,7 @@
 # import matplotlib
 from pkg_resources import parse_version
 
-from albireolib import __version__
+from jaeger import __version__
 
 
 # matplotlib.use('agg')
