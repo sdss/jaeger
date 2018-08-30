@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-08-30 09:09:51
+# @Last modified time: 2018-08-30 11:52:42
 
 from jaeger import config, log
 from jaeger.commands import Message, StatusMixIn
@@ -46,10 +46,12 @@ def CAN(interface, autoinit=True, *args, **kwargs):
 
     """
 
-    if interface == 'slcanBus':
+    if interface == 'slcan':
         log.debug(f'using interface {interface}')
-        from can.interface.slcan import slcanBus
+        from can.interfaces.slcan import slcanBus
         interface = slcanBus
+    else:
+        raise exceptions.JaegerCANError(f'invalid interface {interface!r}')
 
     bus_class = type('CAN', (interface, BaseCAN), {})
     bus_instance = bus_class(*args, **kwargs)

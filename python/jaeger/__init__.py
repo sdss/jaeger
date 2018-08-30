@@ -3,12 +3,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
+import sys
 
 from ruamel.yaml import YAML
 
 # Inits the logging system. Only shell logging, and exception and warning catching.
 # File logging can be started by calling log.start_file_logger(name).
-from .utils import log
+from .utils import log  # noqa
 
 
 def merge(user, default):
@@ -35,6 +36,10 @@ config = yaml.load(open(os.path.dirname(__file__) + '/etc/{0}.yml'.format(NAME))
 custom_config_fn = os.path.expanduser('~/.{0}/{0}.yml'.format(NAME))
 if os.path.exists(custom_config_fn):
     config = merge(yaml.load(open(custom_config_fn)), config)
+
+
+# Replaces ptyhon-can with the internal version
+sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), 'extern/python-can')))
 
 
 __version__ = '0.1.0dev'
