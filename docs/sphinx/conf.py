@@ -22,7 +22,7 @@ from pkg_resources import parse_version
 from albireolib import __version__
 
 
-matplotlib.use('agg')
+# matplotlib.use('agg')
 
 
 # -- General configuration ------------------------------------------------
