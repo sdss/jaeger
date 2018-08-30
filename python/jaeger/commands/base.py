@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-08-30 09:07:44
+# @Last modified time: 2018-08-30 12:24:45
 
 import abc
 
@@ -62,7 +62,7 @@ class StatusMixIn(object):
             self.do_callbacks()
 
     def do_callbacks(self):
-        """Calls functions in `.StatusMixIn.callbacks`."""
+        """Calls functions in ``callbacks``."""
 
         assert hasattr(self, 'callbacks'), 'missing callbacks attribute. Did you call __init__()?'
 
