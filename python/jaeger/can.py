@@ -7,9 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-08-27 14:04:38
+# @Last modified time: 2018-08-30 09:09:51
 
 from jaeger import config, log
+from jaeger.commands import Message, StatusMixIn
 from jaeger.core import exceptions
 
 
@@ -107,3 +108,23 @@ class BaseCAN(object):
         if reply != '\r':
             raise exceptions.JaegerCANError(f'Bus {my_id}: failed to open device.',
                                             serial_reply=reply)
+
+    def send_command(self, command):
+        """Sends multiple messages from a command and tracks status.
+
+        Parameters
+        ----------
+        command : `~jaeger.commands.base.Command`
+            The command to send.
+
+        """
+
+        cid = command.command_id
+
+        assert command.status == StatusMixIn.READY, f'command {cid}: not ready'
+
+        messages = command.get_messages()
+
+        for message in messages:
+            assert isinstance(message, Message), 'message is not an instance of Message'
+            self.send(message)
