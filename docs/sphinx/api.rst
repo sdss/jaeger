@@ -12,3 +12,11 @@ jaeger.can
 .. automodule:: jaeger.can
    :members:
    :show-inheritance:
+
+
+jaeger.commands
+---------------
+
+.. automodule:: jaeger.commands.base
+   :members:
+   :show-inheritance:
