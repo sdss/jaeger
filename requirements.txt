@@ -1,4 +1,5 @@
 numpy>=1.15.1
 ruamel.yaml>=0.15.61
 pygments>=2.2.0
-python-can>=2.3.0
+# python-can>=2.3.0
+-e git://github.com/hardbyte/python-can.git#egg=python-can
