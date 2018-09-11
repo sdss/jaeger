@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import collections
 import datetime
 import logging
 import os
@@ -153,14 +154,13 @@ class MyLogger(Logger):
     exceptions, and the addition of colorized output and context managers to
     easily capture messages to a file or list.
 
-    It is addapted from the astropy logging system.
+    It is adapted from the astropy logging system.
 
     """
 
     INFO = 15
 
-    # The default actor to log to. It is set by the set_actor() method.
-    _actor = None
+    warning_registry = collections.defaultdict(dict)
 
     def save_log(self, path):
         shutil.copyfile(self.log_filename, os.path.expanduser(path))
@@ -224,6 +224,9 @@ class MyLogger(Logger):
         # Remove all previous handlers
         for handler in self.handlers[:]:
             self.removeHandler(handler)
+
+        # Set levels
+        self.setLevel(logging.DEBUG)
 
         # Set up the stdout handler
         self.fh = None
