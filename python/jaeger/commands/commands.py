@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-12 13:08:47
+# @Last modified time: 2018-09-12 20:00:56
 
 import abc
 import asyncio
@@ -128,7 +128,7 @@ class Command(abc.ABCMeta, StatusMixIn):
                       f'arbitration_id={message.arbitration_id} '
                       f'and payload {message.data!r}')
             try:
-                reply = await asyncio.wait_for(self._reply_queue.get, timeout=5)
+                reply = await asyncio.wait_for(self._reply_queue.get, 5)
             except asyncio.TimeoutError:
                 self.status = CommandStatus.CANCELLED
                 log.warning(f'failed receiving reply for message '
