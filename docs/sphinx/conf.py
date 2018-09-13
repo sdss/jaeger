@@ -112,9 +112,9 @@ releases_document_name = 'CHANGELOG.rst'
 
 # Intersphinx mappings
 intersphinx_mapping = {'python': ('https://docs.python.org/3.6', None),
-                       'can': ('https://python-can.readthedocs.io/en/stable/', None)}
+                       'can': ('https://python-can.readthedocs.io/en/stable/', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),}
 # 'astropy': ('http://docs.astropy.org/en/latest', None),
-# 'numpy': ('http://docs.scipy.org/doc/numpy/', None),
 # 'matplotlib': ('https://matplotlib.org/', None),
 # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None)}
 
@@ -123,6 +123,7 @@ autodoc_member_order = 'groupwise'
 
 napoleon_use_rtype = False
 napoleon_use_ivar = True
+autodoc_member_order = 'bysource'
 
 rst_epilog = """
 .. |numpy_array| replace:: Numpy array

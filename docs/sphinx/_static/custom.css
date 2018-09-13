@@ -31,3 +31,7 @@ a.reference > code {
 a.reference {
   border-bottom: 0px;
 }
+
+td.field-body > ul > li > em {
+    font-style: normal !important;
+}
