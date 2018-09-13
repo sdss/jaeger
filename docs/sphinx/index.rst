@@ -13,6 +13,8 @@ Contents
   intro
   What's new in jaeger? <changelog>
   api
+  maskbits
+
 
 
 Indices and tables
