@@ -9,7 +9,7 @@ from ruamel.yaml import YAML
 
 # Inits the logging system. Only shell logging, and exception and warning catching.
 # File logging can be started by calling log.start_file_logger(name).
-from .utils import log  # noqa
+from .core import log  # noqa
 
 
 def merge(user, default):
@@ -26,7 +26,6 @@ def merge(user, default):
 
 
 NAME = 'jaeger'
-
 
 # Loads config
 yaml = YAML(typ='safe')

@@ -1,7 +1,23 @@
 ---
 
-CAN:
+interfaces:
     default:
-        interface: slcanBus
-        baudrate: 1000000
-        baudrate_code: S8
+        interface: slcan
+        channel: /dev/tty.usbserial-LW1FJ8ZR
+        ttyBaudrate: 1000000
+        bitrate: 1000000
+    test:
+        interface: test
+        channel: none
+        ttyBaudrate: 1000000
+        bitrate: 1000000
+
+actor:
+    port: 19990
+    tron:
+        host: localhost
+        port: 6093
+    logging:
+        file_level: 10
+        shell_level: 20
+        log_dir: /data/logs/actors/jaeger

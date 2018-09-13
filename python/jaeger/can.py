@@ -7,22 +7,58 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-08-30 11:52:42
+# @Last modified time: 2018-09-12 09:14:18
 
+import asyncio
+import pprint
+
+import can
+import can.interfaces.slcan
+import jaeger.tests.bus
 from jaeger import config, log
 from jaeger.commands import Message, StatusMixIn
-from jaeger.core import exceptions
+
+
+__ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 
 
 #: Accepted CAN interfaces
-VALID_INTERFACES = ['slcanBus']
+VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
+                    'test': jaeger.tests.bus.SlcanBusTester}
 
 
-def CAN(interface, autoinit=True, *args, **kwargs):
-    """Initialises a CAN interface.
+class JaegerReaderCallback(can.Listener):
+    """A message reader that triggers a callback on message received.
 
-    Returns a CAN bus instance using the appropriate class for the input
-    ``interface``. The returned instance is also a subclass of `.BaseCAN`.
+    Parameters
+    ----------
+    callback : function
+        The function to run when a new message is received.
+    loop : event loop or `None`
+        If an asyncio event loop, the callback will be called with
+        `asyncio.call_soon`, otherwise it will be called immediately.
+
+    """
+
+    def __init__(self, callback, loop=None):
+
+        self.callback = callback
+        self.loop = loop
+
+    def on_message_received(self, msg):
+        """Calls the callback with the received message."""
+
+        if self.loop:
+            self.loop.call_soon(self.callback, msg)
+        else:
+            self.callback(msg)
+
+
+class JaegerCAN(object):
+    """Returns an expanded CAN interface.
+
+    Returns a CAN bus instance subclassing from the appropriate `python-can`_
+    interface (ultimately a subclass of `~can.BusABC` itself).
 
     Parameters
     ----------
@@ -31,99 +67,106 @@ def CAN(interface, autoinit=True, *args, **kwargs):
         Defines the type of interface to use and the class from
         `python-can <https://python-can.readthedocs.io/en/stable/>`_
         to import.
-    autoinit : bool
-        Whether to call `.BaseCAN.initialise` after instantiating the bus.
     args,kwargs
         Arguments and keyword arguments to pass to the interface when
         initialising it (e.g., the channel, baudrate, etc).
 
+    Attributes
+    ----------
+    queue : `asyncio.Queue`
+        Queue of messages to be sent to the bus.
+
     Returns
     -------
-    bus
-        A bus class instance, subclassing from the appropriate `python-can`_
-        interface (ultimately a subclass of `~can.BusABC` itself) and
-        `.BaseCAN`.
+    bus : `.JaegerCAN`
+        A bus class instance,
 
     """
 
-    if interface == 'slcan':
-        log.debug(f'using interface {interface}')
-        from can.interfaces.slcan import slcanBus
-        interface = slcanBus
-    else:
-        raise exceptions.JaegerCANError(f'invalid interface {interface!r}')
+    def __new__(cls, interface, *args, **kwargs):
+        """Dynamically subclasses from the correct CAN interface."""
 
-    bus_class = type('CAN', (interface, BaseCAN), {})
-    bus_instance = bus_class(*args, **kwargs)
-    log.debug('created bus instance {id(bus_instance)}')
+        assert interface in VALID_INTERFACES, f'invalid interface {interface!r}'
 
-    if autoinit:
-        bus_instance.initialise()
+        log.debug(f'starting bus with interface {interface}, args={args!r}, kwargs={kwargs!r}')
 
-    return bus_instance
+        interface_class = VALID_INTERFACES[interface]
 
+        jaeger_class = type('JaegerCAN', (interface_class, JaegerCAN), {})
 
-class BaseCAN(object):
-    """Expands `can.bus.BusABC`."""
+        jaeger_instance = interface_class.__new__(jaeger_class)
 
-    def initialise(self, baudrate=None):
-        """Prepares the device to receive commands.
+        interface_class.__init__(jaeger_instance, *args, **kwargs)
+        JaegerCAN.__init__(jaeger_instance, *args, **kwargs)
 
-        .. warning::
-            This method will need to be modified to support interfaces other
-            than :ref:`slcanBus <can:slcan>`.
+        return jaeger_instance
+
+    def __init__(self, *args, loop=None, **kwargs):
+
+        self.queue = asyncio.Queue(maxsize=10)
+        self.running = []
+
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+
+        # self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
+        # self.notifiers = can.notifier.Notifier(self, [self.listener], loop=self.loop)
+        # log.debug('started AsyncBufferedReader listener')
+
+        self._queue_process_task = self.loop.create_task(self._process_queue())
+
+    async def _process_queue(self):
+        """Processes the queue of waiting commands."""
+
+        while True:
+            message = await self.queue.get()
+            assert isinstance(message, Message)
+            log.debug(f'retrieved message with id {message.command_id} from queue')
+
+    def _process_reply(self, msg):
+        pass
+
+    @classmethod
+    def from_profile(cls, profile=None):
+        """Creates a new bus interface from a configuration profile.
+
+        Parameters
+        ----------
+        profile : `str` or `None`
+            The name of the profile that defines the bus interface, or `None`
+            to use the default configuration.
 
         """
 
-        my_id = id(self)
+        if profile is None:
+            profile = 'default'
 
-        # Clear buffer
-        self.serialPortOrig.read_all()
+        if profile not in config['interfaces']:
+            raise ValueError(f'invalid interface profile {profile}')
 
-        # Close the device in preparation for sending commands.
-        self.write('C')
-        log.debug(f'Bus {my_id}: closing device')
+        config_data = config['interfaces'][profile].copy()
+        interface = config_data.pop('interface')
 
-        reply = self.serialPortOrig.read_all()
-        if reply != '\r':
-            log.debug(f'Bus {my_id}: failed to close device. Device was probably closed.')
+        return cls(interface, **config_data)
 
-        # Sends the baudrate
-        assert isinstance(baudrate, str) or baudrate is None, 'invalid baudrate'
+    @staticmethod
+    def print_profiles():
+        """Prints interface profiles and returns a list of profile names."""
 
-        if baudrate is None:
-            baudrate = config['CAN']['default']['baudrate_code']
+        pprint.pprint(config['interfaces'])
 
-        self.write(baudrate)
-        log.debug(f'Bus {my_id}: setting baudrate {baudrate!r}')
-
-        reply = self.serialPortOrig.read_all()
-        if reply != '\r':
-            raise exceptions.JaegerCANError(f'Bus {my_id}: failed to set baudrate {baudrate!r}.',
-                                            serial_reply=reply)
-
-        # Open the device
-        self.write('O')
-        log.debug(f'Bus {my_id}: opening device')
-
-        reply = self.serialPortOrig.read_all()
-        if reply != '\r':
-            raise exceptions.JaegerCANError(f'Bus {my_id}: failed to open device.',
-                                            serial_reply=reply)
+        return config['interfaces'].keys()
 
     def send_command(self, command):
         """Sends multiple messages from a command and tracks status.
 
         Parameters
         ----------
-        command : `~jaeger.commands.base.Command`
+        command : `~jaeger.commands.commands.Command`
             The command to send.
 
         """
 
-        cid = command.command_id
-
-        assert command.status == StatusMixIn.READY, f'command {cid}: not ready'
+        assert command.status == StatusMixIn.READY, f'command {command!s}: not ready'
 
         messages = command.get_messages()
 
