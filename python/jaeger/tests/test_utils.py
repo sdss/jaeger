@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-11 15:25:12
+# @Last modified time: 2018-09-13 14:31:43
 
 import numpy
 import pytest
@@ -39,6 +39,15 @@ def test_get_dtype_str(dtype, byteorder, result):
 def test_int_to_bytes(value, dtype, byteorder, result):
 
     assert jaeger.utils.int_to_bytes(value, dtype=dtype, byteorder=byteorder) == result
+
+
+@pytest.mark.parametrize('bytes, dtype, byteorder, result',
+                         [(b'\x00\x00\x00\x05', numpy.uint32, '>', 5),
+                          (b'\x05\x00\x00\x00', numpy.uint32, '<', 5),
+                          (b'\x00\x05', numpy.uint16, '>', 5)])
+def test_bytes_to_int(bytes, dtype, byteorder, result):
+
+    assert jaeger.utils.bytes_to_int(bytes, dtype=dtype, byteorder=byteorder) == result
 
 
 @pytest.mark.parametrize('positioner_id, command_id, result',

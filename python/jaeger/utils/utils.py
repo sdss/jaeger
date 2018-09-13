@@ -7,15 +7,15 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-11 15:37:11
+# @Last modified time: 2018-09-13 14:30:11
 
 import numpy
 
 from .maskbits import ResponseCode
 
 
-__ALL__ = ['get_dtype_str', 'int_to_bytes', 'get_identifier',
-           'parse_identifier']
+__ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
+           'get_identifier', 'parse_identifier']
 
 
 def get_dtype_str(dtype, byteorder='big'):
@@ -98,7 +98,7 @@ def int_to_bytes(value, dtype='u4', byteorder='big'):
     --------
     ::
 
-        >>> int2bytes(5, dtype=numpy.uint16, byteorder='big')
+        >>> int_to_bytes(5, dtype=numpy.uint16, byteorder='big')
         bytearray(b'\x00\x05')
 
     """
@@ -108,6 +108,42 @@ def int_to_bytes(value, dtype='u4', byteorder='big'):
     np_value = numpy.array(value, dtype=type_code)
 
     return bytearray(np_value.tobytes())
+
+
+def bytes_to_int(bytes, dtype='u4', byteorder='big'):
+    r"""Returns the integer from a bytearray representation.
+
+    Parameters
+    ----------
+    bytes : `bytearray`
+        The bytearray representing the integer.
+    dtype : `numpy.dtype` or `str`
+        The `numpy.dtype` of the byte representation for the integer, or a
+        type code that can include the endianess. See `.get_dtype_str` to
+        understand how ``dtype`` and ``byteorder`` will be parsed.
+    byteorder : str
+        Either ``'big'`` for big endian representation or ``'little'`` for
+        little end. ``'>'`` and ``'<'`` are also accepted, respectively.
+
+    Returns
+    -------
+    integer : int
+        A integer represented by ``bytes``.
+
+    Examples
+    --------
+    ::
+
+        >>> bytes_to_int(b'\x00\x05', dtype=numpy.uint16, byteorder='big')
+        5
+
+    """
+
+    type_code = get_dtype_str(dtype, byteorder=byteorder)
+
+    np_buffer = numpy.frombuffer(bytes, dtype=type_code)
+
+    return np_buffer[0]
 
 
 def get_identifier(positioner_id, command_id):
