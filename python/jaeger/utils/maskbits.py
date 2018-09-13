@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-11 18:52:23
+# @Last modified time: 2018-09-12 23:34:22
 
 import enum
 
@@ -39,6 +39,7 @@ class BootloaderStatus(Maskbit):
 
 
 class CommandStatus(Maskbit):
+    """Maskbits for command status."""
 
     DONE = enum.auto()
     CANCELLED = enum.auto()
@@ -71,6 +72,7 @@ class CommandStatus(Maskbit):
 
 
 class PositionerStatus(Maskbit):
+    """Maskbits for positioner status."""
 
     OK = enum.auto()
     RESET = enum.auto()
