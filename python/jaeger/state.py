@@ -7,12 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-11 16:30:43
-
-from jaeger.utils.maskbits import PositionerStatus
+# @Last modified time: 2018-09-12 20:52:53
 
 
-__ALL__ = ['StatusMixIn', 'Positioner']
+__ALL__ = ['StatusMixIn']
 
 
 class StatusMixIn(object):
@@ -75,18 +73,3 @@ class StatusMixIn(object):
         if value != self._status:
             self._status = self.flags(value)
             self.do_callbacks()
-
-
-class Positioner(StatusMixIn):
-
-    def __init__(self, robot_id):
-
-        self.robot_id = robot_id
-        self.position = None
-
-        super().__init__(maskbit_flags=PositionerStatus,
-                         initial_status=PositionerStatus.UNKNOWN,
-                         callback_func=self._status_change_cb)
-
-    def _status_change_cb(self):
-        pass

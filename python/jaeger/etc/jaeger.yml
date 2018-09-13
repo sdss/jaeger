@@ -12,6 +12,9 @@ interfaces:
         ttyBaudrate: 1000000
         bitrate: 1000000
 
+fps:
+    default_layout: etc/fps_RTConfig.txt
+
 actor:
     port: 19990
     tron:
