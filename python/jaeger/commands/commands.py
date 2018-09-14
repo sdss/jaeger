@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 15:17:34
+# @Last modified time: 2018-09-14 16:36:23
 
 import asyncio
 import uuid
@@ -127,6 +127,11 @@ class Reply(object):
                  f'command_id={command_id} do not match')
 
         self.command_id = CommandID(command_id)
+
+    def __repr__(self):
+        command_name = self.command.command_id.name if self.command else 'NONE'
+        return (f'<Reply (command_id={command_name!r}, positioner_id={self.positioner_id}, '
+                f'response_code={self.response_code.name!r})>')
 
 
 class Command(StatusMixIn, AsyncQueueMixIn):
