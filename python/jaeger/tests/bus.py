@@ -7,69 +7,64 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-12 20:44:07
+# @Last modified time: 2018-09-13 21:47:07
 
-
-import asyncio
-import os
-import pty
-import re
-
-import serial
+import queue
 
 import can
-from can.bus import BusABC
+import jaeger
+from can.interfaces.virtual import VirtualBus
+from jaeger import log
 
 
-class BusTester(BusABC):
+__ALL__ = ['VirtualBusTester']
 
-    def __init__(self, fps=None):
+
+class VirtualBusTester(VirtualBus):
+
+    def __init__(self, fps=None, **kwargs):
 
         self.fps = fps
-        self._reply_queue = asyncio.Queue()
 
-        super().__init__('')
+        super().__init__(channel='test_bus')
 
-    def _recv_internal(self, timeout=None):
-        """Retrieves and returns a message from the internal reply queue."""
-
-        async def coro(timeout):
-            try:
-                reply = await asyncio.wait_for(self._reply_queue.get(), timeout, loop=self.loop)
-                assert isinstance(reply, can.Message)
-                return reply, False
-            except asyncio.TimeoutError:
-                return None, False
-
-        return self.loop.run_until_complete(coro(timeout))
-
-    def send(self, message):
+    def send(self, message, timeout=None):
         """Receives and processes a message."""
 
-        pass
+        self._check_if_open()
 
+        log.debug(f'VirtualBusTester received message {message.uuid}')
 
-class SlcanBusTester(BusTester):
+        assert message.is_extended_id, 'this bus only accepts messages with extended id.'
 
-    def __init__(self, *args, **kwargs):
+        positioner_id, command_id, __ = jaeger.utils.parse_identifier(message.arbitration_id)
+        payload = message.data
 
-        self._master, self._slave = pty.openpty()
-        s_name = os.ttyname(self._slave)
+        if command_id == jaeger.commands.CommandID.GET_ID:
 
-        self.serialPortOrig = serial.Serial(s_name)
+            assert payload == b'', 'GET_ID command does not accept extra data.'
 
-        super().__init__()
+            for available_positioner in [5]:
 
-    def write(self, string):
+                if positioner_id == 0 or positioner_id == available_positioner:
 
-        if not string.endswith('\r'):
-            string += '\r'
+                    arbitration_id = jaeger.utils.get_identifier(
+                        available_positioner, command_id, response_code=0)
 
-        msg = string.encode()
+                    reply_message = can.Message(data=[], arbitration_id=arbitration_id,
+                                                extended_id=True)
 
-        if msg in [b'O\r', b'C\r']:
-            os.write(self._master, b'\r')
-        elif re.match(b'S[0-9]+', msg):
-            os.write(self._master, b'\r')
-        else:
-            os.write(self._master, b'\x07\r')
+                    log.debug(f'sending reply with '
+                              f'arbitration_id={reply_message.arbitration_id} '
+                              f'and data={reply_message.data!r}')
+
+                    all_sent = True
+                    for bus_queue in self.channel:
+                        if bus_queue is not self.queue:
+                            try:
+                                bus_queue.put(reply_message, block=True, timeout=timeout)
+                            except queue.Full:
+                                all_sent = False
+
+                    if not all_sent:
+                        raise can.CanError('Could not send message to one or more recipients')
