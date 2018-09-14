@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 14:30:11
+# @Last modified time: 2018-09-13 15:43:39
 
 import numpy
 
@@ -146,13 +146,13 @@ def bytes_to_int(bytes, dtype='u4', byteorder='big'):
     return np_buffer[0]
 
 
-def get_identifier(positioner_id, command_id):
+def get_identifier(positioner_id, command_id, response_code=0):
     """Returns a 29 bits identifier with the correct format.
 
     The CAN identifier format for the positioners uses an extended frame with
     29-bit encoding so that the 11 higher bits correspond to the positioner
     ID, the 10 middle bits are the command number, and the 8 lower bits are the
-    response code (empty when sending commands).
+    response code.
 
     Parameters
     ----------
@@ -160,6 +160,8 @@ def get_identifier(positioner_id, command_id):
         The Id of the positioner to command, or zero for broadcast.
     command_id : int
         The ID of the command to send.
+    response_code : `int` or `~jaeger.utils.maskbits.ResponseCode`
+        The response code.
 
     Returns
     -------
@@ -179,7 +181,7 @@ def get_identifier(positioner_id, command_id):
 
     posid_bin = format(positioner_id, '011b')
     cid_bin = format(command_id, '010b')
-    response_bin = format(0, '08b')
+    response_bin = format(ResponseCode(response_code).value, '08b')
 
     identifier = posid_bin + cid_bin + response_bin
 
