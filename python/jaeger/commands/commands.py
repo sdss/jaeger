@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 14:55:21
+# @Last modified time: 2018-09-14 15:17:34
 
 import asyncio
 import uuid
@@ -204,18 +204,17 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         reply = Reply(reply_message, command=self)
 
-        log.debug(f'command {self.command_id.name} received a reply')
-
         self.replies.append(reply)
 
-        log.debug(f'command {self.command_id.name} got a response with '
+        log.debug(f'command {self.command_id.name} got a response from '
+                  f'positioner {reply.positioner_id} with '
                   f'code {reply.response_code}')
 
         if reply.response_code != 0:
             self.status = CommandStatus.FAILED
             return
 
-    def status_callback(self):
+    def status_callback(self, cmd):
         """Callback for change status.
 
         When the status gets set to `.CommandStatus.RUNNING` starts a timer
