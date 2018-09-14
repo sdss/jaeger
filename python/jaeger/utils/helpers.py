@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 14:17:54
+# @Last modified time: 2018-09-14 16:24:16
 
 import asyncio
 
@@ -108,12 +108,23 @@ class StatusMixIn(object):
         self.flags = maskbit_flags
         self.callbacks = []
         self._status = initial_status
+        self.watchers = set()
 
         if callback_func is not None:
             self.callbacks.append(callback_func)
 
         if call_now is True:
             self.do_callbacks()
+
+    def add_callback(self, cb):
+        """Adds a callback."""
+
+        self.callbacks.append(cb)
+
+    def remove_callback(self, cb):
+        """Removes a callback."""
+
+        self.callbacks.remove(cb)
 
     def do_callbacks(self):
         """Calls functions in ``callbacks``."""
@@ -122,7 +133,7 @@ class StatusMixIn(object):
             'missing callbacks attribute. Did you call __init__()?'
 
         for func in self.callbacks:
-            func()
+            func(self)
 
     @property
     def status(self):
@@ -137,3 +148,26 @@ class StatusMixIn(object):
         if value != self._status:
             self._status = self.flags(value)
             self.do_callbacks()
+            for watcher in self.watchers:
+                watcher.set()
+
+    async def wait_for_status(self, value, loop=None):
+        """Awaits until the status matches ``value``."""
+
+        if loop is None:
+            if hasattr(self, 'loop') and self.loop is not None:
+                loop = self.loop
+            else:
+                loop = asyncio.get_event_loop()
+
+        if self.status == value:
+            return
+
+        watcher = asyncio.Event(loop=loop)
+        self.watchers.add(watcher)
+
+        while self.status != value:
+            await watcher.wait()
+            watcher.clear()
+
+        self.watchers.remove(watcher)
