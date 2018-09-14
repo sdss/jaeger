@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 22:00:31
+# @Last modified time: 2018-09-14 12:32:22
 
 import asyncio
 import pprint
@@ -137,7 +137,7 @@ class JaegerCAN(object):
         if command_id not in self.running_commands:
             raise RuntimeError(f'command {command_id_flag.name} is not running')
 
-        self.running_commands[command_id]._reply_queue.put_nowait(msg)
+        self.running_commands[command_id].reply_queue.put_nowait(msg)
 
     def send_command(self, command):
         """Sends multiple messages from a command and tracks status.

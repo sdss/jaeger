@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 08:06:23
+# @Last modified time: 2018-09-14 14:55:21
 
 import asyncio
 import uuid
@@ -16,7 +16,7 @@ import can
 import jaeger.utils
 from jaeger import log
 from jaeger.core import exceptions
-from jaeger.utils import StatusMixIn
+from jaeger.utils import AsyncQueueMixIn, StatusMixIn
 from jaeger.utils.maskbits import CommandStatus
 
 from . import CommandID
@@ -123,12 +123,13 @@ class Reply(object):
 
         if command is not None:
             assert command.command_id == 0 or command.command_id == command_id, \
-                f'command command_id={command.command_id} and command_id={command_id} do not match'
+                (f'command command_id={command.command_id} and '
+                 f'command_id={command_id} do not match')
 
         self.command_id = CommandID(command_id)
 
 
-class Command(StatusMixIn):
+class Command(StatusMixIn, AsyncQueueMixIn):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
@@ -137,6 +138,9 @@ class Command(StatusMixIn):
     then asynchronously waits for a confirmation that the message has been
     received before sending the following message. If any of the messages
     returns an error code the command is failed.
+
+    `.Command` subclasses from `.StatusMixIn` and `.status_cb` gets called
+    when the status changes.
 
     Parameters
     ----------
@@ -147,6 +151,9 @@ class Command(StatusMixIn):
         The bus to which to send messages.
     loop : event loop
         The running event loop, or uses `~asyncio.get_event_loop`.
+    timeout : float
+        Time after which the command will be marked done. If `None`, uses the
+        command default value.
 
     Attributes
     ----------
@@ -156,13 +163,17 @@ class Command(StatusMixIn):
         The id of the command.
     replies : list
         A list of messages with the responses to this command.
+    timeout : float
+        Time after which the command will be marked done.
 
     """
 
     command_id = None
     broadcastable = None
+    timeout = None
 
-    def __init__(self, positioner_id=0, bus=None, loop=None, **kwargs):
+    def __init__(self, positioner_id=0, bus=None, loop=None, timeout=None,
+                 **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
@@ -174,36 +185,52 @@ class Command(StatusMixIn):
         self.bus = bus
         self.loop = loop or asyncio.get_event_loop()
 
-        self._reply_queue = asyncio.Queue()
         self.replies = []
 
+        self.timeout = timeout or self.timeout
+
         StatusMixIn.__init__(self, maskbit_flags=CommandStatus,
-                             initial_status=CommandStatus.READY)
+                             initial_status=CommandStatus.READY,
+                             callback_func=self.status_callback)
 
-        self._reply_queue_watcher = self.loop.create_task(self._process_reply_queue())
+        AsyncQueueMixIn.__init__(self, name='reply_queue',
+                                 get_callback=self.process_reply)
 
-    async def _process_reply_queue(self):
+    def process_reply(self, reply_message):
         """Watches the reply queue."""
 
-        while True:
+        if self.status != CommandStatus.RUNNING:
+            raise RuntimeError('received a reply but command is not running')
 
-            reply_message = await self._reply_queue.get()
+        reply = Reply(reply_message, command=self)
 
-            if self.status != CommandStatus.RUNNING:
-                raise RuntimeError('received a reply but command is not running')
+        log.debug(f'command {self.command_id.name} received a reply')
 
-            reply = Reply(reply_message, command=self)
+        self.replies.append(reply)
 
-            log.debug(f'command {self.command_id.name} received a reply')
+        log.debug(f'command {self.command_id.name} got a response with '
+                  f'code {reply.response_code}')
 
-            self.replies.append(reply)
+        if reply.response_code != 0:
+            self.status = CommandStatus.FAILED
+            return
 
-            log.debug(f'command {self.command_id.name} got a response with '
-                      f'code {reply.response_code}')
+    def status_callback(self):
+        """Callback for change status.
 
-            if reply.response_code != 0:
-                self.status = CommandStatus.FAILED
-                return
+        When the status gets set to `.CommandStatus.RUNNING` starts a timer
+        that marks the command as done after `.timeout`.
+
+        """
+
+        def mark_done():
+            self.status = CommandStatus.DONE
+
+        if self.timeout is None or self.status != CommandStatus.RUNNING:
+            return
+
+        self.loop.call_later(self.timeout, self.reply_queue_watcher.cancel)
+        self.loop.call_later(self.timeout + 0.1, mark_done)
 
     def get_messages(self):
         """Returns the list of messages associated with this command."""
