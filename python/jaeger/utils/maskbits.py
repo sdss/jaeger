@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-12 23:34:22
+# @Last modified time: 2018-09-13 22:09:10
 
 import enum
 
@@ -41,22 +41,17 @@ class BootloaderStatus(Maskbit):
 class CommandStatus(Maskbit):
     """Maskbits for command status."""
 
-    DONE = enum.auto()
-    CANCELLED = enum.auto()
-    FAILED = enum.auto()
-    READY = enum.auto()
-    RUNNING = enum.auto()
-
-    ACTIVE_STATES = RUNNING
-    FAILED_STATES = CANCELLED | FAILED
-    DONE_STATES = DONE | FAILED_STATES
-    ALL_STATES = READY | ACTIVE_STATES | DONE_STATES
+    DONE = 1
+    CANCELLED = 2
+    FAILED = 4
+    READY = 8
+    RUNNING = 16
 
     @property
     def is_done(self):
         """Returns True if the command is done (completed or failed)."""
 
-        return True if self in CommandStatus.DONE_STATES else False
+        return True if (self in self.DONE or self.failed) else False
 
     @property
     def is_running(self):
@@ -68,21 +63,22 @@ class CommandStatus(Maskbit):
     def failed(self):
         """Returns True if the command failed (or got cancelled)."""
 
-        return True if self in CommandStatus.FAILED_STATES else False
+        failed_states = self.CANCELLED | self.FAILED
+        return True if self in failed_states else False
 
 
 class PositionerStatus(Maskbit):
     """Maskbits for positioner status."""
 
-    OK = enum.auto()
-    RESET = enum.auto()
-    MOVING = enum.auto()
-    REACHED = enum.auto()
-    UNKNOWN = enum.auto()
-    COLLIDED = enum.auto()
+    OK = 1
+    RESET = 2
+    MOVING = 4
+    REACHED = 8
+    UNKNOWN = 16
+    COLLIDED = 32
 
 
-class ResponseCode(enum.Flag):
+class ResponseCode(enum.IntEnum):
     """Maskbit for the status of the bootloader."""
 
     COMMAND_ACCEPTED = 0
