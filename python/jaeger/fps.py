@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 22:00:44
+# @Last modified time: 2018-09-13 23:39:09
 
 import asyncio
 
@@ -15,10 +15,10 @@ import astropy
 
 from asyncioActor.actor import Actor
 from jaeger import NAME, __version__
+from jaeger.can import JaegerCAN
+from jaeger.commands import CommandID
+from jaeger.state import StatusMixIn
 from jaeger.utils.maskbits import PositionerStatus
-
-from .can import JaegerCAN
-from .state import StatusMixIn
 
 
 __ALL__ = ['FPS', 'Positioner']
@@ -84,6 +84,32 @@ class FPS(Actor):
         self.positioners = {}
         self.load_positioners(layout)
 
+    def send_command(self, command_id, positioner_id=0, data=[]):
+        """Sends a command to the bus.
+
+        Parameters
+        ----------
+        command_id : `str`, `int`, or `~jaeger.commands.CommandID`
+            The ID of the command, either as the interget value, a string,
+            or the `~jaeger.commands.CommandID` flag
+        positioner_id : int
+            The positioner ID to command, or zero for broadcast.
+        data : bytearray
+            The bytes to send.
+
+        """
+
+        command_flag = CommandID(command_id)
+        CommandClass = command_flag.get_command()
+
+        command = CommandClass(positioner_id=positioner_id,
+                               bus=self.bus, loop=self.loop,
+                               data=data)
+
+        command.send()
+
+        return command
+
     def add_positioner(self, positioner, **kwargs):
         """Adds a new positioner to the list, and checks for duplicates."""
 
@@ -122,6 +148,15 @@ class FPS(Actor):
                 new_positioner = Positioner(pos_id, position=(row['x'], row['y']))
                 pos_id += 1
                 self.add_positioner(new_positioner)
+
+    def _check_positioners(self, positioner_ids=None):
+        """Checks whether the positioner is connected and its status."""
+
+        if isinstance(positioner_id, int):
+            positioner_ids = [positioner_ids]
+        elif positioner_id is None:
+            positioner_ids = self.positioners.keys()
+
 
     def start_actor(self):
         """Initialises the actor."""
