@@ -42,3 +42,7 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), 'ext
 
 
 __version__ = '0.1.0dev'
+
+
+from .can import *  # isort:skip
+from .fps import *  # isort:skip
