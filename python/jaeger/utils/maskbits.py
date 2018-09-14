@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 22:09:10
+# @Last modified time: 2018-09-13 23:17:40
 
 import enum
 
@@ -16,7 +16,7 @@ __ALL__ = ['Maskbit', 'BootloaderStatus', 'CommandStatus' 'ResponseCode',
            'RobotStatus']
 
 
-class Maskbit(enum.Flag):
+class Maskbit(enum.IntFlag):
     """A maskbit enumeration. Intended for subclassing."""
 
     @property
@@ -41,11 +41,11 @@ class BootloaderStatus(Maskbit):
 class CommandStatus(Maskbit):
     """Maskbits for command status."""
 
-    DONE = 1
-    CANCELLED = 2
-    FAILED = 4
-    READY = 8
-    RUNNING = 16
+    DONE = enum.auto()
+    CANCELLED = enum.auto()
+    FAILED = enum.auto()
+    READY = enum.auto()
+    RUNNING = enum.auto()
 
     @property
     def is_done(self):
@@ -70,12 +70,12 @@ class CommandStatus(Maskbit):
 class PositionerStatus(Maskbit):
     """Maskbits for positioner status."""
 
-    OK = 1
-    RESET = 2
-    MOVING = 4
-    REACHED = 8
-    UNKNOWN = 16
-    COLLIDED = 32
+    OK = enum.auto()
+    RESET = enum.auto()
+    MOVING = enum.auto()
+    REACHED = enum.auto()
+    UNKNOWN = enum.auto()
+    COLLIDED = enum.auto()
 
 
 class ResponseCode(enum.IntEnum):
