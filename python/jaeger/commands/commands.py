@@ -7,28 +7,41 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 22:09:05
+# @Last modified time: 2018-09-13 23:36:00
 
 import asyncio
-import enum
 import uuid
 
 import can
+
 import jaeger.utils
 from jaeger import log
 from jaeger.core import exceptions
 from jaeger.state import StatusMixIn
 from jaeger.utils.maskbits import CommandStatus
+from . import CommandID
 
 
-__ALL__ = ['Message', 'Command', 'CommandID']
+__ALL__ = ['Message', 'Command']
 
 
-class CommandID(enum.IntEnum):
-    """IDs associated with commands."""
+def CommandID__new__(cls, value):
+    """Allows to instantiate based on the flag string.
 
-    GET_ID = 1
-    GET_STATUS = 3
+    We cannot override __new__ directly on the subclass. We need
+    to add it after the class has been defined. See http://bit.ly/2CStmNm
+
+    """
+
+    if isinstance(value, str):
+        for flag in cls:
+            if flag.name.lower() == value.lower():
+                return CommandID(flag.value)
+
+    return super(CommandID, cls).__new__(cls, value)
+
+
+CommandID.__new__ = CommandID__new__
 
 
 class Message(can.Message):
@@ -149,7 +162,7 @@ class Command(StatusMixIn):
     command_id = None
     broadcastable = None
 
-    def __init__(self, positioner_id=0, bus=None, loop=None):
+    def __init__(self, positioner_id=0, bus=None, loop=None, **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
