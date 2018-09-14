@@ -7,10 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-12 20:00:56
+# @Last modified time: 2018-09-13 22:09:05
 
-import abc
 import asyncio
+import enum
 import uuid
 
 import can
@@ -21,7 +21,14 @@ from jaeger.state import StatusMixIn
 from jaeger.utils.maskbits import CommandStatus
 
 
-__ALL__ = ['Message', 'Command']
+__ALL__ = ['Message', 'Command', 'CommandID']
+
+
+class CommandID(enum.IntEnum):
+    """IDs associated with commands."""
+
+    GET_ID = 1
+    GET_STATUS = 3
 
 
 class Message(can.Message):
@@ -48,16 +55,18 @@ class Message(can.Message):
 
     """
 
-    def __init__(self, command, data, positioner_id=0, extended_id=True):
+    def __init__(self, command, data=[], positioner_id=0, extended_id=True, bus=None):
 
         self.uuid = uuid.uuid4()
         self.command = command
         self.positioner_id = positioner_id
 
         if extended_id:
-            arbitration_id = jaeger.utils.get_identifier(positioner_id, command.command_id)
+            arbitration_id = jaeger.utils.get_identifier(positioner_id, int(command.command_id))
         else:
             arbitration_id = positioner_id
+
+        self.bus = bus
 
         can.Message.__init__(self,
                              data=data,
@@ -65,7 +74,48 @@ class Message(can.Message):
                              extended_id=extended_id)
 
 
-class Command(abc.ABCMeta, StatusMixIn):
+class Reply(object):
+    """Parses a reply message.
+
+    Parameters
+    ----------
+    message : `can.Message`
+        The received message
+    command : `.Command`
+        The `.Command` to which this message is replying.
+
+    Attributes
+    ----------
+    command_id : `.CommandID` flag
+        The flag with the command id.
+    data : bytearray
+        The data returned.
+    positioner_id : int
+        The positioner sending this command.
+    response_code : `~jaeger.utils.maskbits.ResponseCode` flag
+        The response code associated to the reply.
+
+    """
+
+    def __init__(self, message, command=None):
+
+        assert isinstance(message, can.Message), 'invalid message'
+
+        self.command = command
+        self.message = message
+
+        self.data = message.data
+        self.positioner_id, command_id, self.response_code = jaeger.utils.parse_identifier(
+            message.arbitration_id)
+
+        if command is not None:
+            assert command.command_id == 0 or command.command_id == command_id, \
+                f'command command_id={command.command_id} and command_id={command_id} do not match'
+
+        self.command_id = CommandID(command_id)
+
+
+class Command(StatusMixIn):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
@@ -80,8 +130,10 @@ class Command(abc.ABCMeta, StatusMixIn):
     positioner_id : int or list
         The id or list of ids of the robot(s) to which this command will be
         sent. Use ``positioner_id=0`` to broadcast to all robots.
-    callback_func : function
-        The callback function to call when the status changes.
+    bus : `~jaeger.bus.JaegerCAN`
+        The bus to which to send messages.
+    loop : event loop
+        The running event loop, or uses `~asyncio.get_event_loop`.
 
     Attributes
     ----------
@@ -89,15 +141,15 @@ class Command(abc.ABCMeta, StatusMixIn):
         Whether the command can be broadcast to all robots.
     command_id : int
         The id of the command.
-    reply : `.Reply`
-        A `.Reply` object representing the responses to this command.
+    replies : list
+        A list of messages with the responses to this command.
 
     """
 
     command_id = None
     broadcastable = None
 
-    def __init__(self, positioner_id=0):
+    def __init__(self, positioner_id=0, bus=None, loop=None):
 
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
@@ -106,49 +158,54 @@ class Command(abc.ABCMeta, StatusMixIn):
         if self.positioner_id == 0 and self.broadcastable is False:
             raise exceptions.JaegerError('this command cannot be broadcast.')
 
+        self.bus = bus
+        self.loop = loop or asyncio.get_event_loop()
+
         self._reply_queue = asyncio.Queue()
         self.replies = []
 
         StatusMixIn.__init__(self, maskbit_flags=CommandStatus,
                              initial_status=CommandStatus.READY)
 
-    @abc.abstractmethod
+        self._reply_queue_watcher = self.loop.create_task(self._process_reply_queue())
+
+    async def _process_reply_queue(self):
+        """Watches the reply queue."""
+
+        while True:
+
+            reply_message = await self._reply_queue.get()
+
+            if self.status != CommandStatus.RUNNING:
+                raise RuntimeError('received a reply but command is not running')
+
+            reply = Reply(reply_message, command=self)
+
+            log.debug(f'command {self.command_id.name} received a reply')
+
+            self.replies.append(reply)
+
+            log.debug(f'command {self.command_id.name} got a response with '
+                      f'code {reply.response_code}')
+
+            if reply.response_code != 0:
+                self.status = CommandStatus.FAILED
+                return
+
     def get_messages(self):
         """Returns the list of messages associated with this command."""
 
-        pass
+        raise NotImplementedError('get_message must be overriden for each command subclass.')
 
-    async def _send_coro(self, bus, wait_for_reply):
-        """Async coroutine to send messages to the bus."""
-
-        for message in self.get_messages():
-
-            bus.send(message)
-            log.debug(f'sent message {message.uuid!s} with '
-                      f'arbitration_id={message.arbitration_id} '
-                      f'and payload {message.data!r}')
-            try:
-                reply = await asyncio.wait_for(self._reply_queue.get, 5)
-            except asyncio.TimeoutError:
-                self.status = CommandStatus.CANCELLED
-                log.warning(f'failed receiving reply for message '
-                            f'{message.uuid!s}', exceptions.JaegerUserWarning)
-                return
-
-            assert isinstance(reply, can.Message), 'invalid reply type'
-
-            positioner_id, command_id, reply_flag = \
-                jaeger.utils.parse_identifier(reply.arbitration_id)
-
-    def send(self, bus, wait_for_reply=True, force=False):
+    def send(self, bus=None, wait_for_reply=True, force=False):
         """Sends the command.
 
-        Writes each message to the bus in turn and waits for a response.
+        Writes each message to the fps in turn and waits for a response.
 
         Parameters
         ----------
-        bus : `~jaeger.can.JaegerCAN`
-            The CAN interface bus.
+        fps : `~jaeger.fps.FPS`
+            The focal plane system instance.
         wait_for_reply : bool
             If True, after sending each message associated to the command
             waits until a response for it arrives before sending the next
@@ -158,6 +215,10 @@ class Command(abc.ABCMeta, StatusMixIn):
             unless ``force=True``.
 
         """
+
+        bus = bus or self.bus
+        if bus is None:
+            raise RuntimeError('bus not defined.')
 
         if self.status.is_done:
             if force is False:
@@ -169,6 +230,4 @@ class Command(abc.ABCMeta, StatusMixIn):
                     'Making command ready again.')
                 self.status = CommandStatus.READY
 
-        self.status = CommandStatus.RUNNING
-
-        self.loop.create_task(self._send_coro(), bus, wait_for_reply)
+        bus.send_command(self)

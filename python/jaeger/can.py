@@ -7,16 +7,18 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-12 09:14:18
+# @Last modified time: 2018-09-13 22:00:31
 
 import asyncio
 import pprint
 
 import can
 import can.interfaces.slcan
+import jaeger
 import jaeger.tests.bus
 from jaeger import config, log
-from jaeger.commands import Message, StatusMixIn
+from jaeger.commands import CommandID, Message
+from jaeger.utils.maskbits import CommandStatus
 
 
 __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
@@ -24,7 +26,7 @@ __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 
 #: Accepted CAN interfaces
 VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
-                    'test': jaeger.tests.bus.SlcanBusTester}
+                    'test': jaeger.tests.bus.VirtualBusTester}
 
 
 class JaegerReaderCallback(can.Listener):
@@ -73,7 +75,7 @@ class JaegerCAN(object):
 
     Attributes
     ----------
-    queue : `asyncio.Queue`
+    command_queue : `asyncio.Queue`
         Queue of messages to be sent to the bus.
 
     Returns
@@ -103,14 +105,14 @@ class JaegerCAN(object):
 
     def __init__(self, *args, loop=None, **kwargs):
 
-        self.queue = asyncio.Queue(maxsize=10)
-        self.running = []
+        self.command_queue = asyncio.Queue(maxsize=10)
+        self.running_commands = {}
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
 
-        # self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
-        # self.notifiers = can.notifier.Notifier(self, [self.listener], loop=self.loop)
-        # log.debug('started AsyncBufferedReader listener')
+        self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
+        self.notifiers = can.notifier.Notifier(self, [self.listener], loop=self.loop)
+        log.debug('started JaegerReaderCallback listener')
 
         self._queue_process_task = self.loop.create_task(self._process_queue())
 
@@ -118,12 +120,53 @@ class JaegerCAN(object):
         """Processes the queue of waiting commands."""
 
         while True:
-            message = await self.queue.get()
+            message = await self.command_queue.get()
             assert isinstance(message, Message)
-            log.debug(f'retrieved message with id {message.command_id} from queue')
+            log.debug(f'retrieved message {message.uuid} from queue and sent to CAN bus')
+            self.send(message)
 
     def _process_reply(self, msg):
-        pass
+        """Processes replies from the bus."""
+
+        __, command_id, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
+
+        command_id_flag = CommandID(command_id)
+
+        log.debug(f'processing reply for command {command_id_flag.name}')
+
+        if command_id not in self.running_commands:
+            raise RuntimeError(f'command {command_id_flag.name} is not running')
+
+        self.running_commands[command_id]._reply_queue.put_nowait(msg)
+
+    def send_command(self, command):
+        """Sends multiple messages from a command and tracks status.
+
+        Parameters
+        ----------
+        command : `~jaeger.commands.commands.Command`
+            The command to send.
+
+        """
+
+        log.debug(f'received command {command.command_id.name}')
+
+        if command.command_id in [cmd.command_id for cmd in self.running_commands]:
+            raise ValueError(f'command with command_id={command.command_id} is already running.')
+
+        assert command.status == CommandStatus.READY, f'command {command!s}: not ready'
+
+        command.status = CommandStatus.RUNNING
+        self.running_commands[command.command_id] = command
+
+        for message in command.get_messages():
+
+            log.debug(f'command {command.command_id.name}: '
+                      f'putting message {message.uuid!s} with '
+                      f'arbitration_id={message.arbitration_id} '
+                      f'and payload {message.data!r} in the queue')
+
+            self.command_queue.put_nowait(message)
 
     @classmethod
     def from_profile(cls, profile=None):
@@ -155,21 +198,3 @@ class JaegerCAN(object):
         pprint.pprint(config['interfaces'])
 
         return config['interfaces'].keys()
-
-    def send_command(self, command):
-        """Sends multiple messages from a command and tracks status.
-
-        Parameters
-        ----------
-        command : `~jaeger.commands.commands.Command`
-            The command to send.
-
-        """
-
-        assert command.status == StatusMixIn.READY, f'command {command!s}: not ready'
-
-        messages = command.get_messages()
-
-        for message in messages:
-            assert isinstance(message, Message), 'message is not an instance of Message'
-            self.send(message)

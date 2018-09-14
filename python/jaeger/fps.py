@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 13:58:55
+# @Last modified time: 2018-09-13 22:00:44
 
 import asyncio
 
@@ -81,7 +81,7 @@ class FPS(Actor):
         self.bus = JaegerCAN.from_profile(can_profile)
         self.loop = loop if loop is not None else asyncio.get_event_loop()
 
-        self.positioners = []
+        self.positioners = {}
         self.load_positioners(layout)
 
     def add_positioner(self, positioner, **kwargs):
@@ -89,12 +89,11 @@ class FPS(Actor):
 
         assert isinstance(positioner, Positioner), 'positioner must be a Positioner instance'
 
-        pos_ids = [pos.positioner_id for pos in self.positioners]
-        if positioner.positioner_id in pos_ids:
+        if positioner.positioner_id in self.positioners:
             raise ValueError(f'there is already a positioner in the list with '
                              f'positioner_id {positioner.positioner_id}.')
 
-        self.positioners.append(positioner)
+        self.positioners[positioner.positioner_id] = positioner
 
     def load_positioners(self, layout=None, check_positioners=True):
         """Loads positioner information from a layout file or from CAN.
