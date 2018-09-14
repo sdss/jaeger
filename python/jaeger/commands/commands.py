@@ -7,18 +7,18 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 23:36:00
+# @Last modified time: 2018-09-14 08:06:23
 
 import asyncio
 import uuid
 
 import can
-
 import jaeger.utils
 from jaeger import log
 from jaeger.core import exceptions
-from jaeger.state import StatusMixIn
+from jaeger.utils import StatusMixIn
 from jaeger.utils.maskbits import CommandStatus
+
 from . import CommandID
 
 
@@ -29,7 +29,7 @@ def CommandID__new__(cls, value):
     """Allows to instantiate based on the flag string.
 
     We cannot override __new__ directly on the subclass. We need
-    to add it after the class has been defined. See http://bit.ly/2CStmNm
+    to add it after the class has been defined. See http://bit.ly/2CStmNm.
 
     """
 

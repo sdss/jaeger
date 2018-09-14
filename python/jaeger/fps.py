@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 23:39:09
+# @Last modified time: 2018-09-14 08:06:38
 
 import asyncio
 
@@ -17,7 +17,7 @@ from asyncioActor.actor import Actor
 from jaeger import NAME, __version__
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
-from jaeger.state import StatusMixIn
+from jaeger.utils import StatusMixIn
 from jaeger.utils.maskbits import PositionerStatus
 
 
@@ -152,11 +152,10 @@ class FPS(Actor):
     def _check_positioners(self, positioner_ids=None):
         """Checks whether the positioner is connected and its status."""
 
-        if isinstance(positioner_id, int):
+        if isinstance(positioner_ids, int):
             positioner_ids = [positioner_ids]
-        elif positioner_id is None:
+        elif positioner_ids is None:
             positioner_ids = self.positioners.keys()
-
 
     def start_actor(self):
         """Initialises the actor."""
