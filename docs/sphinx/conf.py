@@ -162,6 +162,8 @@ html_theme_options = {
     'github_repo': 'jaeger',
     'github_button': True,
     'github_type': 'star',
+    'sidebar_collapse': True,
+    'page_width': '80%'
     # 'code_font_family': 'Menlo',
     # 'font_family': 'Hiragino Mincho Pro'
 }
