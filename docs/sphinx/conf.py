@@ -36,7 +36,7 @@ from jaeger import __version__
 # ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.autosummary',
               'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax',
-              'sphinx.ext.intersphinx']
+              'sphinx.ext.intersphinx', 'sphinxcontrib_trio']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
