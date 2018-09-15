@@ -120,6 +120,10 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3.6', None),
 
 autodoc_mock_imports = ['_tkinter']
 autodoc_member_order = 'groupwise'
+autodoc_default_options = {
+    'members': None,
+    'show-inheritance': None
+}
 
 napoleon_use_rtype = False
 napoleon_use_ivar = True
