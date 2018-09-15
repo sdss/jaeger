@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 16:36:23
+# @Last modified time: 2018-09-14 17:09:51
 
 import asyncio
 import uuid
@@ -213,7 +213,7 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         log.debug(f'command {self.command_id.name} got a response from '
                   f'positioner {reply.positioner_id} with '
-                  f'code {reply.response_code}')
+                  f'code {reply.response_code.name!r}')
 
         if reply.response_code != 0:
             self.status = CommandStatus.FAILED
