@@ -25,25 +25,6 @@ from . import CommandID
 __ALL__ = ['Message', 'Command']
 
 
-def CommandID__new__(cls, value):
-    """Allows to instantiate based on the flag string.
-
-    We cannot override __new__ directly on the subclass. We need
-    to add it after the class has been defined. See http://bit.ly/2CStmNm.
-
-    """
-
-    if isinstance(value, str):
-        for flag in cls:
-            if flag.name.lower() == value.lower():
-                return CommandID(flag.value)
-
-    return super(CommandID, cls).__new__(cls, value)
-
-
-CommandID.__new__ = CommandID__new__
-
-
 class Message(can.Message):
     """An extended `can.Message` class.
 
