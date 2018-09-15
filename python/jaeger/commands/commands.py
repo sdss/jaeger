@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 17:09:51
+# @Last modified time: 2018-09-15 12:37:30
 
 import asyncio
 import uuid
@@ -125,8 +125,8 @@ class Command(StatusMixIn, AsyncQueueMixIn):
     received before sending the following message. If any of the messages
     returns an error code the command is failed.
 
-    `.Command` subclasses from `.StatusMixIn` and `.status_cb` gets called
-    when the status changes.
+    `.Command` subclasses from `.StatusMixIn` and `.status_callback` gets
+    called when the status changes.
 
     Parameters
     ----------

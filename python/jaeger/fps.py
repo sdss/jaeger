@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 17:13:49
+# @Last modified time: 2018-09-15 12:35:51
 
 import asyncio
 
@@ -75,7 +75,7 @@ class FPS(Actor):
     can_profile : `str` or `None`
         The configuration profile for the CAN interface, or `None` to use the
         default one.
-    loop : `asyncio.SelectorEventLoop`
+    loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
 
