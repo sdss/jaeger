@@ -8,11 +8,12 @@ Contents
 --------
 
 .. toctree::
-  :maxdepth: 1
+  :maxdepth: 2
 
   intro
   What's new in jaeger? <changelog>
   api
+  commands
   maskbits
 
 

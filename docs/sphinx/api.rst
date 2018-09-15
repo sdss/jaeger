@@ -22,16 +22,10 @@ jaeger.fps
    :show-inheritance:
 
 
-jaeger.commands
----------------
+jaeger.helpers
+--------------
 
-.. automodule:: jaeger.commands.commands
-   :members:
-   :show-inheritance:
-
-.. automodule:: jaeger.commands.bootloader
-   :members: load_firmware
-   :show-inheritance:
+.. automodule:: jaeger.utils.helpers
 
 
 jaeger.utils

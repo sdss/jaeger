@@ -2,6 +2,7 @@ Maskbits
 ========
 
 .. automodule:: jaeger.utils.maskbits
-   :members:
-   :show-inheritance:
-   :undoc-members:
+    :undoc-members:
+
+.. autoclass:: jaeger.commands.CommandID
+    :undoc-members:
