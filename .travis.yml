@@ -27,10 +27,10 @@ install:
 - pip install -U pip wheel --quiet
 - pip install --upgrade setuptools --quiet
 - pip install -r requirements.txt --quiet
-- pip install pytest
-- pip install pytest-coverage
-- pip install coveralls
-- pip install codecov
+- pip install --upgrade pytest
+- pip install --upgrade pytest-coverage
+- pip install --upgrade coveralls
+- pip install --upgrade codecov
 - python setup.py install
 
 script:
