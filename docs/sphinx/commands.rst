@@ -4,7 +4,7 @@ Commands
 Base clases
 -----------
 
-.. automodule:: jaeger.commands.commands
+.. automodule:: jaeger.commands.base
 
 
 Status commands

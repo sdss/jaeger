@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-16 15:38:41
+# @Last modified time: 2018-09-16 15:42:12
 
 # flake8: noqa
 # isort:skip_file
@@ -46,8 +46,8 @@ def CommandID__new__(cls, value):
 CommandID.__new__ = CommandID__new__
 
 
+from .base import *
 from .bootloader import *
-from .commands import *
 from .status import *
 
 
