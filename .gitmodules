@@ -1,3 +1,6 @@
 [submodule "python/jaeger/extern/python-can"]
 	path = python/jaeger/extern/python-can
 	url = https://github.com/albireox/python-can
+[submodule "python/jaeger/extern/asyncioActor"]
+	path = python/jaeger/extern/asyncioActor
+	url = https://github.com/albireox/asyncioActor
