@@ -36,7 +36,7 @@ from jaeger import __version__
 # ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.autosummary',
               'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax',
-              'sphinx.ext.intersphinx', 'sphinxcontrib_trio']
+              'sphinx.ext.intersphinx', 'sphinxcontrib_trio', 'releases']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -108,7 +108,7 @@ pygments_style = 'sphinx'
 todo_include_todos = False
 
 releases_github_path = 'sdss/jaeger'
-releases_document_name = 'CHANGELOG.rst'
+releases_document_name = ['changelog']
 
 # Intersphinx mappings
 intersphinx_mapping = {'python': ('https://docs.python.org/3.6', None),
