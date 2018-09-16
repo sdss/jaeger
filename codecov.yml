@@ -1,5 +1,5 @@
 ignore:
-  - "python/jaeger/test/*"
+  - "python/jaeger/tesst/*"
   - "python/jaeger/bin/*"
   - "python/jaeger/etc/*"
   - "python/jaeger/core/logger.py"
