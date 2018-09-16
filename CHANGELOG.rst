@@ -4,4 +4,4 @@
 Changelog
 =========
 
-* :feature:`0` Basic framework.
+* Basic framework.
