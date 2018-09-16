@@ -7,9 +7,8 @@ cache:
 sudo: false
 
 python:
-- '2.7'
-- '3.5'
 - '3.6'
+- '3.7'
 
 os:
 - linux
@@ -31,10 +30,11 @@ install:
 - pip install pytest
 - pip install pytest-coverage
 - pip install coveralls
+- pip install codecov
 - python setup.py install
 
 script:
 - pytest python/jaeger/tests --cov python/jaeger --cov-report html
 
 after_success:
-- coveralls
+- codecov

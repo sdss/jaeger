@@ -1,0 +1,7 @@
+ignore:
+  - "python/jaeger/test/*"
+  - "python/jaeger/bin/*"
+  - "python/jaeger/etc/*"
+  - "python/jaeger/core/logger.py"
+  - "python/jaeger/core/colour_print.py"
+  - "*.py"
