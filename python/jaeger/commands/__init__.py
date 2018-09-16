@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-15 12:03:54
+# @Last modified time: 2018-09-16 15:38:41
 
 # flake8: noqa
 # isort:skip_file
@@ -51,4 +51,12 @@ from .commands import *
 from .status import *
 
 
-COMMAND_LIST = {1: GetID}
+# Generate a dictionary of commands
+
+_tmp_command_list = []
+
+for item in vars().copy().values():
+    if hasattr(item, '__bases__') and Command in item.__bases__:
+        _tmp_command_list.append((item.command_id, item))
+
+COMMAND_LIST = dict(sorted(_tmp_command_list))
