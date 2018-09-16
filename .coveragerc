@@ -1,8 +1,0 @@
-[run]
-branch = true
-
-[report]
-omit =
-    python/jaeger/etc/*
-    python/jaeger/utils/*
-    python/jaeger/tests/*
