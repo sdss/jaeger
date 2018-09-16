@@ -37,12 +37,9 @@ if os.path.exists(custom_config_fn):
     config = merge(yaml.load(open(custom_config_fn)), config)
 
 
-# Replaces ptyhon-can with the internal version
-sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), 'extern/python-can')))
-
-
 __version__ = '0.1.0dev'
 
 
+from . import extern  # isort:skip
 from .can import *  # isort:skip
 from .fps import *  # isort:skip
