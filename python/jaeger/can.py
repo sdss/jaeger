@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 12:32:22
+# @Last modified time: 2018-09-18 14:38:58
 
 import asyncio
 import pprint
@@ -151,7 +151,7 @@ class JaegerCAN(object):
 
         log.debug(f'received command {command.command_id.name}')
 
-        if command.command_id in [cmd.command_id for cmd in self.running_commands]:
+        if command.command_id in self.running_commands:
             raise ValueError(f'command with command_id={command.command_id} is already running.')
 
         assert command.status == CommandStatus.READY, f'command {command!s}: not ready'
