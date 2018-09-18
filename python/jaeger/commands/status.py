@@ -7,27 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 14:52:05
+# @Last modified time: 2018-09-18 14:14:46
 
 
 from jaeger.commands import Command, CommandID, Message
 
 
 class GetID(Command):
-    """Commands the positioners to reply with their positioner id.
-
-    Parameters
-    ----------
-    positioner_id : int or list
-        The id or list of ids of the robot(s) to which this command will be
-        sent. Use ``positioner_id=0`` to broadcast to all robots.
-
-    Attributes
-    ----------
-    timeout : float
-        Time that the command can be running before it is marked as done.
-
-    """
+    """Commands the positioners to reply with their positioner id."""
 
     command_id = CommandID.GET_ID
     broadcastable = True

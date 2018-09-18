@@ -141,21 +141,13 @@ class Command(StatusMixIn, AsyncQueueMixIn):
         Time after which the command will be marked done. If `None`, uses the
         command default value.
 
-    Attributes
-    ----------
-    broadcastable : bool
-        Whether the command can be broadcast to all robots.
-    command_id : int
-        The id of the command.
-    replies : list
-        A list of messages with the responses to this command.
-    timeout : float
-        Time after which the command will be marked done.
-
     """
 
+    #: The id of the command.
     command_id = None
+    #: Whether the command can be broadcast to all robots.
     broadcastable = None
+    #: Time after which the command will be marked done.
     timeout = None
 
     def __init__(self, positioner_id=0, bus=None, loop=None, timeout=None,
@@ -171,6 +163,7 @@ class Command(StatusMixIn, AsyncQueueMixIn):
         self.bus = bus
         self.loop = loop or asyncio.get_event_loop()
 
+        #: A list of messages with the responses to this command.
         self.replies = []
 
         self.timeout = timeout or self.timeout
@@ -259,9 +252,10 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
 
 class Abort(Command):
+    """Cancels any running command. Stops the positioner if it is moving."""
 
-    broadcastable = True
     command_id = CommandID.ABORT
+    broadcastable = True
     timeout = 0
 
     def get_messages(self):
