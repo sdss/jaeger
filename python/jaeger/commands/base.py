@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 14:50:39
+# @Last modified time: 2018-09-18 15:38:22
 
 import asyncio
 import uuid
@@ -208,6 +208,9 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         def mark_done():
             self.status = CommandStatus.DONE
+
+            if self.bus is not None and self.command_id in self.bus.running_commands:
+                self.bus.running_commands.pop(self.command_id)
 
         if self.timeout is None or self.status != CommandStatus.RUNNING:
             return

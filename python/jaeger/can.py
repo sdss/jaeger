@@ -7,13 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 15:19:01
+# @Last modified time: 2018-09-18 15:38:41
 
 import asyncio
 import pprint
 
 import can
 import can.interfaces.slcan
+
 import jaeger
 import jaeger.tests.bus
 from jaeger import config, log
@@ -115,7 +116,7 @@ class JaegerCAN(object):
         log.debug('started JaegerReaderCallback listener')
 
         self._queue_process_task = self.loop.create_task(self._process_queue())
-        self._running_commands_task = self.loop.create_task(self._watch_running_commands())
+        # self._running_commands_task = self.loop.create_task(self._watch_running_commands())
 
     async def _watch_running_commands(self, sleep_time=1):
         """Checks if commands are done and removes them from the list."""
