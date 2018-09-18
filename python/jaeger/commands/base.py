@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-15 12:37:30
+# @Last modified time: 2018-09-18 13:35:27
 
 import asyncio
 import uuid
@@ -256,3 +256,15 @@ class Command(StatusMixIn, AsyncQueueMixIn):
                 self.status = CommandStatus.READY
 
         bus.send_command(self)
+
+
+class Abort(Command):
+
+    broadcastable = True
+    command_id = CommandID.ABORT
+    timeout = 0
+
+    def get_messages(self):
+        """Returns the messages to send associated with this command."""
+
+        return [Message(self, positioner_id=self.positioner_id, data=[])]
