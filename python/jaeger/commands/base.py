@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 13:35:27
+# @Last modified time: 2018-09-18 14:50:39
 
 import asyncio
 import uuid
@@ -174,6 +174,11 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         AsyncQueueMixIn.__init__(self, name='reply_queue',
                                  get_callback=self.process_reply)
+
+    def __repr__(self):
+        return (f'<Command {self.command_id.name} '
+                f'(positioner_id={self.positioner_id}, '
+                f'status={self.status.name!r})>')
 
     def process_reply(self, reply_message):
         """Watches the reply queue."""
