@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-16 13:00:11
+# @Last modified time: 2018-09-18 14:19:53
 
 
 # import matplotlib
@@ -111,7 +111,7 @@ autodoc_default_options = {
 }
 
 napoleon_use_rtype = False
-napoleon_use_ivar = True
+napoleon_use_ivar = False
 autodoc_member_order = 'bysource'
 
 rst_epilog = """
