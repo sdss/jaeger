@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 14:38:58
+# @Last modified time: 2018-09-18 15:19:01
 
 import asyncio
 import pprint
@@ -115,6 +115,19 @@ class JaegerCAN(object):
         log.debug('started JaegerReaderCallback listener')
 
         self._queue_process_task = self.loop.create_task(self._process_queue())
+        self._running_commands_task = self.loop.create_task(self._watch_running_commands())
+
+    async def _watch_running_commands(self, sleep_time=1):
+        """Checks if commands are done and removes them from the list."""
+
+        while True:
+            to_drop = []
+            for command_id in self.running_commands:
+                if self.running_commands[command_id].status.is_done:
+                    to_drop.append(command_id)
+            for command_id in to_drop:
+                self.running_commands.pop(command_id)
+            await asyncio.sleep(sleep_time)
 
     async def _process_queue(self):
         """Processes the queue of waiting commands."""
@@ -151,7 +164,8 @@ class JaegerCAN(object):
 
         log.debug(f'received command {command.command_id.name}')
 
-        if command.command_id in self.running_commands:
+        if (command.command_id in self.running_commands and
+                not self.running_commands[command.command_id].is_done):
             raise ValueError(f'command with command_id={command.command_id} is already running.')
 
         assert command.status == CommandStatus.READY, f'command {command!s}: not ready'
