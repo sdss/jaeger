@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 15:38:22
+# @Last modified time: 2018-09-18 19:24:09
 
 import asyncio
 import uuid
@@ -168,6 +168,8 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         self.timeout = timeout or self.timeout
 
+        self._data = kwargs.pop('data', [])
+
         StatusMixIn.__init__(self, maskbit_flags=CommandStatus,
                              initial_status=CommandStatus.READY,
                              callback_func=self.status_callback)
@@ -219,9 +221,13 @@ class Command(StatusMixIn, AsyncQueueMixIn):
         self.loop.call_later(self.timeout + 0.1, mark_done)
 
     def get_messages(self):
-        """Returns the list of messages associated with this command."""
+        """Returns the list of messages associated with this command.
 
-        raise NotImplementedError('get_message must be overriden for each command subclass.')
+        Unless overridden, returns a single message with the associated data.
+
+        """
+
+        return [Message(self, positioner_id=self.positioner_id, data=self._data)]
 
     def send(self, bus=None, wait_for_reply=True, force=False):
         """Sends the command.
@@ -265,8 +271,3 @@ class Abort(Command):
     command_id = CommandID.ABORT
     broadcastable = True
     timeout = 0
-
-    def get_messages(self):
-        """Returns the messages to send associated with this command."""
-
-        return [Message(self, positioner_id=self.positioner_id, data=[])]
