@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-15 12:35:51
+# @Last modified time: 2018-10-01 16:29:52
 
 import asyncio
 
@@ -95,7 +95,7 @@ class FPS(Actor):
         Parameters
         ----------
         command_id : `str`, `int`, or `~jaeger.commands.CommandID`
-            The ID of the command, either as the interget value, a string,
+            The ID of the command, either as the integer value, a string,
             or the `~jaeger.commands.CommandID` flag
         positioner_id : int
             The positioner ID to command, or zero for broadcast.
