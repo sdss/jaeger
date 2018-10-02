@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-14 16:24:16
+# @Last modified time: 2018-10-01 16:47:47
 
 import asyncio
 
@@ -37,6 +37,7 @@ class AsyncQueueMixIn(object):
 
             while True:
                 item = await queue.get()
+                print(item)
                 if get_callback:
                     loop.call_soon_threadsafe(get_callback, item)
 
@@ -108,7 +109,7 @@ class StatusMixIn(object):
         self.flags = maskbit_flags
         self.callbacks = []
         self._status = initial_status
-        self.watchers = set()
+        self.watcher = None
 
         if callback_func is not None:
             self.callbacks.append(callback_func)
@@ -148,11 +149,14 @@ class StatusMixIn(object):
         if value != self._status:
             self._status = self.flags(value)
             self.do_callbacks()
-            for watcher in self.watchers:
-                watcher.set()
+            if self.watcher is not None:
+                self.watcher.set()
 
     async def wait_for_status(self, value, loop=None):
         """Awaits until the status matches ``value``."""
+
+        if self.status == value:
+            return
 
         if loop is None:
             if hasattr(self, 'loop') and self.loop is not None:
@@ -160,14 +164,10 @@ class StatusMixIn(object):
             else:
                 loop = asyncio.get_event_loop()
 
-        if self.status == value:
-            return
-
-        watcher = asyncio.Event(loop=loop)
-        self.watchers.add(watcher)
+        self.watcher = asyncio.Event(loop=loop)
 
         while self.status != value:
-            await watcher.wait()
-            watcher.clear()
+            await self.watcher.wait()
+            self.watcher.clear()
 
-        self.watchers.remove(watcher)
+        self.watcher = None
