@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-01 16:47:47
+# @Last modified time: 2018-10-01 18:12:50
 
 import asyncio
 
@@ -37,7 +37,6 @@ class AsyncQueueMixIn(object):
 
             while True:
                 item = await queue.get()
-                print(item)
                 if get_callback:
                     loop.call_soon_threadsafe(get_callback, item)
 
