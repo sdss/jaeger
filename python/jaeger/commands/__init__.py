@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 13:34:05
+# @Last modified time: 2018-09-18 20:34:28
 
 # flake8: noqa
 # isort:skip_file
@@ -20,7 +20,10 @@ class CommandID(enum.IntEnum):
 
     ABORT = 0
     GET_ID = 1
+    GET_FIRMWARE_VERSION = 2
     GET_STATUS = 3
+    START_FIRMWARE_UPGRADE = 200
+    SEND_FIRMWARE_DATA = 201
 
     def get_command(self):
         """Returns the class associated with this command."""
