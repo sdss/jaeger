@@ -204,7 +204,7 @@ class JaegerCAN(object):
         config_data = config['interfaces'][profile].copy()
         interface = config_data.pop('interface')
 
-        return cls(interface, **config_data)
+        return cls.__new__(cls, interface, loop=loop, **config_data)
 
     @staticmethod
     def print_profiles():
