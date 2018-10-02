@@ -7,12 +7,13 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 19:24:09
+# @Last modified time: 2018-10-01 17:36:50
 
 import asyncio
 import uuid
 
 import can
+
 import jaeger.utils
 from jaeger import log
 from jaeger.core import exceptions
@@ -175,7 +176,8 @@ class Command(StatusMixIn, AsyncQueueMixIn):
                              callback_func=self.status_callback)
 
         AsyncQueueMixIn.__init__(self, name='reply_queue',
-                                 get_callback=self.process_reply)
+                                 get_callback=self.process_reply,
+                                 loop=self.loop)
 
     def __repr__(self):
         return (f'<Command {self.command_id.name} '
@@ -214,11 +216,14 @@ class Command(StatusMixIn, AsyncQueueMixIn):
             if self.bus is not None and self.command_id in self.bus.running_commands:
                 self.bus.running_commands.pop(self.command_id)
 
+        log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
+
         if self.timeout is None or self.status != CommandStatus.RUNNING:
             return
 
-        self.loop.call_later(self.timeout, self.reply_queue_watcher.cancel)
-        self.loop.call_later(self.timeout + 0.1, mark_done)
+        if self.status == CommandStatus.RUNNING:
+            self.loop.call_later(self.timeout, self.reply_queue_watcher.cancel)
+            self.loop.call_later(self.timeout + 0.1, mark_done)
 
     def get_messages(self):
         """Returns the list of messages associated with this command.
