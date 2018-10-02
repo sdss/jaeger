@@ -166,13 +166,10 @@ class JaegerCAN(object):
         log.debug(f'received command {command.command_id.name}')
 
         if (command.command_id in self.running_commands and
-                not self.running_commands[command.command_id].is_done):
+                not self.running_commands[command.command_id].status.is_done):
             raise ValueError(f'command with command_id={command.command_id} is already running.')
 
         assert command.status == CommandStatus.READY, f'command {command!s}: not ready'
-
-        command.status = CommandStatus.RUNNING
-        self.running_commands[command.command_id] = command
 
         for message in command.get_messages():
 
@@ -182,6 +179,9 @@ class JaegerCAN(object):
                       f'and payload {message.data!r} in the queue')
 
             self.command_queue.put_nowait(message)
+
+        command.status = CommandStatus.RUNNING
+        self.running_commands[command.command_id] = command
 
     @classmethod
     def from_profile(cls, profile=None):
