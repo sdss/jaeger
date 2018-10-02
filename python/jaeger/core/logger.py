@@ -90,8 +90,8 @@ class MyFormatter(logging.Formatter):
 
     ansi_escape = re.compile(r'\x1b[^m]*m')
 
-    def __init__(self, fmt='%(levelname)s - %(message)s [%(funcName)s @ %(filename)s]'):
-        logging.Formatter.__init__(self, fmt, datefmt='%Y-%m-%d %H:%M:%S')
+    def __init__(self, fmt=base_fmt):
+        logging.Formatter.__init__(self, fmt)
 
     def format(self, record):
 
