@@ -270,4 +270,4 @@ class Abort(Command):
 
     command_id = CommandID.ABORT
     broadcastable = True
-    timeout = 0
+    timeout = 5
