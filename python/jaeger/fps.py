@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-01 16:29:52
+# @Last modified time: 2018-10-02 16:14:49
 
 import asyncio
 
@@ -87,7 +87,7 @@ class FPS(Actor):
         self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
 
         self.positioners = {}
-        self.load_positioners(layout)
+        self.loop.run_until_complete(self.load_positioners(layout))
 
     def send_command(self, command_id, positioner_id=0, data=[]):
         """Sends a command to the bus.
@@ -126,7 +126,7 @@ class FPS(Actor):
 
         self.positioners[positioner.positioner_id] = positioner
 
-    def load_positioners(self, layout=None, check_positioners=True):
+    async def load_positioners(self, layout=None, check_positioners=True):
         """Loads positioner information from a layout file or from CAN.
 
         Parameters
@@ -156,53 +156,52 @@ class FPS(Actor):
 
             log.debug(f'loaded positions for {pos_id-1} positioners')
 
-            if check_positioners:
-                self.loop.create_task(self._check_positioners())
+            if not check_positioners:
+                return
 
-    async def _check_positioners(self):
-        """Checks whether the positioner is connected and its status."""
+            # Resets all positioner
+            for positioner in self.positioners.values():
+                positioner.reset()
 
-        # Resets all positioner
-        for positioner in self.positioners.values():
-            positioner.reset()
+            get_id_command = GetID(positioner_id=0, loop=self.loop, bus=self.bus)
+            get_id_command.send()
 
-        get_id_command = GetID(positioner_id=0, loop=self.loop, bus=self.bus)
-        get_id_command.send()
+            await get_id_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
 
-        await get_id_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
+            # Loops over each reply and set the positioner status to OK. If the
+            # positioner was not in the list, adds it. Checks how many positioner
+            # did not reply.
+            found_positioners = []
+            for reply in get_id_command.replies:
 
-        # Loops over each reply and set the positioner status to OK. If the
-        # positioner was not in the list, adds it. Checks how many positioner
-        # did not reply.
-        found_positioners = []
-        for reply in get_id_command.replies:
+                positioner_id = reply.positioner_id
+                found_positioners.append(positioner_id)
 
-            positioner_id = reply.positioner_id
-            found_positioners.append(positioner_id)
-
-            if positioner_id in self.positioners:
-                if reply.response_code == reply.response_code.COMMAND_ACCEPTED:
-                    log.debug(f'positioner {positioner_id} status set to '
-                              f'{PositionerStatus.OK.name!r}')
-                    self.positioners[positioner_id].status = PositionerStatus.OK
+                if positioner_id in self.positioners:
+                    if reply.response_code == reply.response_code.COMMAND_ACCEPTED:
+                        log.debug(f'positioner {positioner_id} status set to '
+                                  f'{PositionerStatus.OK.name!r}')
+                        self.positioners[positioner_id].status = PositionerStatus.OK
+                    else:
+                        log.warning(f'positioner {positioner_id} responded to '
+                                    f'{get_id_command.command_id} with response code '
+                                    f'{reply.response_code.name!r}', JaegerUserWarning)
+                        log.debug(f'positioner {positioner_id} status set to '
+                                  f'{PositionerStatus.UNKNOWN.name!r}')
+                        self.positioners[positioner_id].status = PositionerStatus.UNKNOWN
                 else:
-                    log.warning(f'positioner {positioner_id} responded to '
-                                f'{get_id_command.command_id} with response code '
-                                f'{reply.response_code.name!r}', JaegerUserWarning)
-                    log.debug(f'positioner {positioner_id} status set to '
-                              f'{PositionerStatus.UNKNOWN.name!r}')
-                    self.positioners[positioner_id].status = PositionerStatus.UNKNOWN
-            else:
-                log.warning(f'{get_id_command.command_id} reported '
-                            f'positioner_id={positioner_id} which was '
-                            f'not in the list. Adding it.', JaegerUserWarning)
-                self.positioners[positioner_id] = Positioner(positioner_id)
-                self.positioners[positioner_id].status = PositionerStatus.OK
+                    log.warning(f'{get_id_command.command_id} reported '
+                                f'positioner_id={positioner_id} which was '
+                                f'not in the list. Adding it.', JaegerUserWarning)
+                    self.positioners[positioner_id] = Positioner(positioner_id)
+                    self.positioners[positioner_id].status = PositionerStatus.OK
 
-        n_unknown = len(self.positioners) - len(found_positioners)
-        if n_unknown > 0:
-            log.warning(f'{n_unknown} positioners did not respond to '
-                        f'{get_id_command.command_id.name!r}', JaegerUserWarning)
+            n_unknown = len(self.positioners) - len(found_positioners)
+            if n_unknown > 0:
+                log.warning(f'{n_unknown} positioners did not respond to '
+                            f'{get_id_command.command_id.name!r}', JaegerUserWarning)
+
+
 
     def start_actor(self):
         """Initialises the actor."""

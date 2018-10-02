@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-01 17:36:50
+# @Last modified time: 2018-10-02 16:46:31
 
 import asyncio
 import uuid
@@ -212,18 +212,17 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         def mark_done():
             self.status = CommandStatus.DONE
+            self.reply_queue_watcher.cancel()
 
             if self.bus is not None and self.command_id in self.bus.running_commands:
                 self.bus.running_commands.pop(self.command_id)
 
         log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
 
-        if self.timeout is None or self.status != CommandStatus.RUNNING:
+        if self.status == CommandStatus.RUNNING and self.timeout is not None:
+            self.loop.call_at(self.loop.time() + self.timeout, mark_done)
+        else:
             return
-
-        if self.status == CommandStatus.RUNNING:
-            self.loop.call_later(self.timeout, self.reply_queue_watcher.cancel)
-            self.loop.call_later(self.timeout + 0.1, mark_done)
 
     def get_messages(self):
         """Returns the list of messages associated with this command.
@@ -234,7 +233,7 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         return [Message(self, positioner_id=self.positioner_id, data=self._data)]
 
-    def send(self, bus=None, wait_for_reply=True, force=False):
+    def send(self, bus=None, wait_for_reply=True, force=False, block=None):
         """Sends the command.
 
         Writes each message to the fps in turn and waits for a response.
@@ -250,6 +249,10 @@ class Command(StatusMixIn, AsyncQueueMixIn):
         force : bool
             If the command has already been finished, sending it will fail
             unless ``force=True``.
+        block : `bool`
+            Whether to `await` for the command to be done before returning. If
+            ``block=None``, will block only if the code is being run inside
+            iPython.
 
         """
 
@@ -267,7 +270,10 @@ class Command(StatusMixIn, AsyncQueueMixIn):
                     'Making command ready again.')
                 self.status = CommandStatus.READY
 
-        bus.send_command(self)
+        if not self.loop.is_running():
+            self.loop.run_until_complete(bus.send_command(self, block=block))
+        else:
+            self.loop.create_task(bus.send_command(self, block=block))
 
 
 class Abort(Command):

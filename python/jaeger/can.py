@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-01 16:53:31
+# @Last modified time: 2018-10-02 16:46:14
 
 import asyncio
 import pprint
@@ -17,7 +17,7 @@ import can.interfaces.slcan
 
 import jaeger
 import jaeger.tests.bus
-from jaeger import config, log
+from jaeger import __IPYTHON__, config, log
 from jaeger.commands import CommandID, Message
 from jaeger.utils.maskbits import CommandStatus
 
@@ -153,13 +153,17 @@ class JaegerCAN(object):
 
         self.running_commands[command_id].reply_queue.put_nowait(msg)
 
-    def send_command(self, command):
+    async def send_command(self, command, block=None):
         """Sends multiple messages from a command and tracks status.
 
         Parameters
         ----------
         command : `~jaeger.commands.commands.Command`
             The command to send.
+        block : `bool`
+            Whether to `await` for the command to be done before returning. If
+            ``block=None``, will block only if the code is being run inside
+            iPython.
 
         """
 
@@ -182,6 +186,12 @@ class JaegerCAN(object):
 
         command.status = CommandStatus.RUNNING
         self.running_commands[command.command_id] = command
+
+        block = (block or __IPYTHON__) if block is None else block
+
+        if block:
+            log.debug(f'blocking command {command.command_id.name} until done.')
+            await command.wait_for_status(CommandStatus.DONE, loop=self.loop)
 
     @classmethod
     def from_profile(cls, profile=None, loop=None):
