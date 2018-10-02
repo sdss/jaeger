@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 15:38:41
+# @Last modified time: 2018-10-01 16:53:31
 
 import asyncio
 import pprint
@@ -184,7 +184,7 @@ class JaegerCAN(object):
         self.running_commands[command.command_id] = command
 
     @classmethod
-    def from_profile(cls, profile=None):
+    def from_profile(cls, profile=None, loop=None):
         """Creates a new bus interface from a configuration profile.
 
         Parameters
@@ -192,6 +192,9 @@ class JaegerCAN(object):
         profile : `str` or `None`
             The name of the profile that defines the bus interface, or `None`
             to use the default configuration.
+        loop : event loop or `None`
+            The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
+            get a valid loop.
 
         """
 

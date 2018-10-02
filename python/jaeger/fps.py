@@ -83,8 +83,8 @@ class FPS(Actor):
 
     def __init__(self, layout=None, can_profile=None, loop=None, **kwargs):
 
-        self.bus = JaegerCAN.from_profile(can_profile)
         self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
 
         self.positioners = {}
         self.load_positioners(layout)
