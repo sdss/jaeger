@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 23:17:40
+# @Last modified time: 2018-10-02 20:31:02
 
 import enum
 
@@ -70,12 +70,31 @@ class CommandStatus(Maskbit):
 class PositionerStatus(Maskbit):
     """Maskbits for positioner status."""
 
-    OK = enum.auto()
-    RESET = enum.auto()
-    MOVING = enum.auto()
-    REACHED = enum.auto()
-    UNKNOWN = enum.auto()
-    COLLIDED = enum.auto()
+    SYSTEM_INITIALIZATION = 0x00000001
+    RECEIVING_TRAJECTORY = 0x00000100
+    TRAJECTORY_ALPHA_RECEIVED = 0x00000200
+    TRAJECTORY_BETA_RECEIVED = 0x00000400
+    DATUM_INITIALIZATION = 0x00200000
+    DATUM_ALPHA_INITIALIZED = 0x00400000
+    DATUM_BETA_INITIALIZED = 0x00800000
+    DISPLACEMENT_COMPLETED = 0x01000000
+    ALPHA_DISPLACEMENT_COMPLETED = 0x02000000
+    BETA_DISPLACEMENT_COMPLETED = 0x04000000
+    DATUM_INITIALIZED = 0x20000000
+    UNKNOWN = 0x40000000
+
+
+class PositionerBootloaderStatus(Maskbit):
+    """Maskbits for positioner status when in bootloader mode."""
+
+    BOOTLOADER_INIT = 0x00000001
+    BOOTLOADER_TIMEOUT = 0x00000002
+    BSETTINGS_CHANGED = 0x00000200
+    RECEIVING_NEW_FIRMWARE = 0x00010000
+    NEW_FIRMWARE_RECEIVED = 0x01000000
+    NEW_FIRMWARE_CHECK_OK = 0x02000000
+    NEW_FIRMWARE_CHECK_BAD = 0x04000000
+    UNKNOWN = 0x40000000
 
 
 class ResponseCode(enum.IntEnum):
