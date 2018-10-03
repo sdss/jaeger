@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 20:35:55
+# @Last modified time: 2018-10-02 20:40:52
 
 import asyncio
 import uuid
@@ -210,8 +210,12 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         """
 
-        def mark_done():
-            self.status = CommandStatus.DONE
+        def mark_done(done_status):
+            """Cancels the queue watcher and removes the running command."""
+
+            if done_status is not None:
+                self.status = done_status
+
             self.reply_queue_watcher.cancel()
 
             if self.bus is not None:
@@ -222,7 +226,9 @@ class Command(StatusMixIn, AsyncQueueMixIn):
         log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING and self.timeout is not None:
-            self.loop.call_at(self.loop.time() + self.timeout, mark_done)
+            self.loop.call_at(self.loop.time() + self.timeout, mark_done, CommandStatus.DONE)
+        elif self.status.is_done:
+            mark_done(None)
         else:
             return
 
