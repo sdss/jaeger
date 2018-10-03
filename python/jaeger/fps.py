@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 11:14:46
+# @Last modified time: 2018-10-03 11:44:55
 
 import asyncio
 import os
@@ -82,15 +82,8 @@ class Positioner(StatusMixIn):
         return f'<Positioner (id={self.positioner_id}, status={status_names!r})>'
 
 
-class FPS(Actor, asyncio.Future):
+class FPS(Actor):
     """A class describing the Focal Plane System that can be used as an actor.
-
-    `.FPS` is a `asyncio.Future` that becomes completed when the initialisation
-    finishes. The initialisation can be awaited ::
-
-        >>> fps = FPS(layout='my_layout.dat')
-        >>> await fps
-        >>> print(fps.positioners)
 
     Parameters
     ----------
@@ -104,19 +97,29 @@ class FPS(Actor, asyncio.Future):
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
 
+    Examples
+    --------
+    After instantiating a new `.FPS` object it is necessary to call
+    `~.FPS.initialise` to retrieve the positioner layout and the status of
+    the connected positioners. Note that `~.FPS.initialise` is a coroutine
+    which needs to be awaited ::
+
+        >>> fps = FPS(can_profile='default')
+        >>> await fps.initialise()
+        >>> fps.positioners[4].status
+        <Positioner (id=4, status='SYSTEM_INITIALIZATION|
+        DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|
+        BETA_DISPLACEMENT_COMPLETED')>
+
     """
 
     def __init__(self, layout=None, can_profile=None, loop=None, **kwargs):
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
         self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
+        self.layout = layout
 
         self.positioners = {}
-
-        asyncio.Future.__init__(self, loop=self.loop)
-
-        coro = self.load_positioners(layout)
-        self.loop.create_task(coro)
 
     def send_command(self, command_id, positioner_id=0, data=[], block=None):
         """Sends a command to the bus.
@@ -159,7 +162,7 @@ class FPS(Actor, asyncio.Future):
 
         self.positioners[positioner.positioner_id] = positioner
 
-    async def load_positioners(self, layout=None, check_positioners=True):
+    async def initialise(self, layout=None, check_positioners=True):
         """Loads positioner information from a layout file or from CAN.
 
         Parameters
@@ -175,10 +178,7 @@ class FPS(Actor, asyncio.Future):
 
         """
 
-        if layout is False:
-            return
-
-        layout = layout or config['fps']['default_layout']
+        layout = layout or self.layout or config['fps']['default_layout']
 
         if isinstance(layout, pathlib.Path) or os.path.exists(layout):
 
@@ -284,8 +284,6 @@ class FPS(Actor, asyncio.Future):
         if n_unknown > 0:
             log.warning(f'{n_unknown} positioners did not respond to '
                         f'{command_name!r}', JaegerUserWarning)
-
-        self.set_result(True)
 
     def start_actor(self):
         """Initialises the actor."""
