@@ -64,8 +64,15 @@ class Positioner(StatusMixIn):
         return f'<Positioner (id={self.positioner_id}, status={self.status.name!r})>'
 
 
-class FPS(Actor):
+class FPS(Actor, asyncio.Future):
     """A class describing the Focal Plane System that can be used as an actor.
+
+    `.FPS` is a `asyncio.Future` that becomes completed when the initialisation
+    finishes. The initialisation can be awaited ::
+
+        >>> fps = FPS(layout='my_layout.dat')
+        >>> await fps
+        >>> print(fps.positioners)
 
     Parameters
     ----------
@@ -87,9 +94,13 @@ class FPS(Actor):
         self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
 
         self.positioners = {}
-        self.loop.run_until_complete(self.load_positioners(layout))
 
-    def send_command(self, command_id, positioner_id=0, data=[]):
+        asyncio.Future.__init__(self, loop=self.loop)
+
+        coro = self.load_positioners(layout)
+        self.loop.create_task(coro)
+
+    def send_command(self, command_id, positioner_id=0, data=[], block=None):
         """Sends a command to the bus.
 
         Parameters
