@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 20:05:36
+# @Last modified time: 2018-10-02 20:20:09
 
 import asyncio
 
@@ -179,8 +179,6 @@ class FPS(Actor, asyncio.Future):
             # Resets all positioner
             for positioner in self.positioners.values():
                 positioner.reset()
-
-            # TODO: instead of GetID use GetStatus and get both id and status at the same time.
 
             get_id_command = self.send_command(CommandID.GET_ID,
                                                positioner_id=0,
