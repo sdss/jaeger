@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-01 15:58:30
+# @Last modified time: 2018-10-03 10:36:32
 
 
 from jaeger.commands import Command, CommandID
@@ -24,3 +24,10 @@ class GetID(Command):
         """Returns a list of positioners that replied back."""
 
         return [reply.positioner_id for reply in self.replies]
+
+
+class GetStatus(Command):
+
+    command_id = CommandID.GET_STATUS
+    broadcastable = True
+    timeout = 2.
