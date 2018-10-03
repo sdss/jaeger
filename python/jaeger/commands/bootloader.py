@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-11 15:59:37
+# @Last modified time: 2018-10-01 17:46:58
 
 import pathlib
 
@@ -18,7 +18,7 @@ from jaeger.utils.maskbits import BootloaderStatus
 __ALL__ = ['load_firmware']
 
 
-def load_firmware(fps, firmware_file, chunk_check=1000):
+def load_firmware(fps, firmware_file, chunk_check=1000, loop=None):
     """Convenience function to run through the steps of loading a new firmware.
 
     Performs a series of initial checks to make sure all the actors are in
@@ -59,4 +59,25 @@ def load_firmware(fps, firmware_file, chunk_check=1000):
 
     # First we check what positioners are online.
     get_id_cmd = commands.GetID(positioner_id=0)
-    get_id_reply = get_id_cmd.send_command()
+    get_id_reply = fps.send_command()
+
+
+class GetFirmwareVersion(commands.Command):
+
+    command_id = commands.CommandID.GET_FIRMWARE_VERSION
+    broadcastable = True
+    timeout = 2
+
+
+class StartFirmwareUpgrade(commands.Command):
+
+    command_id = commands.CommandID.START_FIRMWARE_UPGRADE
+    broadcastable = False
+    timeout = 0
+
+
+class SendFirmwareData(commands.Command):
+
+    command_id = commands.CommandID.SEND_FIRMWARE_DATA
+    broadcastable = False
+    timeout = 0
