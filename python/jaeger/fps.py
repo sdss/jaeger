@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 16:47:42
+# @Last modified time: 2018-10-02 19:02:43
 
 import asyncio
 
@@ -48,6 +48,7 @@ class Positioner(StatusMixIn):
         self.position = position
         self.alpha = alpha
         self.beta = beta
+        self.firmware = None
 
         super().__init__(maskbit_flags=PositionerStatus,
                          initial_status=PositionerStatus.UNKNOWN)
@@ -59,6 +60,7 @@ class Positioner(StatusMixIn):
         self.alpha = None
         self.beta = None
         self.status = PositionerStatus.UNKNOWN
+        self.firmware = None
 
     def __repr__(self):
         return f'<Positioner (id={self.positioner_id}, status={self.status.name!r})>'
@@ -216,6 +218,18 @@ class FPS(Actor, asyncio.Future):
             if n_unknown > 0:
                 log.warning(f'{n_unknown} positioners did not respond to '
                             f'{get_id_command.command_id.name!r}', JaegerUserWarning)
+
+        log.debug('retrieving firmware version')
+        get_firmaware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
+                                                  positioner_id=0,
+                                                  block=False)
+        await get_firmaware_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
+
+        for reply in get_firmaware_command.replies:
+            firmware = '.'.join(str(byt) for byt in reply.data[1:])
+            self.positioners[reply.positioner_id].firmware = firmware
+
+        self.set_result('initialisation done')
 
     def start_actor(self):
         """Initialises the actor."""
