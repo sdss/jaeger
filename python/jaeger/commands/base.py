@@ -205,7 +205,7 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
             self.status = CommandStatus.FAILED
             return
 
-    def finish_command(self, status=CommandID.DONE):
+    def finish_command(self, status=CommandStatus.DONE):
         """Cancels the queue watcher and removes the running command."""
 
         if self.done():
