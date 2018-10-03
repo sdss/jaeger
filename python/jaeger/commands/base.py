@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 18:39:40
+# @Last modified time: 2018-10-02 20:35:55
 
 import asyncio
 import uuid
@@ -277,6 +277,20 @@ class Command(StatusMixIn, AsyncQueueMixIn):
             self.loop.run_until_complete(coro)
         else:
             self.loop.create_task(coro)
+
+    def get_reply_for_positioner(self, positioner_id):
+        """Returns the reply for a given ``positioner_id``.
+
+        In principle this method is only useful when the command is sent in
+        broadcast mode and receives replies from multiples positioners.
+
+        """
+
+        for reply in self.replies:
+            if reply.positioner_id == positioner_id:
+                return reply
+
+        return False
 
 
 class Abort(Command):
