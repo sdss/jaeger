@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 08:55:00
+# @Last modified time: 2018-10-03 11:25:07
 
 import asyncio
 import uuid
@@ -205,13 +205,16 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
             self.status = CommandStatus.FAILED
             return
 
-    def finish_command(self, status=CommandStatus.DONE):
+    def finish_command(self, status=None):
         """Cancels the queue watcher and removes the running command."""
+
+        if status:
+            self.status = status
 
         if self.done():
             return
 
-        self.status = status
+        self.remove_done_callback(self.finish_command)
         self.set_result(status)
 
         self.reply_queue_watcher.cancel()
@@ -221,7 +224,7 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
             if r_command:
                 self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
 
-    def status_callback(self, cmd):
+    def status_callback(self):
         """Callback for change status.
 
         When the status gets set to `.CommandStatus.RUNNING` starts a timer
@@ -234,7 +237,7 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
         if self.status == CommandStatus.RUNNING and self.timeout is not None:
             self.loop.call_later(self.timeout, self.finish_command, CommandStatus.DONE)
         elif self.status.is_done:
-            self.finish_command(self.status)
+            self.finish_command()
         else:
             return
 
