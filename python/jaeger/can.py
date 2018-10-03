@@ -7,9 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 16:46:14
+# @Last modified time: 2018-10-02 17:45:04
 
 import asyncio
+import collections
 import pprint
 
 import can
@@ -107,7 +108,9 @@ class JaegerCAN(object):
     def __init__(self, *args, loop=None, **kwargs):
 
         self.command_queue = asyncio.Queue(maxsize=10)
-        self.running_commands = {}
+
+        #: Commands currently running ordered positioner_id (or zero for broadcast).
+        self.running_commands = collections.defaultdict(dict)
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
 
@@ -116,19 +119,6 @@ class JaegerCAN(object):
         log.debug('started JaegerReaderCallback listener')
 
         self._queue_process_task = self.loop.create_task(self._process_queue())
-        # self._running_commands_task = self.loop.create_task(self._watch_running_commands())
-
-    async def _watch_running_commands(self, sleep_time=1):
-        """Checks if commands are done and removes them from the list."""
-
-        while True:
-            to_drop = []
-            for command_id in self.running_commands:
-                if self.running_commands[command_id].status.is_done:
-                    to_drop.append(command_id)
-            for command_id in to_drop:
-                self.running_commands.pop(command_id)
-            await asyncio.sleep(sleep_time)
 
     async def _process_queue(self):
         """Processes the queue of waiting commands."""
@@ -142,16 +132,17 @@ class JaegerCAN(object):
     def _process_reply(self, msg):
         """Processes replies from the bus."""
 
-        __, command_id, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
+        positioner_id, command_id, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
 
         command_id_flag = CommandID(command_id)
 
         log.debug(f'processing reply for command {command_id_flag.name}')
 
-        if command_id not in self.running_commands:
+        r_cmd = self.is_command_running(positioner_id, command_id)
+        if not r_cmd:
             raise RuntimeError(f'command {command_id_flag.name} is not running')
 
-        self.running_commands[command_id].reply_queue.put_nowait(msg)
+        r_cmd.reply_queue.put_nowait(msg)
 
     async def send_command(self, command, block=None):
         """Sends multiple messages from a command and tracks status.
@@ -169,8 +160,7 @@ class JaegerCAN(object):
 
         log.debug(f'received command {command.command_id.name}')
 
-        if (command.command_id in self.running_commands and
-                not self.running_commands[command.command_id].status.is_done):
+        if not self._can_queue_command(command):
             raise ValueError(f'command with command_id={command.command_id} is already running.')
 
         assert command.status == CommandStatus.READY, f'command {command!s}: not ready'
@@ -185,7 +175,7 @@ class JaegerCAN(object):
             self.command_queue.put_nowait(message)
 
         command.status = CommandStatus.RUNNING
-        self.running_commands[command.command_id] = command
+        self.running_commands[command.positioner_id][command.command_id] = command
 
         block = (block or __IPYTHON__) if block is None else block
 
@@ -226,3 +216,25 @@ class JaegerCAN(object):
         pprint.pprint(config['interfaces'])
 
         return config['interfaces'].keys()
+
+    def is_command_running(self, positioner_id, command_id):
+        """Checks running commands with ``command_id`` and ``positioner_id``.
+
+        If the command is running, returns its instance.
+
+        """
+
+        for pos_id in [0, positioner_id]:
+            if pos_id in self.running_commands and command_id in self.running_commands[pos_id]:
+                cmd = self.running_commands[pos_id][command_id]
+                if cmd.status.is_done or cmd.command_id != command_id:
+                    self.running_commands[pos_id].pop(command_id)
+                else:
+                    return cmd
+
+        return False
+
+    def _can_queue_command(self, command):
+        """Checks whether we can queue the command."""
+
+        return not self.is_command_running(command.positioner_id, command.command_id)

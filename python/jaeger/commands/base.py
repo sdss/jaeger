@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 16:46:31
+# @Last modified time: 2018-10-02 17:47:28
 
 import asyncio
 import uuid
@@ -214,8 +214,10 @@ class Command(StatusMixIn, AsyncQueueMixIn):
             self.status = CommandStatus.DONE
             self.reply_queue_watcher.cancel()
 
-            if self.bus is not None and self.command_id in self.bus.running_commands:
-                self.bus.running_commands.pop(self.command_id)
+            if self.bus is not None:
+                r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
+                if r_command:
+                    self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
 
         log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
 

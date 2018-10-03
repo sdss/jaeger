@@ -39,6 +39,7 @@ if os.path.exists(custom_config_fn):
 
 __version__ = '0.1.0dev'
 
+
 try:
     __IPYTHON__
 except NameError:
