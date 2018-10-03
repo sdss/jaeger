@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 08:54:42
+# @Last modified time: 2018-10-03 11:14:46
 
 import asyncio
 import os
@@ -20,8 +20,7 @@ from jaeger import NAME, __version__, config, log
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
-from jaeger.utils import StatusMixIn
-from jaeger.utils.maskbits import CommandStatus, PositionerStatus, ResponseCode
+from jaeger.utils import StatusMixIn, bytes_to_int, maskbits
 
 
 try:
@@ -58,8 +57,8 @@ class Positioner(StatusMixIn):
         self.beta = beta
         self.firmware = None
 
-        super().__init__(maskbit_flags=PositionerStatus,
-                         initial_status=PositionerStatus.UNKNOWN)
+        super().__init__(maskbit_flags=maskbits.PositionerStatus,
+                         initial_status=maskbits.PositionerStatus.UNKNOWN)
 
     def reset(self):
         """Resets positioner values and statuses."""
@@ -67,11 +66,20 @@ class Positioner(StatusMixIn):
         self.position = None
         self.alpha = None
         self.beta = None
-        self.status = PositionerStatus.UNKNOWN
+        self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
 
+    def is_bootloader(self):
+        """Returns True if we are in bootloader mode."""
+
+        if self.firmware is None:
+            return None
+
+        return self.firmware.split('.')[1] == '80'
+
     def __repr__(self):
-        return f'<Positioner (id={self.positioner_id}, status={self.status.name!r})>'
+        status_names = '|'.join([status.name for status in self.status.active_bits])
+        return f'<Positioner (id={self.positioner_id}, status={status_names!r})>'
 
 
 class FPS(Actor, asyncio.Future):
@@ -215,56 +223,67 @@ class FPS(Actor, asyncio.Future):
         for positioner in self.positioners.values():
             positioner.reset()
 
-        get_id_command = self.send_command(CommandID.GET_ID,
-                                           positioner_id=0,
-                                           block=False)
+        get_status_command = self.send_command(CommandID.GET_STATUS,
+                                               positioner_id=0,
+                                               block=False)
+        get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
+                                                 positioner_id=0,
+                                                 block=False)
 
-        await get_id_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
+        await asyncio.gather(get_status_command, get_firmware_command)
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it. Checks how many positioner
         # did not reply.
         found_positioners = []
-        for reply in get_id_command.replies:
+        for status_reply in get_status_command.replies:
 
-            positioner_id = reply.positioner_id
-            command_id = reply.command_id
+            positioner_id = status_reply.positioner_id
+            command_id = status_reply.command_id
             command_name = command_id.name
-            found_positioners.append(positioner_id)
+            response_code = status_reply.response_code
 
             positioner = self.positioners[positioner_id]
 
+            firmware_reply = get_firmware_command.get_reply_for_positioner(positioner_id)
+
+            if firmware_reply is None:
+                log.warning(f'did not receive a reply for '
+                            f'{get_firmware_command.command_id.name} for '
+                            f'{positioner_id}. Skipping positioner.', JaegerUserWarning)
+                continue
+
+            positioner.firmware = '.'.join(str(byt) for byt in firmware_reply.data[1:])
+
+            status_int = int(bytes_to_int(status_reply.data))
+
+            if positioner.is_bootloader():
+                status = maskbits.PositionerBootloaderStatus(status_int)
+            else:
+                status = maskbits.PositionerStatus(status_int)
+
             if positioner_id in self.positioners:
-                if reply.response_code == ResponseCode.COMMAND_ACCEPTED:
-                    log.debug(f'positioner {positioner_id} status set to OK')
-                    positioner.status = PositionerStatus.OK
+                if response_code == maskbits.ResponseCode.COMMAND_ACCEPTED:
+                    log.debug(f'positioner {positioner_id} initialised')
+                    positioner.status = status
                 else:
                     log.warning(f'positioner {positioner_id} responded to '
                                 f'{command_name} with response code '
-                                f'{reply.response_code.name!r}',
+                                f'{response_code.name!r}',
                                 JaegerUserWarning)
             else:
                 log.warning(f'{command_name} reported '
                             f'positioner_id={positioner_id} '
                             f'which was not in the layout. Skipping it.',
                             JaegerUserWarning)
-                self.positioners[positioner_id] = Positioner(positioner_id)
-                positioner.status = PositionerStatus.OK
+                continue
+
+            found_positioners.append(positioner_id)
 
         n_unknown = len(self.positioners) - len(found_positioners)
         if n_unknown > 0:
             log.warning(f'{n_unknown} positioners did not respond to '
                         f'{command_name!r}', JaegerUserWarning)
-
-        log.debug('retrieving firmware version')
-        get_firmaware_command = self.send_command(
-            CommandID.GET_FIRMWARE_VERSION, positioner_id=0, block=False)
-        await get_firmaware_command.wait_for_status(CommandStatus.DONE,
-                                                    loop=self.loop)
-
-        for reply in get_firmaware_command.replies:
-            firmware = '.'.join(str(byt) for byt in reply.data[1:])
-            self.positioners[reply.positioner_id].firmware = firmware
 
         self.set_result(True)
 
