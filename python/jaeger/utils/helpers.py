@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-01 18:12:50
+# @Last modified time: 2018-10-02 16:17:16
 
 import asyncio
 
@@ -167,6 +167,7 @@ class StatusMixIn(object):
 
         while self.status != value:
             await self.watcher.wait()
-            self.watcher.clear()
+            if self.watcher is not None:
+                self.watcher.clear()
 
         self.watcher = None
