@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 20:40:52
+# @Last modified time: 2018-10-02 22:05:37
 
 import asyncio
 import uuid
@@ -116,7 +116,7 @@ class Reply(object):
                 f'response_code={self.response_code.name!r})>')
 
 
-class Command(StatusMixIn, AsyncQueueMixIn):
+class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
@@ -179,6 +179,9 @@ class Command(StatusMixIn, AsyncQueueMixIn):
                                  get_callback=self.process_reply,
                                  loop=self.loop)
 
+        asyncio.Future.__init__(self, loop=self.loop)
+        self.add_done_callback(self.finish_command)
+
     def __repr__(self):
         return (f'<Command {self.command_id.name} '
                 f'(positioner_id={self.positioner_id}, '
@@ -202,6 +205,22 @@ class Command(StatusMixIn, AsyncQueueMixIn):
             self.status = CommandStatus.FAILED
             return
 
+    def finish_command(self, status=CommandID.DONE):
+        """Cancels the queue watcher and removes the running command."""
+
+        if self.done():
+            return
+
+        self.status = status
+        self.set_result(status)
+
+        self.reply_queue_watcher.cancel()
+
+        if self.bus is not None:
+            r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
+            if r_command:
+                self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
+
     def status_callback(self, cmd):
         """Callback for change status.
 
@@ -210,25 +229,12 @@ class Command(StatusMixIn, AsyncQueueMixIn):
 
         """
 
-        def mark_done(done_status):
-            """Cancels the queue watcher and removes the running command."""
-
-            if done_status is not None:
-                self.status = done_status
-
-            self.reply_queue_watcher.cancel()
-
-            if self.bus is not None:
-                r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
-                if r_command:
-                    self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
-
         log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING and self.timeout is not None:
-            self.loop.call_at(self.loop.time() + self.timeout, mark_done, CommandStatus.DONE)
+            self.loop.call_later(self.timeout, self.finish_command, CommandStatus.DONE)
         elif self.status.is_done:
-            mark_done(None)
+            self.finish_command(self.status)
         else:
             return
 
