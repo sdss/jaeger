@@ -16,7 +16,7 @@ import astropy.table
 from asyncioActor.actor import Actor
 from jaeger import NAME, __version__, log
 from jaeger.can import JaegerCAN
-from jaeger.commands import CommandID, GetID
+from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, PositionerStatus
@@ -167,8 +167,9 @@ class FPS(Actor):
             for positioner in self.positioners.values():
                 positioner.reset()
 
-            get_id_command = GetID(positioner_id=0, loop=self.loop, bus=self.bus)
-            get_id_command.send()
+            get_id_command = self.send_command(CommandID.GET_ID,
+                                               positioner_id=0,
+                                               block=False)
 
             await get_id_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
 
