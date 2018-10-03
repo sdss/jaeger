@@ -101,6 +101,10 @@ class FPS(Actor):
             The positioner ID to command, or zero for broadcast.
         data : bytearray
             The bytes to send.
+        block : `bool`
+            Whether to `await` for the command to be done before returning. If
+            ``block=None``, will block only if the code is being run inside
+            iPython.
 
         """
 
@@ -111,7 +115,7 @@ class FPS(Actor):
                                bus=self.bus, loop=self.loop,
                                data=data)
 
-        command.send()
+        command.send(block=block)
 
         return command
 
