@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 19:02:43
+# @Last modified time: 2018-10-02 20:05:36
 
 import asyncio
 
@@ -19,7 +19,7 @@ from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import StatusMixIn
-from jaeger.utils.maskbits import CommandStatus, PositionerStatus
+from jaeger.utils.maskbits import CommandStatus, PositionerStatus, ResponseCode
 
 
 __ALL__ = ['FPS', 'Positioner']
@@ -180,6 +180,8 @@ class FPS(Actor, asyncio.Future):
             for positioner in self.positioners.values():
                 positioner.reset()
 
+            # TODO: instead of GetID use GetStatus and get both id and status at the same time.
+
             get_id_command = self.send_command(CommandID.GET_ID,
                                                positioner_id=0,
                                                block=False)
@@ -193,43 +195,48 @@ class FPS(Actor, asyncio.Future):
             for reply in get_id_command.replies:
 
                 positioner_id = reply.positioner_id
+                command_id = reply.command_id
+                command_name = command_id.name
                 found_positioners.append(positioner_id)
 
+                positioner = self.positioners[positioner_id]
+
                 if positioner_id in self.positioners:
-                    if reply.response_code == reply.response_code.COMMAND_ACCEPTED:
-                        log.debug(f'positioner {positioner_id} status set to '
-                                  f'{PositionerStatus.OK.name!r}')
-                        self.positioners[positioner_id].status = PositionerStatus.OK
+                    if reply.response_code == ResponseCode.COMMAND_ACCEPTED:
+                        log.debug(f'positioner {positioner_id} status set to OK')
+                        positioner.status = PositionerStatus.OK
                     else:
                         log.warning(f'positioner {positioner_id} responded to '
-                                    f'{get_id_command.command_id} with response code '
-                                    f'{reply.response_code.name!r}', JaegerUserWarning)
-                        log.debug(f'positioner {positioner_id} status set to '
-                                  f'{PositionerStatus.UNKNOWN.name!r}')
-                        self.positioners[positioner_id].status = PositionerStatus.UNKNOWN
+                                    f'{command_name} with response code '
+                                    f'{reply.response_code.name!r}',
+                                    JaegerUserWarning)
+                        log.debug(f'positioner {positioner_id} status '
+                                  'set to UNKNOWN')
+                        positioner.status = PositionerStatus.UNKNOWN
                 else:
-                    log.warning(f'{get_id_command.command_id} reported '
-                                f'positioner_id={positioner_id} which was '
-                                f'not in the list. Adding it.', JaegerUserWarning)
+                    log.warning(f'{command_name} reported '
+                                f'positioner_id={positioner_id} '
+                                f'which was not in the layout. Skipping it.',
+                                JaegerUserWarning)
                     self.positioners[positioner_id] = Positioner(positioner_id)
-                    self.positioners[positioner_id].status = PositionerStatus.OK
+                    positioner.status = PositionerStatus.OK
 
             n_unknown = len(self.positioners) - len(found_positioners)
             if n_unknown > 0:
                 log.warning(f'{n_unknown} positioners did not respond to '
-                            f'{get_id_command.command_id.name!r}', JaegerUserWarning)
+                            f'{command_name!r}', JaegerUserWarning)
 
         log.debug('retrieving firmware version')
-        get_firmaware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
-                                                  positioner_id=0,
-                                                  block=False)
-        await get_firmaware_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
+        get_firmaware_command = self.send_command(
+            CommandID.GET_FIRMWARE_VERSION, positioner_id=0, block=False)
+        await get_firmaware_command.wait_for_status(CommandStatus.DONE,
+                                                    loop=self.loop)
 
         for reply in get_firmaware_command.replies:
             firmware = '.'.join(str(byt) for byt in reply.data[1:])
             self.positioners[reply.positioner_id].firmware = firmware
 
-        self.set_result('initialisation done')
+        self.set_result(True)
 
     def start_actor(self):
         """Initialises the actor."""
