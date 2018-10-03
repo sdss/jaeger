@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 17:47:28
+# @Last modified time: 2018-10-02 18:39:40
 
 import asyncio
 import uuid
@@ -272,10 +272,11 @@ class Command(StatusMixIn, AsyncQueueMixIn):
                     'Making command ready again.')
                 self.status = CommandStatus.READY
 
+        coro = bus.send_command(self, block=block)
         if not self.loop.is_running():
-            self.loop.run_until_complete(bus.send_command(self, block=block))
+            self.loop.run_until_complete(coro)
         else:
-            self.loop.create_task(bus.send_command(self, block=block))
+            self.loop.create_task(coro)
 
 
 class Abort(Command):
