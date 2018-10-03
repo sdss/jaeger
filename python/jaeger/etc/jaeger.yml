@@ -13,7 +13,7 @@ interfaces:
         bitrate: 1000000
 
 fps:
-    default_layout: etc/fps_RTConfig.txt
+    default_layout: 'central_park'
 
 actor:
     port: 19990

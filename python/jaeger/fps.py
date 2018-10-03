@@ -7,19 +7,27 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 20:36:30
+# @Last modified time: 2018-10-03 08:54:42
 
 import asyncio
+import os
+import pathlib
 
 import astropy.table
 
 from asyncioActor.actor import Actor
-from jaeger import NAME, __version__, log
+from jaeger import NAME, __version__, config, log
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, PositionerStatus, ResponseCode
+
+
+try:
+    from sdssdb.peewee.sdss5db import targetdb
+except ImportError:
+    targetdb = False
 
 
 __ALL__ = ['FPS', 'Positioner']
@@ -149,8 +157,9 @@ class FPS(Actor, asyncio.Future):
         Parameters
         ----------
         layout : `str` or `pathlib.Path`
-            Path to a layout file. If `None`, the information for the currently
-            connected positioner will be retrieved from calls to the bus.
+            Either the path to a layout file or a string with the layout name
+            to be retrieved from the database. If ``layout=None``, retrieves
+            the default layout as defined in the config from the DB.
         check_positioners : bool
             If ``True`` and ``layout`` is a file, the CAN interface will be
             used to confirm that each positioner is connected and to fill out
@@ -158,7 +167,14 @@ class FPS(Actor, asyncio.Future):
 
         """
 
-        if layout is not None:
+        if layout is False:
+            return
+
+        layout = layout or config['fps']['default_layout']
+
+        if isinstance(layout, pathlib.Path) or os.path.exists(layout):
+
+            log.info(f'reading layout from file {layout!s}')
 
             data = astropy.table.Table.read(layout, format='ascii.no_header',
                                             names=['row', 'pos', 'x', 'y', 'type'])
@@ -173,53 +189,72 @@ class FPS(Actor, asyncio.Future):
 
             log.debug(f'loaded positions for {pos_id-1} positioners')
 
-            if not check_positioners:
-                return
+        else:
 
-            # Resets all positioner
-            for positioner in self.positioners.values():
-                positioner.reset()
+            log.info(f'reading profile {layout} from database')
 
-            get_id_command = self.send_command(CommandID.GET_ID,
-                                               positioner_id=0,
-                                               block=False)
+            if not targetdb.database.connected:
+                targetdb.database.connect()
+            assert targetdb.database.connected, 'database is not connected.'
 
-            await get_id_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
+            positioners_db = targetdb.Actuator.select().join(
+                targetdb.FPSLayout).switch(targetdb.Actuator).join(
+                    targetdb.ActuatorType).filter(
+                        targetdb.FPSLayout.label == 'central_park',
+                        targetdb.ActuatorType.label == 'Robot')
 
-            # Loops over each reply and set the positioner status to OK. If the
-            # positioner was not in the list, adds it. Checks how many positioner
-            # did not reply.
-            found_positioners = []
-            for reply in get_id_command.replies:
+            for pos in positioners_db:
+                self.add_positioner(Positioner(pos.id, position=(pos.xcen, pos.ycen)))
 
-                positioner_id = reply.positioner_id
-                command_id = reply.command_id
-                command_name = command_id.name
-                found_positioners.append(positioner_id)
+            log.debug(f'loaded positions for {positioners_db.count()} positioners')
 
-                positioner = self.positioners[positioner_id]
+        if not check_positioners:
+            return
 
-                if positioner_id in self.positioners:
-                    if reply.response_code == ResponseCode.COMMAND_ACCEPTED:
-                        log.debug(f'positioner {positioner_id} status set to OK')
-                        positioner.status = PositionerStatus.OK
-                    else:
-                        log.warning(f'positioner {positioner_id} responded to '
-                                    f'{command_name} with response code '
-                                    f'{reply.response_code.name!r}',
-                                    JaegerUserWarning)
-                else:
-                    log.warning(f'{command_name} reported '
-                                f'positioner_id={positioner_id} '
-                                f'which was not in the layout. Skipping it.',
-                                JaegerUserWarning)
-                    self.positioners[positioner_id] = Positioner(positioner_id)
+        # Resets all positioner
+        for positioner in self.positioners.values():
+            positioner.reset()
+
+        get_id_command = self.send_command(CommandID.GET_ID,
+                                           positioner_id=0,
+                                           block=False)
+
+        await get_id_command.wait_for_status(CommandStatus.DONE, loop=self.loop)
+
+        # Loops over each reply and set the positioner status to OK. If the
+        # positioner was not in the list, adds it. Checks how many positioner
+        # did not reply.
+        found_positioners = []
+        for reply in get_id_command.replies:
+
+            positioner_id = reply.positioner_id
+            command_id = reply.command_id
+            command_name = command_id.name
+            found_positioners.append(positioner_id)
+
+            positioner = self.positioners[positioner_id]
+
+            if positioner_id in self.positioners:
+                if reply.response_code == ResponseCode.COMMAND_ACCEPTED:
+                    log.debug(f'positioner {positioner_id} status set to OK')
                     positioner.status = PositionerStatus.OK
+                else:
+                    log.warning(f'positioner {positioner_id} responded to '
+                                f'{command_name} with response code '
+                                f'{reply.response_code.name!r}',
+                                JaegerUserWarning)
+            else:
+                log.warning(f'{command_name} reported '
+                            f'positioner_id={positioner_id} '
+                            f'which was not in the layout. Skipping it.',
+                            JaegerUserWarning)
+                self.positioners[positioner_id] = Positioner(positioner_id)
+                positioner.status = PositionerStatus.OK
 
-            n_unknown = len(self.positioners) - len(found_positioners)
-            if n_unknown > 0:
-                log.warning(f'{n_unknown} positioners did not respond to '
-                            f'{command_name!r}', JaegerUserWarning)
+        n_unknown = len(self.positioners) - len(found_positioners)
+        if n_unknown > 0:
+            log.warning(f'{n_unknown} positioners did not respond to '
+                        f'{command_name!r}', JaegerUserWarning)
 
         log.debug('retrieving firmware version')
         get_firmaware_command = self.send_command(
