@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 20:20:09
+# @Last modified time: 2018-10-02 20:36:30
 
 import asyncio
 
@@ -208,9 +208,6 @@ class FPS(Actor, asyncio.Future):
                                     f'{command_name} with response code '
                                     f'{reply.response_code.name!r}',
                                     JaegerUserWarning)
-                        log.debug(f'positioner {positioner_id} status '
-                                  'set to UNKNOWN')
-                        positioner.status = PositionerStatus.UNKNOWN
                 else:
                     log.warning(f'{command_name} reported '
                                 f'positioner_id={positioner_id} '
