@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import asyncio
 import logging
+from functools import update_wrapper
 
 import click
 
@@ -20,36 +21,57 @@ from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
 
 
+def cli_coro(f):
+    """Decorator function that allows defining coroutines with click."""
+
+    f = asyncio.coroutine(f)
+
+    def wrapper(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(f(*args, **kwargs))
+
+    return update_wrapper(wrapper, f)
+
+
 @click.group()
-@click.option('-a', '--actor', is_flag=True, help='run as actor')
 @click.option('-p', '--profile', type=str, help='the bus interface profile')
+@click.option('-l', '--layout', type=str, help='the FPS layout')
 @click.option('-v', '--verbose', is_flag=True, help='debug mode')
 @click.pass_context
-def jaeger(ctx, actor=False, profile=None, verbose=False):
+@cli_coro
+def jaeger(ctx, layout=None, profile=None, verbose=False):
 
     if verbose:
         log.set_level(logging.DEBUG)
 
-    ctx.obj['profile'] = profile
-
-    if actor:
-        fps_actor = FPS(profile=profile)
-        fps_actor.start_actor()
-
-        fps_actor.loop.run_forever()
+    ctx.obj = {}
+    ctx.obj['can_profile'] = profile
+    ctx.obj['layout'] = layout
 
 
-@jaeger.command()
-@click.argument('firmware-file', type=click.Path(exists=True))
+@jaeger.group()
 @click.pass_context
-def bootloader(ctx, firmware_file):
+@cli_coro
+def bootloader(ctx):
+    pass
 
-    profile = ctx.obj['profile']
-    fps = FPS(profile=profile)
 
-    load_firmware(fps, firmware_file)
+@bootloader.command(name='upgrade-firmware')
+@click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
+@click.option('-f', '--force', is_flag=True, help='forces skipping of invalid positioners')
+@click.option('-s', '--positioners', type=str, help='comma-separated positioners to upgrade')
+@click.pass_context
+@cli_coro
+def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
+
+    if positioners is not None:
+        positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
+
+    fps = FPS(**ctx.obj)
+    yield from fps.initialise()
+
+    yield from load_firmware(fps, firmware_file, positioners=positioners, force=force)
 
 
 if __name__ == '__main__':
-
-    jaeger(obj={})
+    asyncio.run(jaeger(obj={}))
