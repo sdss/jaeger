@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 22:02:07
+# @Last modified time: 2018-10-03 22:11:56
 
 import asyncio
 import uuid
@@ -128,6 +128,11 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
 
     `.Command` subclasses from `.StatusMixIn` and `.status_callback` gets
     called when the status changes.
+
+    `.Command` is a `~asyncio.Future` and must be awaited. The
+    `~asyncio.Future` is done when `~.Command.finish_command` is called,
+    which happens when the status is marked done or cancelled or when the
+    command timeouts.
 
     Parameters
     ----------
