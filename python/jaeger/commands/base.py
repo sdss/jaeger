@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 11:25:07
+# @Last modified time: 2018-10-03 16:21:26
 
 import asyncio
 import uuid
@@ -234,8 +234,13 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
 
         log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
 
-        if self.status == CommandStatus.RUNNING and self.timeout is not None:
-            self.loop.call_later(self.timeout, self.finish_command, CommandStatus.DONE)
+        if self.status == CommandStatus.RUNNING:
+            if self.timeout is None:
+                pass
+            elif self.timeout == 0:
+                self.finish_command(CommandStatus.DONE)
+            else:
+                self.loop.call_later(self.timeout, self.finish_command, CommandStatus.DONE)
         elif self.status.is_done:
             self.finish_command()
         else:
