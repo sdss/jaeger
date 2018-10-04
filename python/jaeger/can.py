@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 17:45:04
+# @Last modified time: 2018-10-03 16:40:24
 
 import asyncio
 import collections
@@ -140,7 +140,8 @@ class JaegerCAN(object):
 
         r_cmd = self.is_command_running(positioner_id, command_id)
         if not r_cmd:
-            raise RuntimeError(f'command {command_id_flag.name} is not running')
+            return
+            # raise RuntimeError(f'command {command_id_flag.name} is not running')
 
         r_cmd.reply_queue.put_nowait(msg)
 
