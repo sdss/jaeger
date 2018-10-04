@@ -7,10 +7,13 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 10:36:32
+# @Last modified time: 2018-10-03 22:06:31
 
 
 from jaeger.commands import Command, CommandID
+
+
+__ALLå__ = ['GetID', 'GetStatus']
 
 
 class GetID(Command):

@@ -7,14 +7,15 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 18:14:43
+# @Last modified time: 2018-10-03 22:01:59
 
 
 from jaeger.commands import Command, CommandID
 from jaeger.utils import int_to_bytes
 
 
-__ALL__ = ['InitialiseDatums']
+__ALL__ = ['InitialiseDatums', 'StartTrajectory', 'GotoAbsolutePosition',
+           'SetSpeed']
 
 
 class InitialiseDatums(Command):

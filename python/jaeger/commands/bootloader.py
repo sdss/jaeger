@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 17:05:38
+# @Last modified time: 2018-10-03 22:02:30
 
 import asyncio
 import os
@@ -20,7 +20,8 @@ from jaeger.utils import int_to_bytes
 from jaeger.utils.maskbits import BootloaderStatus
 
 
-__ALL__ = ['load_firmware']
+__ALL__ = ['load_firmware', 'StartFirmwareUpgrade', 'GetFirmwareVersion',
+           'SendFirmwareData']
 
 
 async def load_firmware(fps, firmware_file, positioners=None, force=False):

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 16:21:26
+# @Last modified time: 2018-10-03 22:02:07
 
 import asyncio
 import uuid
@@ -23,7 +23,7 @@ from jaeger.utils.maskbits import CommandStatus
 from . import CommandID
 
 
-__ALL__ = ['Message', 'Command']
+__ALL__ = ['Message', 'Command', 'Abort']
 
 
 class Message(can.Message):
