@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-18 20:34:28
+# @Last modified time: 2018-10-03 18:15:08
 
 # flake8: noqa
 # isort:skip_file
@@ -22,6 +22,10 @@ class CommandID(enum.IntEnum):
     GET_ID = 1
     GET_FIRMWARE_VERSION = 2
     GET_STATUS = 3
+    START_TRAJECTORY = 14
+    INITIALIZE_DATUMS = 20
+    GO_TO_ABSOLUTE_POSITION = 30
+    SET_SPEED = 40
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
 
@@ -52,6 +56,7 @@ CommandID.__new__ = CommandID__new__
 
 from .base import *
 from .bootloader import *
+from .goto import *
 from .status import *
 
 
