@@ -258,7 +258,11 @@ class FPS(Actor):
             status_int = int(bytes_to_int(status_reply.data))
 
             if positioner.is_bootloader():
-                status = maskbits.PositionerBootloaderStatus(status_int)
+                status = maskbits.BootloaderStatus(status_int)
+                # Need to change the default maskbit flag and initial value
+                # to BootloaderStatus and BootloaderStatus.UNKNOWN
+                positioner.flags = maskbits.BootloaderStatus
+                positioner.status = maskbits.BootloaderStatus.UNKNOWN
             else:
                 status = maskbits.PositionerStatus(status_int)
 

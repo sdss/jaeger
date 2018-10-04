@@ -7,13 +7,13 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-02 20:31:02
+# @Last modified time: 2018-10-03 15:35:37
 
 import enum
 
 
-__ALL__ = ['Maskbit', 'BootloaderStatus', 'CommandStatus' 'ResponseCode',
-           'RobotStatus']
+__ALL__ = ['Maskbit', 'PositionerStatus', 'CommandStatus' 'ResponseCode',
+           'RobotStatus', 'BootloaderStatus']
 
 
 class Maskbit(enum.IntFlag):
@@ -24,18 +24,6 @@ class Maskbit(enum.IntFlag):
         """Returns a list of flags that match the value."""
 
         return [bit for bit in self.__class__ if bit.value & self.value]
-
-
-class BootloaderStatus(Maskbit):
-    """Maskbit for the status of the bootloader."""
-
-    BOOTLOADER_INIT = 2**0
-    BOOTLOADER_TIMEOUT = 2**1
-    BSETTINGS_CHANGED = 2**9
-    RECEIVING_NEW_FIRMWARE = 2**16
-    NEW_FIRMWARE_RECEIVED = 2**24
-    NEW_FIRMWARE_CHECK_OK = 2**25
-    NEW_FIRMWARE_CHECK_BAD = 2**26
 
 
 class CommandStatus(Maskbit):
@@ -84,7 +72,7 @@ class PositionerStatus(Maskbit):
     UNKNOWN = 0x40000000
 
 
-class PositionerBootloaderStatus(Maskbit):
+class BootloaderStatus(Maskbit):
     """Maskbits for positioner status when in bootloader mode."""
 
     BOOTLOADER_INIT = 0x00000001
