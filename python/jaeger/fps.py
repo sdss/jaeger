@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 11:44:55
+# @Last modified time: 2018-10-03 16:47:11
 
 import asyncio
 import os
@@ -253,7 +253,7 @@ class FPS(Actor):
                             f'{positioner_id}. Skipping positioner.', JaegerUserWarning)
                 continue
 
-            positioner.firmware = '.'.join(str(byt) for byt in firmware_reply.data[1:])
+            positioner.firmware = '.'.join(format(byt, '02d') for byt in firmware_reply.data[1:])
 
             status_int = int(bytes_to_int(status_reply.data))
 
