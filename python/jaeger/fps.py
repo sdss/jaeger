@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 16:47:11
+# @Last modified time: 2018-10-03 21:58:07
 
 import asyncio
 import os
@@ -121,7 +121,8 @@ class FPS(Actor):
 
         self.positioners = {}
 
-    def send_command(self, command_id, positioner_id=0, data=[], block=None):
+    def send_command(self, command_id, positioner_id=0, data=[], block=None,
+                     **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -137,6 +138,8 @@ class FPS(Actor):
             Whether to `await` for the command to be done before returning. If
             ``block=None``, will block only if the code is being run inside
             iPython.
+        kwargs : dict
+            Extra arguments to be passed to the command.
 
         """
 
@@ -145,7 +148,7 @@ class FPS(Actor):
 
         command = CommandClass(positioner_id=positioner_id,
                                bus=self.bus, loop=self.loop,
-                               data=data)
+                               data=data, **kwargs)
 
         command.send(block=block)
 
