@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 20:59:51
+# @Last modified time: 2018-10-07 21:15:24
 
 import asyncio
 import os
@@ -166,7 +166,7 @@ class FPS(Actor):
                         targetdb.ActuatorType.label == 'Robot')
 
             for pos in positioners_db:
-                self.add_positioner(Positioner(pos.id, position=(pos.xcen, pos.ycen)))
+                self.add_positioner(Positioner(pos.id, self, position=(pos.xcen, pos.ycen)))
 
             log.debug(f'loaded positions for {positioners_db.count()} positioners')
 

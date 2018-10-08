@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 20:58:47
+# @Last modified time: 2018-10-07 21:28:50
 
 from jaeger.utils import StatusMixIn, maskbits
 
@@ -22,6 +22,8 @@ class Positioner(StatusMixIn):
     ----------
     positioner_id : int
         The ID of the positioner
+    fps : `~jaeger.fps.FPS`
+        The `~jaeger.fps.FPS` instance to which this positioner is linked to.
     position : tuple
         The :math:`(x_{\rm focal}, y_{\rm focal})` coordinates of the
         central axis of the positioner.
@@ -32,8 +34,9 @@ class Positioner(StatusMixIn):
 
     """
 
-    def __init__(self, positioner_id, position=None, alpha=None, beta=None):
+    def __init__(self, positioner_id, fps, position=None, alpha=None, beta=None):
 
+        self.fps = fps
         self.positioner_id = positioner_id
         self.position = position
         self.alpha = alpha
