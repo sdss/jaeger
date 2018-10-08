@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 21:33:19
+# @Last modified time: 2018-10-07 22:29:17
 
 import asyncio
 import os
@@ -114,6 +114,46 @@ class GetFirmwareVersion(commands.Command):
 
     command_id = commands.CommandID.GET_FIRMWARE_VERSION
     broadcastable = True
+
+    def get_firmware(self, positioner_id=None):
+        """Returns the firmware version string.
+
+        Parameters
+        ----------
+        positioner_id : int
+            The positioner for which to return the version. This parameter is
+            ignored unless the command is a broadcast. If `None` and the
+            command is a broadcast, returns a list with the firmware version of
+            all the positioners, in the order of `GetFirmwareVersion.replies`.
+
+        Returns
+        -------
+        firmware : `str` or `list`
+            A string or list of string with the firmware version(s), with the
+            format ``'XX.YY.ZZ'`` where ``YY='80'`` if the positioner is in
+            bootloader mode.
+
+        Raises
+        ------
+        ValueError
+            If no positioner with ``positioner_id`` has replied.
+
+        """
+
+        def format_version(reply):
+            return '.'.join(format(byt, '02d') for byt in reply.data[1:])
+
+        # If not a broadcast, use the positioner_id of the command
+        if self.positioner_id != 0:
+            positioner_id = self.positioner_id
+
+        if len(self.replies) == 0:
+            raise ValueError('no positioners have replied to this command.')
+
+        if positioner_id is None:
+            return [format_version(reply) for reply in self.replies]
+        else:
+            return format_version(self.get_reply_for_positioner(positioner_id))
 
 
 class StartFirmwareUpgrade(commands.Command):

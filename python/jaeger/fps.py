@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 21:15:24
+# @Last modified time: 2018-10-07 21:46:36
 
 import asyncio
 import os
@@ -201,15 +201,13 @@ class FPS(Actor):
 
             positioner = self.positioners[positioner_id]
 
-            firmware_reply = get_firmware_command.get_reply_for_positioner(positioner_id)
-
-            if firmware_reply is None:
+            try:
+                positioner.firmware = get_firmware_command.get_firmware(positioner_id)
+            except ValueError:
                 log.warning(f'did not receive a reply for '
                             f'{get_firmware_command.command_id.name} for '
                             f'{positioner_id}. Skipping positioner.', JaegerUserWarning)
                 continue
-
-            positioner.firmware = '.'.join(format(byt, '02d') for byt in firmware_reply.data[1:])
 
             status_int = int(bytes_to_int(status_reply.data))
 
