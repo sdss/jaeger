@@ -191,6 +191,9 @@ class Positioner(StatusMixIn):
         self.position_watcher = self.fps.loop.create_task(
             self._postion_watcher_periodic(delay))
 
+        await self.goto(alpha_speed=config['motor_speed'],
+                        beta_speed=config['motor_speed'])
+
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
 
