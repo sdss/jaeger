@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 16:40:24
+# @Last modified time: 2018-10-07 20:43:09
 
 import asyncio
 import collections
@@ -114,20 +114,15 @@ class JaegerCAN(object):
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
 
+        #: A `.JaegerReaderCallback` instance that calls a callback when
+        #: a new message is received from the bus.
         self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
-        self.notifiers = can.notifier.Notifier(self, [self.listener], loop=self.loop)
+
+        #: A `.can.notifier.Notifier` instance that processes messages from
+        #: the bus asynchronously.
+        self.notifier = can.notifier.Notifier(self, [self.listener], loop=self.loop)
+
         log.debug('started JaegerReaderCallback listener')
-
-        self._queue_process_task = self.loop.create_task(self._process_queue())
-
-    async def _process_queue(self):
-        """Processes the queue of waiting commands."""
-
-        while True:
-            message = await self.command_queue.get()
-            assert isinstance(message, Message)
-            log.debug(f'retrieved message {message.uuid} from queue and sent to CAN bus')
-            self.send(message)
 
     def _process_reply(self, msg):
         """Processes replies from the bus."""
@@ -136,12 +131,13 @@ class JaegerCAN(object):
 
         command_id_flag = CommandID(command_id)
 
-        log.debug(f'processing reply for command {command_id_flag.name}')
-
         r_cmd = self.is_command_running(positioner_id, command_id)
         if not r_cmd:
+            log.debug(f'({command_id_flag.name}, {positioner_id}): '
+                      'ignoring reply for non-running command.')
             return
-            # raise RuntimeError(f'command {command_id_flag.name} is not running')
+
+        log.debug(f'({command_id_flag.name}, {positioner_id}): queuing reply.')
 
         r_cmd.reply_queue.put_nowait(msg)
 
@@ -159,21 +155,19 @@ class JaegerCAN(object):
 
         """
 
-        log.debug(f'received command {command.command_id.name}')
-
+        log_header = f'({command.command_id.name}, {command.positioner_id}): '
         if not self._can_queue_command(command):
-            raise ValueError(f'command with command_id={command.command_id} is already running.')
+            raise ValueError(log_header + 'command is already running.')
 
-        assert command.status == CommandStatus.READY, f'command {command!s}: not ready'
+        assert command.status == CommandStatus.READY, log_header + 'command is not ready'
 
         for message in command.get_messages():
 
-            log.debug(f'command {command.command_id.name}: '
-                      f'putting message {message.uuid!s} with '
+            log.debug(log_header + 'sending message with '
                       f'arbitration_id={message.arbitration_id} '
-                      f'and payload {message.data!r} in the queue')
+                      f'and data={message.data!r}.')
 
-            self.command_queue.put_nowait(message)
+            self.send(message)
 
         command.status = CommandStatus.RUNNING
         self.running_commands[command.positioner_id][command.command_id] = command
@@ -181,7 +175,7 @@ class JaegerCAN(object):
         block = (block or __IPYTHON__) if block is None else block
 
         if block:
-            log.debug(f'blocking command {command.command_id.name} until done.')
+            log.debug(log_header + f'blocking command until done.')
             await command.wait_for_status(CommandStatus.DONE, loop=self.loop)
 
     @classmethod
