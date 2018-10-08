@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 12:39:05
+# @Last modified time: 2018-10-08 12:46:52
 
 import asyncio
 
@@ -172,6 +172,8 @@ class Positioner(StatusMixIn):
 
         """
 
+        log.info(f'positioner {self.positioner_id}: initialising datums')
+
         assert not self.is_bootloader(), \
             'this coroutine cannot be scheduled in bootloader mode.'
 
@@ -298,7 +300,7 @@ class Positioner(StatusMixIn):
             assert alpha is not None and beta is not None, \
                 'the position for both arms needs to be provided.'
 
-            log.info(f'positioner {self.positioner_id}: goto position'
+            log.info(f'positioner {self.positioner_id}: goto position '
                      f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
 
             goto_command = await self._goto_position(alpha, beta,
