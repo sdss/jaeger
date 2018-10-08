@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 14:44:49
+# @Last modified time: 2018-10-08 15:35:49
 
 import numpy
 
@@ -72,6 +72,19 @@ class GotoRelativePosition(GotoAbsolutePosition):
 
     command_id = CommandID.GO_TO_RELATIVE_POSITION
     broadcastable = False
+
+
+class SetActualPosition(Command):
+
+    command_id = CommandID.SET_ACTUAL_POSITION
+    broadcastable = False
+
+    def __init__(self, alpha=0.0, beta=0.0, **kwargs):
+
+        data = int_to_bytes(int(beta)) + int_to_bytes(int(alpha))
+        kwargs['data'] = data
+
+        super().__init__(**kwargs)
 
 
 class SetSpeed(Command):

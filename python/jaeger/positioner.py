@@ -207,6 +207,22 @@ class Positioner(StatusMixIn):
 
         return self.firmware.split('.')[1] == '80'
 
+    async def _set_position(self, alpha, beta):
+        """Sets the internal position of the motors."""
+
+        set_position_command = self.fps.send_command(
+            CommandID.SET_ACTUAL_POSITION,
+            positioner_id=self.positioner_id,
+            alpha=float(alpha),
+            beta=float(beta))
+
+        await set_position_command
+
+        if set_position_command.status.failed:
+            return False
+
+        return set_position_command
+
     async def _set_speed(self, alpha, beta):
         """Sets motor speeds."""
 
