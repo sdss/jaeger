@@ -7,11 +7,11 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 12:14:09
+# @Last modified time: 2018-10-08 12:39:05
 
 import asyncio
 
-from jaeger import log
+from jaeger import config, log
 from jaeger.commands import CommandID
 from jaeger.utils import StatusMixIn, bytes_to_int, maskbits
 
@@ -191,8 +191,8 @@ class Positioner(StatusMixIn):
         self.position_watcher = self.fps.loop.create_task(
             self._postion_watcher_periodic(delay))
 
-        await self.goto(alpha_speed=config['motor_speed'],
-                        beta_speed=config['motor_speed'])
+        await self._set_speed(alpha=config['motor_speed'],
+                              beta=config['motor_speed'])
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
@@ -204,9 +204,6 @@ class Positioner(StatusMixIn):
 
     async def _set_speed(self, alpha, beta):
         """Sets motor speeds."""
-
-        log.info(f'positioner {self.positioner_id}: setting speed '
-                 f'({float(alpha):.2f}, {float(beta):.2f})')
 
         speed_command = self.fps.send_command(CommandID.SET_SPEED,
                                               positioner_id=self.positioner_id,
@@ -225,9 +222,6 @@ class Positioner(StatusMixIn):
 
     async def _goto_position(self, alpha, beta, relative=False):
         """Go to a position."""
-
-        log.info(f'positioner {self.positioner_id}: goto position'
-                 f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
 
         command_id = CommandID.GO_TO_RELATIVE_POSITION \
             if relative else CommandID.GO_TO_ABSOLUTE_POSITION
@@ -292,6 +286,9 @@ class Positioner(StatusMixIn):
             assert alpha_speed is not None and beta_speed is not None, \
                 'the speed for both arms needs to be provided.'
 
+            log.info(f'positioner {self.positioner_id}: setting speed '
+                     f'({float(alpha):.2f}, {float(beta):.2f})')
+
             if not await self._set_speed(alpha_speed, beta_speed):
                 return False
 
@@ -300,6 +297,9 @@ class Positioner(StatusMixIn):
 
             assert alpha is not None and beta is not None, \
                 'the position for both arms needs to be provided.'
+
+            log.info(f'positioner {self.positioner_id}: goto position'
+                     f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
 
             goto_command = await self._goto_position(alpha, beta,
                                                      relative=relative)
@@ -313,7 +313,7 @@ class Positioner(StatusMixIn):
 
             move_time = max([alpha_time, beta_time])
 
-            log.debug(f'the move will take {move_time} seconds')
+            log.info(f'the move will take {move_time} seconds')
 
             await asyncio.sleep(move_time)
 
