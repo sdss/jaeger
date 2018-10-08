@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:58:22
+# @Last modified time: 2018-10-08 12:14:09
 
 import asyncio
 
@@ -57,7 +57,7 @@ class Positioner(StatusMixIn):
     def reset(self):
         """Resets positioner values and statuses."""
 
-        self.position = None
+        self.centre = None
         self.alpha = None
         self.beta = None
         self.status = maskbits.PositionerStatus.UNKNOWN
