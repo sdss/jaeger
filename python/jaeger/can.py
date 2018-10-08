@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:15:21
+# @Last modified time: 2018-10-08 16:06:40
 
 import asyncio
 import collections
@@ -137,7 +137,7 @@ class JaegerCAN(object):
                           'ignoring reply for non-running command.')
             return
 
-        can_log.debug(f'({command_id_flag.name}, {positioner_id}): queuing reply.')
+        can_log.debug(f'({command_id_flag.name!r}, {positioner_id}): queuing reply.')
 
         r_cmd.reply_queue.put_nowait(msg)
 
