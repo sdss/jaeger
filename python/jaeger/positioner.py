@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 01:32:26
+# @Last modified time: 2018-10-08 01:33:49
 
 import asyncio
 
@@ -270,6 +270,7 @@ class Positioner(StatusMixIn):
         Examples
         --------
         ::
+
             # Move alpha and beta at the currently set speed
             >>> await goto(alpha=100, beta=10)
 
