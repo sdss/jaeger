@@ -10,7 +10,10 @@ from ruamel.yaml import YAML
 
 # Inits the logging system. Only shell logging, and exception and warning catching.
 # File logging can be started by calling log.start_file_logger(name).
-from .core import log  # noqa
+from .core import log
+
+
+log.start_file_logger('~/.jaeger/jaeger.log')
 
 
 def merge(user, default):
@@ -52,6 +55,7 @@ else:
 # Add a logger for the CAN interface
 can_log = logging.getLogger('jaeger_can')
 can_log._set_defaults()
+can_log.start_file_logger('~/.jaeger/can.log')
 
 
 from . import extern
