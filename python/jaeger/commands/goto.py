@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 22:01:59
+# @Last modified time: 2018-10-07 21:33:49
 
 
 from jaeger.commands import Command, CommandID
@@ -23,21 +23,18 @@ class InitialiseDatums(Command):
 
     command_id = CommandID.INITIALIZE_DATUMS
     broadcastable = False
-    timeout = 2
 
 
 class StartTrajectory(Command):
 
     command_id = CommandID.START_TRAJECTORY
     broadcastable = False
-    timeout = 0
 
 
 class GotoAbsolutePosition(Command):
 
     command_id = CommandID.GO_TO_ABSOLUTE_POSITION
     broadcastable = False
-    timeout = 2
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
@@ -54,7 +51,6 @@ class SetSpeed(Command):
 
     command_id = CommandID.SET_SPEED
     broadcastable = False
-    timeout = 2
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 

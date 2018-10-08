@@ -7,13 +7,13 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 11:10:26
+# @Last modified time: 2018-10-07 21:34:05
 
 
 from jaeger.commands import Command, CommandID
 
 
-__ALLå__ = ['GetID', 'GetStatus']
+__ALL__ = ['GetID', 'GetStatus']
 
 
 class GetID(Command):
@@ -21,7 +21,6 @@ class GetID(Command):
 
     command_id = CommandID.GET_ID
     broadcastable = True
-    timeout = None
 
     def get_ids(self):
         """Returns a list of positioners that replied back."""
@@ -33,4 +32,3 @@ class GetStatus(Command):
 
     command_id = CommandID.GET_STATUS
     broadcastable = True
-    timeout = None

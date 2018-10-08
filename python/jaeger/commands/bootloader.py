@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 22:02:30
+# @Last modified time: 2018-10-07 21:33:19
 
 import asyncio
 import os
@@ -114,18 +114,15 @@ class GetFirmwareVersion(commands.Command):
 
     command_id = commands.CommandID.GET_FIRMWARE_VERSION
     broadcastable = True
-    timeout = 2
 
 
 class StartFirmwareUpgrade(commands.Command):
 
     command_id = commands.CommandID.START_FIRMWARE_UPGRADE
     broadcastable = False
-    timeout = 0
 
 
 class SendFirmwareData(commands.Command):
 
     command_id = commands.CommandID.SEND_FIRMWARE_DATA
     broadcastable = False
-    timeout = 0

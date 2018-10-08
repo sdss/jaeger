@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 21:01:49
+# @Last modified time: 2018-10-07 21:35:11
 
 import asyncio
 import logging
@@ -145,8 +145,9 @@ class Command(StatusMixIn, asyncio.Future):
     loop : event loop
         The running event loop, or uses `~asyncio.get_event_loop`.
     timeout : float
-        Time after which the command will be marked done. If `None`, uses the
-        command default value.
+        Time after which the command will be marked done. If `None` and the
+        command is not a broadcast, the command will be finished after the
+        first reply is received.
 
     """
 
@@ -154,8 +155,6 @@ class Command(StatusMixIn, asyncio.Future):
     command_id = None
     #: Whether the command can be broadcast to all robots.
     broadcastable = None
-    #: Time after which the command will be marked done.
-    timeout = None
 
     def __init__(self, positioner_id=0, bus=None, loop=None, timeout=None,
                  **kwargs):
@@ -173,7 +172,7 @@ class Command(StatusMixIn, asyncio.Future):
         #: A list of messages with the responses to this command.
         self.replies = []
 
-        self.timeout = timeout or self.timeout
+        self.timeout = timeout
 
         self._data = kwargs.pop('data', [])
 
