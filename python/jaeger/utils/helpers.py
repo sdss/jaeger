@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 00:18:31
+# @Last modified time: 2018-10-08 11:20:56
 
 import asyncio
 
@@ -15,7 +15,7 @@ import asyncio
 __ALL__ = ['AsyncQueue', 'StatusMixIn']
 
 
-class AsyncQueue(object):
+class AsyncQueue(asyncio.Queue):
     """Provides an `asyncio.Queue` object with a watcher.
 
     Parameters
@@ -30,19 +30,19 @@ class AsyncQueue(object):
 
     def __init__(self, loop=None, callback=None):
 
-        async def process_queue(loop, queue):
+        async def process_queue(loop):
             """Waits for the next item and sends it to the cb function."""
 
             while True:
-                item = await queue.get()
+                item = await self.get()
                 if callback:
                     loop.call_soon_threadsafe(callback, item)
 
-        self.queue = asyncio.Queue()
+        super().__init__()
 
         loop = loop or asyncio.get_event_loop()
 
-        self.watcher = loop.create_task(process_queue(loop, self.queue))
+        self.watcher = loop.create_task(process_queue(loop))
 
 
 class StatusMixIn(object):
