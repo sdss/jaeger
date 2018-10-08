@@ -68,6 +68,11 @@ class GotoAbsolutePosition(Command):
         return numpy.array([alpha, beta]) * TIME_STEP
 
 
+class GotoRelativePosition(GotoAbsolutePosition):
+
+    command_id = CommandID.GO_TO_RELATIVE_POSITION
+    broadcastable = False
+
 
 class SetSpeed(Command):
 
