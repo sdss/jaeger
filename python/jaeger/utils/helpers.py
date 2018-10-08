@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 20:26:28
+# @Last modified time: 2018-10-08 00:18:31
 
 import asyncio
 
@@ -16,7 +16,7 @@ __ALL__ = ['AsyncQueue', 'StatusMixIn']
 
 
 class AsyncQueue(object):
-    """Provides a `asyncio.Queue` object with a watcher.
+    """Provides an `asyncio.Queue` object with a watcher.
 
     Parameters
     ----------
