@@ -44,6 +44,10 @@ List of commands
     :exclude-members:
     :undoc-members:
 
+.. autoclass:: jaeger.commands.GetActualPosition
+    :exclude-members:
+    :undoc-members:
+
 .. autoclass:: jaeger.commands.SetSpeed
     :exclude-members:
     :undoc-members:
