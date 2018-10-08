@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:13:51
+# @Last modified time: 2018-10-08 11:22:25
 
 import asyncio
 import collections
@@ -18,8 +18,8 @@ import can.interfaces.slcan
 
 import jaeger
 import jaeger.tests.bus
-from jaeger import __IPYTHON__, config, log
-from jaeger.commands import CommandID, Message
+from jaeger import config, log
+from jaeger.commands import CommandID
 from jaeger.utils.maskbits import CommandStatus
 
 
