@@ -272,6 +272,8 @@ class MyLogger(Logger):
 
             self.log_filename = log_file_path
 
+        self.debug(f'starting file logger at {log_file_path}')
+
     def set_level(self, level):
         """Sets levels for both sh and (if initialised) fh."""
 
