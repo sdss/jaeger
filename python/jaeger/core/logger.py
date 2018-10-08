@@ -86,7 +86,8 @@ def colored_formatter(record):
 
 class MyFormatter(logging.Formatter):
 
-    base_fmt = '%(asctime)s - %(levelname)s - %(message)s [%(funcName)s @ %(filename)s]'
+    base_fmt = '%(asctime)s - %(levelname)s - %(message)s'
+    # base_fmt = '%(asctime)s - %(levelname)s - %(message)s [%(funcName)s @ %(filename)s]'
 
     ansi_escape = re.compile(r'\x1b[^m]*m')
 
@@ -127,7 +128,6 @@ class MyFormatter(logging.Formatter):
 
 
 Logger = logging.getLoggerClass()
-fmt = MyFormatter()
 
 
 class LoggerStdout(object):
@@ -266,7 +266,7 @@ class MyLogger(Logger):
             self.warning('log file {0!r} could not be opened for writing: {1}'.format(
                 log_file_path, ee), RuntimeWarning)
         else:
-            self.fh.setFormatter(fmt)
+            self.fh.setFormatter(MyFormatter())
             self.addHandler(self.fh)
             self.fh.setLevel(log_file_level)
 
