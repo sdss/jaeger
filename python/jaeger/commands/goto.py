@@ -7,11 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:32:27
+# @Last modified time: 2018-10-08 01:24:16
 
+import numpy
 
-from jaeger.commands import MOTOR_STEPS, Command, CommandID
-from jaeger.utils import int_to_bytes
+from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
+from jaeger.utils import bytes_to_int, int_to_bytes
 
 
 __ALL__ = ['InitialiseDatums', 'StartTrajectory', 'GotoAbsolutePosition',
@@ -45,6 +46,27 @@ class GotoAbsolutePosition(Command):
         kwargs['data'] = data
 
         super().__init__(**kwargs)
+
+    def get_move_time(self):
+        """Returns the time needed to move to the commanded position.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError('no positioners have replied to this command.')
+
+        data = self.replies[0].data
+
+        alpha = bytes_to_int(data[0:4])
+        beta = bytes_to_int(data[4:])
+
+        return numpy.array([alpha, beta]) * TIME_STEP
+
 
 
 class SetSpeed(Command):
