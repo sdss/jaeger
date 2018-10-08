@@ -60,9 +60,6 @@ def colored_formatter(record):
 
     levelname = record.levelname.lower()
 
-    if levelname == 'error':
-        return
-
     if levelname.lower() in colours:
         levelname_color = colours[levelname][0]
         header = color_text('[{}]: '.format(levelname.upper()),
