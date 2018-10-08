@@ -64,6 +64,7 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
 @click.pass_context
 @cli_coro
 def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
+    """Upgrades the firmaware."""
 
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
