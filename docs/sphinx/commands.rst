@@ -67,3 +67,5 @@ Bootloader commands
 .. autoclass:: jaeger.commands.SendFirmwareData
     :exclude-members:
     :undoc-members:
+
+.. autofunction:: jaeger.commands.load_firmware

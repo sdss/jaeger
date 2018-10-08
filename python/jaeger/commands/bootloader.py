@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 22:29:17
+# @Last modified time: 2018-10-08 01:50:05
 
 import asyncio
 import os
@@ -38,7 +38,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
         Binary file containing the firmware to load.
     positioners : `list` or `None`
         A list of positioner ids whose firmware to update, or `None` to update
-        all the positioners in `fps`.
+        all the positioners in ``fps``.
     force : bool
         Forces the firmware load to continue even if some positioners are not
         responding or are not in bootloader mode.
