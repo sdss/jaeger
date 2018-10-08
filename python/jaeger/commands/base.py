@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 20:41:07
+# @Last modified time: 2018-10-07 20:58:02
 
 import asyncio
 import logging
@@ -260,7 +260,7 @@ class Command(StatusMixIn, asyncio.Future):
         self._log(f'status changed status to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING:
-            if self.timeout is None:
+            if self.timeout is None or self.timeout < 0:
                 pass
             elif self.timeout == 0:
                 self.finish_command(CommandStatus.DONE)
