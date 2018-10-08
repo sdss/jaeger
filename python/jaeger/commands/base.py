@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:17:12
+# @Last modified time: 2018-10-08 11:19:49
 
 import asyncio
 import logging
@@ -19,7 +19,6 @@ from jaeger import log
 from jaeger.core import exceptions
 from jaeger.utils import AsyncQueue, StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, ResponseCode
-
 from . import CommandID
 
 
@@ -243,7 +242,7 @@ class Command(StatusMixIn, asyncio.Future):
         self.set_result(status)
 
         if not self.reply_queue.watcher.done() and not self.reply_queue.watcher.cancelled():
-            self.reply_queue.watcher.done()
+            self.reply_queue.watcher.cancel()
 
         if self.bus is not None:
             r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
