@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 01:33:49
+# @Last modified time: 2018-10-08 11:58:22
 
 import asyncio
 
@@ -75,10 +75,12 @@ class Positioner(StatusMixIn):
             await command
 
             try:
-                alpha, beta = command.get_position()
+                self.alpha, self.beta = command.get_positions()
             except ValueError:
                 log.debug(f'positioner {self.positioner_id}: '
                           'failed to receive current position.')
+
+            log.debug(f'(alpha, beta)={self.alpha, self.beta}')
 
             await asyncio.sleep(delay, loop=self.fps.loop)
 
@@ -98,7 +100,7 @@ class Positioner(StatusMixIn):
                                         positioner_id=self.positioner_id)
         await command
 
-        status_int = int(bytes_to_int(command.replies[0]))
+        status_int = int(bytes_to_int(command.replies[0].data))
 
         if self.is_bootloader():
             self.flag = maskbits.PositionerStatus
@@ -154,7 +156,7 @@ class Positioner(StatusMixIn):
             'this coroutine cannot be scheduled in bootloader mode.'
 
         try:
-            await asyncio.wait_for(status_poller(), timeout, wait_for_status)
+            await asyncio.wait_for(status_poller(wait_for_status), timeout)
         except asyncio.TimeoutError:
             return False
 
@@ -282,18 +284,18 @@ class Positioner(StatusMixIn):
         assert alpha or beta or alpha_speed or beta_speed, 'no inputs.'
 
         # Set the speed
-        if alpha_speed or beta_speed:
+        if alpha_speed is not None or beta_speed is not None:
 
-            assert alpha_speed and beta_speed, \
+            assert alpha_speed is not None and beta_speed is not None, \
                 'the speed for both arms needs to be provided.'
 
             if not await self._set_speed(alpha_speed, beta_speed):
                 return False
 
         # Go to position
-        if alpha or beta:
+        if alpha is not None or beta is not None:
 
-            assert alpha and beta, \
+            assert alpha is not None and beta is not None, \
                 'the position for both arms needs to be provided.'
 
             goto_command = await self._goto_position(alpha, beta,
@@ -306,7 +308,11 @@ class Positioner(StatusMixIn):
             # to get to the desired position.
             alpha_time, beta_time = goto_command.get_move_time()
 
-            await asyncio.sleep(max([alpha_time, beta_time]))
+            move_time = max([alpha_time, beta_time])
+
+            log.debug(f'the move will take {move_time} seconds')
+
+            await asyncio.sleep(move_time)
 
             # Blocks until we're sure both arms at at the position.
             result = await self.wait_for_status(
@@ -318,7 +324,7 @@ class Positioner(StatusMixIn):
                 log.error(f'positioner {self.positioner_id}: '
                           'failed to reach commanded position.')
 
-        log.info(f'positioner {self.positioner_id}: position reached.')
+            log.info(f'positioner {self.positioner_id}: position reached.')
 
         return True
 
