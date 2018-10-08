@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:55:09
+# @Last modified time: 2018-10-08 09:00:54
 
 import asyncio
 import os
@@ -206,7 +206,8 @@ class FPS(Actor):
             except ValueError:
                 log.warning(f'did not receive a reply for '
                             f'{get_firmware_command.command_id.name} for '
-                            f'{positioner_id}. Skipping positioner.', JaegerUserWarning)
+                            f'{positioner_id}. Skipping positioner.',
+                            JaegerUserWarning)
                 continue
 
             status_int = int(bytes_to_int(status_reply.data))

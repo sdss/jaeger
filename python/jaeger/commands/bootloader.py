@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 01:50:05
+# @Last modified time: 2018-10-08 08:39:01
 
 import asyncio
 import os
@@ -69,9 +69,11 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
                 BootloaderStatus.BOOTLOADER_INIT not in positioner.status or
                 BootloaderStatus.UNKNOWN in positioner.status):
 
-            msg = f'positioner_id={positioner_id} not in bootloader mode or state is invalid.'
+            msg = (f'positioner_id={positioner_id} not in bootloader '
+                   'mode or state is invalid.')
             if force:
-                log.warning(msg + ' Skipping because force=True.', JaegerUserWarning)
+                log.warning(msg + ' Skipping because force=True.',
+                            JaegerUserWarning)
                 continue
 
             raise JaegerError(msg)
