@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 12:15:50
+# @Last modified time: 2018-10-08 14:44:16
 
 
 import numpy
@@ -57,7 +57,7 @@ class GetActualPosition(Command):
 
         data = self.replies[0].data
 
-        alpha = bytes_to_int(data[0:4])
-        beta = bytes_to_int(data[4:])
+        beta = bytes_to_int(data[0:4])
+        alpha = bytes_to_int(data[4:])
 
         return numpy.array([alpha, beta]) / MOTOR_STEPS * 360.
