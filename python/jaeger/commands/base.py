@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 21:35:11
+# @Last modified time: 2018-10-07 23:15:20
 
 import asyncio
 import logging
@@ -285,7 +285,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         return [Message(self, positioner_id=self.positioner_id, data=self._data)]
 
-    def send(self, bus=None, wait_for_reply=True, force=False, block=None):
+    def send(self, bus=None, wait_for_reply=True, force=False):
         """Sends the command.
 
         Writes each message to the fps in turn and waits for a response.
@@ -301,10 +301,6 @@ class Command(StatusMixIn, asyncio.Future):
         force : bool
             If the command has already been finished, sending it will fail
             unless ``force=True``.
-        block : `bool`
-            Whether to `await` for the command to be done before returning. If
-            ``block=None``, will block only if the code is being run inside
-            iPython.
 
         """
 
@@ -322,12 +318,7 @@ class Command(StatusMixIn, asyncio.Future):
                           'Making command ready again.')
                 self.status = CommandStatus.READY
 
-        coro = bus.send_command(self, block=block)
-
-        if not self.loop.is_running():
-            self.loop.run_until_complete(coro)
-        else:
-            self.loop.create_task(coro)
+        bus.send_command(self)
 
     def get_reply_for_positioner(self, positioner_id):
         """Returns the reply for a given ``positioner_id``.

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 20:43:09
+# @Last modified time: 2018-10-07 23:13:51
 
 import asyncio
 import collections
@@ -141,17 +141,13 @@ class JaegerCAN(object):
 
         r_cmd.reply_queue.put_nowait(msg)
 
-    async def send_command(self, command, block=None):
+    def send_command(self, command):
         """Sends multiple messages from a command and tracks status.
 
         Parameters
         ----------
         command : `~jaeger.commands.commands.Command`
             The command to send.
-        block : `bool`
-            Whether to `await` for the command to be done before returning. If
-            ``block=None``, will block only if the code is being run inside
-            iPython.
 
         """
 
@@ -171,12 +167,6 @@ class JaegerCAN(object):
 
         command.status = CommandStatus.RUNNING
         self.running_commands[command.positioner_id][command.command_id] = command
-
-        block = (block or __IPYTHON__) if block is None else block
-
-        if block:
-            log.debug(log_header + f'blocking command until done.')
-            await command.wait_for_status(CommandStatus.DONE, loop=self.loop)
 
     @classmethod
     def from_profile(cls, profile=None, loop=None):
