@@ -28,7 +28,7 @@ class Positioner(StatusMixIn):
         The ID of the positioner
     fps : `~jaeger.fps.FPS`
         The `~jaeger.fps.FPS` instance to which this positioner is linked to.
-    position : tuple
+    centre : tuple
         The :math:`(x_{\rm focal}, y_{\rm focal})` coordinates of the
         central axis of the positioner.
     alpha : float
@@ -38,11 +38,11 @@ class Positioner(StatusMixIn):
 
     """
 
-    def __init__(self, positioner_id, fps, position=None, alpha=None, beta=None):
+    def __init__(self, positioner_id, fps, centre=None, alpha=None, beta=None):
 
         self.fps = fps
         self.positioner_id = positioner_id
-        self.position = position
+        self.centre = centre
         self.alpha = alpha
         self.beta = beta
         self.firmware = None
