@@ -7,18 +7,18 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 22:11:56
+# @Last modified time: 2018-10-07 20:41:07
 
 import asyncio
-import uuid
+import logging
 
 import can
 
 import jaeger.utils
 from jaeger import log
 from jaeger.core import exceptions
-from jaeger.utils import AsyncQueueMixIn, StatusMixIn
-from jaeger.utils.maskbits import CommandStatus
+from jaeger.utils import AsyncQueue, StatusMixIn
+from jaeger.utils.maskbits import CommandStatus, ResponseCode
 
 from . import CommandID
 
@@ -30,7 +30,7 @@ class Message(can.Message):
     """An extended `can.Message` class.
 
     Expands the `can.Message` class to handle custom arbitration IDs for
-    extended frames..
+    extended frames.
 
     Parameters
     ----------
@@ -43,16 +43,10 @@ class Message(can.Message):
     extended_id : bool
         Whether the id is an 11 bit (False) or 29 bit (True) address.
 
-    Attributes
-    ----------
-    uuid : `uuid.uuid4`
-        A unique identifier for the message based on `uuid.uuid4`.
-
     """
 
     def __init__(self, command, data=[], positioner_id=0, extended_id=True, bus=None):
 
-        self.uuid = uuid.uuid4()
         self.command = command
         self.positioner_id = positioner_id
 
@@ -116,7 +110,7 @@ class Reply(object):
                 f'response_code={self.response_code.name!r})>')
 
 
-class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
+class Command(StatusMixIn, asyncio.Future):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
@@ -133,6 +127,11 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
     `~asyncio.Future` is done when `~.Command.finish_command` is called,
     which happens when the status is marked done or cancelled or when the
     command timeouts.
+
+    Commands sent to a single positioner are marked done when a reply is
+    received from the same positioner for the given command, or when it
+    `times out <.Command.timeout>`. Broadcast commands only get marked done
+    by timing out or manually.
 
     Parameters
     ----------
@@ -191,25 +190,46 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
                 f'(positioner_id={self.positioner_id}, '
                 f'status={self.status.name!r})>')
 
+    def _log(self, msg, level=logging.DEBUG, command_id=None, positioner_id=None):
+        """Logs a message."""
+
+        command_id = command_id or self.command_id
+        command_name = command_id.name
+
+        positioner_id = positioner_id or self.positioner_id
+
+        msg = f'({command_name, self.positioner_id}): ' + msg
+
+        log.log(level, msg)
+
     def process_reply(self, reply_message):
         """Watches the reply queue."""
 
+        command_name = self.command_id.name
+
         if self.status != CommandStatus.RUNNING:
-            raise RuntimeError('received a reply but command is not running')
+            raise RuntimeError(f'({command_name, self.positioner_id}): '
+                               'received a reply but command is not running')
 
         reply = Reply(reply_message, command=self)
 
+        if self.positioner_id != 0:
+            assert reply.positioner_id == self.positioner_id, \
+                (f'({command_name, self.positioner_id}): '
+                 'received a reply from an invalid positioner.')
+
         self.replies.append(reply)
 
-        log.debug(f'command {self.command_id.name} got a response from '
-                  f'positioner {reply.positioner_id} with '
-                  f'code {reply.response_code.name!r}')
+        self._log(f'positioner replied code={reply.response_code.name!r} '
+                  f'data={reply.data}', positioner_id=reply.positioner_id)
 
-        if reply.response_code != 0:
+        if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
             self.status = CommandStatus.FAILED
-            return
+        elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
+                self.positioner_id != 0 and self.timeout is None):
+            self.finish_command(CommandStatus.DONE)
 
-    def finish_command(self, status=None):
+    def finish_command(self, status=CommandStatus.DONE):
         """Cancels the queue watcher and removes the running command."""
 
         if status:
@@ -237,7 +257,7 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
 
         """
 
-        log.debug(f'command {self.command_id.name} changed status to {self.status.name}')
+        self._log(f'status changed status to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING:
             if self.timeout is None:
@@ -247,7 +267,9 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
             else:
                 self.loop.call_later(self.timeout, self.finish_command, CommandStatus.DONE)
         elif self.status.is_done:
-            self.finish_command()
+            # Call with status=None to avoid setting the status again and
+            # retriggering the callback.
+            self.finish_command(status=None)
         else:
             return
 
@@ -290,14 +312,15 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
         if self.status.is_done:
             if force is False:
                 raise exceptions.JaegerError(
-                    f'command {self.command_id}: trying to send a done command.')
+                    f'({self.command_id.name, self.positioner_id}): '
+                    'trying to send a done command.')
             else:
-                log.info(
-                    f'command {self.command_id}: command is done but force=True. '
-                    'Making command ready again.')
+                self._log('command is done but force=True. '
+                          'Making command ready again.')
                 self.status = CommandStatus.READY
 
         coro = bus.send_command(self, block=block)
+
         if not self.loop.is_running():
             self.loop.run_until_complete(coro)
         else:
