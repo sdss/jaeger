@@ -57,14 +57,7 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
         fps.start_actor()
 
 
-@jaeger.group()
-@click.pass_context
-@cli_coro
-def bootloader(ctx):
-    pass
-
-
-@bootloader.command(name='upgrade-firmware')
+@jaeger.command(name='upgrade-firmware')
 @click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
 @click.option('-f', '--force', is_flag=True, help='forces skipping of invalid positioners')
 @click.option('-s', '--positioners', type=str, help='comma-separated positioners to upgrade')
