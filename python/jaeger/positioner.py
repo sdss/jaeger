@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:04:12
+# @Last modified time: 2018-10-08 15:21:54
 
 import asyncio
 
@@ -193,8 +193,11 @@ class Positioner(StatusMixIn):
         self.position_watcher = self.fps.loop.create_task(
             self._postion_watcher_periodic(delay))
 
-        await self._set_speed(alpha=config['motor_speed'],
-                              beta=config['motor_speed'])
+        if not await self._set_speed(alpha=config['motor_speed'],
+                                     beta=config['motor_speed']):
+            return False
+
+        return True
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
@@ -224,6 +227,13 @@ class Positioner(StatusMixIn):
 
     async def _goto_position(self, alpha, beta, relative=False):
         """Go to a position."""
+
+        PositionerStatus = maskbits.PositionerStatus
+
+        if (PositionerStatus.SYSTEM_INITIALIZATION not in self.status or
+                PositionerStatus.DATUM_INITIALIZED not in self.status):
+            log.error('positioner has not been initialised.')
+            return False
 
         command_id = CommandID.GO_TO_RELATIVE_POSITION \
             if relative else CommandID.GO_TO_ABSOLUTE_POSITION
