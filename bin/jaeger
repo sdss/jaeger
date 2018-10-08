@@ -95,7 +95,9 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
     yield from fps.initialise()
 
     positioner = fps.positioners[positioner_id]
-    yield from positioner.initialise()
+    result = yield from positioner.initialise()
+    if not result:
+        return
 
     if speed is not None:
         yield from positioner.goto(alpha_speed=speed[0], beta_speed=speed[1])
@@ -105,16 +107,15 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
 
         alpha_move = numpy.random.randint(low=alpha[0], high=alpha[1])
         beta_move = numpy.random.randint(low=beta[0], high=beta[1])
+        alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
+        beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
 
-        if speed is None:
-            alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
-            beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
-        else:
-            alpha_speed = beta_speed = None
+        result = yield from positioner.goto(alpha=alpha_move, beta=beta_move,
+                                            alpha_speed=alpha_speed,
+                                            beta_speed=beta_speed)
 
-        yield from positioner.goto(alpha=alpha_move, beta=beta_move,
-                                   alpha_speed=alpha_speed,
-                                   beta_speed=beta_speed)
+        if result is False:
+            return
 
         done_moves += 1
 
