@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:22:25
+# @Last modified time: 2018-10-08 12:35:40
 
 import asyncio
 import collections
@@ -18,7 +18,7 @@ import can.interfaces.slcan
 
 import jaeger
 import jaeger.tests.bus
-from jaeger import config, log
+from jaeger import can_log, config, log
 from jaeger.commands import CommandID
 from jaeger.utils.maskbits import CommandStatus
 
@@ -133,11 +133,11 @@ class JaegerCAN(object):
 
         r_cmd = self.is_command_running(positioner_id, command_id)
         if not r_cmd:
-            log.debug(f'({command_id_flag.name}, {positioner_id}): '
-                      'ignoring reply for non-running command.')
+            can_log.debug(f'({command_id_flag.name}, {positioner_id}): '
+                          'ignoring reply for non-running command.')
             return
 
-        log.debug(f'({command_id_flag.name}, {positioner_id}): queuing reply.')
+        can_log.debug(f'({command_id_flag.name}, {positioner_id}): queuing reply.')
 
         r_cmd.reply_queue.put_nowait(msg)
 
@@ -159,9 +159,9 @@ class JaegerCAN(object):
 
         for message in command.get_messages():
 
-            log.debug(log_header + 'sending message with '
-                      f'arbitration_id={message.arbitration_id} '
-                      f'and data={message.data!r}.')
+            can_log.debug(log_header + 'sending message with '
+                          f'arbitration_id={message.arbitration_id} '
+                          f'and data={message.data!r}.')
 
             self.send(message)
 

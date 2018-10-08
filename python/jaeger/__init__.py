@@ -1,9 +1,10 @@
 # encoding: utf-8
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+# flake8: noqa
+# isort:skip_file
 
+import logging
 import os
-import sys
 
 from ruamel.yaml import YAML
 
@@ -48,6 +49,11 @@ else:
     __IPYTHON__ = True
 
 
-from . import extern  # isort:skip
-from .can import *  # isort:skip
-from .fps import *  # isort:skip
+# Add a logger for the CAN interface
+can_log = logging.getLogger('jaeger_can')
+can_log._set_defaults()
+
+
+from . import extern
+from .can import *
+from .fps import *

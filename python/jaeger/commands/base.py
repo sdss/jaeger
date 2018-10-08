@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:34:14
+# @Last modified time: 2018-10-08 12:34:15
 
 import asyncio
 import logging
@@ -15,7 +15,7 @@ import logging
 import can
 
 import jaeger.utils
-from jaeger import log
+from jaeger import can_log
 from jaeger.core import exceptions
 from jaeger.utils import AsyncQueue, StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, ResponseCode
@@ -201,7 +201,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         msg = f'{command_name, self.positioner_id}: ' + msg
 
-        log.log(level, msg)
+        can_log.log(level, msg)
 
     def process_reply(self, reply_message):
         """Watches the reply queue."""
