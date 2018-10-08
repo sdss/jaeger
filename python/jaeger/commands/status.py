@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:33:55
+# @Last modified time: 2018-10-08 11:35:28
 
 
 import numpy
@@ -42,7 +42,7 @@ class GetActualPosition(Command):
     command_id = CommandID.GET_ACTUAL_POSTION
     broadcastable = False
 
-    def get_postions(self):
+    def get_positions(self):
         """Returns the positions of alpha and beta in degrees.
 
         Raises
