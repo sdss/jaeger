@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 09:04:29
+# @Last modified time: 2018-10-08 09:26:11
 
 import asyncio
 import os
@@ -132,6 +132,8 @@ class FPS(Actor):
             additional information such as ``alpha`` and ``beta``.
 
         """
+
+        log.info('starting FPS initialisation')
 
         layout = layout or self.layout or config['fps']['default_layout']
 
