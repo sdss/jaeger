@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 12:35:40
+# @Last modified time: 2018-10-08 15:15:21
 
 import asyncio
 import collections
@@ -151,7 +151,7 @@ class JaegerCAN(object):
 
         """
 
-        log_header = f'({command.command_id.name}, {command.positioner_id}): '
+        log_header = f'({command.command_id.name!r}, {command.positioner_id}): '
         if not self._can_queue_command(command):
             raise ValueError(log_header + 'command is already running.')
 
