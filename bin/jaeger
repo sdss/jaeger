@@ -15,6 +15,7 @@ import logging
 from functools import update_wrapper
 
 import click
+import numpy
 
 from jaeger import log
 from jaeger.commands.bootloader import load_firmware
@@ -73,6 +74,50 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
     yield from fps.initialise()
 
     yield from load_firmware(fps, firmware_file, positioners=positioners, force=force)
+
+
+@jaeger.command()
+@click.argument('positioner_id', metavar='POSITIONER', nargs=1, type=int)
+@click.option('-s', '--speed', type=float,
+              help='sets the speed. Otherwise the speed will be '
+                   'changed randomly for each move.')
+@click.option('-n', '--moves', type=int,
+              help='number of moves to perform. Otherwise runs forever.')
+@click.pass_context
+@cli_coro
+def demo(ctx, positioner_id, speed=None, moves=None):
+    """Moves a robot to random positions."""
+
+    fps = FPS(**ctx.obj)
+    yield from fps.initialise()
+
+    positioner = fps.positioners[positioner_id]
+    yield from positioner.initialise()
+
+    if speed is not None:
+        yield from positioner.goto(alpha_speed=speed, beta_speed=speed)
+
+    done_moves = 0
+    while True:
+
+        alpha = numpy.random.randint(low=0, high=330)
+        beta = numpy.random.randint(low=0, high=180)
+
+        if speed is None:
+            alpha_speed = numpy.random.randint(low=500, high=2000)
+            beta_speed = numpy.random.randint(low=500, high=2000)
+        else:
+            alpha_speed = beta_speed = None
+
+        yield from positioner.goto(alpha=alpha, beta=beta,
+                                   alpha_speed=alpha_speed,
+                                   beta_speed=beta_speed)
+
+        done_moves += 1
+
+        if moves is not None and done_moves == moves:
+            return
+
 
 
 if __name__ == '__main__':
