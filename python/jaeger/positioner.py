@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:21:54
+# @Last modified time: 2018-10-08 15:54:27
 
 import asyncio
 
@@ -185,13 +185,10 @@ class Positioner(StatusMixIn):
             await init_datum
             await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED)
 
-        # If the watcher is already running, return.
-        if self.position_watcher is not None:
-            if not self.position_watcher.done() and not self.position_watcher.cancelled():
-                return
-
-        self.position_watcher = self.fps.loop.create_task(
-            self._postion_watcher_periodic(delay))
+        if (self.position_watcher is None or self.position_watcher.done() or
+                self.position_watcher.cancelled()):
+            self.position_watcher = self.fps.loop.create_task(
+                self._postion_watcher_periodic(delay))
 
         if not await self._set_speed(alpha=config['motor_speed'],
                                      beta=config['motor_speed']):
