@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:35:49
+# @Last modified time: 2018-10-08 16:27:14
 
 import numpy
 
@@ -26,13 +26,8 @@ class InitialiseDatums(Command):
     broadcastable = False
 
 
-class StartTrajectory(Command):
-
-    command_id = CommandID.START_TRAJECTORY
-    broadcastable = False
-
-
 class GotoAbsolutePosition(Command):
+    """Moves alpha and beta to absolute positions in degrees."""
 
     command_id = CommandID.GO_TO_ABSOLUTE_POSITION
     broadcastable = False
@@ -69,12 +64,14 @@ class GotoAbsolutePosition(Command):
 
 
 class GotoRelativePosition(GotoAbsolutePosition):
+    """Moves alpha and beta a relative number of degrees."""
 
     command_id = CommandID.GO_TO_RELATIVE_POSITION
     broadcastable = False
 
 
 class SetActualPosition(Command):
+    """Sets the current position of the alpha and beta arms."""
 
     command_id = CommandID.SET_ACTUAL_POSITION
     broadcastable = False
@@ -88,6 +85,7 @@ class SetActualPosition(Command):
 
 
 class SetSpeed(Command):
+    """Sets the speeds of the alpha and beta motors."""
 
     command_id = CommandID.SET_SPEED
     broadcastable = False

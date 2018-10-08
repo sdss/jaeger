@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 14:44:16
+# @Last modified time: 2018-10-08 16:26:10
 
 
 import numpy
@@ -32,12 +32,14 @@ class GetID(Command):
 
 
 class GetStatus(Command):
+    """Gets the status bits for the positioner."""
 
     command_id = CommandID.GET_STATUS
     broadcastable = True
 
 
 class GetActualPosition(Command):
+    """Gets the current position of th alpha and beta arms."""
 
     command_id = CommandID.GET_ACTUAL_POSITION
     broadcastable = False
