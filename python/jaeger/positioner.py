@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:00:42
+# @Last modified time: 2018-10-07 23:54:55
 
 import asyncio
 
@@ -146,6 +146,35 @@ class Positioner(StatusMixIn):
             return False
 
         return True
+
+    async def initialise(self, delay=1.):
+        """Initialises the datum and starts the position watcher.
+
+        Parameters
+        ----------
+        delay : float
+            How frequently to poll for the current position.
+
+        """
+
+        assert not self.is_bootloader(), \
+            'this coroutine cannot be scheduled in bootloader mode.'
+
+        if maskbits.PositionerStatus.DATUM_INITIALIZED not in self.status:
+
+            init_datum = self.fps.send_command(CommandID.INITIALIZE_DATUMS,
+                                               positioner_id=self.positioner_id)
+
+            await init_datum
+            await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED)
+
+        # If the watcher is already running, return.
+        if self.position_watcher is not None:
+            if not self.position_watcher.done() and not self.position_watcher.cancelled():
+                return
+
+        self.position_watcher = self.fps.loop.create_task(
+            self._postion_watcher_periodic(delay))
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
