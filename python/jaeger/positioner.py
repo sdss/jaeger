@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:01:41
+# @Last modified time: 2018-10-08 15:04:12
 
 import asyncio
 
@@ -280,7 +280,9 @@ class Positioner(StatusMixIn):
 
         """
 
-        assert alpha or beta or alpha_speed or beta_speed, 'no inputs.'
+        assert any([var is not None
+                    for var in [alpha, beta, alpha_speed, beta_speed]]), \
+            'no inputs.'
 
         # Set the speed
         if alpha_speed is not None or beta_speed is not None:
