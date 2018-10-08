@@ -32,7 +32,27 @@ List of commands
     :exclude-members:
     :undoc-members:
 
+.. autoclass:: jaeger.commands.SendNewTrajectory
+    :exclude-members:
+    :undoc-members:
+
+.. autoclass:: jaeger.commands.SendTrajectoryData
+    :exclude-members:
+    :undoc-members:
+
+.. autoclass:: jaeger.commands.TrajectoryDataEnd
+    :exclude-members:
+    :undoc-members:
+
+.. autoclass:: jaeger.commands.TrajectoryTransmissionAbort
+    :exclude-members:
+    :undoc-members:
+
 .. autoclass:: jaeger.commands.StartTrajectory
+    :exclude-members:
+    :undoc-members:
+
+.. autoclass:: jaeger.commands.StopTrajectory
     :exclude-members:
     :undoc-members:
 

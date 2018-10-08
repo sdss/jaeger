@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:35:20
+# @Last modified time: 2018-10-08 16:20:59
 
 # flake8: noqa
 # isort:skip_file
@@ -29,7 +29,12 @@ class CommandID(enum.IntEnum):
     GET_ID = 1
     GET_FIRMWARE_VERSION = 2
     GET_STATUS = 3
+    SEND_NEW_TRAJECTORY = 10
+    SEND_TRAJECTORY_DATA = 11
+    TRAJECTORY_DATA_END = 12
+    TRAJECTORY_TRANSMISSION_ABORT = 13
     START_TRAJECTORY = 14
+    STOP_TRAJECTORY = 15
     INITIALIZE_DATUMS = 20
     GO_TO_ABSOLUTE_POSITION = 30
     GO_TO_RELATIVE_POSITION = 31
@@ -68,6 +73,7 @@ from .base import *
 from .bootloader import *
 from .goto import *
 from .status import *
+from .trajectory import *
 
 
 # Generate a dictionary of commands
