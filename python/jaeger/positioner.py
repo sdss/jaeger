@@ -7,9 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 21:28:50
+# @Last modified time: 2018-10-07 23:00:42
 
-from jaeger.utils import StatusMixIn, maskbits
+import asyncio
+
+from jaeger.commands import CommandID
+from jaeger.utils import StatusMixIn, bytes_to_int, maskbits
 
 
 __ALL__ = ['Positioner']
@@ -54,6 +57,71 @@ class Positioner(StatusMixIn):
         self.beta = None
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
+
+    async def get_firmware(self):
+        """Updates the firmware version."""
+
+        command = self.fps.send_command(CommandID.GET_FIRMWARE_VERSION,
+                                        positioner_id=self.positioner_id)
+        await command
+
+        self.firmware = command.get_firmware()
+
+    async def update_status(self):
+        """Updates the status of the positioner."""
+
+        command = self.fps.send_command(CommandID.GET_STATUS,
+                                        positioner_id=self.positioner_id)
+        await command
+
+        status_int = int(bytes_to_int(command.replies[0]))
+
+        if self.is_bootloader():
+            self.flag = maskbits.PositionerStatus
+        else:
+            self.flag = maskbits.BootloaderStatus
+
+        self.status = self.flag(status_int)
+
+    async def wait_for_status(self, status, delay=0.1, timeout=None):
+        """Polls the status until it reaches a certain value.
+
+        Parameters
+        ----------
+        status : `~jaeger.maskbits.PositionerStatus`
+            The status to wait for.
+        delay : float
+            How many seconds to sleep between polls to get the current status.
+        timeout : float
+            How many seconds to wait for the status to reach the desired value
+            before aborting.
+
+        Returns
+        -------
+        result : bool
+            Returns `True` if the status has been reached or `False` if the
+            timeout limit was reached.
+
+        """
+
+        async def status_poller(wait_for_status):
+            while True:
+                await self.update_status()
+                if wait_for_status in self.status:
+                    break
+                await asyncio.sleep(delay)
+
+        wait_for_status = maskbits.PositionerStatus(status)
+
+        assert not self.is_bootloader(), \
+            'this coroutine cannot be scheduled in bootloader mode.'
+
+        try:
+            await asyncio.wait_for(status_poller(), timeout, wait_for_status)
+        except asyncio.TimeoutError:
+            return False
+
+        return True
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
