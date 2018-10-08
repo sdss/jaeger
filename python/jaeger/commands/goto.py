@@ -7,10 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 21:33:49
+# @Last modified time: 2018-10-07 23:32:27
 
 
-from jaeger.commands import Command, CommandID
+from jaeger.commands import MOTOR_STEPS, Command, CommandID
 from jaeger.utils import int_to_bytes
 
 
@@ -38,8 +38,8 @@ class GotoAbsolutePosition(Command):
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
-        alpha_steps = int(alpha / 360. * 2**30)
-        beta_steps = int(beta / 360. * 2**30)
+        alpha_steps = int(alpha / 360. * MOTOR_STEPS)
+        beta_steps = int(beta / 360. * MOTOR_STEPS)
 
         data = int_to_bytes(alpha_steps) + int_to_bytes(beta_steps)
         kwargs['data'] = data

@@ -7,12 +7,16 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 18:15:08
+# @Last modified time: 2018-10-07 23:30:37
 
 # flake8: noqa
 # isort:skip_file
 
 import enum
+
+
+# Number of motor steps
+MOTOR_STEPS = 2*30
 
 
 class CommandID(enum.IntEnum):
