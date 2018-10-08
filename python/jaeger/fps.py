@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 09:26:11
+# @Last modified time: 2018-10-08 11:21:02
 
 import asyncio
 import os
@@ -101,7 +101,7 @@ class FPS(Actor):
                                bus=self.bus, loop=self.loop,
                                data=data, **kwargs)
 
-        command.send(block=block)
+        command.send()
 
         return command
 
@@ -243,7 +243,7 @@ class FPS(Actor):
         n_unknown = len(self.positioners) - len(found_positioners)
         if n_unknown > 0:
             log.warning(f'{n_unknown} positioners did not respond to '
-                        f'{command_name!r}', JaegerUserWarning)
+                        f'{status_reply.command_id.name!r}', JaegerUserWarning)
 
     def start_actor(self):
         """Initialises the actor."""
