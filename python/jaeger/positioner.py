@@ -113,7 +113,8 @@ class Positioner(StatusMixIn):
         Parameters
         ----------
         status : `~jaeger.maskbits.PositionerStatus`
-            The status to wait for.
+            The status to wait for. Can be a list in which case it will wait
+            until all the statuses in the list have been reached.
         delay : float
             How many seconds to sleep between polls to get the current status.
         timeout : float
@@ -122,20 +123,32 @@ class Positioner(StatusMixIn):
 
         Returns
         -------
-        result : bool
+        result : `bool`
             Returns `True` if the status has been reached or `False` if the
             timeout limit was reached.
 
         """
 
+        if not isinstance(status, (list, tuple)):
+            status = [status]
+
         async def status_poller(wait_for_status):
+
             while True:
                 await self.update_status()
-                if wait_for_status in self.status:
-                    break
+
+                # Check all statuses in the list
+                all_reached = True
+                for ss in wait_for_status:
+                    if ss not in self.status:
+                        all_reached = False
+
+                if all_reached:
+                    return
+
                 await asyncio.sleep(delay)
 
-        wait_for_status = maskbits.PositionerStatus(status)
+        wait_for_status = [maskbits.PositionerStatus(ss) for ss in status]
 
         assert not self.is_bootloader(), \
             'this coroutine cannot be scheduled in bootloader mode.'
