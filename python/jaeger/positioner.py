@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 13:32:53
+# @Last modified time: 2018-10-08 15:01:41
 
 import asyncio
 
@@ -289,7 +289,7 @@ class Positioner(StatusMixIn):
                 'the speed for both arms needs to be provided.'
 
             log.info(f'positioner {self.positioner_id}: setting speed '
-                     f'({float(alpha_speed):.2f}, {float(alpha_speed):.2f})')
+                     f'({float(alpha_speed):.2f}, {float(beta_speed):.2f})')
 
             if not await self._set_speed(alpha_speed, beta_speed):
                 return False

@@ -77,15 +77,18 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
 
 
 @jaeger.command()
-@click.argument('positioner_id', metavar='POSITIONER', nargs=1, type=int)
-@click.option('-s', '--speed', type=float,
-              help='sets the speed. Otherwise the speed will be '
-                   'changed randomly for each move.')
+@click.argument('positioner_id', metavar='POSITIONER', type=int)
 @click.option('-n', '--moves', type=int,
               help='number of moves to perform. Otherwise runs forever.')
+@click.option('--alpha', type=(int, int), default=(0, 360),
+              help='range of alpha positions.', show_default=True)
+@click.option('--beta', type=(int, int), default=(0, 180),
+              help='range of beta positions.', show_default=True)
+@click.option('--speed', type=(int, int), default=(500, 2000),
+              help='range of speed.', show_default=True)
 @click.pass_context
 @cli_coro
-def demo(ctx, positioner_id, speed=None, moves=None):
+def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
     """Moves a robot to random positions."""
 
     fps = FPS(**ctx.obj)
@@ -95,21 +98,21 @@ def demo(ctx, positioner_id, speed=None, moves=None):
     yield from positioner.initialise()
 
     if speed is not None:
-        yield from positioner.goto(alpha_speed=speed, beta_speed=speed)
+        yield from positioner.goto(alpha_speed=speed[0], beta_speed=speed[1])
 
     done_moves = 0
     while True:
 
-        alpha = numpy.random.randint(low=0, high=330)
-        beta = numpy.random.randint(low=0, high=180)
+        alpha_move = numpy.random.randint(low=alpha[0], high=alpha[1])
+        beta_move = numpy.random.randint(low=beta[0], high=beta[1])
 
         if speed is None:
-            alpha_speed = numpy.random.randint(low=500, high=2000)
-            beta_speed = numpy.random.randint(low=500, high=2000)
+            alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
+            beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
         else:
             alpha_speed = beta_speed = None
 
-        yield from positioner.goto(alpha=alpha, beta=beta,
+        yield from positioner.goto(alpha=alpha_move, beta=beta_move,
                                    alpha_speed=alpha_speed,
                                    beta_speed=beta_speed)
 
@@ -117,7 +120,6 @@ def demo(ctx, positioner_id, speed=None, moves=None):
 
         if moves is not None and done_moves == moves:
             return
-
 
 
 if __name__ == '__main__':
