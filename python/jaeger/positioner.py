@@ -217,10 +217,7 @@ class Positioner(StatusMixIn):
 
         await speed_command
 
-        response_code = speed_command.replies[0].response_code
-        if response_code != maskbits.ResponseCode.COMMAND_ACCEPTED:
-            log.error(f'positioner {self.positioner_id}: failed setting speed.'
-                      f' Command returned code {response_code.name}.')
+        if speed_command.status.failed:
             return False
 
         return speed_command
@@ -245,11 +242,7 @@ class Positioner(StatusMixIn):
 
         await goto_command
 
-        response_code = goto_command.replies[0].response_code
-        if response_code != maskbits.ResponseCode.COMMAND_ACCEPTED:
-            log.error(f'positioner {self.positioner_id}: '
-                      f'failed going to position. '
-                      f'Command returned code {response_code.name}.')
+        if goto_command.status.failed:
             return False
 
         return goto_command

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 12:34:15
+# @Last modified time: 2018-10-08 15:53:25
 
 import asyncio
 import logging
@@ -15,7 +15,7 @@ import logging
 import can
 
 import jaeger.utils
-from jaeger import can_log
+from jaeger import can_log, log
 from jaeger.core import exceptions
 from jaeger.utils import AsyncQueue, StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, ResponseCode
@@ -191,7 +191,8 @@ class Command(StatusMixIn, asyncio.Future):
                 f'(positioner_id={self.positioner_id}, '
                 f'status={self.status.name!r})>')
 
-    def _log(self, msg, level=logging.DEBUG, command_id=None, positioner_id=None):
+    def _log(self, msg, level=logging.DEBUG, command_id=None,
+             positioner_id=None, logs=[can_log]):
         """Logs a message."""
 
         command_id = command_id or self.command_id
@@ -201,7 +202,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         msg = f'{command_name, self.positioner_id}: ' + msg
 
-        can_log.log(level, msg)
+        for ll in logs:
+            ll.log(level, msg)
 
     def process_reply(self, reply_message):
         """Watches the reply queue."""
@@ -226,6 +228,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
             self.status = CommandStatus.FAILED
+            self._log(f'command failed with code {reply.response_code.name}.',
+                      level=logging.ERROR, logs=[can_log, log])
         elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
                 self.positioner_id != 0 and self.timeout is None):
             self.finish_command(CommandStatus.DONE)
