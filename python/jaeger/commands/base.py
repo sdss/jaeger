@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:19:49
+# @Last modified time: 2018-10-08 11:34:14
 
 import asyncio
 import logging
@@ -19,6 +19,7 @@ from jaeger import log
 from jaeger.core import exceptions
 from jaeger.utils import AsyncQueue, StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, ResponseCode
+
 from . import CommandID
 
 
@@ -198,7 +199,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         positioner_id = positioner_id or self.positioner_id
 
-        msg = f'({command_name, self.positioner_id}): ' + msg
+        msg = f'{command_name, self.positioner_id}: ' + msg
 
         log.log(level, msg)
 
