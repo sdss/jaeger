@@ -33,13 +33,14 @@ def cli_coro(f):
     return update_wrapper(wrapper, f)
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.option('-p', '--profile', type=str, help='the bus interface profile')
 @click.option('-l', '--layout', type=str, help='the FPS layout')
+@click.option('-a', '--actor', is_flag=True, help='start as an actor')
 @click.option('-v', '--verbose', is_flag=True, help='debug mode')
 @click.pass_context
 @cli_coro
-def jaeger(ctx, layout=None, profile=None, verbose=False):
+def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
 
     if verbose:
         log.set_level(logging.DEBUG)
@@ -47,6 +48,13 @@ def jaeger(ctx, layout=None, profile=None, verbose=False):
     ctx.obj = {}
     ctx.obj['can_profile'] = profile
     ctx.obj['layout'] = layout
+
+    # If we call jaeger without a subcommand and with the actor flag,
+    # start the actor.
+    if actor and ctx.invoked_subcommand is None:
+        fps = FPS(**ctx.obj)
+        yield from fps.initialise()
+        fps.start_actor()
 
 
 @jaeger.group()
