@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:35:28
+# @Last modified time: 2018-10-08 12:15:50
 
 
 import numpy
@@ -39,7 +39,7 @@ class GetStatus(Command):
 
 class GetActualPosition(Command):
 
-    command_id = CommandID.GET_ACTUAL_POSTION
+    command_id = CommandID.GET_ACTUAL_POSITION
     broadcastable = False
 
     def get_positions(self):

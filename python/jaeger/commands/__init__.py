@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:53:20
+# @Last modified time: 2018-10-08 12:15:43
 
 # flake8: noqa
 # isort:skip_file
@@ -33,7 +33,7 @@ class CommandID(enum.IntEnum):
     INITIALIZE_DATUMS = 20
     GO_TO_ABSOLUTE_POSITION = 30
     GO_TO_RELATIVE_POSITION = 31
-    GET_ACTUAL_POSTION = 32
+    GET_ACTUAL_POSITION = 32
     SET_SPEED = 40
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
