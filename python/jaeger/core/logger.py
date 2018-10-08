@@ -254,10 +254,10 @@ class MyLogger(Logger):
             if not os.path.exists(logdir):
                 os.mkdir(logdir)
 
-            if os.path.exists(log_file_path):
-                strtime = datetime.datetime.utcnow().strftime(
-                    '%Y-%m-%d_%H:%M:%S')
-                shutil.move(log_file_path, log_file_path + '.' + strtime)
+            # if os.path.exists(log_file_path):
+            #     strtime = datetime.datetime.utcnow().strftime(
+            #         '%Y-%m-%d_%H:%M:%S')
+            #     shutil.move(log_file_path, log_file_path + '.' + strtime)
 
             self.fh = TimedRotatingFileHandler(
                 str(log_file_path), when='midnight', utc=True)
