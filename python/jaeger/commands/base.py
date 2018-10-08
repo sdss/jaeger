@@ -176,13 +176,12 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
 
         self._data = kwargs.pop('data', [])
 
+        self.reply_queue = AsyncQueue(self, callback=self.process_reply,
+                                      loop=self.loop)
+
         StatusMixIn.__init__(self, maskbit_flags=CommandStatus,
                              initial_status=CommandStatus.READY,
                              callback_func=self.status_callback)
-
-        AsyncQueueMixIn.__init__(self, name='reply_queue',
-                                 get_callback=self.process_reply,
-                                 loop=self.loop)
 
         asyncio.Future.__init__(self, loop=self.loop)
         self.add_done_callback(self.finish_command)
@@ -222,7 +221,8 @@ class Command(StatusMixIn, AsyncQueueMixIn, asyncio.Future):
         self.remove_done_callback(self.finish_command)
         self.set_result(status)
 
-        self.reply_queue_watcher.cancel()
+        if not self.reply_queue.watcher.done() and not self.reply_queue.watcher.cancelled():
+            self.reply_queue.watcher.done()
 
         if self.bus is not None:
             r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
