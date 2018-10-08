@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 09:00:54
+# @Last modified time: 2018-10-08 09:04:29
 
 import asyncio
 import os
@@ -108,7 +108,8 @@ class FPS(Actor):
     def add_positioner(self, positioner, **kwargs):
         """Adds a new positioner to the list, and checks for duplicates."""
 
-        assert isinstance(positioner, Positioner), 'positioner must be a Positioner instance'
+        assert isinstance(positioner, Positioner), \
+            'positioner must be a Positioner instance'
 
         if positioner.positioner_id in self.positioners:
             raise ValueError(f'there is already a positioner in the list with '
@@ -166,7 +167,8 @@ class FPS(Actor):
                         targetdb.ActuatorType.label == 'Robot')
 
             for pos in positioners_db:
-                self.add_positioner(Positioner(pos.id, self, centre=(pos.xcen, pos.ycen)))
+                self.add_positioner(Positioner(pos.id, self,
+                                               centre=(pos.xcen, pos.ycen)))
 
             log.debug(f'loaded positions for {positioners_db.count()} positioners')
 
@@ -204,10 +206,10 @@ class FPS(Actor):
             try:
                 positioner.firmware = get_firmware_command.get_firmware(positioner_id)
             except ValueError:
-                log.warning(f'did not receive a reply for '
-                            f'{get_firmware_command.command_id.name} for '
-                            f'{positioner_id}. Skipping positioner.',
-                            JaegerUserWarning)
+                log.warning(
+                    f'({get_firmware_command.command_id.name}, {positioner_id}): '
+                    'did not receive a reply for for. Skipping positioner.',
+                    JaegerUserWarning)
                 continue
 
             status_int = int(bytes_to_int(status_reply.data))
@@ -225,14 +227,12 @@ class FPS(Actor):
                 if response_code == maskbits.ResponseCode.COMMAND_ACCEPTED:
                     positioner.status = status
                 else:
-                    log.warning(f'positioner {positioner_id} responded to '
-                                f'{command_name} with response code '
-                                f'{response_code.name!r}',
+                    log.warning(f'({command_name}, {positioner_id}): responded '
+                                f' with response code {response_code.name!r}',
                                 JaegerUserWarning)
             else:
-                log.warning(f'{command_name} reported '
-                            f'positioner_id={positioner_id} '
-                            f'which was not in the layout. Skipping it.',
+                log.warning(f'({command_name}, {positioner_id}): replied but '
+                            f'if not in the layout. Skipping it.',
                             JaegerUserWarning)
                 continue
 
