@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:54:55
+# @Last modified time: 2018-10-08 01:32:26
 
 import asyncio
 
@@ -196,6 +196,130 @@ class Positioner(StatusMixIn):
             return None
 
         return self.firmware.split('.')[1] == '80'
+
+    async def _set_speed(self, alpha, beta):
+        """Sets motor speeds."""
+
+        log.info(f'positioner {self.positioner_id}: setting speed '
+                 f'({float(alpha):.2f}, {float(beta):.2f})')
+
+        speed_command = self.fps.send_command(CommandID.SET_SPEED,
+                                              positioner_id=self.positioner_id,
+                                              alpha=float(alpha),
+                                              beta=float(beta))
+
+        await speed_command
+
+        response_code = speed_command.replies[0].response_code
+        if response_code != maskbits.ResponseCode.COMMAND_ACCEPTED:
+            log.error(f'positioner {self.positioner_id}: failed setting speed.'
+                      f' Command returned code {response_code.name}.')
+            return False
+
+        return speed_command
+
+    async def _goto_position(self, alpha, beta, relative=False):
+        """Go to a position."""
+
+        log.info(f'positioner {self.positioner_id}: goto position'
+                 f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
+
+        command_id = CommandID.GO_TO_RELATIVE_POSITION \
+            if relative else CommandID.GO_TO_ABSOLUTE_POSITION
+
+        goto_command = self.fps.send_command(command_id,
+                                             positioner_id=self.positioner_id,
+                                             alpha=float(alpha),
+                                             beta=float(beta))
+
+        await goto_command
+
+        response_code = goto_command.replies[0].response_code
+        if response_code != maskbits.ResponseCode.COMMAND_ACCEPTED:
+            log.error(f'positioner {self.positioner_id}: '
+                      f'failed going to position. '
+                      f'Command returned code {response_code.name}.')
+            return False
+
+        return goto_command
+
+    async def goto(self, alpha=None, beta=None,
+                   alpha_speed=None, beta_speed=None, relative=False):
+        """Moves positioner to a given position.
+
+        Parameters
+        ----------
+        alpha : float
+            The position where to move the alpha arm, in degrees.
+        beta : float
+            The position where to move the beta arm, in degrees.
+        alpha_speed : float
+            The speed of the alpha arm, in RPM.
+        beta_speed : float
+            The speed of the beta arm, in RPM.
+        relative : bool
+            Whether the movement is absolute or relative to the current
+            position.
+
+        Returns
+        -------
+        result : `bool`
+            `True` if both arms have reached the desired position, `False` if
+            a problem was found.
+
+        Examples
+        --------
+        ::
+            # Move alpha and beta at the currently set speed
+            >>> await goto(alpha=100, beta=10)
+
+            # Set the speed of the alpha arm
+            >>> await goto(alpha_speed=1000)
+
+        """
+
+        assert alpha or beta or alpha_speed or beta_speed, 'no inputs.'
+
+        # Set the speed
+        if alpha_speed or beta_speed:
+
+            assert alpha_speed and beta_speed, \
+                'the speed for both arms needs to be provided.'
+
+            if not await self._set_speed(alpha_speed, beta_speed):
+                return False
+
+        # Go to position
+        if alpha or beta:
+
+            assert alpha and beta, \
+                'the position for both arms needs to be provided.'
+
+            goto_command = await self._goto_position(alpha, beta,
+                                                     relative=relative)
+
+            if not goto_command:
+                return False
+
+            # Sleeps for the time the firmware believes it's going to take
+            # to get to the desired position.
+            alpha_time, beta_time = goto_command.get_move_time()
+
+            await asyncio.sleep(max([alpha_time, beta_time]))
+
+            # Blocks until we're sure both arms at at the position.
+            result = await self.wait_for_status(
+                [maskbits.PositionerStatus.ALPHA_DISPLACEMENT_COMPLETED,
+                 maskbits.PositionerStatus.BETA_DISPLACEMENT_COMPLETED],
+                timeout=3)
+
+            if result is False:
+                log.error(f'positioner {self.positioner_id}: '
+                          'failed to reach commanded position.')
+
+        log.info(f'positioner {self.positioner_id}: position reached.')
+
+        return True
 
     def __repr__(self):
         status_names = '|'.join([status.name for status in self.status.active_bits])
