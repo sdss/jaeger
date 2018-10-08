@@ -11,6 +11,7 @@
 
 import asyncio
 
+from jaeger import log
 from jaeger.commands import CommandID
 from jaeger.utils import StatusMixIn, bytes_to_int, maskbits
 
@@ -46,6 +47,10 @@ class Positioner(StatusMixIn):
         self.beta = beta
         self.firmware = None
 
+        #: A `~asyncio.Task` that polls the current position of alpha and
+        #: beta periodically.
+        self.position_watcher = None
+
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
 
@@ -57,6 +62,25 @@ class Positioner(StatusMixIn):
         self.beta = None
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
+
+        if self.position_watcher is not None:
+            self.position_watcher.cancel()
+
+    async def _postion_watcher_periodic(self, delay):
+        """Updates the position each ``delay`` seconds."""
+
+        while True:
+            command = self.fps.send_command(CommandID.GET_ACTUAL_POSTION,
+                                            positioner_id=self.positioner_id)
+            await command
+
+            try:
+                alpha, beta = command.get_position()
+            except ValueError:
+                log.debug(f'positioner {self.positioner_id}: '
+                          'failed to receive current position.')
+
+            await asyncio.sleep(delay, loop=self.fps.loop)
 
     async def get_firmware(self):
         """Updates the firmware version."""
