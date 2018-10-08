@@ -176,7 +176,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         self._data = kwargs.pop('data', [])
 
-        self.reply_queue = AsyncQueue(self, callback=self.process_reply,
+        self.reply_queue = AsyncQueue(callback=self.process_reply,
                                       loop=self.loop)
 
         StatusMixIn.__init__(self, maskbit_flags=CommandStatus,
