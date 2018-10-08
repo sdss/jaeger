@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 23:15:20
+# @Last modified time: 2018-10-07 23:17:12
 
 import asyncio
 import logging
@@ -156,7 +156,7 @@ class Command(StatusMixIn, asyncio.Future):
     #: Whether the command can be broadcast to all robots.
     broadcastable = None
 
-    def __init__(self, positioner_id=0, bus=None, loop=None, timeout=None,
+    def __init__(self, positioner_id, bus=None, loop=None, timeout=None,
                  **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'
