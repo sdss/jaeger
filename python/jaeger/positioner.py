@@ -70,7 +70,7 @@ class Positioner(StatusMixIn):
         """Updates the position each ``delay`` seconds."""
 
         while True:
-            command = self.fps.send_command(CommandID.GET_ACTUAL_POSTION,
+            command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
                                             positioner_id=self.positioner_id)
             await command
 
