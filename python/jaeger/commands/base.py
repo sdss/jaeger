@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-07 20:58:02
+# @Last modified time: 2018-10-07 21:01:49
 
 import asyncio
 import logging
@@ -51,7 +51,8 @@ class Message(can.Message):
         self.positioner_id = positioner_id
 
         if extended_id:
-            arbitration_id = jaeger.utils.get_identifier(positioner_id, int(command.command_id))
+            arbitration_id = jaeger.utils.get_identifier(positioner_id,
+                                                         int(command.command_id))
         else:
             arbitration_id = positioner_id
 
@@ -106,7 +107,8 @@ class Reply(object):
 
     def __repr__(self):
         command_name = self.command.command_id.name if self.command else 'NONE'
-        return (f'<Reply (command_id={command_name!r}, positioner_id={self.positioner_id}, '
+        return (f'<Reply (command_id={command_name!r}, '
+                f'positioner_id={self.positioner_id}, '
                 f'response_code={self.response_code.name!r})>')
 
 
@@ -265,7 +267,9 @@ class Command(StatusMixIn, asyncio.Future):
             elif self.timeout == 0:
                 self.finish_command(CommandStatus.DONE)
             else:
-                self.loop.call_later(self.timeout, self.finish_command, CommandStatus.DONE)
+                self.loop.call_later(self.timeout,
+                                     self.finish_command,
+                                     CommandStatus.DONE)
         elif self.status.is_done:
             # Call with status=None to avoid setting the status again and
             # retriggering the callback.
