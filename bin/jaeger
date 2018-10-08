@@ -84,7 +84,7 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
               help='range of alpha positions.', show_default=True)
 @click.option('--beta', type=(int, int), default=(0, 180),
               help='range of beta positions.', show_default=True)
-@click.option('--speed', type=(int, int), default=(500, 2000),
+@click.option('--speed', type=(int, int), default=(500, 1500),
               help='range of speed.', show_default=True)
 @click.pass_context
 @cli_coro
