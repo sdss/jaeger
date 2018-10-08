@@ -22,6 +22,14 @@ jaeger.fps
    :show-inheritance:
 
 
+jaeger.positioner
+-----------------
+
+.. automodule:: jaeger.positioner
+   :members:
+   :show-inheritance:
+
+
 jaeger.helpers
 --------------
 
