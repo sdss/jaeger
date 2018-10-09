@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:53:25
+# @Last modified time: 2018-10-08 21:41:14
 
 import asyncio
 import logging
@@ -228,7 +228,7 @@ class Command(StatusMixIn, asyncio.Future):
                   f'data={reply.data}', positioner_id=reply.positioner_id)
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
-            self.status = CommandStatus.FAILED
+            self.finish_command(CommandStatus.FAILED)
             self._log(f'command failed with code {reply.response_code.name}.',
                       level=logging.ERROR, logs=[can_log, log])
         elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
@@ -238,14 +238,17 @@ class Command(StatusMixIn, asyncio.Future):
     def finish_command(self, status=CommandStatus.DONE):
         """Cancels the queue watcher and removes the running command."""
 
+        if self.status.is_done:
+            if not self.done():
+                self.set_result(self.status)
+            return
+
         if status:
             self.status = status
 
-        if self.done():
-            return
-
-        self.remove_done_callback(self.finish_command)
-        self.set_result(status)
+        if not self.done():
+            self.remove_done_callback(self.finish_command)
+            self.set_result(status)
 
         if not self.reply_queue.watcher.done() and not self.reply_queue.watcher.cancelled():
             self.reply_queue.watcher.cancel()
