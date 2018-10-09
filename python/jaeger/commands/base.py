@@ -211,8 +211,9 @@ class Command(StatusMixIn, asyncio.Future):
         command_name = self.command_id.name
 
         if self.status != CommandStatus.RUNNING:
-            raise RuntimeError(f'({command_name, self.positioner_id}): '
-                               'received a reply but command is not running')
+            log.error(f'{command_name, self.positioner_id}: '
+                      'received a reply but command is not running')
+            return
 
         reply = Reply(reply_message, command=self)
 
