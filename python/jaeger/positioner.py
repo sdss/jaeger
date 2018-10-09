@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 23:47:23
+# @Last modified time: 2018-10-08 23:51:27
 
 import asyncio
 
@@ -145,6 +145,8 @@ class Positioner(StatusMixIn):
             until all the statuses in the list have been reached.
         delay : float
             How many seconds to sleep between polls to get the current status.
+            The original status polling delay is restored at the end of the
+            command.
         timeout : float
             How many seconds to wait for the status to reach the desired value
             before aborting.
@@ -156,6 +158,9 @@ class Positioner(StatusMixIn):
             timeout limit was reached.
 
         """
+
+        orig_status_delay = self._status_watcher_delay
+        self._status_watcher_delay = delay
 
         if not isinstance(status, (list, tuple)):
             status = [status]
@@ -184,8 +189,10 @@ class Positioner(StatusMixIn):
         try:
             await asyncio.wait_for(status_poller(wait_for_status), timeout)
         except asyncio.TimeoutError:
+            self._status_watcher_delay = orig_status_delay
             return False
 
+        self._status_watcher_delay = orig_status_delay
         return True
 
     async def initialise(self):
