@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 16:06:40
+# @Last modified time: 2018-10-08 18:38:51
 
 import asyncio
 import collections
@@ -158,6 +158,11 @@ class JaegerCAN(object):
         assert command.status == CommandStatus.READY, log_header + 'command is not ready'
 
         for message in command.get_messages():
+
+            if command.status.failed:
+                can_log.debug(log_header + 'not sending more messages ' +
+                              'since this command has failed.')
+                return
 
             can_log.debug(log_header + 'sending message with '
                           f'arbitration_id={message.arbitration_id} '
