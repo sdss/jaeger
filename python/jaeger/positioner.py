@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 22:12:07
+# @Last modified time: 2018-10-08 23:47:23
 
 import asyncio
 
@@ -80,10 +80,13 @@ class Positioner(StatusMixIn):
                 self.status_watcher.cancel()
             self.status_watcher = None
 
+    async def _position_watcher_periodic(self):
+        """Updates the position each ``self._position_watcher_delay``."""
 
         while True:
             command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
-                                            positioner_id=self.positioner_id)
+                                            positioner_id=self.positioner_id,
+                                            timeout=1)
             await command
 
             try:
@@ -94,7 +97,15 @@ class Positioner(StatusMixIn):
 
             log.debug(f'(alpha, beta)={self.alpha, self.beta}')
 
-            await asyncio.sleep(delay, loop=self.fps.loop)
+            await asyncio.sleep(self._position_watcher_delay,
+                                loop=self.fps.loop)
+
+    async def _status_watcher_periodic(self):
+        """Updates the status each ``self._status_watcher_delay``."""
+
+        while True:
+            await self.update_status(timeout=1)
+            await asyncio.sleep(self._status_watcher_delay, loop=self.fps.loop)
 
     async def get_firmware(self):
         """Updates the firmware version."""
@@ -177,8 +188,8 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def initialise(self, delay=1.):
-        """Initialises the datum and starts the position watcher.
+    async def initialise(self):
+        """Initialises the datum and starts the position watcher."""
 
         log.info(f'positioner {self.positioner_id}: initialising datums')
 
@@ -222,11 +233,15 @@ class Positioner(StatusMixIn):
                           'failed to stop trajectory.')
                 return False
 
-        if (self.position_watcher is None or self.position_watcher.done() or
-                self.position_watcher.cancelled()):
-            self.position_watcher = self.fps.loop.create_task(
-                self._postion_watcher_periodic(delay))
+        # Initialise position poller
+        self.position_watcher = self.fps.loop.create_task(
+            self._position_watcher_periodic())
 
+        # Initialise status poller
+        self.status_watcher = self.fps.loop.create_task(
+            self._status_watcher_periodic())
+
+        # Sets the default speed
         if not await self._set_speed(alpha=config['motor_speed'],
                                      beta=config['motor_speed']):
             return False
