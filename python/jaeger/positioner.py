@@ -397,6 +397,12 @@ class Positioner(StatusMixIn):
             log.info(f'the move will take {move_time:.2f} seconds')
 
             # Faster output of positions
+            """TODO: because the watcher is sleeping this won't take effect
+            until the next loop, so it may sometimes take a long
+            time to take effect. We may want to convert that sleep to a Future
+            stored in self and be able to cancel it to quickly restart the
+            loop.
+            """
             orig_position_delay = self._position_watcher_delay
             self._position_watcher_delay = 0.5
 
