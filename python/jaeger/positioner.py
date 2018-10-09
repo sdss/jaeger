@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 23:51:27
+# @Last modified time: 2018-10-08 23:53:33
 
 import asyncio
 
@@ -394,6 +394,10 @@ class Positioner(StatusMixIn):
 
             log.info(f'the move will take {move_time} seconds')
 
+            # Faster output of positions
+            orig_position_delay = self._position_watcher_delay
+            self._position_watcher_delay = 0.5
+
             await asyncio.sleep(move_time)
 
             # Blocks until we're sure both arms at at the position.
@@ -405,6 +409,9 @@ class Positioner(StatusMixIn):
                           'failed to reach commanded position.')
 
             log.info(f'positioner {self.positioner_id}: position reached.')
+
+            # Restore position delay
+            self._position_watcher_delay = orig_position_delay
 
         return True
 

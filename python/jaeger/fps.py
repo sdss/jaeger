@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 23:17:45
+# @Last modified time: 2018-10-09 00:01:57
 
 import asyncio
 import os
@@ -408,8 +408,22 @@ class FPS(Actor):
                 self._abort_trajectory(trajectories.keys())
                 return False
 
+        # Prepare to start the trajectories. Make position polling faster and
+        # output expected time.
+        log.info(f'expected time to complete trajectory: {max_time} seconds.')
+
+        orig_position_delay = {}
+        for pos_id in trajectories:
+            positioner = self.positioners[pos_id]
+            orig_position_delay[pos_id] = positioner._position_watcher_delay
+            positioner._position_watcher_delay = 0.5
+
         # Start trajectories
         await self.send_command('START_TRAJECTORY', positioner_id=0, timeout=1)
+
+        # Restore default polling time
+        for pos_id in trajectories:
+            self.positioners[pos_id]._position_watcher_delay = orig_position_delay[pos_id]
 
         return True
 
