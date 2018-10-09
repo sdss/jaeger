@@ -289,19 +289,13 @@ class Command(StatusMixIn, asyncio.Future):
 
         return [Message(self, positioner_id=self.positioner_id, data=self._data)]
 
-    def send(self, bus=None, wait_for_reply=True, force=False):
-        """Sends the command.
-
-        Writes each message to the fps in turn and waits for a response.
+    def send(self, bus=None, force=False):
+        """Sends the command to the bus.
 
         Parameters
         ----------
         fps : `~jaeger.fps.FPS`
             The focal plane system instance.
-        wait_for_reply : bool
-            If True, after sending each message associated to the command
-            waits until a response for it arrives before sending the next
-            message.
         force : bool
             If the command has already been finished, sending it will fail
             unless ``force=True``.
