@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-03 15:35:37
+# @Last modified time: 2018-10-09 15:27:56
 
 import enum
 
@@ -85,7 +85,7 @@ class BootloaderStatus(Maskbit):
     UNKNOWN = 0x40000000
 
 
-class ResponseCode(enum.IntEnum):
+class ResponseCode(enum.IntFlag):
     """Maskbit for the status of the bootloader."""
 
     COMMAND_ACCEPTED = 0
