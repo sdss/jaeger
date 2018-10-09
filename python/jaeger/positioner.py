@@ -122,7 +122,9 @@ class Positioner(StatusMixIn):
         command = self.fps.send_command(CommandID.GET_STATUS,
                                         positioner_id=self.positioner_id,
                                         timeout=timeout)
-        await command
+        if await command is False:
+            log.error(f'{CommandID.GET_STATUS.name!r} failed to complete.')
+            return
 
         if self.is_bootloader():
             self.flag = maskbits.PositionerStatus

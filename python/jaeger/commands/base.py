@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 00:12:07
+# @Last modified time: 2018-10-09 14:29:44
 
 import asyncio
 import logging
@@ -320,7 +320,15 @@ class Command(StatusMixIn, asyncio.Future):
                           'Making command ready again.')
                 self.status = CommandStatus.READY
 
+        if not self.bus._can_queue_command(self):
+            self._log(f'a command with the same command_id and '
+                      f'positioner_id is already running.',
+                      level=logging.ERROR, logs=[can_log, log])
+            return False
+
         bus.send_command(self)
+
+        return True
 
     def get_reply_for_positioner(self, positioner_id):
         """Returns the reply for a given ``positioner_id``.

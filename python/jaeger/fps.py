@@ -97,7 +97,8 @@ class FPS(Actor):
                                bus=self.bus, loop=self.loop,
                                data=data, **kwargs)
 
-        command.send()
+        if not command.send():
+            return False
 
         return command
 
