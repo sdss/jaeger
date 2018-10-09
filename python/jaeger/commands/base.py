@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 14:29:44
+# @Last modified time: 2018-10-09 15:46:52
 
 import asyncio
 import logging
@@ -172,6 +172,10 @@ class Command(StatusMixIn, asyncio.Future):
         #: A list of messages with the responses to this command.
         self.replies = []
 
+        # Numbers of messages to send. If the command is not a broadcast,
+        # the command will be marked done after receiving this many replies.
+        self._n_messages = 1
+
         self.timeout = timeout
 
         self._data = kwargs.pop('data', [])
@@ -228,11 +232,18 @@ class Command(StatusMixIn, asyncio.Future):
                   f'data={reply.data}', positioner_id=reply.positioner_id)
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
+
             self.finish_command(CommandStatus.FAILED)
+
             self._log(f'command failed with code {reply.response_code.name}.',
                       level=logging.ERROR, logs=[can_log, log])
+
+        # If this is not a broadcast, the message was accepted and we have as
+        # many replies as messages sent, mask as done.
         elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
-                self.positioner_id != 0):
+                self.positioner_id != 0 and
+                len(self.replies) == self._n_messages):
+
             self.finish_command(CommandStatus.DONE)
 
     def finish_command(self, status=CommandStatus.DONE):
@@ -246,12 +257,12 @@ class Command(StatusMixIn, asyncio.Future):
         if status:
             self.status = status
 
+        if not self.reply_queue.watcher.cancelled():
+            self.reply_queue.watcher.cancel()
+
         if not self.done():
             self.remove_done_callback(self.finish_command)
             self.set_result(status)
-
-        if not self.reply_queue.watcher.cancelled():
-            self.reply_queue.watcher.cancel()
 
         if self.bus is not None:
             r_command = self.bus.is_command_running(self.positioner_id, self.command_id)

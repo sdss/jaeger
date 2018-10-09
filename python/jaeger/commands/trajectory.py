@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 22:51:04
+# @Last modified time: 2018-10-09 15:19:51
 
 import numpy
 
@@ -64,8 +64,8 @@ class SendTrajectoryData(Command):
 
     def __init__(self, alpha, beta, **kwargs):
 
-        alpha = numpy.array(alpha)
-        beta = numpy.array(beta)
+        alpha = numpy.array(alpha).astype(numpy.float64)
+        beta = numpy.array(beta).astype(numpy.float64)
 
         alpha[:, 0] = alpha[:, 0] / 360. * MOTOR_STEPS
         beta[:, 0] = beta[:, 0] / 360. * MOTOR_STEPS
@@ -85,8 +85,10 @@ class SendTrajectoryData(Command):
         for angle, time in numpy.vstack((self.alpha_points, self.beta_points)):
 
             data = int_to_bytes(time) + int_to_bytes(angle)
-            messages.add(
+            messages.append(
                 Message(self, positioner_id=self.positioner_id, data=data))
+
+        self._n_messages = len(messages)
 
         return messages
 
