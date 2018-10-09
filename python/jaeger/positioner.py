@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 23:53:33
+# @Last modified time: 2018-10-09 14:31:43
 
 import asyncio
 
@@ -394,7 +394,7 @@ class Positioner(StatusMixIn):
 
             move_time = max([alpha_time, beta_time])
 
-            log.info(f'the move will take {move_time} seconds')
+            log.info(f'the move will take {move_time:.2f} seconds')
 
             # Faster output of positions
             orig_position_delay = self._position_watcher_delay

@@ -207,7 +207,7 @@ class FPS(Actor):
             except ValueError:
                 log.warning(
                     f'({get_firmware_command.command_id.name}, {positioner_id}): '
-                    'did not receive a reply for for. Skipping positioner.',
+                    'did not receive a reply. Skipping positioner.',
                     JaegerUserWarning)
                 continue
 
@@ -411,7 +411,8 @@ class FPS(Actor):
 
         # Prepare to start the trajectories. Make position polling faster and
         # output expected time.
-        log.info(f'expected time to complete trajectory: {max_time} seconds.')
+        log.info(f'expected time to complete trajectory: '
+                 f'{max_time:.2f} seconds.')
 
         orig_position_delay = {}
         for pos_id in trajectories:
