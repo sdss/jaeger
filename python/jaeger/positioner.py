@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 15:54:27
+# @Last modified time: 2018-10-08 21:19:59
 
 import asyncio
 
@@ -93,21 +93,24 @@ class Positioner(StatusMixIn):
 
         self.firmware = command.get_firmware()
 
-    async def update_status(self):
+    async def update_status(self, timeout=None):
         """Updates the status of the positioner."""
 
         command = self.fps.send_command(CommandID.GET_STATUS,
-                                        positioner_id=self.positioner_id)
+                                        positioner_id=self.positioner_id,
+                                        timeout=timeout)
         await command
-
-        status_int = int(bytes_to_int(command.replies[0].data))
 
         if self.is_bootloader():
             self.flag = maskbits.PositionerStatus
         else:
             self.flag = maskbits.BootloaderStatus
 
-        self.status = self.flag(status_int)
+        if len(command.replies) == 1:
+            status_int = int(bytes_to_int(command.replies[0].data))
+            self.status = self.flag(status_int)
+        else:
+            self.status = self.flag.UNKNOWN
 
     async def wait_for_status(self, status, delay=0.1, timeout=None):
         """Polls the status until it reaches a certain value.
