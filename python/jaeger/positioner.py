@@ -7,12 +7,13 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 21:19:59
+# @Last modified time: 2018-10-08 22:12:07
 
 import asyncio
 
 from jaeger import config, log
 from jaeger.commands import CommandID
+from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import StatusMixIn, bytes_to_int, maskbits
 
 
@@ -175,18 +176,41 @@ class Positioner(StatusMixIn):
 
         """
 
+        PosStatus = maskbits.PositionerStatus
+
         log.info(f'positioner {self.positioner_id}: initialising datums')
 
         assert not self.is_bootloader(), \
             'this coroutine cannot be scheduled in bootloader mode.'
 
-        if maskbits.PositionerStatus.DATUM_INITIALIZED not in self.status:
+        if PosStatus.DATUM_INITIALIZED not in self.status:
 
-            init_datum = self.fps.send_command(CommandID.INITIALIZE_DATUMS,
-                                               positioner_id=self.positioner_id)
+            await self.fps.send_command(CommandID.INITIALIZE_DATUMS,
+                                        positioner_id=self.positioner_id)
 
-            await init_datum
-            await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED)
+            result = await self.wait_for_status(PosStatus.DATUM_INITIALIZED,
+                                                timeout=2)
+
+            if result is False:
+                log.error(f'positioner={self.positioner_id}: '
+                          'failed to initialise datums.')
+                return False
+
+        if PosStatus.DISPLACEMENT_COMPLETED not in self.status:
+
+            log.warning(f'positioner {self.positioner_id} is moving. '
+                        'Stopping trajectories.', JaegerUserWarning)
+
+            await self.fps.send_command(CommandID.STOP_TRAJECTORY,
+                                        positioner_id=self.positioner_id)
+
+            result = await self.wait_for_status(
+                PosStatus.DISPLACEMENT_COMPLETED, timeout=2)
+
+            if result is False:
+                log.error(f'positioner={self.positioner_id}: '
+                          'failed to stop trajectory.')
+                return False
 
         if (self.position_watcher is None or self.position_watcher.done() or
                 self.position_watcher.cancelled()):
@@ -342,9 +366,7 @@ class Positioner(StatusMixIn):
 
             # Blocks until we're sure both arms at at the position.
             result = await self.wait_for_status(
-                [maskbits.PositionerStatus.ALPHA_DISPLACEMENT_COMPLETED,
-                 maskbits.PositionerStatus.BETA_DISPLACEMENT_COMPLETED],
-                timeout=3)
+                maskbits.PositionerStatus.DISPLACEMENT_COMPLETED, timeout=3)
 
             if result is False:
                 log.error(f'positioner {self.positioner_id}: '
