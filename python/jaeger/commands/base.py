@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 21:41:14
+# @Last modified time: 2018-10-08 23:33:55
 
 import asyncio
 import logging
@@ -232,7 +232,7 @@ class Command(StatusMixIn, asyncio.Future):
             self._log(f'command failed with code {reply.response_code.name}.',
                       level=logging.ERROR, logs=[can_log, log])
         elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
-                self.positioner_id != 0 and self.timeout is None):
+                self.positioner_id != 0):
             self.finish_command(CommandStatus.DONE)
 
     def finish_command(self, status=CommandStatus.DONE):
