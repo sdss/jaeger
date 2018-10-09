@@ -37,7 +37,7 @@ List of commands
     :undoc-members:
 
 .. autoclass:: jaeger.commands.SendTrajectoryData
-    :exclude-members:
+    :exclude-members: get_messages
     :undoc-members:
 
 .. autoclass:: jaeger.commands.TrajectoryDataEnd
