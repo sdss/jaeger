@@ -32,25 +32,29 @@ class Positioner(StatusMixIn):
     centre : tuple
         The :math:`(x_{\rm focal}, y_{\rm focal})` coordinates of the
         central axis of the positioner.
-    alpha : float
-        Position of the alpha arm, in degrees.
-    beta : float
-        Position of the beta arm, in degrees.
 
     """
 
-    def __init__(self, positioner_id, fps, centre=None, alpha=None, beta=None):
+    def __init__(self, positioner_id, fps, centre,):
 
         self.fps = fps
         self.positioner_id = positioner_id
         self.centre = centre
-        self.alpha = alpha
-        self.beta = beta
+        self.alpha = None
+        self.beta = None
         self.firmware = None
 
         #: A `~asyncio.Task` that polls the current position of alpha and
         #: beta periodically.
         self.position_watcher = None
+
+        #: A `~asyncio.Task` that polls the current status periodically.
+        self.status_watcher = None
+
+        # How frequently to poll for status and position.
+        # Can be changed in runtime.
+        self._position_watcher_delay = 10
+        self._status_watcher_delay = 5
 
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
@@ -58,17 +62,24 @@ class Positioner(StatusMixIn):
     def reset(self):
         """Resets positioner values and statuses."""
 
-        self.centre = None
         self.alpha = None
         self.beta = None
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
 
-        if self.position_watcher is not None:
-            self.position_watcher.cancel()
+        self._position_watcher_delay = 10
+        self._status_watcher_delay = 5
 
-    async def _postion_watcher_periodic(self, delay):
-        """Updates the position each ``delay`` seconds."""
+        if self.position_watcher is not None:
+            if not self.position_watcher.cancelled():
+                self.position_watcher.cancel()
+            self.position_watcher = None
+
+        if self.status_watcher is not None:
+            if not self.status_watcher.cancelled():
+                self.status_watcher.cancel()
+            self.status_watcher = None
+
 
         while True:
             command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
@@ -169,19 +180,18 @@ class Positioner(StatusMixIn):
     async def initialise(self, delay=1.):
         """Initialises the datum and starts the position watcher.
 
-        Parameters
-        ----------
-        delay : float
-            How frequently to poll for the current position.
-
-        """
-
-        PosStatus = maskbits.PositionerStatus
-
         log.info(f'positioner {self.positioner_id}: initialising datums')
 
         assert not self.is_bootloader(), \
             'this coroutine cannot be scheduled in bootloader mode.'
+
+        PosStatus = maskbits.PositionerStatus
+
+        # Resets all.
+        self.reset()
+
+        # Update status
+        await self.update_status(timeout=1)
 
         if PosStatus.DATUM_INITIALIZED not in self.status:
 
