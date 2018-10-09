@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 23:33:55
+# @Last modified time: 2018-10-09 00:08:34
 
 import asyncio
 import logging
@@ -250,7 +250,7 @@ class Command(StatusMixIn, asyncio.Future):
             self.remove_done_callback(self.finish_command)
             self.set_result(status)
 
-        if not self.reply_queue.watcher.done() and not self.reply_queue.watcher.cancelled():
+        if not self.reply_queue.watcher.cancelled():
             self.reply_queue.watcher.cancel()
 
         if self.bus is not None:
