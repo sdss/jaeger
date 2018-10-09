@@ -72,8 +72,7 @@ class FPS(Actor):
 
         self.positioners = {}
 
-    def send_command(self, command_id, positioner_id=0, data=[], block=None,
-                     **kwargs):
+    def send_command(self, command_id, positioner_id=0, data=[], **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -85,10 +84,6 @@ class FPS(Actor):
             The positioner ID to command, or zero for broadcast.
         data : bytearray
             The bytes to send.
-        block : `bool`
-            Whether to `await` for the command to be done before returning. If
-            ``block=None``, will block only if the code is being run inside
-            iPython.
         kwargs : dict
             Extra arguments to be passed to the command.
 
