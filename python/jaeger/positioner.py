@@ -170,8 +170,6 @@ class Positioner(StatusMixIn):
         async def status_poller(wait_for_status):
 
             while True:
-                await self.update_status()
-
                 # Check all statuses in the list
                 all_reached = True
                 for ss in wait_for_status:
