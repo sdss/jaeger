@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 00:01:57
+# @Last modified time: 2018-10-09 15:59:00
 
 import asyncio
 import os
@@ -358,8 +358,8 @@ class FPS(Actor):
             n_points[pos_id] = (len(traj_pos['alpha']), len(traj_pos['beta']))
 
             # Gets maximum time for this positioner
-            max_time_pos = max([max(list(zip(*traj_pos[1]['alpha']))[1]),
-                                max(list(zip(*traj_pos[1]['beta']))[1])])
+            max_time_pos = max([max(list(zip(*traj_pos['alpha']))[1]),
+                                max(list(zip(*traj_pos['beta']))[1])])
 
             # Updates the global trajectory max time.
             if max_time_pos > max_time:
@@ -368,7 +368,8 @@ class FPS(Actor):
         # Starts trajectory
         new_traj_cmds = [self.send_command('SEND_NEW_TRAJECTORY',
                                            positioner_id=pos_id,
-                                           *n_points[pos_id])
+                                           n_alpha=n_points[pos_id][0],
+                                           n_beta=n_points[pos_id][1])
                          for pos_id in n_points]
 
         await asyncio.gather(*new_traj_cmds)
@@ -403,7 +404,7 @@ class FPS(Actor):
                 self._abort_trajectory(trajectories.keys())
                 return False
 
-            if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0]:
+            if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
                 log.error(f'positioner_id={cmd.positioner_id} got an '
                           f'INVALID_TRAJECTORY reply. Aborting trajectory.')
                 self._abort_trajectory(trajectories.keys())
