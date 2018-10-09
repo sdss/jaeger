@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 14:45:50
+# @Last modified time: 2018-10-09 16:31:36
 
 import asyncio
 
@@ -221,7 +221,7 @@ class Positioner(StatusMixIn):
 
             if result is False:
                 log.error(f'positioner={self.positioner_id}: '
-                          'failed to initialise datums.')
+                          'did not reach a DATUM_INITIALISED status.')
                 return False
 
         if PosStatus.DISPLACEMENT_COMPLETED not in self.status:
