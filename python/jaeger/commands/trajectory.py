@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 16:34:22
+# @Last modified time: 2018-10-08 18:30:00
 
 
 from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
@@ -78,5 +78,5 @@ class StartTrajectory(Command):
 class StopTrajectory(Command):
     """Stop the trajectories."""
 
-    command_id = CommandID.START_TRAJECTORY
+    command_id = CommandID.STOP_TRAJECTORY
     broadcastable = True
