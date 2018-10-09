@@ -96,9 +96,6 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
     if not result:
         return
 
-    if speed is not None:
-        yield from positioner.goto(alpha_speed=speed[0], beta_speed=speed[1])
-
     done_moves = 0
     while True:
 
