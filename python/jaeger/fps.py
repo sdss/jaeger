@@ -423,6 +423,21 @@ class FPS(Actor):
         # Start trajectories
         await self.send_command('START_TRAJECTORY', positioner_id=0, timeout=1)
 
+        # Wait approximate time before starting to poll for status
+        await asyncio.sleep(0.95 * max_time, loop=self.loop)
+
+        # Wait until all positioners have completed.
+        wait_status = [self.positioners[pos_id].wait_for_status(
+            PosStatus.DISPLACEMENT_COMPLETED, timeout=max_time + 3)
+            for pos_id in trajectories]
+        results = await asyncio.gather(*wait_status, loop=self.loop)
+
+        if not all(results):
+            log.error('some positioners did not complete the move.')
+            return False
+
+        log.info('all positioners have reached their final positions.')
+
         # Restore default polling time
         for pos_id in trajectories:
             self.positioners[pos_id]._position_watcher_delay = orig_position_delay[pos_id]
