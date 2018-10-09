@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 16:20:59
+# @Last modified time: 2018-10-09 00:12:12
 
 # flake8: noqa
 # isort:skip_file
@@ -25,7 +25,6 @@ TIME_STEP = 5e-4
 class CommandID(enum.IntEnum):
     """IDs associated with commands."""
 
-    ABORT = 0
     GET_ID = 1
     GET_FIRMWARE_VERSION = 2
     GET_STATUS = 3

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 00:08:34
+# @Last modified time: 2018-10-09 00:12:07
 
 import asyncio
 import logging
@@ -95,15 +95,15 @@ class Reply(object):
         self.message = message
 
         self.data = message.data
-        self.positioner_id, command_id, self.response_code = jaeger.utils.parse_identifier(
-            message.arbitration_id)
+        self.positioner_id, reply_cmd_id, self.response_code = \
+            jaeger.utils.parse_identifier(message.arbitration_id)
 
         if command is not None:
-            assert command.command_id == 0 or command.command_id == command_id, \
+            assert command.command_id == reply_cmd_id, \
                 (f'command command_id={command.command_id} and '
-                 f'command_id={command_id} do not match')
+                 f'reply command_id={reply_cmd_id} do not match')
 
-        self.command_id = CommandID(command_id)
+        self.command_id = CommandID(reply_cmd_id)
 
     def __repr__(self):
         command_name = self.command.command_id.name if self.command else 'NONE'
@@ -335,11 +335,3 @@ class Command(StatusMixIn, asyncio.Future):
                 return reply
 
         return False
-
-
-class Abort(Command):
-    """Cancels any running command. Stops the positioner if it is moving."""
-
-    command_id = CommandID.ABORT
-    broadcastable = True
-    timeout = 5
