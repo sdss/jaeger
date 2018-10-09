@@ -7,13 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:21:02
+# @Last modified time: 2018-10-08 23:17:45
 
 import asyncio
 import os
 import pathlib
 
 import astropy.table
+from ruamel.yaml import YAML
 
 from asyncioActor.actor import Actor
 from jaeger import NAME, __version__, config, log
@@ -239,6 +240,178 @@ class FPS(Actor):
         if n_unknown > 0:
             log.warning(f'{n_unknown} positioners did not respond to '
                         f'{status_reply.command_id.name!r}', JaegerUserWarning)
+
+    async def update_status(self, positioners=None, timeout=1):
+        """Update statuses for all positioners.
+
+        Parameters
+        ----------
+        positioners : `list`
+            The list of positioners to update. If `None`, update all
+            positioners.
+        timeout : float
+            How long to wait before timing out the command.
+
+        """
+
+        if positioners is None:
+            positioners = list(self.positioners.keys())
+
+        await asyncio.gather(
+            *[self.positioners[pid].update_status(timeout=timeout)
+              for pid in positioners], loop=self.loop)
+
+    async def _abort_trajectory(self, positioners=None, timeout=1):
+        """Sends ``STOP_TRAJECTORY`` to all positioners.
+
+        Parameters
+        ----------
+        positioners : `list`
+            The list of positioners to abort. If `None`, abort all positioners.
+        timeout : float
+            How long to wait before timing out the command.
+
+        """
+
+        if positioners is None:
+            await self.send_command('STOP_TRAJECTORY', positioner_id=0,
+                                    timeout=timeout)
+            return
+
+        await asyncio.gather(
+            *[self.send_command('STOP_TRAJECTORY', positioner_id=pid,
+                                timeout=timeout)
+              for pid in positioners], loop=self.loop)
+
+    async def send_trajectory(self, trajectories, kaiju_check=True):
+        """Sends a set of trajectories to the positioners.
+
+        .. danger:: This method can cause the positioners to collide if it is
+            commanded with ``kaiju_check=False``.
+
+        Parameters
+        ----------
+        trajectories : `str` or `dict`
+            Either a path to a YAML file to read or a dictionary with the
+            trajectories. In either case the format must be a dictionary in
+            which the keys are the ``positioner_ids`` and each value is a
+            dictionary containing two keys: ``alpha`` and ``beta``, each
+            pointing to a list of tuples ``(position, time)``, where
+            ``position`` is in degrees and ``time`` is in seconds.
+        kaiju_check : `bool`
+            Whether to check the trajectories with kaiju before sending it.
+
+        Examples
+        --------
+        ::
+
+            >>> fps = FPS()
+            >>> await fps.initialise()
+
+            # Send a trajectory with two points for positioner 4
+            >>> await fps.send_trajectory({1: 'alpha': [(90, 0), (91, 3)],
+                                              'beta': [(20, 0), (23, 4)]})
+
+        """
+
+        PosStatus = maskbits.PositionerStatus
+
+        if isinstance(trajectories, (str, pathlib.Path)):
+            yaml = YAML(typ='safe')
+            trajectories = yaml.load(open(trajectories))
+        elif isinstance(trajectories, dict):
+            pass
+        else:
+            raise ValueError('invalid trajectory data.')
+
+        if kaiju_check:
+            # TODO: implement call to kaiju
+            pass
+        else:
+            log.warning('about to send a trajectory that has not been checked '
+                        'by kaiju. This will end up in tears.',
+                        JaegerUserWarning)
+
+        await self.update_status(positioners=list(trajectories.keys()),
+                                 timeout=1.)
+
+        # TODO: better deal with broken/unknown status positioners.
+
+        n_points = {}
+        max_time = 0.0
+
+        # Check that all positioners are ready to receive a new trajectory.
+        for pos_id in trajectories:
+
+            positioner = self.positioners[pos_id]
+            status = positioner.status
+
+            if (PosStatus.DATUM_INITIALIZED not in status or
+                    PosStatus.DISPLACEMENT_COMPLETED not in status):
+                log.error(f'positioner_id={pos_id} is not '
+                          f'ready to receive a trajectory.')
+                return False
+
+            traj_pos = trajectories[pos_id]
+
+            n_points[pos_id] = (len(traj_pos['alpha']), len(traj_pos['beta']))
+
+            # Gets maximum time for this positioner
+            max_time_pos = max([max(list(zip(*traj_pos[1]['alpha']))[1]),
+                                max(list(zip(*traj_pos[1]['beta']))[1])])
+
+            # Updates the global trajectory max time.
+            if max_time_pos > max_time:
+                max_time = max_time_pos
+
+        # Starts trajectory
+        new_traj_cmds = [self.send_command('SEND_NEW_TRAJECTORY',
+                                           positioner_id=pos_id,
+                                           *n_points[pos_id])
+                         for pos_id in n_points]
+
+        await asyncio.gather(*new_traj_cmds)
+
+        # Send trajectory points
+        traj_data_cmds = []
+
+        for pos_id in trajectories:
+
+            alpha = trajectories[pos_id]['alpha']
+            beta = trajectories[pos_id]['beta']
+
+            traj_data_cmds.append(self.send_command('SEND_TRAJECTORY_DATA',
+                                                    positioner_id=pos_id,
+                                                    alpha=alpha, beta=beta))
+
+        await asyncio.gather(*traj_data_cmds)
+
+        # Finalise the trajectories
+        end_traj_cmds = [self.send_command('TRAJECTORY_DATA_END',
+                                           positioner_id=pos_id)
+                         for pos_id in trajectories]
+
+        await asyncio.gather(*end_traj_cmds)
+
+        for cmd in end_traj_cmds:
+
+            if len(cmd.replies) == 0:
+                log.error(f'positioner_id={cmd.positioner_id} did not get '
+                          f'a reply to {cmd.command_id.name!r}. '
+                          'Aborting trajectory.')
+                self._abort_trajectory(trajectories.keys())
+                return False
+
+            if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0]:
+                log.error(f'positioner_id={cmd.positioner_id} got an '
+                          f'INVALID_TRAJECTORY reply. Aborting trajectory.')
+                self._abort_trajectory(trajectories.keys())
+                return False
+
+        # Start trajectories
+        await self.send_command('START_TRAJECTORY', positioner_id=0, timeout=1)
+
+        return True
 
     def start_actor(self):
         """Initialises the actor."""
