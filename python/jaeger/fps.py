@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 15:59:00
+# @Last modified time: 2018-10-09 23:11:04
 
 import asyncio
 import os
@@ -415,11 +415,8 @@ class FPS(Actor):
         log.info(f'expected time to complete trajectory: '
                  f'{max_time:.2f} seconds.')
 
-        orig_position_delay = {}
         for pos_id in trajectories:
-            positioner = self.positioners[pos_id]
-            orig_position_delay[pos_id] = positioner._position_watcher_delay
-            positioner._position_watcher_delay = 0.5
+            self.positioners[pos_id].position_poller.set_delay(0.5)
 
         # Start trajectories
         await self.send_command('START_TRAJECTORY', positioner_id=0, timeout=1)
@@ -441,7 +438,7 @@ class FPS(Actor):
 
         # Restore default polling time
         for pos_id in trajectories:
-            self.positioners[pos_id]._position_watcher_delay = orig_position_delay[pos_id]
+            self.positioners[pos_id].position_poller.set_delay()
 
         return True
 

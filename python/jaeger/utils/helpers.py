@@ -7,12 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 11:20:56
+# @Last modified time: 2018-10-09 23:12:54
 
 import asyncio
 
 
-__ALL__ = ['AsyncQueue', 'StatusMixIn']
+__ALL__ = ['AsyncQueue', 'StatusMixIn', 'Poller']
 
 
 class AsyncQueue(asyncio.Queue):
@@ -139,3 +139,69 @@ class StatusMixIn(object):
                 self.watcher.clear()
 
         self.watcher = None
+
+
+class Poller(asyncio.Task):
+    """A task that runs a callback periodically.
+
+    Parameters
+    ----------
+    callback : `function` or `coroutine`
+        A function or coroutine to call periodically.
+    delay : float
+        Initial delay between calls to the callback.
+    loop : event loop
+        The event loop to which to attach the task.
+
+    """
+
+    def __init__(self, callback, delay=1, loop=None):
+
+        self.callback = callback
+
+        self._orig_delay = delay
+        self.delay = delay
+
+        self.loop = loop or asyncio.get_event_loop()
+
+        self._sleep_task = None
+
+        super().__init__(self.poller(), loop=self.loop)
+
+    async def poller(self):
+        """The polling loop."""
+
+        while True:
+
+            cb = self.callback()
+            if asyncio.iscoroutine(cb):
+                await cb
+
+            self._sleep_task = asyncio.create_task(
+                asyncio.sleep(self.delay, loop=self.loop))
+
+            try:
+                await self._sleep_task
+            except asyncio.CancelledError:
+                pass
+
+    def set_delay(self, delay=None):
+        """Sets the delay for polling.
+
+        Parameters
+        ----------
+        delay : float
+            The delay between calls to the callback. If ``None``, restores the
+            original delay."""
+
+        self.delay = delay or self._orig_delay
+
+        if self._sleep_task and not self._sleep_task.cancelled():
+            self._sleep_task.cancel()
+
+    def now(self):
+        """Call the callback now."""
+
+        # Cancels the sleep, which forces a new callback.
+        if self._sleep_task and not self._sleep_task.cancelled():
+            self._sleep_task.cancel()

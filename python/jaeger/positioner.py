@@ -7,14 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 16:31:36
+# @Last modified time: 2018-10-09 23:10:28
 
 import asyncio
 
 from jaeger import config, log
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
-from jaeger.utils import StatusMixIn, bytes_to_int, maskbits
+from jaeger.utils import Poller, StatusMixIn, bytes_to_int, maskbits
 
 
 __ALL__ = ['Positioner']
@@ -46,15 +46,10 @@ class Positioner(StatusMixIn):
 
         #: A `~asyncio.Task` that polls the current position of alpha and
         #: beta periodically.
-        self.position_watcher = None
+        self.position_poller = None
 
         #: A `~asyncio.Task` that polls the current status periodically.
-        self.status_watcher = None
-
-        # How frequently to poll for status and position.
-        # Can be changed in runtime.
-        self._position_watcher_delay = 10
-        self._status_watcher_delay = 5
+        self.status_poller = None
 
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
@@ -67,56 +62,39 @@ class Positioner(StatusMixIn):
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
 
-        self._position_watcher_delay = 10
-        self._status_watcher_delay = 5
+        if self.position_poller is not None:
+            if not self.position_poller.cancelled():
+                self.position_poller.cancel()
+            self.position_poller = None
 
-        if self.position_watcher is not None:
-            if not self.position_watcher.cancelled():
-                self.position_watcher.cancel()
-            self.position_watcher = None
+        if self.status_poller is not None:
+            if not self.status_poller.cancelled():
+                self.status_poller.cancel()
+            self.status_poller = None
 
-        if self.status_watcher is not None:
-            if not self.status_watcher.cancelled():
-                self.status_watcher.cancel()
-            self.status_watcher = None
+    async def update_position(self, timeout=1):
+        """Updates the position of the alpha and beta arms."""
 
-    async def _position_watcher_periodic(self):
-        """Updates the position each ``self._position_watcher_delay``."""
+        command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
+                                        positioner_id=self.positioner_id,
+                                        timeout=timeout)
+        result = await command
 
-        while True:
-            command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
-                                            positioner_id=self.positioner_id,
-                                            timeout=1)
-            await command
+        if not result:
+            log.error(f'positioner {self.positioner_id}: '
+                      'failed updating position')
+            return
 
-            try:
-                self.alpha, self.beta = command.get_positions()
-            except ValueError:
-                log.debug(f'positioner {self.positioner_id}: '
-                          'failed to receive current position.')
+        try:
+            self.alpha, self.beta = command.get_positions()
+        except ValueError:
+            log.debug(f'positioner {self.positioner_id}: '
+                      'failed to receive current position.')
+            return
 
-            log.debug(f'(alpha, beta)={self.alpha, self.beta}')
+        log.debug(f'(alpha, beta)={self.alpha, self.beta}')
 
-            await asyncio.sleep(self._position_watcher_delay,
-                                loop=self.fps.loop)
-
-    async def _status_watcher_periodic(self):
-        """Updates the status each ``self._status_watcher_delay``."""
-
-        while True:
-            await self.update_status(timeout=1)
-            await asyncio.sleep(self._status_watcher_delay, loop=self.fps.loop)
-
-    async def get_firmware(self):
-        """Updates the firmware version."""
-
-        command = self.fps.send_command(CommandID.GET_FIRMWARE_VERSION,
-                                        positioner_id=self.positioner_id)
-        await command
-
-        self.firmware = command.get_firmware()
-
-    async def update_status(self, timeout=None):
+    async def update_status(self, timeout=1.):
         """Updates the status of the positioner."""
 
         command = self.fps.send_command(CommandID.GET_STATUS,
@@ -161,8 +139,7 @@ class Positioner(StatusMixIn):
 
         """
 
-        orig_status_delay = self._status_watcher_delay
-        self._status_watcher_delay = delay
+        self.status_poller.set_delay(delay)
 
         if not isinstance(status, (list, tuple)):
             status = [status]
@@ -189,10 +166,10 @@ class Positioner(StatusMixIn):
         try:
             await asyncio.wait_for(status_poller(wait_for_status), timeout)
         except asyncio.TimeoutError:
-            self._status_watcher_delay = orig_status_delay
+            self.status_poller.set_delay()
             return False
 
-        self._status_watcher_delay = orig_status_delay
+        self.status_poller.set_delay()
         return True
 
     async def initialise(self):
@@ -241,12 +218,10 @@ class Positioner(StatusMixIn):
                 return False
 
         # Initialise position poller
-        self.position_watcher = self.fps.loop.create_task(
-            self._position_watcher_periodic())
+        self.position_poller = Poller(self.update_position, delay=5)
 
         # Initialise status poller
-        self.status_watcher = self.fps.loop.create_task(
-            self._status_watcher_periodic())
+        self.status_poller = Poller(self.update_status, delay=5)
 
         # Sets the default speed
         if not await self._set_speed(alpha=config['motor_speed'],
@@ -254,6 +229,15 @@ class Positioner(StatusMixIn):
             return False
 
         return True
+
+    async def get_firmware(self):
+        """Updates the firmware version."""
+
+        command = self.fps.send_command(CommandID.GET_FIRMWARE_VERSION,
+                                        positioner_id=self.positioner_id)
+        await command
+
+        self.firmware = command.get_firmware()
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
@@ -394,15 +378,7 @@ class Positioner(StatusMixIn):
 
             log.info(f'the move will take {move_time:.2f} seconds')
 
-            # Faster output of positions
-            """TODO: because the watcher is sleeping this won't take effect
-            until the next loop, so it may sometimes take a long
-            time to take effect. We may want to convert that sleep to a Future
-            stored in self and be able to cancel it to quickly restart the
-            loop.
-            """
-            orig_position_delay = self._position_watcher_delay
-            self._position_watcher_delay = 0.5
+            self.position_poller.set_delay(0.5)
 
             await asyncio.sleep(move_time)
 
@@ -417,7 +393,7 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: position reached.')
 
             # Restore position delay
-            self._position_watcher_delay = orig_position_delay
+            self.position_poller.set_delay()
 
         return True
 
