@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 12:43:01
+# @Last modified time: 2018-10-10 16:45:38
 
 import asyncio
 import logging
@@ -19,7 +19,6 @@ from jaeger import can_log, log
 from jaeger.core import exceptions
 from jaeger.utils import AsyncQueue, StatusMixIn
 from jaeger.utils.maskbits import CommandStatus, ResponseCode
-
 from . import CommandID
 
 
@@ -249,14 +248,28 @@ class Command(StatusMixIn, asyncio.Future):
 
             self.finish_command(CommandStatus.DONE)
 
-    def finish_command(self, status=CommandStatus.DONE):
-        """Cancels the queue watcher and removes the running command."""
+    def finish_command(self, status):
+        """Cancels the queue watcher and removes the running command.
 
-        if not self.done():
-            self.set_result(self.status)
+        Parameters
+        ----------
+        status : `.CommandStatus` or `None`
+            The status to set the command to. If `None` the command will be set
+            to `~.CommandStatus.DONE` if one reply for
+            each message has been received, `~.CommandStatus.FAILED` otherwise.
+
+        """
 
         if status:
             self.status = status
+        else:
+            if len(self.replies) == self._n_messages:
+                self.status = CommandStatus.DONE
+            else:
+                self.status = CommandStatus.FAILED
+
+        if not self.done():
+            self.set_result(self.status)
 
         self.reply_queue.watcher.cancel()
 
