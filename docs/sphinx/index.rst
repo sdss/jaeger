@@ -11,10 +11,12 @@ Contents
   :maxdepth: 2
 
   intro
-  What's new in jaeger? <changelog>
+
   api
   commands
   maskbits
+
+  What's new in jaeger? <changelog>
 
 
 
