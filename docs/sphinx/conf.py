@@ -7,8 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 08:46:14
+# @Last modified time: 2018-10-10 16:25:45
 
+import os
+import shutil
+import sys
+import tempfile
 
 # import matplotlib
 from pkg_resources import parse_version
@@ -16,12 +20,23 @@ from pkg_resources import parse_version
 from jaeger import __version__
 
 
+# Copy jaeger CLI script to a temporary location so that it can be imported
+tempdir = tempfile.TemporaryDirectory().name
+os.makedirs(os.path.join(tempdir, 'jaegercli'))
+
+os.chdir(os.path.dirname(__file__))
+shutil.copyfile('../../bin/jaeger', os.path.join(tempdir, 'jaegercli', 'jaegercli.py'))
+open(os.path.join(tempdir, 'jaegercli', '__init__.py'), 'w')
+
+sys.path.insert(0, os.path.join(tempdir, 'jaegercli'))
+
 # matplotlib.use('agg')
 
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.autosummary',
               'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax',
-              'sphinx.ext.intersphinx', 'sphinxcontrib_trio', 'releases']
+              'sphinx.ext.intersphinx', 'sphinxcontrib_trio', 'releases',
+              'sphinx_click.ext']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

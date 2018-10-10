@@ -16,6 +16,14 @@ Contents
   commands
   maskbits
 
+.. toctree::
+  :maxdepth: 1
+
+  cli
+
+.. toctree::
+  :maxdepth: 2
+
   What's new in jaeger? <changelog>
 
 
