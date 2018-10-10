@@ -36,7 +36,7 @@ A simple jaeger program
         log.set_level(0)
 
         # Initialise the FPS instance.
-        fps = FPS(loop=loop)
+        fps = FPS()
         await fps.initialise()
 
         # Initialise positioner 4
@@ -46,8 +46,10 @@ A simple jaeger program
         # Send positioner 4 to alpha=90, beta=45
         await pos.goto(alpha=90, beta=45)
 
-    loop = asyncio.get_event_loop()
-    asyncio.run(main(loop))
+        # Cleanly finish all pending tasks and exit
+        await fps.shutdown()
+
+    asyncio.run(main())
 
 This code runs the `coroutine <https://docs.python.org/3/library/asyncio-task.html#coroutines>`__ ``main`` until it completes. First we create an instance of `~jaeger.fps.FPS` , the main jaeger class that contains information about all the positioners and the `CAN bus <jaeger.can.JaegerCAN>`. When called without extra parameters, `~jaeger.fps.FPS` loads the default CAN interface and positioner layout. The real initialisation happens when calling `fps.initialise <jaeger.fps.FPS.initialise>`. Note that `~jaeger.fps.FPS.initialise` is a coroutine and needs to be awaited until completion. During initialisation, all the robots in the layout are queried by their status and firmware, and `~jaeger.positioner.Positioner` instances are added to `fps.positioners <jaeger.fps.FPS.positioners>`.
 
