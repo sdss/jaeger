@@ -13,6 +13,7 @@ from functools import update_wrapper
 
 import click
 import numpy
+
 from jaeger import log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
@@ -38,6 +39,7 @@ def cli_coro(f):
 @click.pass_context
 @cli_coro
 def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
+    """CLI for the SDSS-V focal plane system."""
 
     if verbose:
         log.set_level(logging.DEBUG)
