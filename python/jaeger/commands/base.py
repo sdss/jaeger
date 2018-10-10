@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 23:42:01
+# @Last modified time: 2018-10-10 00:21:00
 
 import asyncio
 import logging
@@ -145,9 +145,11 @@ class Command(StatusMixIn, asyncio.Future):
     loop : event loop
         The running event loop, or uses `~asyncio.get_event_loop`.
     timeout : float
-        Time after which the command will be marked done. If `None` and the
-        command is not a broadcast, the command will be finished after the
-        first reply is received.
+        Time after which the command will be marked done. Note that if the
+        command is not a broadcast and it receives replies to each one of the
+        messages it sends, the command will be marked done and the timer
+        cancelled. If `None`, the command runs forever or until replies are
+        received.
 
     """
 
@@ -156,7 +158,7 @@ class Command(StatusMixIn, asyncio.Future):
     #: Whether the command can be broadcast to all robots.
     broadcastable = None
 
-    def __init__(self, positioner_id, bus=None, loop=None, timeout=None,
+    def __init__(self, positioner_id, bus=None, loop=None, timeout=1.,
                  **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'
