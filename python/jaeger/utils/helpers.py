@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 00:09:44
+# @Last modified time: 2018-10-10 00:10:06
 
 import asyncio
 
@@ -196,12 +196,5 @@ class Poller(asyncio.Task):
 
         self.delay = delay or self._orig_delay
 
-        if self._sleep_task and not self._sleep_task.cancelled():
-            self._sleep_task.cancel()
-
-    def now(self):
-        """Call the callback now."""
-
-        # Cancels the sleep, which forces a new callback.
         if self._sleep_task and not self._sleep_task.cancelled():
             self._sleep_task.cancel()
