@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 23:10:28
+# @Last modified time: 2018-10-10 16:49:45
 
 import asyncio
 
@@ -353,6 +353,7 @@ class Positioner(StatusMixIn):
                      f'({float(alpha_speed):.2f}, {float(beta_speed):.2f})')
 
             if not await self._set_speed(alpha_speed, beta_speed):
+                log.error('failed setting speed.')
                 return False
 
         # Go to position
@@ -368,6 +369,7 @@ class Positioner(StatusMixIn):
                                                      relative=relative)
 
             if not goto_command:
+                log.error('failed sending the goto position command.')
                 return False
 
             # Sleeps for the time the firmware believes it's going to take
