@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 00:21:00
+# @Last modified time: 2018-10-10 12:43:01
 
 import asyncio
 import logging
@@ -192,7 +192,6 @@ class Command(StatusMixIn, asyncio.Future):
                              callback_func=self.status_callback)
 
         asyncio.Future.__init__(self, loop=self.loop)
-        self.add_done_callback(self.finish_command)
 
     def __repr__(self):
         return (f'<Command {self.command_id.name} '
@@ -253,20 +252,13 @@ class Command(StatusMixIn, asyncio.Future):
     def finish_command(self, status=CommandStatus.DONE):
         """Cancels the queue watcher and removes the running command."""
 
-        if self.status.is_done:
-            if not self.done():
-                self.set_result(self.status)
-            return
+        if not self.done():
+            self.set_result(self.status)
 
         if status:
             self.status = status
 
-        if not self.reply_queue.watcher.cancelled():
-            self.reply_queue.watcher.cancel()
-
-        if not self.done():
-            self.remove_done_callback(self.finish_command)
-            self.set_result(status)
+        self.reply_queue.watcher.cancel()
 
         if self.bus is not None:
             r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
