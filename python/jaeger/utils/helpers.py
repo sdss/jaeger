@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 23:12:54
+# @Last modified time: 2018-10-10 00:08:53
 
 import asyncio
 
@@ -146,7 +146,7 @@ class Poller(asyncio.Task):
 
     Parameters
     ----------
-    callback : `function` or `coroutine`
+    callback : function or coroutine
         A function or coroutine to call periodically.
     delay : float
         Initial delay between calls to the callback.
