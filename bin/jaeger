@@ -13,7 +13,6 @@ from functools import update_wrapper
 
 import click
 import numpy
-
 from jaeger import log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
@@ -103,6 +102,8 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
         beta_move = numpy.random.randint(low=beta[0], high=beta[1])
         alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
         beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
+
+        log.warning(f'running step {done_moves+1}')
 
         result = yield from positioner.goto(alpha=alpha_move, beta=beta_move,
                                             alpha_speed=alpha_speed,
