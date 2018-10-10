@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 12:44:01
+# @Last modified time: 2018-10-10 13:29:12
 
 import asyncio
 import os
@@ -148,7 +148,7 @@ class FPS(Actor):
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
-                new_positioner = Positioner(pos_id, position=(row['x'], row['y']))
+                new_positioner = Positioner(pos_id, self, centre=(row['x'], row['y']))
                 pos_id += 1
                 self.add_positioner(new_positioner)
 
