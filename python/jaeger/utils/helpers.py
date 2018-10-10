@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 00:08:53
+# @Last modified time: 2018-10-10 00:09:44
 
 import asyncio
 
@@ -191,7 +191,7 @@ class Poller(asyncio.Task):
         Parameters
         ----------
         delay : float
-            The delay between calls to the callback. If ``None``, restores the
+            The delay between calls to the callback. If `None`, restores the
             original delay."""
 
         self.delay = delay or self._orig_delay
