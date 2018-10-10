@@ -54,6 +54,8 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
         fps = FPS(**ctx.obj)
         yield from fps.initialise()
         fps.start_actor()
+    elif ctx.invoked_subcommand is None:
+        raise click.UsageError('not enough arguments')
 
 
 @jaeger.command(name='upgrade-firmware')
