@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 15:46:52
+# @Last modified time: 2018-10-09 23:42:01
 
 import asyncio
 import logging
@@ -180,6 +180,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         self._data = kwargs.pop('data', [])
 
+        self._override = False
+
         self.reply_queue = AsyncQueue(callback=self.process_reply,
                                       loop=self.loop)
 
@@ -304,16 +306,27 @@ class Command(StatusMixIn, asyncio.Future):
 
         return [Message(self, positioner_id=self.positioner_id, data=self._data)]
 
-    def send(self, bus=None, force=False):
-        """Sends the command to the bus.
+    def send(self, bus=None, override=False):
+        """Queues the command for execution.
+
+        Adds the command to the
+        `JaegerCAN.command_queue <jaeger.bus.JaegerCAN.command_queue>` so that
+        it can be processed.
 
         Parameters
         ----------
         fps : `~jaeger.fps.FPS`
             The focal plane system instance.
-        force : bool
-            If the command has already been finished, sending it will fail
-            unless ``force=True``.
+        override : bool
+            If another instance of this command_id with the same positioner_id
+            is running, cancels it and schedules this one immediately.
+            Otherwise the command is queued until the first one finishes.
+
+        Returns
+        -------
+        result : `bool`
+            `True` if the command was sent to the bus command queue. `False` if
+            and error occurred. The error is logged.
 
         """
 
@@ -322,22 +335,15 @@ class Command(StatusMixIn, asyncio.Future):
             raise RuntimeError('bus not defined.')
 
         if self.status.is_done:
-            if force is False:
-                raise exceptions.JaegerError(
-                    f'({self.command_id.name, self.positioner_id}): '
-                    'trying to send a done command.')
-            else:
-                self._log('command is done but force=True. '
-                          'Making command ready again.')
-                self.status = CommandStatus.READY
-
-        if not self.bus._can_queue_command(self):
-            self._log(f'a command with the same command_id and '
-                      f'positioner_id is already running.',
-                      level=logging.ERROR, logs=[can_log, log])
+            self._log('trying to send a done command.', level=logging.ERROR,
+                      logs=[can_log, log])
             return False
 
-        bus.send_command(self)
+        self._override = override
+
+        bus.command_queue.put_nowait(self)
+
+        self._log('added command to CAN processing queue.')
 
         return True
 

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 18:38:51
+# @Last modified time: 2018-10-10 00:06:15
 
 import asyncio
 import collections
@@ -20,6 +20,7 @@ import jaeger
 import jaeger.tests.bus
 from jaeger import can_log, config, log
 from jaeger.commands import CommandID
+from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils.maskbits import CommandStatus
 
 
@@ -75,11 +76,6 @@ class JaegerCAN(object):
         Arguments and keyword arguments to pass to the interface when
         initialising it (e.g., the channel, baudrate, etc).
 
-    Attributes
-    ----------
-    command_queue : `asyncio.Queue`
-        Queue of messages to be sent to the bus.
-
     Returns
     -------
     bus : `.JaegerCAN`
@@ -122,6 +118,12 @@ class JaegerCAN(object):
         #: the bus asynchronously.
         self.notifier = can.notifier.Notifier(self, [self.listener], loop=self.loop)
 
+        #: Queue of messages to be sent to the bus. The messages are sent as
+        #: soon as the bus has finished processing any commands with the same
+        #: command_id and positioner_id.
+        self.command_queue = asyncio.Queue()
+        self._command_queue_task = self.loop.create_task(self._process_queue())
+
         log.debug('started JaegerReaderCallback listener')
 
     def _process_reply(self, msg):
@@ -141,37 +143,71 @@ class JaegerCAN(object):
 
         r_cmd.reply_queue.put_nowait(msg)
 
-    def send_command(self, command):
-        """Sends multiple messages from a command and tracks status.
+    async def _process_queue(self):
+        """Processes messages in the command queue."""
 
-        Parameters
-        ----------
-        command : `~jaeger.commands.commands.Command`
-            The command to send.
+        while True:
 
-        """
+            cmd = await self.command_queue.get()
 
-        log_header = f'({command.command_id.name!r}, {command.positioner_id}): '
-        if not self._can_queue_command(command):
-            raise ValueError(log_header + 'command is already running.')
+            log_header = f'({cmd.command_id.name!r}, {cmd.positioner_id}): '
 
-        assert command.status == CommandStatus.READY, log_header + 'command is not ready'
+            if not self._can_queue_command(cmd):
 
-        for message in command.get_messages():
+                # If we sent the command with override=True, finds the running
+                # command and cancels it.
+                if cmd._override:
+                    can_log.warning(log_header + 'another instance is already '
+                                    'running but the new command overrides it. '
+                                    'Cancelling previous command.',
+                                    JaegerUserWarning)
 
-            if command.status.failed:
-                can_log.debug(log_header + 'not sending more messages ' +
-                              'since this command has failed.')
-                return
+                    found = False
+                    for pos_id in [0, cmd.positioner_id]:
+                        if not found:
+                            for other_cmd in self.running_commands[pos_id]:
+                                if other_cmd.command_id == cmd.command_id:
+                                    found = True
+                                    break
 
-            can_log.debug(log_header + 'sending message with '
-                          f'arbitration_id={message.arbitration_id} '
-                          f'and data={message.data!r}.')
+                    if not found:
+                        raise RuntimeError('cannot find the running command '
+                                           'but _can_queue_command returned '
+                                           'False. This must be a bug.')
 
-            self.send(message)
+                    other_cmd.finish_command(CommandStatus.CANCELLED)
+                    self.running_commands[other_cmd.positioner_id].pop(other_cmd)
 
-        command.status = CommandStatus.RUNNING
-        self.running_commands[command.positioner_id][command.command_id] = command
+                else:
+
+                    can_log.warning(log_header + 'another instances is already '
+                                    'running. Requeuing and trying later.',
+                                    JaegerUserWarning)
+
+                    # Requeue command but wait a bit.
+                    self.loop.call_later(0.1, self.command_queue.put_nowait, cmd)
+                    continue
+
+            assert cmd.status == CommandStatus.READY, \
+                log_header + 'command is not ready'
+
+            can_log.debug(log_header + 'sending messages to CAN bus.')
+
+            cmd.status = CommandStatus.RUNNING
+            self.running_commands[cmd.positioner_id][cmd.command_id] = cmd
+
+            for message in cmd.get_messages():
+
+                if cmd.status.failed:
+                    can_log.debug(log_header + 'not sending more messages ' +
+                                  'since this command has failed.')
+                    return
+
+                can_log.debug(log_header + 'sending message with '
+                              f'arbitration_id={message.arbitration_id} '
+                              f'and data={message.data!r}.')
+
+                self.send(message)
 
     @classmethod
     def from_profile(cls, profile=None, loop=None):
