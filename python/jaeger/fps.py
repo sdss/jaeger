@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 23:11:04
+# @Last modified time: 2018-10-10 08:40:04
 
 import asyncio
 import os
@@ -71,6 +71,8 @@ class FPS(Actor):
         self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
         self.layout = layout
 
+        #: A list of `~jaeger.positioner.Positioner` instances associated with
+        #: this `.FPS` instance.
         self.positioners = {}
 
     def send_command(self, command_id, positioner_id=0, data=[], **kwargs):
