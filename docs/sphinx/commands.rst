@@ -16,10 +16,6 @@ List of commands
     :undoc-members:
     :noindex:
 
-.. autoclass:: jaeger.commands.Abort
-    :exclude-members: get_messages
-    :undoc-members:
-
 .. autoclass:: jaeger.commands.GetID
     :exclude-members: get_messages
     :undoc-members:
