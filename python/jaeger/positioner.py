@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 16:49:45
+# @Last modified time: 2018-10-10 17:40:28
 
 import asyncio
 
@@ -66,13 +66,11 @@ class Positioner(StatusMixIn):
         self.initialised = False
 
         if self.position_poller is not None:
-            if not self.position_poller.cancelled():
-                self.position_poller.cancel()
+            self.position_poller.cancel()
             self.position_poller = None
 
         if self.status_poller is not None:
-            if not self.status_poller.cancelled():
-                self.status_poller.cancel()
+            self.status_poller.cancel()
             self.status_poller = None
 
     async def update_position(self, timeout=1):
