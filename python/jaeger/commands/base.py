@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 19:24:18
+# @Last modified time: 2018-10-10 22:17:22
 
 import asyncio
 import logging
@@ -256,8 +256,8 @@ class Command(StatusMixIn, asyncio.Future):
         ----------
         status : `.CommandStatus` or `None`
             The status to set the command to. If `None` the command will be set
-            to `~.CommandStatus.DONE` if one reply for
-            each message has been received, `~.CommandStatus.FAILED` otherwise.
+            to `~.CommandStatus.DONE` if one reply for each message has been
+            received, `~.CommandStatus.FAILED` otherwise.
 
         """
 
