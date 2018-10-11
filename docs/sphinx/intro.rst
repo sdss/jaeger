@@ -7,8 +7,8 @@ Introduction to jaeger
 `jaeger <http://pacificrim.wikia.com/wiki/Jaeger>`_ provides high level control for the SDSS-V `Focal Plane System <https://wiki.sdss.org/display/FPS>`__. Some of the things that jaeger does are:
 
 - Wraps the low level CAN commands for simpler use.
-- Provides a framework that is independent of the CAN interface used (by using the `python-can <https://github.com/hardbyte/python-can>`_ library).
-- Interfaces with `kaiju <https://github.com/csayres/kaiju>`_ to provide anticollision path planning for trajectories.
+- Provides a framework that is independent of the CAN interface used (by using the python-can_ library).
+- Interfaces with kaiju_ to provide anticollision path planning for trajectories.
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
 - Stores last known positions and provide a system to recover from unexpected errors.
@@ -131,3 +131,6 @@ And it can be commanded by doing ::
 Unless `~.FPS.send_trajectory` is called with ``kaiju_check=False`` (DANGER! Do not do that unless you are sure of what you are doing), jaeger will check with kaiju_ to confirm that the trajectory is safe to execute.
 
 .. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
+
+.. _kaiju: https://github.com/csayres/kaiju
+.. _python-can: https://github.com/hardbyte/python-can
