@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:43:47
+# @Last modified time: 2018-10-10 19:24:49
 
 import asyncio
 import collections
@@ -41,7 +41,7 @@ class JaegerReaderCallback(can.Listener):
         The function to run when a new message is received.
     loop : event loop or `None`
         If an asyncio event loop, the callback will be called with
-        `asyncio.call_soon`, otherwise it will be called immediately.
+        ``call_soon``, otherwise it will be called immediately.
 
     """
 

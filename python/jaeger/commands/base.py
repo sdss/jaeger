@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:48:41
+# @Last modified time: 2018-10-10 19:24:18
 
 import asyncio
 import logging
@@ -318,7 +318,7 @@ class Command(StatusMixIn, asyncio.Future):
         """Queues the command for execution.
 
         Adds the command to the
-        `JaegerCAN.command_queue <jaeger.bus.JaegerCAN.command_queue>` so that
+        `JaegerCAN.command_queue <jaeger.can.JaegerCAN.command_queue>` so that
         it can be processed.
 
         Parameters
