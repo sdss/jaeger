@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 15:23:02
+# @Last modified time: 2018-10-11 15:24:35
 
 import asyncio
 import os
@@ -39,12 +39,14 @@ class FPS(object):
 
     Parameters
     ----------
+    bus : `.JaegerCAN` instance
+        The CAN bus to use.
     layout : str
         A file describing the layout of the FPS. If `None`, the CAN interface
         will be use to determine the positioners connected.
     can_profile : `str` or `None`
         The configuration profile for the CAN interface, or `None` to use the
-        default one.
+        default one. Ignored if ``bus`` is passed.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
@@ -65,10 +67,15 @@ class FPS(object):
 
     """
 
-    def __init__(self, layout=None, can_profile=None, loop=None, **kwargs):
+    def __init__(self, bus=None, layout=None, can_profile=None, loop=None, **kwargs):
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
-        self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
+
+        if isinstance(bus, JaegerCAN):
+            self.bus = bus
+        else:
+            self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
+
         self.layout = layout or config['fps']['default_layout']
 
         #: A list of `~jaeger.positioner.Positioner` instances associated with
