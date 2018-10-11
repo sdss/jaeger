@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 15:16:13
+# @Last modified time: 2018-10-11 15:23:02
 
 import asyncio
 import os
@@ -69,7 +69,7 @@ class FPS(object):
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
         self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
-        self.layout = layout or self.layout or config['fps']['default_layout']
+        self.layout = layout or config['fps']['default_layout']
 
         #: A list of `~jaeger.positioner.Positioner` instances associated with
         #: this `.FPS` instance.
