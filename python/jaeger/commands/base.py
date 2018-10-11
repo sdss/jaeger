@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 22:17:22
+# @Last modified time: 2018-10-11 10:49:29
 
 import asyncio
 import logging
@@ -249,7 +249,7 @@ class Command(StatusMixIn, asyncio.Future):
 
             self.finish_command(CommandStatus.DONE)
 
-    def finish_command(self, status):
+    def finish_command(self, status, timed_out=False):
         """Cancels the queue watcher and removes the running command.
 
         Parameters
@@ -258,8 +258,13 @@ class Command(StatusMixIn, asyncio.Future):
             The status to set the command to. If `None` the command will be set
             to `~.CommandStatus.DONE` if one reply for each message has been
             received, `~.CommandStatus.FAILED` otherwise.
+        timed_out : `bool`
+            Whether the command if being finished because it timed out.
 
         """
+
+        if timed_out:
+            self._log('command timed out. Finishing it.')
 
         if status:
             self.status = status
@@ -287,7 +292,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
-        self._log(f'status changed status to {self.status.name}')
+        self._log(f'status changed to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING:
             if self.timeout is None or self.timeout < 0:
@@ -297,7 +302,8 @@ class Command(StatusMixIn, asyncio.Future):
             else:
                 self.loop.call_later(self.timeout,
                                      self.finish_command,
-                                     CommandStatus.DONE)
+                                     CommandStatus.DONE,
+                                     True)
         elif self.status.is_done:
             # Call with status=None to avoid setting the status again and
             # retriggering the callback.
