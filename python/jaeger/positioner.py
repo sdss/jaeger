@@ -63,6 +63,7 @@ class Positioner(StatusMixIn):
         self.beta = None
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
+        self.initialised = False
 
         if self.position_poller is not None:
             if not self.position_poller.cancelled():
