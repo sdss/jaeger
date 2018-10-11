@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 11:49:41
+# @Last modified time: 2018-10-11 12:02:10
 
 import os
 import shutil
@@ -29,6 +29,10 @@ shutil.copyfile('../../bin/jaeger', os.path.join(tempdir, 'jaegercli', 'jaegercl
 open(os.path.join(tempdir, 'jaegercli', '__init__.py'), 'w')
 
 sys.path.insert(0, os.path.join(tempdir, 'jaegercli'))
+
+# Are we building in RTD?
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+
 
 # matplotlib.use('agg')
 
@@ -156,7 +160,12 @@ html_favicon = './_static/favicon.ico'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = []
+
+# See https://github.com/rtfd/readthedocs.org/issues/1776 for why we do this
+if on_rtd:
+    html_static_path = []
+else:
+    html_static_path = ['_static']
 
 # Sidebar templates
 html_sidebars = {
