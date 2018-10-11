@@ -68,3 +68,66 @@ Using jaeger from IPython
 -------------------------
 
 Since its 7.0 version, IPython provides `experimental support for asyncio <https://blog.jupyter.org/ipython-7-0-async-repl-a35ce050f7f7>`__. This means that it is possible to run the statements within the ``main()`` function from the example above directly in IPython interactively. Note that the support for asyncio is still tentative and should not be use for production, but it is a useful feature for quick control of the positioners and debugging.
+
+
+Scheduling commands
+-------------------
+
+The are two ways to send a new command to the CAN bus and wait for a reply:
+
+- Use the `.FPS.send_command` method, which returns a `.Command` instance. Note that the command does *not* get executed until it is awaited ::
+
+    >>> fps = FPS()
+    >>> cmd = fps.send_command('GO_TO_ABSOLUTE_POSITION', positioner_id=4, alpha=100, beta=30)
+    >>> cmd
+    <Command GO_TO_ABSOLUTE_POSITION (positioner_id=4, status='READY')>
+    >>> await cmd
+
+- Alternatively you can create a `.Command` instance directly, send it to the bus, and await the command ::
+
+    >>> from jaeger.commands import GetStatus
+    >>> status_cmd = GetStatus(positioner_id=4)
+    >>> status_cmd.send(bus=can_bus)  # can_bus must be an instance of JaegerCAN
+    >>> await status_cmd
+    >>> reply = status_cmd.replies[0]
+    >>> reply
+    <Reply (command_id='GET_STATUS', positioner_id=4, response_code='COMMAND_ACCEPTED')>
+    >>> reply.data
+    bytearray(b"\'\xc0\x00\x01")
+    >>> status_cmd.get_positioner_status()
+    [<PositionerStatus.DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZATION: 666894337>]
+
+
+Moving positioners and sending trajectories
+-------------------------------------------
+
+Moving positioners can be done either by using the `.Positioner.goto` method for a given positioner, or by sending a series of trajectories to multiple positioners with `.FPS.send_trajectory`.
+
+To move positioner 8 to :math:`\alpha=85,\,\beta=30` at a speed of 1500 RPM, you can do ::
+
+    >>> positioner = fps.positioners[8]
+    >>> positioner
+    <Positioner (id=8, status='DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZATION', initialised=False)>
+    >>> await positioner.initialise()
+    >>> await positioner.goto(alpha=85, beta=30, speed_alpha=1500, speed_beta=1500)
+
+The command will asynchronously block until the position has been reached and the status is again `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.
+
+Trajectories can be sent either a `YAML <http://yaml.org>`__ file or a dictionary. In both cases the trajectory must include, for each positioner, a list of positions and times for the ``'alpha'`` arm in the format :math:`\rm [(\alpha_1, t_1), (\alpha_2, t_2), ...]`, and a similar dictionary for ``'beta'``. An example of YAML file with a valid trajectory for positioners 1 and 4 is
+
+.. code-block:: yaml
+
+    1:
+        alpha: [[20, 5], [100, 10], [50, 15]]
+        beta: [[90, 15], [85, 18]]
+    4:
+        alpha: [[200, 3], [100, 15]]
+        beta: [[50, 5]]
+
+And it can be commanded by doing ::
+
+    >>> await fps.send_trajectory('my_trajectory.yaml')
+
+Unless `~.FPS.send_trajectory` is called with ``kaiju_check=False`` (DANGER! Do not do that unless you are sure of what you are doing), jaeger will check with kaiju_ to confirm that the trajectory is safe to execute.
+
+.. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
