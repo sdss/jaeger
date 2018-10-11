@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:44:29
+# @Last modified time: 2018-10-11 15:16:13
 
 import asyncio
 import os
@@ -69,11 +69,69 @@ class FPS(object):
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()
         self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
-        self.layout = layout
+        self.layout = layout or self.layout or config['fps']['default_layout']
 
         #: A list of `~jaeger.positioner.Positioner` instances associated with
         #: this `.FPS` instance.
         self.positioners = {}
+
+        # Loads the positioners from the layout
+        self._load_layout(self.layout)
+
+    def _load_layout(self, layout):
+        """Loads positioner information from a layout file or DB.
+
+        Parameters
+        ----------
+        layout : `str` or `pathlib.Path`
+            Either the path to a layout file or a string with the layout name
+            to be retrieved from the database. If ``layout=None``, retrieves
+            the default layout as defined in the config from the DB.
+
+        """
+
+        if isinstance(layout, pathlib.Path) or os.path.exists(layout):
+
+            log.info(f'reading layout from file {layout!s}')
+
+            data = astropy.table.Table.read(layout, format='ascii.no_header',
+                                            names=['row', 'pos', 'x', 'y', 'type'])
+
+            pos_id = 1
+            for row in data:
+                if row['type'].lower() == 'fiducial':
+                    continue
+                new_positioner = Positioner(pos_id, self, centre=(row['x'], row['y']))
+                pos_id += 1
+                self.add_positioner(new_positioner)
+
+            n_pos = pos_id - 1
+
+        elif targetdb is not None:
+
+            log.info(f'reading profile {layout} from database')
+
+            if not targetdb.database.connected:
+                targetdb.database.connect()
+            assert targetdb.database.connected, 'database is not connected.'
+
+            positioners_db = targetdb.Actuator.select().join(
+                targetdb.FPSLayout).switch(targetdb.Actuator).join(
+                    targetdb.ActuatorType).filter(
+                        targetdb.FPSLayout.label == layout,
+                        targetdb.ActuatorType.label == 'Robot')
+
+            for pos in positioners_db:
+                self.add_positioner(Positioner(pos.id, self,
+                                               centre=(pos.xcen, pos.ycen)))
+
+            n_pos = positioners_db.count()
+
+        else:
+
+            raise RuntimeError('database is not available.')
+
+        log.debug(f'loaded positions for {n_pos} positioners')
 
     def send_command(self, command_id, positioner_id=0, data=[], **kwargs):
         """Sends a command to the bus.
@@ -117,64 +175,7 @@ class FPS(object):
         self.positioners[positioner.positioner_id] = positioner
 
     async def initialise(self, layout=None, check_positioners=True):
-        """Loads positioner information from a layout file or from CAN.
-
-        Parameters
-        ----------
-        layout : `str` or `pathlib.Path`
-            Either the path to a layout file or a string with the layout name
-            to be retrieved from the database. If ``layout=None``, retrieves
-            the default layout as defined in the config from the DB.
-        check_positioners : bool
-            If ``True`` and ``layout`` is a file, the CAN interface will be
-            used to confirm that each positioner is connected and to fill out
-            additional information such as ``alpha`` and ``beta``.
-
-        """
-
-        log.info('starting FPS initialisation')
-
-        layout = layout or self.layout or config['fps']['default_layout']
-
-        if isinstance(layout, pathlib.Path) or os.path.exists(layout):
-
-            log.info(f'reading layout from file {layout!s}')
-
-            data = astropy.table.Table.read(layout, format='ascii.no_header',
-                                            names=['row', 'pos', 'x', 'y', 'type'])
-
-            pos_id = 1
-            for row in data:
-                if row['type'].lower() == 'fiducial':
-                    continue
-                new_positioner = Positioner(pos_id, self, centre=(row['x'], row['y']))
-                pos_id += 1
-                self.add_positioner(new_positioner)
-
-            log.debug(f'loaded positions for {pos_id-1} positioners')
-
-        else:
-
-            log.info(f'reading profile {layout} from database')
-
-            if not targetdb.database.connected:
-                targetdb.database.connect()
-            assert targetdb.database.connected, 'database is not connected.'
-
-            positioners_db = targetdb.Actuator.select().join(
-                targetdb.FPSLayout).switch(targetdb.Actuator).join(
-                    targetdb.ActuatorType).filter(
-                        targetdb.FPSLayout.label == 'central_park',
-                        targetdb.ActuatorType.label == 'Robot')
-
-            for pos in positioners_db:
-                self.add_positioner(Positioner(pos.id, self,
-                                               centre=(pos.xcen, pos.ycen)))
-
-            log.debug(f'loaded positions for {positioners_db.count()} positioners')
-
-        if not check_positioners:
-            return
+        """Initialises all positioners with status and firmware version."""
 
         # Resets all positioner
         for positioner in self.positioners.values():
