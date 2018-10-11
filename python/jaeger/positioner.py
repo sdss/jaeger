@@ -44,6 +44,8 @@ class Positioner(StatusMixIn):
         self.beta = None
         self.firmware = None
 
+        self.initialised = False
+
         #: A `~asyncio.Task` that polls the current position of alpha and
         #: beta periodically.
         self.position_poller = None
@@ -228,6 +230,8 @@ class Positioner(StatusMixIn):
                                      beta=config['motor_speed']):
             return False
 
+        self.initialised = True
+
         return True
 
     async def get_firmware(self):
@@ -338,6 +342,9 @@ class Positioner(StatusMixIn):
             >>> await goto(alpha_speed=1000)
 
         """
+
+        assert self.initialise, \
+            'cannot go to position until positioner has been initialised.'
 
         assert any([var is not None
                     for var in [alpha, beta, alpha_speed, beta_speed]]), \
