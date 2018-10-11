@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 13:29:12
+# @Last modified time: 2018-10-10 17:44:52
 
 import asyncio
 import os
@@ -17,8 +17,7 @@ from contextlib import suppress
 import astropy.table
 from ruamel.yaml import YAML
 
-from asyncioActor.actor import Actor
-from jaeger import NAME, __version__, config, log
+from jaeger import config, log
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
@@ -35,7 +34,7 @@ except ImportError:
 __ALL__ = ['FPS']
 
 
-class FPS(Actor):
+class FPS(object):
     """A class describing the Focal Plane System that can be used as an actor.
 
     Parameters
@@ -461,4 +460,5 @@ class FPS(Actor):
     def start_actor(self):
         """Initialises the actor."""
 
-        super().__init__(NAME, version=__version__)
+        raise NotImplementedError('the actor functionality '
+                                  'has not yet been implemented.')
