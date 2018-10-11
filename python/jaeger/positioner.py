@@ -187,8 +187,9 @@ class Positioner(StatusMixIn):
         # Resets all.
         self.reset()
 
-        # Update status
+        # Make one status update and initialise status poller
         await self.update_status(timeout=1)
+        self.status_poller = Poller(self.update_status, delay=5)
 
         if PosStatus.DATUM_INITIALIZED not in self.status:
 
@@ -221,9 +222,6 @@ class Positioner(StatusMixIn):
 
         # Initialise position poller
         self.position_poller = Poller(self.update_position, delay=5)
-
-        # Initialise status poller
-        self.status_poller = Poller(self.update_status, delay=5)
 
         # Sets the default speed
         if not await self._set_speed(alpha=config['motor_speed'],
