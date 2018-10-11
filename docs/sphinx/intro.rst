@@ -7,7 +7,7 @@ Introduction to jaeger
 `jaeger <http://pacificrim.wikia.com/wiki/Jaeger>`_ provides high level control for the SDSS-V `Focal Plane System <https://wiki.sdss.org/display/FPS>`__. Some of the things that jaeger does are:
 
 - Wraps the low level CAN commands for simpler use.
-- Provides a framework that is independent of the CAN interface used (by using the `python-can <https://github.com/hardbyte/python-can>`__ library).
+- Provides a framework that is independent of the CAN interface used (by using the `python-can <https://github.com/hardbyte/python-can>`_ library).
 - Interfaces with `kaiju <https://github.com/csayres/kaiju>`_ to provide anticollision path planning for trajectories.
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
@@ -18,6 +18,12 @@ Introduction to jaeger
 The code for jaeger is developed in `GitHub <https://github.com/sdss/jaeger>`__ and can be installed using `sdss_install <https://github.com/sdss/sdss_install>`__ or by running ::
 
     pip install --upgrade sdss-jaeger
+
+To check out the development version do ::
+
+    git clone --recurse-submodules git://github.com/sdss/jaeger.git
+
+.. note:: Currently jaeger uses a custom version of the python-can_ library, included as a submodule. Once a new version of python-can has been released with the necessary changes we should be able to deprecate the use of the submodule.
 
 jaeger is developed as an `asyncio <https://docs.python.org/3/library/asyncio.html>`__ library and a certain familiarity with asynchronous programming. The actor functionality (TCP/IP connection, command parser, inter-actor communication) is built on top of `asyncioActor <https://github.com/albireox/asyncioActor>`__.
 
@@ -51,7 +57,7 @@ A simple jaeger program
 
     asyncio.run(main())
 
-This code runs the `coroutine <https://docs.python.org/3/library/asyncio-task.html#coroutines>`__ ``main`` until it completes. First we create an instance of `~jaeger.fps.FPS` , the main jaeger class that contains information about all the positioners and the `CAN bus <jaeger.can.JaegerCAN>`. When called without extra parameters, `~jaeger.fps.FPS` loads the default CAN interface and positioner layout. The real initialisation happens when calling `fps.initialise <jaeger.fps.FPS.initialise>`. Note that `~jaeger.fps.FPS.initialise` is a coroutine and needs to be awaited until completion. During initialisation, all the robots in the layout are queried by their status and firmware, and `~jaeger.positioner.Positioner` instances are added to `fps.positioners <jaeger.fps.FPS.positioners>`.
+This code runs the `coroutine <https://docs.python.org/3/library/asyncio-task.html#coroutines>`__ ``main()`` until it completes. First we create an instance of `~jaeger.fps.FPS` , the main jaeger class that contains information about all the positioners and the `CAN bus <jaeger.can.JaegerCAN>`. When called without extra parameters, `~jaeger.fps.FPS` loads the default CAN interface and positioner layout. The real initialisation happens when calling `fps.initialise <jaeger.fps.FPS.initialise>`. Note that `~jaeger.fps.FPS.initialise` is a coroutine and needs to be awaited until completion. During initialisation, all the robots in the layout are queried by their status and firmware, and `~jaeger.positioner.Positioner` instances are added to `fps.positioners <jaeger.fps.FPS.positioners>`.
 
 Next we initialise one of the positioners. This make sure that the positioner is not moving, initialises the datums if necessary, and starts a loop for polling status and position. It also sets the default motor speeds. Finally, we command the positioner to go to a certain position in alpha and beta. The `Positioner.goto <jaeger.positioner.Positioner.goto>` coroutine finishes once the move has been completed and the status reaches `~jaeger.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.
 
