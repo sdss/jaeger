@@ -7,12 +7,13 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 16:26:10
+# @Last modified time: 2018-10-11 11:01:51
 
 
 import numpy
 
 from jaeger.commands import MOTOR_STEPS, Command, CommandID
+from jaeger.maskbits import PositionerStatus
 from jaeger.utils import bytes_to_int
 
 
@@ -36,6 +37,12 @@ class GetStatus(Command):
 
     command_id = CommandID.GET_STATUS
     broadcastable = True
+
+    def get_positioner_status(self):
+        """Returns the `~.maskbit.PositionerStatus` flag for each reply."""
+
+        return [PositionerStatus(bytes_to_int(reply.data))
+                for reply in self.replies]
 
 
 class GetActualPosition(Command):
