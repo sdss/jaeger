@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:44:00
+# @Last modified time: 2018-10-10 18:48:41
 
 import asyncio
 import logging
@@ -132,8 +132,8 @@ class Command(StatusMixIn, asyncio.Future):
 
     Commands sent to a single positioner are marked done when a reply is
     received from the same positioner for the given command, or when it
-    `times out <.Command.timeout>`. Broadcast commands only get marked done
-    by timing out or manually.
+    times out. Broadcast commands only get marked done by timing out or
+    manually.
 
     Parameters
     ----------
