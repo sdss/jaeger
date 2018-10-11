@@ -28,6 +28,10 @@ a.reference > code {
   background-color: inherit;
 }
 
+ul, ol {
+  margin: 0px 0 0px 30px;
+}
+
 a.reference {
   border-bottom: 0px;
 }
