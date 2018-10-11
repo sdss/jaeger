@@ -177,7 +177,7 @@ class Positioner(StatusMixIn):
     async def initialise(self):
         """Initialises the datum and starts the position watcher."""
 
-        log.info(f'positioner {self.positioner_id}: initialising datums')
+        log.info(f'positioner {self.positioner_id}: initialising')
 
         assert not self.is_bootloader(), \
             'this coroutine cannot be scheduled in bootloader mode.'
@@ -192,6 +192,8 @@ class Positioner(StatusMixIn):
         self.status_poller = Poller(self.update_status, delay=5)
 
         if PosStatus.DATUM_INITIALIZED not in self.status:
+
+            log.info(f'positioner {self.positioner_id}: initialising datums')
 
             await self.fps.send_command(CommandID.INITIALIZE_DATUMS,
                                         positioner_id=self.positioner_id)
