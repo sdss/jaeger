@@ -91,12 +91,22 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
 def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
     """Moves a robot to random positions."""
 
+    if (alpha[0] >= alpha[1]) or (alpha[0] < 0 or alpha[1] > 360):
+        raise click.UsageError('alpha must be in the range [0, 360)')
+
+    if (beta[0] >= beta[1]) or (beta[0] < 0 or beta[1] > 360):
+        raise click.UsageError('beta must be in the range [0, 360)')
+
+    if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
+        raise click.UsageError('speed must be in the range [0, 3000)')
+
     fps = FPS(**ctx.obj)
     yield from fps.initialise()
 
     positioner = fps.positioners[positioner_id]
     result = yield from positioner.initialise()
     if not result:
+        log.error('positioner is not connected or failed to initialise.')
         return
 
     done_moves = 0
