@@ -14,7 +14,6 @@ List of commands
 .. autoclass:: jaeger.commands.CommandID
     :exclude-members:
     :undoc-members:
-    :noindex:
 
 .. autoclass:: jaeger.commands.GetID
     :exclude-members: get_messages
