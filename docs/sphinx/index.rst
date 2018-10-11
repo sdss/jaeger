@@ -15,8 +15,10 @@ Contents
   api
   commands
   maskbits
+
   cli
-  What's new in jaeger? <changelog>
+
+  changelog
 
 
 
