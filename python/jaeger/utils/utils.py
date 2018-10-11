@@ -7,11 +7,11 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-09-13 15:43:39
+# @Last modified time: 2018-10-10 18:45:12
 
 import numpy
 
-from .maskbits import ResponseCode
+from jaeger.maskbits import ResponseCode
 
 
 __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
@@ -160,7 +160,7 @@ def get_identifier(positioner_id, command_id, response_code=0):
         The Id of the positioner to command, or zero for broadcast.
     command_id : int
         The ID of the command to send.
-    response_code : `int` or `~jaeger.utils.maskbits.ResponseCode`
+    response_code : `int` or `~jaeger.maskbits.ResponseCode`
         The response code.
 
     Returns
@@ -207,7 +207,7 @@ def parse_identifier(identifier):
     components : tuple
         A tuple with the components of the identifier. The first element is
         the positioner id, the second the command id, and the third the
-        response flag as an instance of `~jaeger.utils.maskbits.ResponseCode`.
+        response flag as an instance of `~jaeger.maskbits.ResponseCode`.
 
     Examples
     --------

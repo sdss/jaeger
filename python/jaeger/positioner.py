@@ -7,14 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 17:40:28
+# @Last modified time: 2018-10-10 18:45:35
 
 import asyncio
 
-from jaeger import config, log
+from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
-from jaeger.utils import Poller, StatusMixIn, bytes_to_int, maskbits
+from jaeger.utils import Poller, StatusMixIn, bytes_to_int
 
 
 __ALL__ = ['Positioner']

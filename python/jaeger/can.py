@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 00:06:15
+# @Last modified time: 2018-10-10 18:43:47
 
 import asyncio
 import collections
@@ -21,7 +21,7 @@ import jaeger.tests.bus
 from jaeger import can_log, config, log
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
-from jaeger.utils.maskbits import CommandStatus
+from jaeger.maskbits import CommandStatus
 
 
 __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']

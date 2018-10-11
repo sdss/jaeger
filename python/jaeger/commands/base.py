@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 16:45:38
+# @Last modified time: 2018-10-10 18:44:00
 
 import asyncio
 import logging
@@ -17,8 +17,9 @@ import can
 import jaeger.utils
 from jaeger import can_log, log
 from jaeger.core import exceptions
+from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
-from jaeger.utils.maskbits import CommandStatus, ResponseCode
+
 from . import CommandID
 
 
@@ -81,7 +82,7 @@ class Reply(object):
         The data returned.
     positioner_id : int
         The positioner sending this command.
-    response_code : `~jaeger.utils.maskbits.ResponseCode` flag
+    response_code : `~jaeger.maskbits.ResponseCode` flag
         The response code associated to the reply.
 
     """

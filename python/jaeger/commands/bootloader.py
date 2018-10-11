@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 08:39:01
+# @Last modified time: 2018-10-10 18:44:09
 
 import asyncio
 import os
@@ -16,8 +16,8 @@ import zlib
 
 from jaeger import commands, log
 from jaeger.core.exceptions import JaegerError, JaegerUserWarning
+from jaeger.maskbits import BootloaderStatus
 from jaeger.utils import int_to_bytes
-from jaeger.utils.maskbits import BootloaderStatus
 
 
 __ALL__ = ['load_firmware', 'StartFirmwareUpgrade', 'GetFirmwareVersion',

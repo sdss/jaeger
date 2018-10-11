@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 17:44:52
+# @Last modified time: 2018-10-10 18:44:29
 
 import asyncio
 import os
@@ -17,12 +17,12 @@ from contextlib import suppress
 import astropy.table
 from ruamel.yaml import YAML
 
-from jaeger import config, log
+from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.positioner import Positioner
-from jaeger.utils import bytes_to_int, maskbits
+from jaeger.utils import bytes_to_int
 
 
 try:

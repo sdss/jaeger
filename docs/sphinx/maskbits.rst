@@ -1,7 +1,7 @@
 Maskbits
 ========
 
-.. automodule:: jaeger.utils.maskbits
+.. automodule:: jaeger.maskbits
     :undoc-members:
 
 .. autoclass:: jaeger.commands.CommandID
