@@ -199,7 +199,7 @@ class Positioner(StatusMixIn):
                                         positioner_id=self.positioner_id)
 
             result = await self.wait_for_status(PosStatus.DATUM_INITIALIZED,
-                                                timeout=2)
+                                                timeout=60)
 
             if result is False:
                 log.error(f'positioner={self.positioner_id}: '
