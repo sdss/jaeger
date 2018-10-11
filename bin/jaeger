@@ -78,6 +78,73 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
 
 @jaeger.command()
 @click.argument('positioner_id', metavar='POSITIONER', type=int)
+@click.argument('alpha', metavar='ALPHA', type=float)
+@click.argument('beta', metavar='BETA', type=float)
+@click.option('--speed', type=(float, float), default=(1000, 1000),
+              help='the speed for the alpha and beta motors.',
+              show_default=True)
+@click.pass_context
+@cli_coro
+def goto(ctx, positioner_id, alpha, beta, speed=None):
+    """Moves a robot to a given position."""
+
+    if alpha < 0 or alpha >= 360:
+        raise click.UsageError('alpha must be in the range [0, 360)')
+
+    if beta < 0 or beta >= 360:
+        raise click.UsageError('beta must be in the range [0, 360)')
+
+    if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
+        raise click.UsageError('speed must be in the range [0, 3000)')
+
+    fps = FPS(**ctx.obj)
+    yield from fps.initialise()
+
+    positioner = fps.positioners[positioner_id]
+    result = yield from positioner.initialise()
+    if not result:
+        log.error('positioner is not connected or failed to initialise.')
+        return
+
+    result = yield from positioner.goto(alpha=alpha, beta=beta,
+                                        alpha_speed=speed[0],
+                                        beta_speed=speed[1])
+
+    if result is False:
+        return
+
+
+@jaeger.command(name='set-positions')
+@click.argument('positioner_id', metavar='POSITIONER', type=int)
+@click.argument('alpha', metavar='ALPHA', type=float)
+@click.argument('beta', metavar='BETA', type=float)
+@click.pass_context
+@cli_coro
+def set_positions(ctx, positioner_id, alpha, beta):
+    """Sets the position of the alpha and beta arms."""
+
+    if alpha < 0 or alpha >= 360:
+        raise click.UsageError('alpha must be in the range [0, 360)')
+
+    if beta < 0 or beta >= 360:
+        raise click.UsageError('beta must be in the range [0, 360)')
+
+    fps = FPS(**ctx.obj)
+    yield from fps.initialise()
+
+    positioner = fps.positioners[positioner_id]
+
+    result = yield from positioner._set_position(alpha, beta)
+
+    if not result:
+        log.error('failed to set positions.')
+        return
+
+    log.info(f'positioner {positioner_id} set to {alpha, beta}.')
+
+
+@jaeger.command()
+@click.argument('positioner_id', metavar='POSITIONER', type=int)
 @click.option('-n', '--moves', type=int,
               help='number of moves to perform. Otherwise runs forever.')
 @click.option('--alpha', type=(int, int), default=(0, 360),
