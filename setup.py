@@ -16,7 +16,7 @@ from setuptools import find_packages, setup
 # The NAME variable should be of the format "sdss-jaeger".
 # Please check your NAME adheres to that format.
 NAME = 'jaeger'
-VERSION = '0.1.0dev'
+VERSION = '0.1.0'
 RELEASE = 'dev' in VERSION
 
 
