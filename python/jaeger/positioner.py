@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:45:35
+# @Last modified time: 2018-10-11 11:11:50
 
 import asyncio
 
@@ -407,4 +407,6 @@ class Positioner(StatusMixIn):
 
     def __repr__(self):
         status_names = '|'.join([status.name for status in self.status.active_bits])
-        return f'<Positioner (id={self.positioner_id}, status={status_names!r})>'
+        return (f'<Positioner (id={self.positioner_id}, '
+                f'status={status_names!r}, '
+                f'initialised={self.initialised})>')
