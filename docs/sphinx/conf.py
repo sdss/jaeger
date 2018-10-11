@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 12:02:10
+# @Last modified time: 2018-10-11 13:14:33
 
 import os
 import shutil
@@ -116,8 +116,8 @@ releases_unstable_prehistory = True
 
 # Intersphinx mappings
 intersphinx_mapping = {'python': ('https://docs.python.org/3.6', None),
-                       'can': ('https://python-can.readthedocs.io/en/stable/', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),}
+                       'can': ('https://python-can.readthedocs.io/en/develop/', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy/', None)}
 # 'astropy': ('http://docs.astropy.org/en/latest', None),
 # 'matplotlib': ('https://matplotlib.org/', None),
 # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None)}
