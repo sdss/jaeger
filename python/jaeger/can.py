@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 19:24:49
+# @Last modified time: 2018-10-10 21:59:13
 
 import asyncio
 import collections
@@ -250,11 +250,13 @@ class JaegerCAN(object):
 
         """
 
+        r_coms = self.running_commands
+
         for pos_id in [0, positioner_id]:
-            if pos_id in self.running_commands and command_id in self.running_commands[pos_id]:
-                cmd = self.running_commands[pos_id][command_id]
+            if pos_id in r_coms and command_id in r_coms[pos_id]:
+                cmd = r_coms[pos_id][command_id]
                 if cmd.status.is_done or cmd.command_id != command_id:
-                    self.running_commands[pos_id].pop(command_id)
+                    r_coms[pos_id].pop(command_id)
                 else:
                     return cmd
 
