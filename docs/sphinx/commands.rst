@@ -1,5 +1,5 @@
-Commands
-========
+Command API
+===========
 
 Base classes
 ------------

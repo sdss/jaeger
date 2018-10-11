@@ -12,9 +12,12 @@ Contents
 
   intro
 
+  shatterdome
+
+  maskbits
+
   api
   commands
-  maskbits
 
   cli
 
