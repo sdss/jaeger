@@ -102,7 +102,7 @@ Shutting down the FPS
 Sending trajectories
 ^^^^^^^^^^^^^^^^^^^^
 
-Trajectories can be sent either a `YAML <http://yaml.org>`__ file or a dictionary. In both cases the trajectory must include, for each positioner, a list of positions and times for the ``'alpha'`` arm in the format :math:`\rm [(\alpha_1, t_1), (\alpha_2, t_2), ...]`, and a similar dictionary for ``'beta'``. An example of YAML file with a valid trajectory for positioners 1 and 4 is
+Trajectories can be sent either a `YAML <http://yaml.org>`_ file or a dictionary. In both cases the trajectory must include, for each positioner, a list of positions and times for the ``'alpha'`` arm in the format :math:`\rm [(\alpha_1, t_1), (\alpha_2, t_2), ...]`, and a similar dictionary for ``'beta'``. An example of YAML file with a valid trajectory for positioners 1 and 4 is
 
 .. code-block:: yaml
 
@@ -195,28 +195,131 @@ While `~.Positioner.wait_for_status` is running the interval at which `~.Positio
 Commands
 --------
 
-Creating a new command class
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+`.Command` provides a base class to implement wrappers around firmware commands. It handles the creation of messages to be passed to the bus, encodes the ``arbitration id`` from the ``command_id` and ``positioner_id``, processes replies, and keeps a record of the status of a command. Commands that accept extra data (e.g., positions of the alpha and beta arms) also do the encoding of the input parameters to the format that the firmware command understands, making them easier to use. Commands are `asyncio.Future` objects and can be awaited until complete. A list of all the available commands can be found `here <command-list>`_.
+
+Commands can sent directly to the bus ::
+
+    >>> from jaeger.commands import GetStatus
+    >>> status_cmd = GetStatus(positioner_id=4)
+    >>> status_cmd
+    <Command GET_STATUS (positioner_id=4, status='READY')>
+    >>> status_cmd.send()
+    True
+    >>> await status_cmd
+
+This is what happens when you execute the above snippet:
+
+- When created, the command has status `~.maskbits.CommandStatus.READY` and is prepared to be sent to the bus.
+- When we `~.Command.send` the command, it gets put in the `bus queue <can-queue>`_.
+- Shortly after, the bus processes the command from the queue and checks that no other command with the same ``(command_id, positioner_id)`` is running. If that's the case the command status is changed to `~.maskbits.CommandStatus.RUNNING` and all the `~.commands.base.Message` that compose the command are sent to the bus. A `~.commands.base.Message` is just a wrapper that contains the ``arbitration_id`` and the data to send as bytes. Most command will issue just a message but some such as `~.commands.SendTrajectoryData` can send multiple messages.
+- The bus listens to replies from the bus and redirects them to the command with the matching ``(command_id, positioner_id)`` where they are processed.
+- Once the expected replies have been received, or when the command times out, the command is marked `~.maskbits.CommandStatus.DONE` or `~.maskbits.CommandStatus.FAILED`. See the :ref:`command-done` section for more details.
+- When the command is marked done, the ``result`` of the `~asyncio.Future` is set and the event loop returns.
 
 Replies
 ^^^^^^^
+
+When a reply is received from the bus it is redirected to appropriate command, processed, and stored in the `~.commands.base.Command.replies` list as a `~.commands.base.Reply` object. `~.commands.base.Reply` instances are quite simple and contain the associated ``positioner_id`` and ``command_id`` as well as the `~.commands.base.Reply.data` returned (as a `bytearray`), and the `~.commands.base.Reply.response_code` (and instance of `~.maskbits.ResponseCode`) for the command sent.
 
 .. _command-done:
 
 When is a command marked done?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+There are several ways in which a command can be marked done:
+
+- If the command is not a broadcast and it has received *as many replies as messages sent* and all those replies have the `~.maskbits.ResponseCode.COMMAND_ACCEPTED` bit, then the command is marked `~.maskbits.CommandStatus.DONE`. This happens because we expect each message sent to receive a confirmation that it has been accepted, even if the reply doesn't include any additional data.
+- If any reply to the command has a `~.maskbits.ResponseCode` different from `~.maskbits.ResponseCode.COMMAND_ACCEPTED` then the command is immediately marked `~.maskbits.CommandStatus.FAILED` and all additional replies are ignored.
+- If the command is a broadcast we don't know how many replies to expect. In that case the command waits until it :ref:`times out <command-timeout>` and it's marked `~.maskbits.CommandStatus.DONE` if it has received at least one reply, otherwise `~.maskbits.CommandStatus.FAILED`.
+- If the command is instantiated with ``timeout=0``, the command is marked done the moment it is processed by the :ref:`bus queue <can-queue>`. In this case all replies to the command are ignored.
+
+.. _command-timeout:
+
 Time-outs
 ^^^^^^^^^
+
+When the command is set to `~.maskbits.CommandStatus.RUNNING` (i.e., when it is processed from the :ref:`bus queue <can-queue>`), a timer starts that times out the command after a certain delay (usually one second). The timeout can be set when the command is instantiated. When the command times out it is marked done (if is has not already been so) according to the :ref:`above logic <command-done>`.
+
+The ``timeout`` can be set to `None`, in which case the command will never time out. When combined with a broadcast this means the command will never be marked finished and the user will need to manually call `~.commands.base.Command.finish_command` to finish it. For example ::
+
+    import asyncio
+
+    from jaeger import FPS
+    from jaeger.maskbits import CommandStatus, PositionerStatus
+
+
+    async def check_status(status_cmd, positioners):
+
+        print('Starting monitoring')
+
+        if all(asyncio.gather(*[positioner.wait_for_status(PositionerStatus.DATUM_INITIALISED) for positioner in positioners])):
+            status_cmd.finish_command(status=CommandStatus.DONE)
+        else:
+            status_cmd.finish_command(status=CommandStatus.FAILED)
+
+
+    async def get_status():
+
+        fps = FPS()
+        await fps.initialise()
+
+        status_cmd = fps.send_command('GET_STATUS', positioner_id=0, timeout=None)
+
+        asyncio.create_task(check_status(status_cmd, fps.positioners))
+
+        await status_cmd
+
+        print('Command done')
+
+
+    asyncio.run(get_status())
+
+
+
+Internals
+---------
 
 .. _config-files:
 
 Configuration files
--------------------
+^^^^^^^^^^^^^^^^^^^
 
+jaeger uses the default configuration file system from the `SDSS Python template <https://sdss-python-template.readthedocs.io/en/latest/#configuration-file-and-logging>`__. The main configuration file, in YAML_ format, is included with the package in `etc/jaeger.yml <https://github.com/sdss/jaeger/blob/master/python/jaeger/etc/jaeger.yml>`__. Any section in this file can be overridden in a personal configuration file that must be located at ``~/.jaeger.jaeger.yml`` in the HOME directory of the user executing the code. For example, if the default ``interfaces`` section is
+
+.. code-block:: YAML
+
+    interfaces:
+        default:
+            interface: slcan
+            channel: /dev/tty.usbserial-LW1FJ8ZR
+            ttyBaudrate: 1000000
+            bitrate: 1000000
+        test:
+            interface: test
+            channel: none
+            ttyBaudrate: 1000000
+            bitrate: 1000000
+
+But we want to change the channel of the default configuration we can create a file that contains
+
+.. code-block:: YAML
+
+    interfaces:
+        default:
+            channel: /dev/tty.USB0
 
 Logging
--------
+^^^^^^^
+
+There are two loggers in jaeger. Both of them are output to the terminal (with different logging levels) and stored in files. The first one logs all jaeger specific messages and it is stored at ``~/.jaeger/jaeger.log``. The second logs interaction with the CAN bus and saves messages to ``~/.jaeger/can.log``. In both cases, all messages with logging level ``INFO`` or above are output to the terminal. The logger instances can be access from the top jaeger module by importing ``from jaeger import log, can_log``.
+
+To change the terminal logging level you can use the `~logging.Handler.setLevel` method. For instance ::
+
+    import logging
+    from jaeger import log
+
+    # log.sh contains the terminal logging handler
+    log.sh.setLevel(logging.DEBUG)
 
 
 .. _bootloader-mode:
@@ -224,8 +327,16 @@ Logging
 The bootloader mode
 -------------------
 
+During the first 10 seconds after a positioner has been powered up it remains in bootloader mode. In this state is is possible to issue several :ref:`specific commands <bootloader-commands>` to update the firmware. In this mode the `~.commands.GetStatus` command returns bits that must be interpreted using the `~.maskbits.BootloaderStatus` maskbit.
+
+Is is possible to know whether a positioner is in bootloader mode by `getting the firmware version <.commands.GetFirmwareVersion>` command and getting the version string. If the version is ``'XX.80.YY'`` the positioner is in bootloader mode.
+
+.. note:: This implementation is temporary and will be changed once the bootloaded mode can be set via de sync cable.
+
 Upgrading firmware
 ^^^^^^^^^^^^^^^^^^
+
+If is possible to upgrade the firmware of a positioner (or set of them) by using the convenience function `~.commands.load_firmware`. A :ref:`CLI interface <cli>` to this function is available via the ``jaeger`` command.
 
 
 .. _kaiju: https://github.com/csayres/kaiju
