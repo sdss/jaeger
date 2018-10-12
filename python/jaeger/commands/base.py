@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 10:49:29
+# @Last modified time: 2018-10-12 11:31:14
 
 import asyncio
 import logging
@@ -19,7 +19,6 @@ from jaeger import can_log, log
 from jaeger.core import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
-
 from . import CommandID
 
 
@@ -242,14 +241,14 @@ class Command(StatusMixIn, asyncio.Future):
                       level=logging.ERROR, logs=[can_log, log])
 
         # If this is not a broadcast, the message was accepted and we have as
-        # many replies as messages sent, mask as done.
+        # many replies as messages sent, mark as done.
         elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
                 self.positioner_id != 0 and
                 len(self.replies) == self._n_messages):
 
-            self.finish_command(CommandStatus.DONE)
+            self.status = CommandStatus.DONE
 
-    def finish_command(self, status, timed_out=False):
+    def finish_command(self, status=None, timed_out=False):
         """Cancels the queue watcher and removes the running command.
 
         Parameters
@@ -266,13 +265,16 @@ class Command(StatusMixIn, asyncio.Future):
         if timed_out:
             self._log('command timed out. Finishing it.')
 
-        if status:
-            self.status = status
-        else:
-            if len(self.replies) == self._n_messages:
-                self.status = CommandStatus.DONE
+        if not status.is_done:
+            if status:
+                self.status = status
             else:
-                self.status = CommandStatus.FAILED
+                n_replies = len(self.replies)
+                if ((self.positioner_id != 0 and n_replies == self._n_messages) or
+                        (self.positioner_id == 0 and n_replies >= 1)):
+                    self.status = CommandStatus.DONE
+                else:
+                    self.status = CommandStatus.FAILED
 
         if not self.done():
             self.set_result(self.status)
@@ -300,14 +302,9 @@ class Command(StatusMixIn, asyncio.Future):
             elif self.timeout == 0:
                 self.finish_command(CommandStatus.DONE)
             else:
-                self.loop.call_later(self.timeout,
-                                     self.finish_command,
-                                     CommandStatus.DONE,
-                                     True)
+                self.loop.call_later(self.timeout, self.finish_command, None, True)
         elif self.status.is_done:
-            # Call with status=None to avoid setting the status again and
-            # retriggering the callback.
-            self.finish_command(status=None)
+            self.finish_command()
         else:
             return
 

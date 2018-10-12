@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* :bug:`2` Fix double setting of status when command times out.
 * :feature:`1` Added `.FPS.abort` method to cancel all trajectories.
 * Expose `.Positioner.set_position` as a public method.
 * Load layout when `.FPS` is instantiated.
