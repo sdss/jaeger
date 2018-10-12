@@ -132,26 +132,64 @@ Trajectories or `go to <positioner-goto>`_ commands can be cancelled for all pos
 Note that the `~.FPS.abort` method creates and returns a `~asyncio.Task` and will be executed even without it being awaited, as long as there is a running event loop. However, it is safer to await the returned task.
 
 
-Positioner, status, and position
---------------------------------
+`.Positioner`, status, and position
+-----------------------------------
+
+The `.Positioner` class stores information about a single positioner, its `status <.maskbits.PositionerStatus>` and position, and provides high level methods to command the positioner. `.Positioner` objects need to be linked to a `.FPS` instance and are usually created when the `.FPS` class is instantiated.
 
 .. _positioner-initialise:
 
 Initialisation
 ^^^^^^^^^^^^^^
 
+When a `.Positioner` is instantiated it contains no information about its position (angle of the alpha and beta arms) and its status is set to `~.maskbits.PositionerStatus.UNKNOWN`. By calling and awaiting `.Positioner.initialise`, the following steps are executed:
+
+- The status is updated by calling `.Positioner.update_status`.
+- If the `~.maskbits.PositionerStatus.DATUM_INITIALIZED` flag is not in the status, issues a `~.commands.InitialiseDatums` command and waits until it completes and the bit has been set. This will move the positioner to its home position.
+- If the `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED` bit is not found, it issues `~.commands.StopTrajectory` and waits until the positioner has stopped and the bit is set.
+- Starts the `position and status pollers <position-pollers>`_.
+- Sets the alpha and beta arm speeds to the default value (stored in the configuration file as ``motor_speed``).
+
+After this sequence, the positioner is ready to be commanded.
+
 .. _positioner-pollers:
 
 Position and status pollers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The status of the positioner, given as a `maskbit <maskbits>`_ `~.maskbits.PositionerStatus` (or `.maskbits.BootloaderStatus` if the positioner is in `bootloader <bootloader-mode>`_ mode) can be accessed via the ``status`` attribute and updated by calling the `~.Positioner.update_status` coroutine. Similarly, the current position of the positioner is stored in the ``alpha`` and ``beta`` attributes, in degrees, and updated via `~.Positioner.update_position`.
+
+As we initialise the positioner, two `~.utils.helpers.Poller` instances are created: `~.Positioner.status_poller` and `~.Positioner.position_poller`. These tasks simply call `~.Positioner.update_status`. and `~.Positioner.update_position` every second and update the corresponding attribute. The delay between polls can be set via the `~.utils.helpers.Poller.set_delay` method.
 
 .. _positioner-goto:
 
 Sending a positioner to a position
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+The `.Positioner.goto` coroutine allows to easily send the positioner to a position or set the speed of either arm ::
+
+    await positioner.goto(alpha=30, beta=90, alpha_speed=1000, beta_speed=1200)
+
+    # Only set speed
+    await positioner.goto(alpha_speed=500, beta_speed=500)
+
+    # Only go to position using the speed we just set
+    await positioner.goto(alpha=100, beta=154)
+
+Awaiting `.Positioner.goto` blocks until the positioner has arrived to the desired position and `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED` is set.
+
 Waiting for a status
 ^^^^^^^^^^^^^^^^^^^^
+
+In many cases it's convenient to asynchronously block the execution of a coroutine while we wait until certain bits appear in the status. To do that one can use `~.Positioner.wait_for_status` ::
+
+    # Wait until DISPLACEMENT_COMPLETED appears
+    await positioner.wait_for_status(PositionerStatus.DISPLACEMENT_COMPLETED)
+
+    # Wait untils SYSTEM_INITIALIZATION and DATUM_INITIALISED are set. Time-out in 3 seconds if that doesn't happen.
+    await positioner.wait_for_status([PositionerStatus.SYSTEM_INITIALIZATION, PositionerStatus.DATUM_INITIALISED], timeout=3)
+
+While `~.Positioner.wait_for_status` is running the interval at which `~.Positioner.status_poller` updates the status is increased (to 0.1 seconds by default, but this can be set when calling the coroutine) and the default value is restored when the status is reached or the time-out happens.
 
 
 Commands
@@ -181,12 +219,14 @@ Logging
 -------
 
 
-.. _kaiju: https://github.com/csayres/kaiju
-.. _python-can: https://github.com/hardbyte/python-can
-
+.. _bootloader-mode:
 
 The bootloader mode
 -------------------
 
 Upgrading firmware
 ^^^^^^^^^^^^^^^^^^
+
+
+.. _kaiju: https://github.com/csayres/kaiju
+.. _python-can: https://github.com/hardbyte/python-can
