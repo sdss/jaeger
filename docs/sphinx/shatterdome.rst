@@ -4,6 +4,8 @@ The shatterdome
 
 In the `shatterdome <http://pacificrim.wikia.com/wiki/Shatterdome>`__ we'll have a closer look at some of the internal mechanics of the jaeger.
 
+.. _can-bus:
+
 The `CAN bus <.JaegerCAN>`
 --------------------------
 
@@ -42,6 +44,8 @@ These configurations can be loaded by using the `.JaegerCAN.from_profile` classm
 
 The ``default`` interface can be loaded by calling `~.JaegerCAN.from_profile` without arguments.
 
+.. _can-queue:
+
 The command queue
 ^^^^^^^^^^^^^^^^^
 
@@ -53,14 +57,47 @@ Broadcast commands are a bit special: when a broadcast command (``positioner_id=
 The `.FPS` class
 ----------------
 
+The `.FPS` class is the main entry point to monitor and command the focal plane system and usually it will be the first thing you instantiate. It contains a `CAN bus <can-bus>`_, a `dictionary <.FPS.positioners>` of all the positioners included in the layout (a layout is a list of the positioners that compose the FPS, with their associated ``positioner_id`` and central position; it can be stored as a file or in a database) and high level methods to perform operations that affect multiple positioners (e.g., `send a trajectory <send-trajectory>`_).
+
+To instantiate with the default options, simply do ::
+
+    >>> from jaeger import FPS
+    >>> fps = FPS()
+
+This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` interface profile and will use the default layout stored in the configuration file under ``config['fps']['default_layout']`` to add instances of `.Positioner` to `.FPS.positioners`.
+
 Initialisation
 ^^^^^^^^^^^^^^
+
+Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected and sets their status.
+
+.. important:: At this time running `.FPS.initialise` does not ensure that each one of the positioners will have their datums initialised. This is because initialising datums will move the positioners which, without path planning, could induce collisions. Instead, each positioner needs to be manually initialised with `.Positioner.initialise`. See the `positioner initialisation <positioner-initialise>`_ section for more details.
 
 Sending commands
 ^^^^^^^^^^^^^^^^
 
+The preferred way to send a command to the bus is by using the `.FPS.send_command` method which accepts a `.commands.CommandID` (either as a flag, integer, or string), ``the positioner_id`` that must listen to the command, and additional arguments to be passed to the command associated with the `.commands.CommandID`. For example, to broadcast a `.commands.CommandID.GET_ID` command ::
+
+    >>> await fps.send_command('GET_ID', positioner_id=0)
+
+Note that you need to ``await`` the command, which will return the execution to the event loop until the `command has finished <command-done>`_.
+
+Some commands, such as `~.commands.SetActualPosition` take multiple attributes ::
+
+    >>> cmd = await fps.send_command(CommandID.SET_ACTUAL_POSITION, positioner_id=4, alpha=10, beta=100)
+    >>> cmd
+    <Command SET_ACTUAL_POSITION (positioner_id=4, status='DONE')>
+
+When a command is send `.FPS` puts it in the `bus command queue <can-queue>`_ and, once it gets processed, starts listening for replies from the bus. When it gets a reply with the same ``command_id`` and ``positioner_id`` the bus sends it to the command for further processing.
+
 Shutting down the FPS
 ^^^^^^^^^^^^^^^^^^^^^
+
+`Positioner pollers <positioner-pollers>`_ and queue watchers are built as `Tasks <asyncio.Task>` that run forever. If you are executing your code with `asyncio.run <https://docs.python.org/3/library/asyncio-task.html#asyncio.run>`__ or `~asyncio.AbstractEventLoop.run_until_complete`, your funcion will never finish and you'll need to cancel the execution. To cancel all pending tasks and close the `.FPS` object cleanly, run ::
+
+    await fps.shutdown()
+
+.. _send-trajectory:
 
 Sending trajectories
 ^^^^^^^^^^^^^^^^^^^^
@@ -92,8 +129,12 @@ Aborting all trajectories
 Positioner, status, and position
 --------------------------------
 
+.. _positioner-initialise:
+
 Initialisation
 ^^^^^^^^^^^^^^
+
+.. _positioner-pollers:
 
 Position and status pollers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -134,3 +175,10 @@ Logging
 
 .. _kaiju: https://github.com/csayres/kaiju
 .. _python-can: https://github.com/hardbyte/python-can
+
+
+The bootloader mode
+-------------------
+
+Upgrading firmware
+^^^^^^^^^^^^^^^^^^
