@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-12 12:13:30
+# @Last modified time: 2018-10-12 13:26:16
 
 import asyncio
 import logging
@@ -19,6 +19,7 @@ from jaeger import can_log, log
 from jaeger.core import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
+
 from . import CommandID
 
 
@@ -90,10 +91,18 @@ class Reply(object):
 
         assert isinstance(message, can.Message), 'invalid message'
 
+        #: The command for which this reply is inteded.
         self.command = command
+
+        #: The raw `~can.Message`.
         self.message = message
 
+        #: The data from the message.
         self.data = message.data
+
+        #: The `~.maskbits.ResponseCode` bit returned by the reply.
+        self.response_code = None
+
         self.positioner_id, reply_cmd_id, self.response_code = \
             jaeger.utils.parse_identifier(message.arbitration_id)
 
