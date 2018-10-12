@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 15:33:06
+# @Last modified time: 2018-10-12 09:30:12
 
 import asyncio
 
@@ -35,7 +35,7 @@ class Positioner(StatusMixIn):
 
     """
 
-    def __init__(self, positioner_id, fps, centre,):
+    def __init__(self, positioner_id, fps, centre):
 
         self.fps = fps
         self.positioner_id = positioner_id
