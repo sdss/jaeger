@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-12 11:36:27
+# @Last modified time: 2018-10-12 12:13:30
 
 import asyncio
 import logging
@@ -19,7 +19,6 @@ from jaeger import can_log, log
 from jaeger.core import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
-
 from . import CommandID
 
 
@@ -263,19 +262,20 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
-        if timed_out:
-            self._log('command timed out. Finishing it.')
-
         if not self.status.is_done:
+
+            if timed_out:
+                self._log('command timed out. Finishing it.')
+
             if status:
-                self.status = status
+                self._status = status
             else:
                 n_replies = len(self.replies)
                 if ((self.positioner_id != 0 and n_replies == self._n_messages) or
                         (self.positioner_id == 0 and n_replies >= 1)):
-                    self.status = CommandStatus.DONE
+                    self._status = CommandStatus.DONE
                 else:
-                    self.status = CommandStatus.FAILED
+                    self._status = CommandStatus.FAILED
 
         if not self.done():
             self.set_result(self.status)
