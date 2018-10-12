@@ -76,7 +76,7 @@ Once we have created a `.FPS` object we'll need to initialise it by calling and 
 Sending commands
 ^^^^^^^^^^^^^^^^
 
-The preferred way to send a command to the bus is by using the `.FPS.send_command` method which accepts a `.commands.CommandID` (either as a flag, integer, or string), ``the positioner_id`` that must listen to the command, and additional arguments to be passed to the command associated with the `.commands.CommandID`. For example, to broadcast a `.commands.CommandID.GET_ID` command ::
+The preferred way to send a command to the bus is by using the `.FPS.send_command` method which accepts a `.commands.CommandID` (either as a flag, integer, or string), the ``positioner_id`` that must listen to the command, and additional arguments to be passed to the command associated with the `~.commands.CommandID`. For example, to broadcast a `~.commands.CommandID.GET_ID` command ::
 
     >>> await fps.send_command('GET_ID', positioner_id=0)
 
@@ -121,9 +121,15 @@ Unless `~.FPS.send_trajectory` is called with ``kaiju_check=False`` (DANGER! Do 
 
 .. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
 
-
 Aborting all trajectories
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Trajectories or `go to <positioner-goto>`_ commands can be cancelled for all positioners by using the `.FPS.abort` method ::
+
+    >>> await fps.send_trajectory('my_trajectory.yaml')
+    >>> await fps.abort()  # Cancel the trajectory
+
+Note that the `~.FPS.abort` method creates and returns a `~asyncio.Task` and will be executed even without it being awaited, as long as there is a running event loop. However, it is safer to await the returned task.
 
 
 Positioner, status, and position
@@ -138,6 +144,8 @@ Initialisation
 
 Position and status pollers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. _positioner-goto:
 
 Sending a positioner to a position
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 15:44:14
+# @Last modified time: 2018-10-12 00:05:53
 
 import asyncio
 import os
@@ -452,6 +452,12 @@ class FPS(object):
             self.positioners[pos_id].position_poller.set_delay()
 
         return True
+
+    def abort(self):
+        """Aborts trajectories and stops positioners."""
+
+        cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_id=0)
+        return asyncio.create_task(cmd)
 
     async def shutdown(self):
 
