@@ -153,9 +153,13 @@ def set_positions(ctx, positioner_id, alpha, beta):
               help='range of beta positions.', show_default=True)
 @click.option('--speed', type=(int, int), default=(500, 1500),
               help='range of speed.', show_default=True)
+@click.argument('-f', '--skip-errors', is_flag=True,
+                help='if an error occurs, ignores it and '
+                     'commands another move.')
 @click.pass_context
 @cli_coro
-def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
+def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
+         skip_errors=False):
     """Moves a robot to random positions."""
 
     if (alpha[0] >= alpha[1]) or (alpha[0] < 0 or alpha[1] > 360):
@@ -191,7 +195,12 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None):
                                             beta_speed=beta_speed)
 
         if result is False:
-            return
+            if skip_errors is False:
+                return
+            else:
+                log.warning('an error happened but ignoring it '
+                            'because skip-error=True')
+                continue
 
         done_moves += 1
 

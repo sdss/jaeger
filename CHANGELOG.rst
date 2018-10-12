@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* :feature:`3` Add ``skip-error`` option to ``jaeger demo``.
 * :bug:`2` Fix double setting of status when command times out.
 * :feature:`1` Added `.FPS.abort` method to cancel all trajectories.
 * Expose `.Positioner.set_position` as a public method.
