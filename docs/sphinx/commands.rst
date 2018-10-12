@@ -5,8 +5,8 @@ Base classes
 ------------
 
 .. automodule:: jaeger.commands.base
-    :exclude-members: Abort
 
+.. _command-list:
 
 List of commands
 ----------------
@@ -75,6 +75,8 @@ List of commands
     :exclude-members:
     :undoc-members:
 
+
+.. _bootloader-commands:
 
 Bootloader commands
 -------------------
