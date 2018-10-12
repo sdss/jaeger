@@ -153,9 +153,9 @@ def set_positions(ctx, positioner_id, alpha, beta):
               help='range of beta positions.', show_default=True)
 @click.option('--speed', type=(int, int), default=(500, 1500),
               help='range of speed.', show_default=True)
-@click.argument('-f', '--skip-errors', is_flag=True,
-                help='if an error occurs, ignores it and '
-                     'commands another move.')
+@click.option('-f', '--skip-errors', is_flag=True,
+              help='if an error occurs, ignores it and '
+                   'commands another move.')
 @click.pass_context
 @cli_coro
 def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
