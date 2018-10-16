@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-08 16:27:14
+# @Last modified time: 2018-10-15 21:49:24
 
 import numpy
 
@@ -78,7 +78,10 @@ class SetActualPosition(Command):
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
-        data = int_to_bytes(int(beta)) + int_to_bytes(int(alpha))
+        alpha_steps = int(alpha / 360. * MOTOR_STEPS)
+        beta_steps = int(beta / 360. * MOTOR_STEPS)
+
+        data = int_to_bytes(int(beta_steps)) + int_to_bytes(int(alpha_steps))
         kwargs['data'] = data
 
         super().__init__(**kwargs)
