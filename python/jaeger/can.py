@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 21:59:13
+# @Last modified time: 2018-10-16 15:34:07
 
 import asyncio
 import collections
@@ -135,7 +135,7 @@ class JaegerCAN(object):
 
         r_cmd = self.is_command_running(positioner_id, command_id)
         if not r_cmd:
-            can_log.debug(f'({command_id_flag.name}, {positioner_id}): '
+            can_log.debug(f'({command_id_flag.name!r}, {positioner_id}): '
                           'ignoring reply for non-running command.')
             return
 
