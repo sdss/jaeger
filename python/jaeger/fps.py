@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-12 00:05:53
+# @Last modified time: 2018-10-15 21:45:39
 
 import asyncio
 import os
@@ -251,7 +251,7 @@ class FPS(object):
         n_unknown = len(self.positioners) - len(found_positioners)
         if n_unknown > 0:
             log.warning(f'{n_unknown} positioners did not respond to '
-                        f'{status_reply.command_id.name!r}', JaegerUserWarning)
+                        f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
 
     async def update_status(self, positioners=None, timeout=1):
         """Update statuses for all positioners.
