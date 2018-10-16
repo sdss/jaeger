@@ -134,7 +134,7 @@ def set_positions(ctx, positioner_id, alpha, beta):
 
     positioner = fps.positioners[positioner_id]
 
-    result = yield from positioner._set_position(alpha, beta)
+    result = yield from positioner.set_position(alpha, beta)
 
     if not result:
         log.error('failed to set positions.')
