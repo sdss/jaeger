@@ -17,6 +17,7 @@ import numpy
 from jaeger import log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
+from jaeger.maskbits import PositionerStatus
 
 
 def cli_coro(f):
@@ -206,6 +207,35 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
 
         if moves is not None and done_moves == moves:
             return
+
+
+@jaeger.command()
+@click.argument('positioner_id', metavar='POSITIONER', type=int, required=False)
+@click.pass_context
+@cli_coro
+def home(ctx, positioner_id):
+    """Initialise datums."""
+
+    fps = FPS(**ctx.obj)
+    yield from fps.initialise()
+
+    if positioner_id is None:
+        positioners = fps.positioners.values()
+    else:
+        positioners = [fps.positioners[positioner_id]]
+
+    valid_positioners = [positioner for positioner in positioners
+                         if PositionerStatus.SYSTEM_INITIALIZATION in positioner.status]
+
+    if len(valid_positioners) < len(positioners):
+        log.warning(f'{len(positioners) - len(valid_positioners)} positioners '
+                    'have not been initialised and will not be homed.')
+
+    yield from asyncio.gather(*[
+        fps.send_command('INITIALIZE_DATUMS', positioner_id=pos.positioner_id)
+        for pos in valid_positioners])
+
+    return
 
 
 if __name__ == '__main__':

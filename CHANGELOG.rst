@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* Added ``home`` command to ``jaeger`` CLI.
 * Fixed bug in which the positions for ``SetActualPosition`` were being sent in degrees instead of in steps.
 * Fixed bug that would raise an exception during initialisation if no positioner had replied to ``GET_STATUS``.
 * First complete pass at the documentation.
