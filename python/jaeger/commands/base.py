@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-12 13:26:16
+# @Last modified time: 2018-10-17 16:30:04
 
 import asyncio
 import logging
@@ -192,6 +192,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         self._override = False
 
+        self._timeout_handle = None
+
         self.reply_queue = AsyncQueue(callback=self.process_reply,
                                       loop=self.loop)
 
@@ -271,6 +273,9 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
+        if self._timeout_handle:
+            self._timeout_handle.cancel()
+
         if not self.status.is_done:
 
             if timed_out:
@@ -286,15 +291,15 @@ class Command(StatusMixIn, asyncio.Future):
                 else:
                     self._status = CommandStatus.FAILED
 
-        if not self.done():
-            self.set_result(self.status)
-
         self.reply_queue.watcher.cancel()
 
         if self.bus is not None:
             r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
             if r_command:
                 self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
+
+        if not self.done():
+            self.set_result(self.status)
 
     def status_callback(self):
         """Callback for change status.
@@ -312,7 +317,8 @@ class Command(StatusMixIn, asyncio.Future):
             elif self.timeout == 0:
                 self.finish_command(CommandStatus.DONE)
             else:
-                self.loop.call_later(self.timeout, self.finish_command, None, True)
+                self._timeout_handle = self.loop.call_later(
+                    self.timeout, self.finish_command, None, True)
         elif self.status.is_done:
             self.finish_command()
         else:
