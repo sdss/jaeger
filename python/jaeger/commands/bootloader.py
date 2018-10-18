@@ -7,21 +7,44 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:44:09
+# @Last modified time: 2018-10-17 16:31:55
 
 import asyncio
 import os
 import pathlib
+import time
 import zlib
 
 from jaeger import commands, log
 from jaeger.core.exceptions import JaegerError, JaegerUserWarning
-from jaeger.maskbits import BootloaderStatus
+from jaeger.maskbits import BootloaderStatus, ResponseCode
 from jaeger.utils import int_to_bytes
 
 
 __ALL__ = ['load_firmware', 'StartFirmwareUpgrade', 'GetFirmwareVersion',
            'SendFirmwareData']
+
+
+def _process_replies(cmds):
+    """Checks if any of the replies is invalid."""
+
+    for cmd in cmds:
+
+        cmd_acc = ResponseCode.COMMAND_ACCEPTED
+
+        if (cmd is False or len(cmd.replies) == 0 or
+                cmd_acc not in cmd.replies[0].response_code):
+            log.error(f'positioner {cmd.positioner_id} did not replied or '
+                      'command was not accepted. Cancelling firmware upgrade.')
+
+            if len(cmd.replies) > 0:
+                log.error(f'positioner {cmd.positioner_id}: response code to '
+                          f'{cmd.command_id.name!r} is '
+                          f'{cmd.replies[0].response_code}')
+
+            return False
+
+    return True
 
 
 async def load_firmware(fps, firmware_file, positioners=None, force=False):
@@ -44,6 +67,8 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
         responding or are not in bootloader mode.
 
     """
+
+    start_time = time.time()
 
     firmware_file = pathlib.Path(firmware_file)
     assert firmware_file.exists(), 'cannot find firmware file'
@@ -85,14 +110,20 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
     log.info(f'CRC32: {start_firmware_payload[0:4]}')
     log.info(f'File size: {start_firmware_payload[4:]}')
 
-    await asyncio.gather(
-        *[fps.send_command(commands.CommandID.START_FIRMWARE_UPGRADE,
-                           positioner_id=positioner.positioner_id,
-                           data=start_firmware_payload)
-          for positioner in valid_positioners])
+    cmds = [fps.send_command(commands.CommandID.START_FIRMWARE_UPGRADE,
+                             positioner_id=positioner.positioner_id,
+                             data=start_firmware_payload)
+            for positioner in valid_positioners]
 
-    # Restore seek to start of file
+    await asyncio.gather(*cmds)
+
+    if not _process_replies(cmds):
+        return
+
+    # Restore pointer to start of file
     firmware_data.seek(0)
+
+    log.info('starting data send.')
 
     while True:
 
@@ -103,13 +134,20 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
         if len(packetdata) == 0:
             break
 
-        await asyncio.gather(
-            *[fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
-                               positioner_id=positioner.positioner_id,
-                               data=packetdata)
-              for positioner in valid_positioners])
+        cmds = [fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
+                                 positioner_id=positioner.positioner_id,
+                                 data=packetdata, timeout=15)
+                for positioner in valid_positioners]
+
+        await asyncio.gather(*cmds)
+
+        if not _process_replies(cmds):
+            return
 
     log.info('firmware upgrade complete.')
+
+    total_time = time.time() - start_time
+    log.info(f'upgrading firmware took {total_time:.2f}')
 
 
 class GetFirmwareVersion(commands.Command):
