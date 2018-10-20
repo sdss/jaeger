@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-17 16:30:04
+# @Last modified time: 2018-10-20 09:40:04
 
 import asyncio
 import logging
@@ -91,7 +91,7 @@ class Reply(object):
 
         assert isinstance(message, can.Message), 'invalid message'
 
-        #: The command for which this reply is inteded.
+        #: The command for which this reply is intended.
         self.command = command
 
         #: The raw `~can.Message`.
