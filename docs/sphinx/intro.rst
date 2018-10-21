@@ -38,7 +38,7 @@ A simple jaeger program
     import asyncio
     from jaeger import FPS, log
 
-    async def main(loop):
+    async def main():
 
         # Set logging level to DEBUG
         log.set_level(0)
