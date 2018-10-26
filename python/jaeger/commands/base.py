@@ -7,13 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-20 09:40:04
+# @Last modified time: 2018-10-25 13:47:11
 
 import asyncio
 import logging
 
 import can
-
 import jaeger.utils
 from jaeger import can_log, log
 from jaeger.core import exceptions
@@ -299,7 +298,7 @@ class Command(StatusMixIn, asyncio.Future):
                 self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
 
         if not self.done():
-            self.set_result(self.status)
+            self.set_result(self)
 
     def status_callback(self):
         """Callback for change status.
