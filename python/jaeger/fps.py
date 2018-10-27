@@ -253,6 +253,11 @@ class FPS(object):
             log.warning(f'{n_unknown} positioners did not respond to '
                         f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
 
+        for positioner in self.positioners.values():
+            if positioner.initialised:
+                log.debug(f'positioner {positioner.positioner_id}: starting pollers.')
+                positioner.start_pollers()
+
     async def update_status(self, positioners=None, timeout=1):
         """Update statuses for all positioners.
 

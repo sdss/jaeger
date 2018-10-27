@@ -102,9 +102,6 @@ class Positioner(StatusMixIn):
                 PositionerStatus.DATUM_INITIALIZED not in self.status):
             return False
 
-        if self.status_poller is None or self.position_poller is None:
-            return False
-
         return True
 
     def reset(self):
@@ -114,7 +111,6 @@ class Positioner(StatusMixIn):
         self.beta = None
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
-        self.initialised = False
 
         if self.position_poller is not None:
             self.position_poller.cancel()
