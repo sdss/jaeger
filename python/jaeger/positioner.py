@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-12 14:27:14
+# @Last modified time: 2018-10-26 17:33:03
 
 import asyncio
 
@@ -18,6 +18,8 @@ from jaeger.utils import Poller, StatusMixIn, bytes_to_int
 
 
 __ALL__ = ['Positioner']
+
+_pos_conf = config['positioner']
 
 
 class Positioner(StatusMixIn):
@@ -44,8 +46,6 @@ class Positioner(StatusMixIn):
         self.beta = None
         self.firmware = None
 
-        self.initialised = False
-
         #: A `~asyncio.Task` that polls the current position of alpha and
         #: beta periodically.
         self.position_poller = None
@@ -55,6 +55,57 @@ class Positioner(StatusMixIn):
 
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
+
+        # If the positioner is initialised, starts the polling.
+        if self.initialised:
+            self.start_pollers()
+
+    def start_pollers(self, poller='all'):
+        """Starts the status or position poller.
+
+        Parameters
+        ----------
+        poller : str
+            Either ``'position'`` or ``'status'`` to start the position or
+            status pollers, or ``'all'`` to start both.
+
+        """
+
+        if poller == 'status' or poller == 'all':
+
+            if self.status_poller is not None and self.status_poller.cancelled is False:
+                log.debug(f'positioner {self.positioner_id}: '
+                          'status poller was already running.')
+
+            self.status_poller = Poller(self.update_status,
+                                        delay=_pos_conf['status_poller_delay'])
+
+        if poller == 'position' or poller == 'all':
+
+            if self.position_poller is not None and self.position_poller.cancelled is False:
+                log.debug(f'positioner {self.positioner_id}: '
+                          'position poller was already running.')
+
+            self.position_poller = Poller(self.update_position,
+                                          delay=_pos_conf['position_poller_delay'])
+
+    @property
+    def initialised(self):
+        """Returns ``True`` if the system and datums have been initialised."""
+
+        if self.status is None:
+            return False
+
+        PositionerStatus = maskbits.PositionerStatus
+
+        if (PositionerStatus.SYSTEM_INITIALIZATION not in self.status or
+                PositionerStatus.DATUM_INITIALIZED not in self.status):
+            return False
+
+        if self.status_poller is None or self.position_poller is None:
+            return False
+
+        return True
 
     def reset(self):
         """Resets positioner values and statuses."""
@@ -140,6 +191,9 @@ class Positioner(StatusMixIn):
 
         """
 
+        assert self.initialised, \
+            f'positioner {self.positioner_id}: not initialised.'
+
         self.status_poller.set_delay(delay)
 
         if not isinstance(status, (list, tuple)):
@@ -181,6 +235,11 @@ class Positioner(StatusMixIn):
         assert not self.is_bootloader(), \
             'this coroutine cannot be scheduled in bootloader mode.'
 
+        if self.initialised:
+            log.warning(f'positioner {self.positioner_id}: '
+                        'positioner had already been initialised. '
+                        'Reinitialising it.')
+
         PosStatus = maskbits.PositionerStatus
 
         # Resets all.
@@ -188,7 +247,7 @@ class Positioner(StatusMixIn):
 
         # Make one status update and initialise status poller
         await self.update_status(timeout=1)
-        self.status_poller = Poller(self.update_status, delay=5)
+        self.start_pollers(poller='status')
 
         if PosStatus.DATUM_INITIALIZED not in self.status:
 
@@ -198,7 +257,7 @@ class Positioner(StatusMixIn):
                                         positioner_id=self.positioner_id)
 
             result = await self.wait_for_status(PosStatus.DATUM_INITIALIZED,
-                                                timeout=60)
+                                                timeout=_pos_conf['initialise_datums_timeout'])
 
             if result is False:
                 log.error(f'positioner={self.positioner_id}: '
@@ -222,14 +281,12 @@ class Positioner(StatusMixIn):
                 return False
 
         # Initialise position poller
-        self.position_poller = Poller(self.update_position, delay=5)
+        self.start_pollers(poller='position')
 
         # Sets the default speed
-        if not await self._set_speed(alpha=config['motor_speed'],
-                                     beta=config['motor_speed']):
+        if not await self._set_speed(alpha=_pos_conf['motor_speed'],
+                                     beta=_pos_conf['motor_speed']):
             return False
-
-        self.initialised = True
 
         return True
 
@@ -284,12 +341,8 @@ class Positioner(StatusMixIn):
     async def _goto_position(self, alpha, beta, relative=False):
         """Go to a position."""
 
-        PositionerStatus = maskbits.PositionerStatus
-
-        if (PositionerStatus.SYSTEM_INITIALIZATION not in self.status or
-                PositionerStatus.DATUM_INITIALIZED not in self.status):
-            log.error('positioner has not been initialised.')
-            return False
+        assert self.initialised, \
+            f'positioner {self.positioner_id}: not initialised.'
 
         command_id = CommandID.GO_TO_RELATIVE_POSITION \
             if relative else CommandID.GO_TO_ABSOLUTE_POSITION
@@ -342,8 +395,8 @@ class Positioner(StatusMixIn):
 
         """
 
-        assert self.initialise, \
-            'cannot go to position until positioner has been initialised.'
+        assert self.initialised, \
+            f'positioner {self.positioner_id}: not initialised.'
 
         assert any([var is not None
                     for var in [alpha, beta, alpha_speed, beta_speed]]), \
