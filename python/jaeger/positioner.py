@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-26 17:33:03
+# @Last modified time: 2018-10-26 18:12:16
 
 import asyncio
 
@@ -303,14 +303,17 @@ class Positioner(StatusMixIn):
 
         return self.firmware.split('.')[1] == '80'
 
-    async def set_position(self, alpha, beta):
+    async def set_position(self, alpha, beta, start_pollers=True):
         """Sets the internal position of the motors."""
+
+        done_callback = self.start_pollers if start_pollers else None
 
         set_position_command = self.fps.send_command(
             CommandID.SET_ACTUAL_POSITION,
             positioner_id=self.positioner_id,
             alpha=float(alpha),
-            beta=float(beta))
+            beta=float(beta),
+            done_callback=done_callback)
 
         await set_position_command
 

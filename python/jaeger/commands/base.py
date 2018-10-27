@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-25 13:47:11
+# @Last modified time: 2018-10-26 17:41:11
 
 import asyncio
 import logging
@@ -157,6 +157,8 @@ class Command(StatusMixIn, asyncio.Future):
         messages it sends, the command will be marked done and the timer
         cancelled. If `None`, the command runs forever or until replies are
         received.
+    done_callback : function
+        A function to call when the command has been successfully completed.
 
     """
 
@@ -166,7 +168,7 @@ class Command(StatusMixIn, asyncio.Future):
     broadcastable = None
 
     def __init__(self, positioner_id, bus=None, loop=None, timeout=1.,
-                 **kwargs):
+                 done_callback=None, **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
@@ -188,6 +190,7 @@ class Command(StatusMixIn, asyncio.Future):
         self.timeout = timeout
 
         self._data = kwargs.pop('data', [])
+        self._done_callback = done_callback
 
         self._override = False
 
@@ -299,6 +302,9 @@ class Command(StatusMixIn, asyncio.Future):
 
         if not self.done():
             self.set_result(self)
+
+            if self.status == CommandStatus.DONE and self._done_callback:
+                self._done_callback()
 
     def status_callback(self):
         """Callback for change status.
