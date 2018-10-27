@@ -7,12 +7,11 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-15 21:45:39
+# @Last modified time: 2018-10-26 18:37:00
 
 import asyncio
 import os
 import pathlib
-from contextlib import suppress
 
 import astropy.table
 from ruamel.yaml import YAML
@@ -468,14 +467,13 @@ class FPS(object):
 
         log.info('cancelling all pending tasks and shutting down.')
 
-        pending = asyncio.Task.all_tasks()
+        tasks = [task for task in asyncio.Task.all_tasks()
+                 if task is not asyncio.tasks.Task.current_task()]
+        list(map(lambda task: task.cancel(), tasks))
 
-        for task in pending:
-            task.cancel()
-            # Now we should await task to execute it's cancellation.
-            # Cancelled task raises asyncio.CancelledError that we suppress.
-            with suppress(asyncio.CancelledError):
-                await task
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        self.loop.stop()
 
     def start_actor(self):
         """Initialises the actor."""
