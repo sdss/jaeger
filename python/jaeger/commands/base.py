@@ -167,7 +167,7 @@ class Command(StatusMixIn, asyncio.Future):
     #: Whether the command can be broadcast to all robots.
     broadcastable = None
 
-    def __init__(self, positioner_id, bus=None, loop=None, timeout=1.,
+    def __init__(self, positioner_id, bus=None, loop=None, timeout=5.,
                  done_callback=None, **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'

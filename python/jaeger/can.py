@@ -29,6 +29,7 @@ __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 
 #: Accepted CAN interfaces
 VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
+                    'socketcan': can.interfaces.socketcan.SocketcanBus,
                     'test': jaeger.tests.bus.VirtualBusTester}
 
 
