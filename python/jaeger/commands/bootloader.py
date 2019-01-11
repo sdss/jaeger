@@ -105,10 +105,10 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
         valid_positioners.append(positioner)
 
-    start_firmware_payload = int_to_bytes(crc32) + int_to_bytes(filesize)
+    start_firmware_payload = int_to_bytes(filesize) + int_to_bytes(crc32)
 
-    log.info(f'CRC32: {start_firmware_payload[0:4]}')
-    log.info(f'File size: {start_firmware_payload[4:]}')
+    log.info(f'CRC32: {start_firmware_payload[4:]}')
+    log.info(f'File size: {start_firmware_payload[0:4]}')
 
     cmds = [fps.send_command(commands.CommandID.START_FIRMWARE_UPGRADE,
                              positioner_id=positioner.positioner_id,
@@ -129,7 +129,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
         chunk = firmware_data.read(8)
         packetdata = bytearray(chunk)
-        packetdata.reverse()  # IMPORTANT!
+        #packetdata.reverse()  # IMPORTANT! no longer needed for P1
 
         if len(packetdata) == 0:
             break
@@ -181,7 +181,7 @@ class GetFirmwareVersion(commands.Command):
         """
 
         def format_version(reply):
-            return '.'.join(format(byt, '02d') for byt in reply.data[1:])
+            return '.'.join(format(byt, '02d') for byt in reply.data[0:3])
 
         # If not a broadcast, use the positioner_id of the command
         if self.positioner_id != 0:

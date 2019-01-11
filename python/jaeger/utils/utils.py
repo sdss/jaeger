@@ -18,7 +18,7 @@ __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
            'get_identifier', 'parse_identifier']
 
 
-def get_dtype_str(dtype, byteorder='big'):
+def get_dtype_str(dtype, byteorder='little'):
     """Parses dtype and byte order to return a type string code.
 
     Parameters
@@ -74,7 +74,7 @@ def get_dtype_str(dtype, byteorder='big'):
     return byteorder + dtype_str[1:]
 
 
-def int_to_bytes(value, dtype='u4', byteorder='big'):
+def int_to_bytes(value, dtype='u4', byteorder='little'):
     r"""Returns a bytearray with the representation of an integer.
 
     Parameters
@@ -110,7 +110,7 @@ def int_to_bytes(value, dtype='u4', byteorder='big'):
     return bytearray(np_value.tobytes())
 
 
-def bytes_to_int(bytes, dtype='u4', byteorder='big'):
+def bytes_to_int(bytes, dtype='u4', byteorder='little'):
     r"""Returns the integer from a bytearray representation.
 
     Parameters
@@ -180,10 +180,11 @@ def get_identifier(positioner_id, command_id, response_code=0):
     """
 
     posid_bin = format(positioner_id, '011b')
-    cid_bin = format(command_id, '010b')
-    response_bin = format(ResponseCode(response_code).value, '08b')
+    cid_bin = format(command_id, '08b')
+    cuid_bin = format(0, '06b')
+    response_bin = format(ResponseCode(response_code).value, '04b')
 
-    identifier = posid_bin + cid_bin + response_bin
+    identifier = posid_bin + cid_bin + cuid_bin + response_bin
 
     assert len(identifier) == 29
 
@@ -223,8 +224,9 @@ def parse_identifier(identifier):
     identifier_bin = format(identifier, '029b')
 
     positioner_id = int(identifier_bin[0:11], 2)
-    command_id = int(identifier_bin[11:21], 2)
-    response_code = int(identifier_bin[21:], 2)
+    command_id = int(identifier_bin[11:19], 2)
+    command_uid = int(identifier_bin[19:25], 2)
+    response_code = int(identifier_bin[25:], 2)
 
     response_flag = ResponseCode(response_code)
 

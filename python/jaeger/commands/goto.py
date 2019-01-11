@@ -37,7 +37,7 @@ class GotoAbsolutePosition(Command):
         alpha_steps = int(alpha / 360. * MOTOR_STEPS)
         beta_steps = int(beta / 360. * MOTOR_STEPS)
 
-        data = int_to_bytes(beta_steps) + int_to_bytes(alpha_steps)
+        data = int_to_bytes(alpha_steps) + int_to_bytes(beta_steps)
         kwargs['data'] = data
 
         super().__init__(**kwargs)
@@ -57,8 +57,8 @@ class GotoAbsolutePosition(Command):
 
         data = self.replies[0].data
 
-        beta = bytes_to_int(data[0:4])
-        alpha = bytes_to_int(data[4:])
+        beta = bytes_to_int(data[4:])
+        alpha = bytes_to_int(data[0:4])
 
         return numpy.array([alpha, beta]) * TIME_STEP
 
@@ -81,7 +81,7 @@ class SetActualPosition(Command):
         alpha_steps = int(alpha / 360. * MOTOR_STEPS)
         beta_steps = int(beta / 360. * MOTOR_STEPS)
 
-        data = int_to_bytes(int(beta_steps)) + int_to_bytes(int(alpha_steps))
+        data = int_to_bytes(int(alpha_steps)) + int_to_bytes(int(beta_steps))
         kwargs['data'] = data
 
         super().__init__(**kwargs)
@@ -95,7 +95,7 @@ class SetSpeed(Command):
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
-        data = int_to_bytes(int(beta)) + int_to_bytes(int(alpha))
+        data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
         kwargs['data'] = data
 
         super().__init__(**kwargs)
