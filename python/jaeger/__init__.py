@@ -58,6 +58,5 @@ can_log._set_defaults()
 can_log.start_file_logger('~/.jaeger/can.log')
 
 
-from . import extern
 from .can import *
 from .fps import *

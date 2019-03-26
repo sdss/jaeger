@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-16 15:34:07
+# @Last modified time: 2019-03-26 12:33:04
 
 import asyncio
 import collections
@@ -15,6 +15,7 @@ import pprint
 
 import can
 import can.interfaces.slcan
+import can.interfaces.socketcan
 
 import jaeger
 import jaeger.tests.bus
