@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-03-26 12:33:04
+# @Last modified time: 2019-04-11 15:54:36
 
 import asyncio
 import collections
@@ -132,7 +132,7 @@ class JaegerCAN(object):
     def _process_reply(self, msg):
         """Processes replies from the bus."""
 
-        positioner_id, command_id, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
+        positioner_id, command_id, __, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
 
         command_id_flag = CommandID(command_id)
 
