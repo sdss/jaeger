@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-17 16:31:55
+# @Last modified time: 2019-04-11 10:56:37
 
 import asyncio
 import os
@@ -125,24 +125,28 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
     log.info('starting data send.')
 
+    firmware_chunks = []
+
     while True:
 
         chunk = firmware_data.read(8)
         packetdata = bytearray(chunk)
-        #packetdata.reverse()  # IMPORTANT! no longer needed for P1
+        # packetdata.reverse()  # IMPORTANT! no longer needed for P1
 
         if len(packetdata) == 0:
             break
 
-        cmds = [fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
-                                 positioner_id=positioner.positioner_id,
-                                 data=packetdata, timeout=15)
-                for positioner in valid_positioners]
+        firmware_chunks.append(packetdata)
 
-        await asyncio.gather(*cmds)
+    cmds = [fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
+                             positioner_id=positioner.positioner_id,
+                             data=firmware_chunks, timeout=15)
+            for positioner in valid_positioners]
 
-        if not _process_replies(cmds):
-            return
+    await asyncio.gather(*cmds)
+
+    if not _process_replies(cmds):
+        return
 
     log.info('firmware upgrade complete.')
 
@@ -206,3 +210,17 @@ class SendFirmwareData(commands.Command):
 
     command_id = commands.CommandID.SEND_FIRMWARE_DATA
     broadcastable = False
+
+    def get_messages(self):
+        """Returns the list of messages associated with this command.
+
+        Unless overridden, returns a single message with the associated data.
+
+        """
+
+        messages = [commands.Message(self, positioner_id=self.positioner_id, data=data_chunk)
+                    for data_chunk in self.data]
+
+        self._n_messages = len(messages)
+
+        return messages

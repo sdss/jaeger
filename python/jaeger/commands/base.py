@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-26 17:41:11
+# @Last modified time: 2019-04-11 10:54:24
 
 import asyncio
 import logging
@@ -336,7 +336,10 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
-        return [Message(self, positioner_id=self.positioner_id, data=self._data)]
+        messages = [Message(self, positioner_id=self.positioner_id, data=self._data)]
+        self._n_messages = len(messages)
+
+        return messages
 
     def send(self, bus=None, override=False):
         """Queues the command for execution.
