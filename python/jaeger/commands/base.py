@@ -7,18 +7,18 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 10:54:24
+# @Last modified time: 2019-04-11 14:35:21
 
 import asyncio
 import logging
 
 import can
+
 import jaeger.utils
-from jaeger import can_log, log
+from jaeger import can_log, config, log
 from jaeger.core import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
-
 from . import CommandID
 
 
@@ -39,15 +39,23 @@ class Message(can.Message):
         Payload to pass to `can.Message`.
     positioner_id : int
         The positioner to which the message will be sent (0 for broadcast).
+    uid : int
+        The unique identifier for this message.
     extended_id : bool
         Whether the id is an 11 bit (False) or 29 bit (True) address.
 
     """
 
-    def __init__(self, command, data=[], positioner_id=0, extended_id=True, bus=None):
+    def __init__(self, command, data=[], positioner_id=0, uid=0,
+                 extended_id=True, bus=None):
 
         self.command = command
         self.positioner_id = positioner_id
+        self.uid = uid
+
+        uid_bits = config['uid_bits']
+        max_uid = 2**uid_bits - 1
+        assert self.uid < max_uid, f'UID must be <= {max_uid}.'
 
         if extended_id:
             arbitration_id = jaeger.utils.get_identifier(positioner_id,
@@ -329,14 +337,21 @@ class Command(StatusMixIn, asyncio.Future):
         else:
             return
 
-    def get_messages(self):
+    def get_messages(self, data=None):
         """Returns the list of messages associated with this command.
 
         Unless overridden, returns a single message with the associated data.
 
         """
 
-        messages = [Message(self, positioner_id=self.positioner_id, data=self._data)]
+        data = data or self._data
+
+        if len(self._data) == 0:
+            messages = [Message(self, positioner_id=self.positioner_id, data=data)]
+        else:
+            messages = [Message(self, positioner_id=self.positioner_id, uid=ii,
+                                data=data_chunk) for ii, data_chunk in enumerate(data)]
+
         self._n_messages = len(messages)
 
         return messages

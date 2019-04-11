@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 15:19:51
+# @Last modified time: 2019-04-11 15:24:52
 
 import numpy
 
@@ -46,34 +46,27 @@ class SendTrajectoryData(Command):
 
     Parameters
     ----------
-    alpha : `list`
-        For the alpha arm, a list of tuples in which the first element is the
-        angle, in degrees, and the second is the associated time, in seconds.
-    beta : `list`
-        As ``alpha``, for the beta arm.
+    positions : list
+        A list of tuples in which the first element is the angle, in degrees,
+        and the second is the associated time, in seconds.
 
     Examples
     --------
-        >>> SendTrajectoryData(alpha=[(90, 10), (88, 12), (80, 20)],
-                               beta=[(10, 5), (30, 35)])
+        >>> SendTrajectoryData([(90, 10), (88, 12), (80, 20)])
 
     """
 
     command_id = CommandID.SEND_TRAJECTORY_DATA
     broadcastable = False
 
-    def __init__(self, alpha, beta, **kwargs):
+    def __init__(self, positions, **kwargs):
 
-        alpha = numpy.array(alpha).astype(numpy.float64)
-        beta = numpy.array(beta).astype(numpy.float64)
+        positions = numpy.array(positions).astype(numpy.float64)
 
-        alpha[:, 0] = alpha[:, 0] / 360. * MOTOR_STEPS
-        beta[:, 0] = beta[:, 0] / 360. * MOTOR_STEPS
-        alpha[:, 1] /= TIME_STEP
-        beta[:, 1] /= TIME_STEP
+        positions[:, 0] = positions[:, 0] / 360. * MOTOR_STEPS
+        positions[:, 1] /= TIME_STEP
 
-        self.alpha_points = alpha.astype(numpy.int)
-        self.beta_points = beta.astype(numpy.int)
+        self.positions_points = positions.astype(numpy.int)
 
         super().__init__(**kwargs)
 
@@ -82,7 +75,7 @@ class SendTrajectoryData(Command):
 
         messages = []
 
-        for angle, time in numpy.vstack((self.alpha_points, self.beta_points)):
+        for angle, time in self.positions_points:
 
             data = int_to_bytes(time) + int_to_bytes(angle)
             messages.append(
