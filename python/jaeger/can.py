@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 17:23:54
+# @Last modified time: 2019-04-11 18:16:54
 
 import asyncio
 import collections
@@ -135,7 +135,9 @@ class JaegerCAN(object):
         positioner_id, command_id, __, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
 
         if command_id == 0:
-            can_log.warning('invalid command with command_id=0 received. Ignoring it.')
+            can_log.warning('invalid command with command_id=0, '
+                            f'arbitration_id={msg.arbitration_id} received. '
+                            'Ignoring it.')
             return
 
         command_id_flag = CommandID(command_id)
