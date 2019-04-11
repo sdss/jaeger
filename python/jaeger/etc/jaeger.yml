@@ -3,7 +3,7 @@
 interfaces:
     default:
         interface: slcan
-        channel: /dev/tty.usbserial-LW1FJ8ZR
+        channel: /dev/tty.usbserial-LW3HTDSY
         ttyBaudrate: 1000000
         bitrate: 1000000
     test:
@@ -33,3 +33,6 @@ actor:
 
 # Number of bits available for the Message UID.
 uid_bits: 6
+
+# How many points from the trajectory are we putting in each SEND_TRAJECTORY_DATA command.
+trajectory_n_chunk: 10
