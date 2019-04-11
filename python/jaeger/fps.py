@@ -7,13 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 15:26:17
+# @Last modified time: 2019-04-11 15:45:12
 
 import asyncio
 import os
 import pathlib
 
 import astropy.table
+import numpy
 from ruamel.yaml import YAML
 
 from jaeger import config, log, maskbits
@@ -392,16 +393,24 @@ class FPS(object):
         # How many points from the trajectory are we putting in each command.
         n_chunk = config['trajectory_n_chunk']
 
-        for pos_id in trajectories:
+        # Gets the maximum number of points for each arm for all positioners.
+        max_points = numpy.max(
+            [(len(trajectories[pos_id]['alpha']), len(trajectories[pos_id]['beta']))
+             for pos_id in trajectories], axis=1)
 
-            alpha = trajectories[pos_id]['alpha']
-            beta = trajectories[pos_id]['beta']
+        # Send chunks of size n_chunk to all the positioners in parallel.
+        # Do alpha first, then beta.
+        for ii in range(2):
 
-            for arm in [alpha, beta]:
+            arm = 'alpha' if ii == 0 else 'beta'
 
-                for ii in range(0, len(arm), n_chunk):
+            for jj in range(0, max_points[ii], n_chunk):
 
-                    arm_chunk = arm[ii:ii + n_chunk]
+                for pos_id in trajectories:
+
+                    arm_chunk = trajectories[pos_id][arm][jj:jj + n_chunk]
+                    if len(arm_chunk) == 0:
+                        continue
 
                     await self.send_command('SEND_TRAJECTORY_DATA',
                                             positioner_id=pos_id,
