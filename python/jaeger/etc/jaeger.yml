@@ -30,3 +30,6 @@ actor:
         file_level: 10
         shell_level: 20
         log_dir: /data/logs/actors/jaeger
+
+# Number of bits available for the Message UID.
+uid_bits: 6

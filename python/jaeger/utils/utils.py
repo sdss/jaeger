@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 18:45:12
+# @Last modified time: 2019-04-11 11:23:31
 
 import numpy
 
@@ -146,13 +146,13 @@ def bytes_to_int(bytes, dtype='u4', byteorder='little'):
     return np_buffer[0]
 
 
-def get_identifier(positioner_id, command_id, response_code=0):
+def get_identifier(positioner_id, command_id, uid=0, response_code=0):
     """Returns a 29 bits identifier with the correct format.
 
     The CAN identifier format for the positioners uses an extended frame with
     29-bit encoding so that the 11 higher bits correspond to the positioner
-    ID, the 10 middle bits are the command number, and the 8 lower bits are the
-    response code.
+    ID, the 8 middle bits are the command number, the following 6 bits are the
+    unique identifier, and the 4 lower bits are the response code.
 
     Parameters
     ----------
@@ -160,8 +160,10 @@ def get_identifier(positioner_id, command_id, response_code=0):
         The Id of the positioner to command, or zero for broadcast.
     command_id : int
         The ID of the command to send.
-    response_code : `int` or `~jaeger.maskbits.ResponseCode`
+    response_code : int or ~jaeger.maskbits.ResponseCode
         The response code.
+    uid : int
+        The unique identifier
 
     Returns
     -------
@@ -172,10 +174,10 @@ def get_identifier(positioner_id, command_id, response_code=0):
     --------
     ::
 
-        >>> get_identifier(5, 17)
-        1315072
-        >>> bin(1315072)
-        '0b101000001000100000000'
+        >>> get_identifier(5, 17, uid=5)
+        1328128
+        >>> bin(1328128)
+        '0b101000100010000000000'
 
     """
 
@@ -207,8 +209,9 @@ def parse_identifier(identifier):
     -------
     components : tuple
         A tuple with the components of the identifier. The first element is
-        the positioner id, the second the command id, and the third the
-        response flag as an instance of `~jaeger.maskbits.ResponseCode`.
+        the positioner id, the second the command id, the third is the command
+        UID, and the last one is the response flag as an instance of
+        `~jaeger.maskbits.ResponseCode`.
 
     Examples
     --------
@@ -230,4 +233,4 @@ def parse_identifier(identifier):
 
     response_flag = ResponseCode(response_code)
 
-    return positioner_id, command_id, response_flag
+    return positioner_id, command_id, command_uid, response_flag
