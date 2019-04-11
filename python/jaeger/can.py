@@ -31,7 +31,8 @@ __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 #: Accepted CAN interfaces
 VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
                     'socketcan': can.interfaces.socketcan.SocketcanBus,
-                    'test': jaeger.tests.bus.VirtualBusTester}
+                    'test': jaeger.tests.bus.VirtualBusTester,
+                    'cannet': can.interfaces.cannet.CANNetBus}
 
 
 class JaegerReaderCallback(can.Listener):
