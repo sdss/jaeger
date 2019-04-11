@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 14:35:21
+# @Last modified time: 2019-04-11 16:26:33
 
 import asyncio
 import logging
@@ -110,7 +110,7 @@ class Reply(object):
         #: The `~.maskbits.ResponseCode` bit returned by the reply.
         self.response_code = None
 
-        self.positioner_id, reply_cmd_id, self.response_code = \
+        self.positioner_id, reply_cmd_id, __, self.response_code = \
             jaeger.utils.parse_identifier(message.arbitration_id)
 
         if command is not None:
@@ -198,6 +198,9 @@ class Command(StatusMixIn, asyncio.Future):
         self.timeout = timeout
 
         self._data = kwargs.pop('data', [])
+        if not isinstance(self._data, (list, tuple)):
+            self._data = [self._data]
+
         self._done_callback = done_callback
 
         self._override = False
