@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 15:54:36
+# @Last modified time: 2019-04-11 16:09:36
 
 import asyncio
 import collections
@@ -182,7 +182,7 @@ class JaegerCAN(object):
 
                 else:
 
-                    can_log.warning(log_header + 'another instances is already '
+                    can_log.warning(log_header + 'another instance is already '
                                     'running. Requeuing and trying later.',
                                     JaegerUserWarning)
 
