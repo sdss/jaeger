@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 10:03:54
+# @Last modified time: 2019-04-12 15:36:10
 
 import asyncio
 import os
@@ -277,6 +277,36 @@ class FPS(object):
         await asyncio.gather(
             *[self.positioners[pid].update_status(timeout=timeout)
               for pid in positioners], loop=self.loop)
+
+    def start_pollers(self, poller='all'):
+        """Starts the pollers for all valid positioners.
+
+        Parameters
+        ----------
+        poller : str
+            Either ``'position'`` or ``'status'`` to start the position or
+            status pollers, or ``'all'`` to start both.
+
+        """
+
+        for positioner in self.positioners.values():
+            if positioner.initialised:
+                positioner.start_pollers(poller=poller)
+
+    def stop_pollers(self, poller='all'):
+        """Stops the pollers for all valid positioners.
+
+        Parameters
+        ----------
+        poller : str
+            Either ``'position'`` or ``'status'`` to start the position or
+            status pollers, or ``'all'`` to start both.
+
+        """
+
+        for positioner in self.positioners.values():
+            if positioner.initialised:
+                positioner.stop_pollers(poller=poller)
 
     async def _abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
