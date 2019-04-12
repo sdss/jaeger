@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 15:45:12
+# @Last modified time: 2019-04-12 10:03:54
 
 import asyncio
 import os
@@ -406,15 +406,20 @@ class FPS(object):
 
             for jj in range(0, max_points[ii], n_chunk):
 
+                data_cmds = []
+
                 for pos_id in trajectories:
 
                     arm_chunk = trajectories[pos_id][arm][jj:jj + n_chunk]
                     if len(arm_chunk) == 0:
                         continue
 
-                    await self.send_command('SEND_TRAJECTORY_DATA',
-                                            positioner_id=pos_id,
-                                            positions=arm_chunk)
+                    data_cmds.append(
+                        self.send_command('SEND_TRAJECTORY_DATA',
+                                          positioner_id=pos_id,
+                                          positions=arm_chunk))
+
+                await asyncio.gather(*data_cmds)
 
         # Finalise the trajectories
         end_traj_cmds = [self.send_command('TRAJECTORY_DATA_END',
