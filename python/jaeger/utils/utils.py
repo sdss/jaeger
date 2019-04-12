@@ -183,8 +183,7 @@ def get_identifier(positioner_id, command_id, uid=0, response_code=0):
 
     posid_bin = format(positioner_id, '011b')
     cid_bin = format(command_id, '08b')
-    cuid_bin = format(0, '06b')
-    response_bin = format(ResponseCode(response_code).value, '04b')
+    cuid_bin = format(uid, '06b')
 
     identifier = posid_bin + cid_bin + cuid_bin + response_bin
 
