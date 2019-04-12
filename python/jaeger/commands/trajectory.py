@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 15:24:52
+# @Last modified time: 2019-04-11 18:12:10
 
 import numpy
 
@@ -75,11 +75,16 @@ class SendTrajectoryData(Command):
 
         messages = []
 
+        uid = 0
+
         for angle, time in self.positions_points:
 
             data = int_to_bytes(time) + int_to_bytes(angle)
             messages.append(
-                Message(self, positioner_id=self.positioner_id, data=data))
+                Message(self, positioner_id=self.positioner_id,
+                        uid=uid, data=data))
+
+            uid += 1
 
         self._n_messages = len(messages)
 
