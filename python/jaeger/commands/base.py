@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 16:26:33
+# @Last modified time: 2019-04-12 09:44:56
 
 import asyncio
 import logging
@@ -59,7 +59,8 @@ class Message(can.Message):
 
         if extended_id:
             arbitration_id = jaeger.utils.get_identifier(positioner_id,
-                                                         int(command.command_id))
+                                                         int(command.command_id),
+                                                         uid=self.uid)
         else:
             arbitration_id = positioner_id
 
