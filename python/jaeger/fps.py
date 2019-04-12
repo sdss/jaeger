@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 15:36:10
+# @Last modified time: 2019-04-12 15:44:16
 
 import asyncio
 import os
@@ -379,8 +379,10 @@ class FPS(object):
                         'by kaiju. This will end up in tears.',
                         JaegerUserWarning)
 
-        await self.update_status(positioners=list(trajectories.keys()),
-                                 timeout=1.)
+        await self.update_status(positioners=list(trajectories.keys()), timeout=1.)
+
+        log.info('stopping the pollers before sending the trajectory.')
+        self.stop_pollers()
 
         # TODO: better deal with broken/unknown status positioners.
 
@@ -458,6 +460,7 @@ class FPS(object):
 
         await asyncio.gather(*end_traj_cmds)
 
+        failed = False
         for cmd in end_traj_cmds:
 
             if len(cmd.replies) == 0:
@@ -465,18 +468,28 @@ class FPS(object):
                           f'a reply to {cmd.command_id.name!r}. '
                           'Aborting trajectory.')
                 self._abort_trajectory(trajectories.keys())
-                return False
+                failed = True
+                break
 
             if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
                 log.error(f'positioner_id={cmd.positioner_id} got an '
                           f'INVALID_TRAJECTORY reply. Aborting trajectory.')
                 self._abort_trajectory(trajectories.keys())
-                return False
+                failed = True
+                break
+
+        if failed:
+            log.info('restarting the pollers.')
+            self.start_pollers()
+            return False
 
         # Prepare to start the trajectories. Make position polling faster and
         # output expected time.
         log.info(f'expected time to complete trajectory: '
                  f'{max_time:.2f} seconds.')
+
+        log.info('restarting the pollers.')
+        self.start_pollers()
 
         for pos_id in trajectories:
             self.positioners[pos_id].position_poller.set_delay(0.5)
