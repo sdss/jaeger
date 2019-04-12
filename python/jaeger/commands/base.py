@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 09:44:56
+# @Last modified time: 2019-04-12 13:24:23
 
 import asyncio
 import logging
@@ -294,6 +294,7 @@ class Command(StatusMixIn, asyncio.Future):
 
             if timed_out:
                 self._log('command timed out. Finishing it.')
+                status = CommandStatus.TIMEDOUT
 
             if status:
                 self._status = status
@@ -315,8 +316,15 @@ class Command(StatusMixIn, asyncio.Future):
         if not self.done():
             self.set_result(self)
 
-            if self.status == CommandStatus.DONE and self._done_callback:
+            is_done = (self.status == CommandStatus.DONE or
+                       (self.positioner_id == 0 and
+                        self.status == CommandStatus.TIMEDOUT))
+
+            if is_done and self._done_callback:
                 self._done_callback()
+
+            if self.positioner_id != 0 and self.status == CommandStatus.TIMEDOUT:
+                self._log('this command timed out and it is not a broadcast.')
 
     def status_callback(self):
         """Callback for change status.

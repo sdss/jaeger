@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 15:27:56
+# @Last modified time: 2019-04-12 13:10:54
 
 import enum
 
@@ -34,12 +34,13 @@ class CommandStatus(Maskbit):
     FAILED = enum.auto()
     READY = enum.auto()
     RUNNING = enum.auto()
+    TIMEDOUT = enum.auto()
 
     @property
     def is_done(self):
         """Returns True if the command is done (completed or failed)."""
 
-        return True if (self in self.DONE or self.failed) else False
+        return True if (self in self.DONE or self.failed or self.TIMEDOUT) else False
 
     @property
     def is_running(self):
@@ -53,6 +54,12 @@ class CommandStatus(Maskbit):
 
         failed_states = self.CANCELLED | self.FAILED
         return True if self in failed_states else False
+
+    @property
+    def timed_out(self):
+        """Returns True if the command timed out."""
+
+        return True if self.TIMEDOUT else False
 
 
 class PositionerStatus(Maskbit):
