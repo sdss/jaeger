@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 13:24:23
+# @Last modified time: 2019-04-12 16:18:07
 
 import asyncio
 import logging
@@ -22,7 +22,7 @@ from jaeger.utils import AsyncQueue, StatusMixIn
 from . import CommandID
 
 
-__ALL__ = ['Message', 'Command', 'Abort']
+__ALL__ = ['Message', 'Command']
 
 
 class Message(can.Message):
