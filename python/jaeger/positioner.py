@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-26 18:12:16
+# @Last modified time: 2019-04-12 13:30:38
 
 import asyncio
 
@@ -88,6 +88,27 @@ class Positioner(StatusMixIn):
 
             self.position_poller = Poller(self.update_position,
                                           delay=_pos_conf['position_poller_delay'])
+
+    def stop_pollers(self, poller='all'):
+        """Stops the status and position pollers.
+
+        Parameters
+        ----------
+        poller : str
+            Either ``'position'`` or ``'status'`` to start the position or
+            status pollers, or ``'all'`` to start both.
+
+        """
+
+        if poller == 'status' or poller == 'all':
+
+            self.status_poller.cancel()
+            self.status_poller = None
+
+        if poller == 'position' or poller == 'all':
+
+            self.position_poller.cancel()
+            self.position_poller = None
 
     @property
     def initialised(self):
