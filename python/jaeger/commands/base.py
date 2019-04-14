@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 17:59:38
+# @Last modified time: 2019-04-14 18:02:21
 
 import asyncio
 import logging
@@ -167,8 +167,8 @@ class Command(StatusMixIn, asyncio.Future):
         Time after which the command will be marked done. Note that if the
         command is not a broadcast and it receives replies to each one of the
         messages it sends, the command will be marked done and the timer
-        cancelled. If `None`, the command runs forever or until replies are
-        received.
+        cancelled. If `None`, the command runs forever or until all the
+        replies have been received.
     done_callback : function
         A function to call when the command has been successfully completed.
     n_positioners : int
