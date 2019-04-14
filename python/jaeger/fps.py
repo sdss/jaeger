@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 18:09:35
+# @Last modified time: 2019-04-14 18:19:42
 
 import asyncio
 import os
@@ -189,12 +189,10 @@ class FPS(object):
 
         get_status_command = self.send_command(CommandID.GET_STATUS,
                                                positioner_id=0,
-                                               timeout=2,
-                                               block=False)
+                                               timeout=2)
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
-                                                 timeout=2,
-                                                 block=False)
+                                                 timeout=2)
 
         await asyncio.gather(get_status_command, get_firmware_command)
 
