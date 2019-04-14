@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 17:55:00
+# @Last modified time: 2019-04-14 17:59:38
 
 import asyncio
 import logging
@@ -175,6 +175,10 @@ class Command(StatusMixIn, asyncio.Future):
         If the command is a broadcast, the number of positioners that should
         reply. If defined, the command will be done once as many positioners
         have replied. Otherwise it waits for the command to time out.
+    data : list
+        The data to pass to the messages. It must be a list in which each
+        element is the payload for a message. As many messages as data elements
+        will be sent. If `None`, a single message without payload will be sent.
 
     """
 
@@ -184,7 +188,7 @@ class Command(StatusMixIn, asyncio.Future):
     broadcastable = None
 
     def __init__(self, positioner_id, bus=None, loop=None, timeout=5.,
-                 done_callback=None, n_positioners=None, **kwargs):
+                 done_callback=None, n_positioners=None, data=None):
 
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
@@ -195,6 +199,9 @@ class Command(StatusMixIn, asyncio.Future):
 
         self.bus = bus
         self.loop = loop or asyncio.get_event_loop()
+
+        #: The data payload for the messages to send.
+        self.data = data or []
 
         #: A list of messages with the responses to this command.
         self.replies = []
@@ -212,10 +219,6 @@ class Command(StatusMixIn, asyncio.Future):
         self.n_positioners = n_positioners
 
         self.timeout = timeout
-
-        self._data = kwargs.pop('data', [])
-        if not isinstance(self._data, (list, tuple)):
-            self._data = [self._data]
 
         self._done_callback = done_callback
 
@@ -390,7 +393,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
-        data = data or self._data
+        data = data or self.data
 
         if len(data) == 0:
             data = [[]]
