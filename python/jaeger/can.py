@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 18:16:54
+# @Last modified time: 2019-04-14 18:36:03
 
 import asyncio
 import collections
@@ -18,6 +18,7 @@ import can.interfaces.slcan
 import can.interfaces.socketcan
 
 import jaeger
+import jaeger.interfaces.cannet
 import jaeger.tests.bus
 from jaeger import can_log, config, log
 from jaeger.commands import CommandID
@@ -32,7 +33,7 @@ __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
                     'socketcan': can.interfaces.socketcan.SocketcanBus,
                     'test': jaeger.tests.bus.VirtualBusTester,
-                    'cannet': can.interfaces.cannet.CANNetBus}
+                    'cannet': jaeger.interfaces.cannet.CANNetBus}
 
 
 class JaegerReaderCallback(can.Listener):
