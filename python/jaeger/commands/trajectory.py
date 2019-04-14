@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 18:18:10
+# @Last modified time: 2019-04-14 18:57:18
 
 import asyncio
 import pathlib
@@ -121,17 +121,14 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     n_chunk = config['trajectory_data_n_points']
 
     # Gets the maximum number of points for each arm for all positioners.
-    max_points = numpy.max(
-        [(len(trajectories[pos_id]['alpha']), len(trajectories[pos_id]['beta']))
-            for pos_id in trajectories], axis=1)
+    max_points = numpy.max(list(n_points.values()), axis=1)
+    max_points = {'alpha': max_points[0], 'beta': max_points[1]}
 
     # Send chunks of size n_chunk to all the positioners in parallel.
     # Do alpha first, then beta.
-    for ii in range(2):
+    for arm in ['alpha', 'beta']:
 
-        arm = 'alpha' if ii == 0 else 'beta'
-
-        for jj in range(0, max_points[ii], n_chunk):
+        for jj in range(0, max_points[arm], n_chunk):
 
             data_cmds = []
 
@@ -180,8 +177,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
     # Prepare to start the trajectories. Make position polling faster and
     # output expected time.
-    log.info(f'expected time to complete trajectory: '
-             f'{max_time:.2f} seconds.')
+    log.info(f'expected time to complete trajectory: {max_time:.2f} seconds.')
 
     log.info('restarting the pollers.')
     fps.start_pollers()
@@ -196,9 +192,11 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     # Wait approximate time before starting to poll for status
     await asyncio.sleep(0.95 * max_time, loop=fps.loop)
 
+    remaining_time = max_time - 0.95 * max_time
+
     # Wait until all positioners have completed.
     wait_status = [fps.positioners[pos_id].wait_for_status(
-        PosStatus.DISPLACEMENT_COMPLETED, timeout=max_time + 3)
+        PosStatus.DISPLACEMENT_COMPLETED, timeout=remaining_time + 3)
         for pos_id in trajectories]
     results = await asyncio.gather(*wait_status, loop=fps.loop)
 
