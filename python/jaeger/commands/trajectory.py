@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-11 18:12:10
+# @Last modified time: 2019-04-14 17:01:43
 
 import numpy
 
@@ -66,27 +66,20 @@ class SendTrajectoryData(Command):
         positions[:, 0] = positions[:, 0] / 360. * MOTOR_STEPS
         positions[:, 1] /= TIME_STEP
 
-        self.positions_points = positions.astype(numpy.int)
+        self.trajectory_points = positions.astype(numpy.int)
 
         super().__init__(**kwargs)
 
-    def get_messages(self):
+    def _generate_messages_internal(self):
         """Returns the list of messages associated with this command."""
 
         messages = []
 
-        uid = 0
-
-        for angle, time in self.positions_points:
+        for angle, time in self.trajectory_points:
 
             data = int_to_bytes(time) + int_to_bytes(angle)
             messages.append(
-                Message(self, positioner_id=self.positioner_id,
-                        uid=uid, data=data))
-
-            uid += 1
-
-        self._n_messages = len(messages)
+                Message(self, positioner_id=self.positioner_id, data=data))
 
         return messages
 

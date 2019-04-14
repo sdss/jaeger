@@ -349,6 +349,24 @@ class Command(StatusMixIn, asyncio.Future):
         else:
             return
 
+    def _generate_messages_internal(self, data=None):
+        """Generates the list of messages to send to the bus for this command.
+
+        This method is called by `.get_messages` and can be overridden in
+        subclasses. Do not override `.get_messages` directly.
+
+        """
+
+        data = data or self._data
+
+        if len(data) == 0:
+            data = [[]]
+
+        messages = [Message(self, positioner_id=self.positioner_id, data=data_chunk)
+                    for data_chunk in data]
+
+        return messages
+
     def get_messages(self, data=None):
         """Returns the list of messages associated with this command.
 
@@ -356,15 +374,20 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
-        data = data or self._data
+        messages = self._generate_messages_internal(data=data)
 
-        if len(self._data) == 0:
-            messages = [Message(self, positioner_id=self.positioner_id, data=data)]
+        uid_bits = config['uid_bits']
+        max_uid = 2**uid_bits - 1
+
+        if len(messages) > max_uid:
+            self._log('command has more messages than available UIDs. Not assigning UIDs.',
+                      level=logging.WARNING)
         else:
-            messages = [Message(self, positioner_id=self.positioner_id, uid=ii,
-                                data=data_chunk) for ii, data_chunk in enumerate(data)]
+            for ii, message in enumerate(messages):
+                message.uid = ii
 
         self._n_messages = len(messages)
+        self._uids = [message.uid for message in messages]
 
         return messages
 
