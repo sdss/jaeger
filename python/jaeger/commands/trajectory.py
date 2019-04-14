@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 18:57:18
+# @Last modified time: 2019-04-14 19:28:53
 
 import asyncio
 import pathlib
@@ -146,11 +146,8 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
             await asyncio.gather(*data_cmds)
 
     # Finalise the trajectories
-    end_traj_cmds = [fps.send_command('TRAJECTORY_DATA_END',
-                                      positioner_id=pos_id)
-                     for pos_id in trajectories]
-
-    await asyncio.gather(*end_traj_cmds)
+    end_traj_cmds = await fps.send_to_all('TRAJECTORY_DATA_END',
+                                          positioners=list(trajectories.keys()))
 
     failed = False
     for cmd in end_traj_cmds:

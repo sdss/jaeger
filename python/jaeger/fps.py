@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 18:19:42
+# @Last modified time: 2019-04-14 19:25:08
 
 import asyncio
 import os
@@ -340,6 +340,43 @@ class FPS(object):
 
         cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_id=0)
         return asyncio.create_task(cmd)
+
+    async def sent_to_all(self, command, positioners=None, data=None):
+        """Sends a command to multiple positioners and awaits completion.
+
+        Parameters
+        ----------
+        command : str
+            The name of the command to send.
+        positioners : list
+            The list of ``positioner_id`` of the positioners to command. If
+            `None`, sends the command to all the positioners in the FPS.
+        data : list
+            The payload to send. If `None`, no payload is sent. If the value
+            is a list with a single value, the same payload is sent to all
+            the positioners. Otherwise the list length must match the number
+            of positioners.
+
+        Returns
+        -------
+        commands : `list`
+            A list with the command instances executed.
+
+        """
+
+        positioners = positioners or list(self.positioners.keys())
+
+        if data is None or len(data) == 1:
+            commands = [self.send_command(command, positioner_id=positioner_id)
+                        for positioner_id in positioners]
+        else:
+            commands = [self.send_command(command, positioner_id=positioner_id,
+                                          data=data[ii])
+                        for ii, positioner_id in enumerate(positioners)]
+
+        await asyncio.gather(*commands)
+
+        return commands
 
     async def shutdown(self):
 
