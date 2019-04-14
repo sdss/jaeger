@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 16:02:11
+# @Last modified time: 2019-04-14 17:32:43
 
 import asyncio
 import os
@@ -423,7 +423,7 @@ class FPS(object):
         await asyncio.gather(*new_traj_cmds)
 
         # How many points from the trajectory are we putting in each command.
-        n_chunk = config['trajectory_n_chunk']
+        n_chunk = config['trajectory_data_n_points']
 
         # Gets the maximum number of points for each arm for all positioners.
         max_points = numpy.max(
