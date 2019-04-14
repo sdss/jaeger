@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 16:18:07
+# @Last modified time: 2019-04-14 17:27:45
 
 import asyncio
 import logging
@@ -111,7 +111,10 @@ class Reply(object):
         #: The `~.maskbits.ResponseCode` bit returned by the reply.
         self.response_code = None
 
-        self.positioner_id, reply_cmd_id, __, self.response_code = \
+        #: The UID of the message this reply is for.
+        self.uid = None
+
+        self.positioner_id, reply_cmd_id, self.uid, self.response_code = \
             jaeger.utils.parse_identifier(message.arbitration_id)
 
         if command is not None:
@@ -196,6 +199,10 @@ class Command(StatusMixIn, asyncio.Future):
         # the command will be marked done after receiving this many replies.
         self._n_messages = 1
 
+        # Stores the UIDs of the messages sent for them to be compared with
+        # the replies.
+        self._uids = None
+
         self.timeout = timeout
 
         self._data = kwargs.pop('data', [])
@@ -231,10 +238,32 @@ class Command(StatusMixIn, asyncio.Future):
 
         positioner_id = positioner_id or self.positioner_id
 
-        msg = f'{command_name, self.positioner_id}: ' + msg
+        msg = f'{command_name, positioner_id}: ' + msg
 
         for ll in logs:
             ll.log(level, msg)
+
+    def _check_replies(self):
+        """Checks if the UIDs of the replies match the messages."""
+
+        if len(self.replies) != self._n_messages:
+            return False
+
+        if len(self.replies) > self._n_messages:
+            self._log('command received more replies than messages. '
+                      'This should not be possible.',
+                      level=logging.ERROR)
+            self.finish_command(CommandStatus.FAILED)
+            return False
+
+        replies_uids = sorted([reply.uid for reply in self.replies])
+
+        # Compares each message-reply UID.
+        for ii in range(len(self._uids)):
+            if replies_uids[ii] != sorted(self._uids)[ii]:
+                return False
+
+        return True
 
     def process_reply(self, reply_message):
         """Watches the reply queue."""
@@ -251,7 +280,7 @@ class Command(StatusMixIn, asyncio.Future):
         if self.positioner_id != 0:
             assert reply.positioner_id == self.positioner_id, \
                 (f'({command_name, self.positioner_id}): '
-                 'received a reply from an invalid positioner.')
+                 'received a reply from a different positioner.')
 
         self.replies.append(reply)
 
@@ -267,44 +296,26 @@ class Command(StatusMixIn, asyncio.Future):
 
         # If this is not a broadcast, the message was accepted and we have as
         # many replies as messages sent, mark as done.
-        elif (reply.response_code == ResponseCode.COMMAND_ACCEPTED and
-                self.positioner_id != 0 and
-                len(self.replies) == self._n_messages):
+        elif self._check_replies():
 
-            self.status = CommandStatus.DONE
+            self.finish_command(CommandStatus.DONE)
 
-    def finish_command(self, status=None, timed_out=False):
+    def finish_command(self, status):
         """Cancels the queue watcher and removes the running command.
 
         Parameters
         ----------
-        status : `.CommandStatus` or `None`
+        status : .CommandStatus
             The status to set the command to. If `None` the command will be set
             to `~.CommandStatus.DONE` if one reply for each message has been
             received, `~.CommandStatus.FAILED` otherwise.
-        timed_out : `bool`
-            Whether the command if being finished because it timed out.
 
         """
 
         if self._timeout_handle:
             self._timeout_handle.cancel()
 
-        if not self.status.is_done:
-
-            if timed_out:
-                self._log('command timed out. Finishing it.')
-                status = CommandStatus.TIMEDOUT
-
-            if status:
-                self._status = status
-            else:
-                n_replies = len(self.replies)
-                if ((self.positioner_id != 0 and n_replies == self._n_messages) or
-                        (self.positioner_id == 0 and n_replies >= 1)):
-                    self._status = CommandStatus.DONE
-                else:
-                    self._status = CommandStatus.FAILED
+        self._status = status
 
         self.reply_queue.watcher.cancel()
 
@@ -314,6 +325,7 @@ class Command(StatusMixIn, asyncio.Future):
                 self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
 
         if not self.done():
+
             self.set_result(self)
 
             is_done = (self.status == CommandStatus.DONE or
@@ -343,11 +355,9 @@ class Command(StatusMixIn, asyncio.Future):
                 self.finish_command(CommandStatus.DONE)
             else:
                 self._timeout_handle = self.loop.call_later(
-                    self.timeout, self.finish_command, None, True)
-        elif self.status.is_done:
-            self.finish_command()
+                    self.timeout, self.finish_command, CommandStatus.TIMEDOUT, True)
         else:
-            return
+            self.finish_command(self.status)
 
     def _generate_messages_internal(self, data=None):
         """Generates the list of messages to send to the bus for this command.
