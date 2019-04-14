@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-17 16:31:55
+# @Last modified time: 2019-04-14 23:20:23
 
 import asyncio
 import os
@@ -129,7 +129,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
         chunk = firmware_data.read(8)
         packetdata = bytearray(chunk)
-        #packetdata.reverse()  # IMPORTANT! no longer needed for P1
+        # packetdata.reverse()  # IMPORTANT! no longer needed for P1
 
         if len(packetdata) == 0:
             break
