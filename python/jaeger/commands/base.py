@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 18:02:21
+# @Last modified time: 2019-04-14 19:06:53
 
 import asyncio
 import logging
@@ -167,7 +167,7 @@ class Command(StatusMixIn, asyncio.Future):
         Time after which the command will be marked done. Note that if the
         command is not a broadcast and it receives replies to each one of the
         messages it sends, the command will be marked done and the timer
-        cancelled. If `None`, the command runs forever or until all the
+        cancelled. If negative, the command runs forever or until all the
         replies have been received.
     done_callback : function
         A function to call when the command has been successfully completed.
@@ -186,8 +186,10 @@ class Command(StatusMixIn, asyncio.Future):
     command_id = None
     #: Whether the command can be broadcast to all robots.
     broadcastable = None
+    #: The default timeout for this command.
+    timeout = 5
 
-    def __init__(self, positioner_id, bus=None, loop=None, timeout=5.,
+    def __init__(self, positioner_id, bus=None, loop=None, timeout=None,
                  done_callback=None, n_positioners=None, data=None):
 
         assert self.broadcastable is not None, 'broadcastable not set'
@@ -218,7 +220,7 @@ class Command(StatusMixIn, asyncio.Future):
             assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
         self.n_positioners = n_positioners
 
-        self.timeout = timeout
+        self.timeout = timeout or self.timeout
 
         self._done_callback = done_callback
 
