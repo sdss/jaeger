@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 17:27:45
+# @Last modified time: 2019-04-14 17:55:00
 
 import asyncio
 import logging
@@ -171,6 +171,10 @@ class Command(StatusMixIn, asyncio.Future):
         received.
     done_callback : function
         A function to call when the command has been successfully completed.
+    n_positioners : int
+        If the command is a broadcast, the number of positioners that should
+        reply. If defined, the command will be done once as many positioners
+        have replied. Otherwise it waits for the command to time out.
 
     """
 
@@ -180,7 +184,7 @@ class Command(StatusMixIn, asyncio.Future):
     broadcastable = None
 
     def __init__(self, positioner_id, bus=None, loop=None, timeout=5.,
-                 done_callback=None, **kwargs):
+                 done_callback=None, n_positioners=None, **kwargs):
 
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
@@ -197,11 +201,15 @@ class Command(StatusMixIn, asyncio.Future):
 
         # Numbers of messages to send. If the command is not a broadcast,
         # the command will be marked done after receiving this many replies.
-        self._n_messages = 1
+        self.n_messages = None
 
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
-        self._uids = None
+        self.uids = None
+
+        if n_positioners is not None:
+            assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
+        self.n_positioners = n_positioners
 
         self.timeout = timeout
 
@@ -243,24 +251,39 @@ class Command(StatusMixIn, asyncio.Future):
         for ll in logs:
             ll.log(level, msg)
 
+    @property
+    def is_broadcast(self):
+        """Returns `True` if the command is a broadcast."""
+
+        return self.positioner_id == 0
+
     def _check_replies(self):
         """Checks if the UIDs of the replies match the messages."""
 
-        if len(self.replies) != self._n_messages:
+        replies_uids = sorted([reply.uid for reply in self.replies])
+
+        if self.is_broadcast:
+
+            if self.n_positioners is None:
+                return False
+            else:
+                # We expect a reply matching the UID of each message
+                # from each positioner.
+                replies_uids = self.n_positioners * replies_uids
+
+        if len(self.replies) < self.n_messages:
             return False
 
-        if len(self.replies) > self._n_messages:
+        if len(self.replies) > self.n_messages:
             self._log('command received more replies than messages. '
                       'This should not be possible.',
                       level=logging.ERROR)
             self.finish_command(CommandStatus.FAILED)
             return False
 
-        replies_uids = sorted([reply.uid for reply in self.replies])
-
         # Compares each message-reply UID.
-        for ii in range(len(self._uids)):
-            if replies_uids[ii] != sorted(self._uids)[ii]:
+        for ii in range(len(self.uids)):
+            if replies_uids[ii] != sorted(self.uids)[ii]:
                 return False
 
         return True
@@ -396,8 +419,8 @@ class Command(StatusMixIn, asyncio.Future):
             for ii, message in enumerate(messages):
                 message.uid = ii
 
-        self._n_messages = len(messages)
-        self._uids = [message.uid for message in messages]
+        self.n_messages = len(messages)
+        self.uids = [message.uid for message in messages]
 
         return messages
 
