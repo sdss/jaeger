@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-15 14:30:43
+# @Last modified time: 2019-04-15 14:31:55
 
 import asyncio
 import pathlib
@@ -55,8 +55,8 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         >>> await fps.initialise()
 
         # Send a trajectory with two points for positioner 4
-        >>> await fps.send_trajectory({1: 'alpha': [(90, 0), (91, 3)],
-                                          'beta': [(20, 0), (23, 4)]})
+        >>> await fps.send_trajectory({1: {'alpha': [(90, 0), (91, 3)],
+                                           'beta': [(20, 0), (23, 4)]}})
 
     """
 
