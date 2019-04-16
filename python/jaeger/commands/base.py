@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 14:00:16
+# @Last modified time: 2019-04-16 14:34:31
 
 import asyncio
 import logging
@@ -204,6 +204,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         #: The data payload for the messages to send.
         self.data = data or []
+        if not isinstance(self.data, (list, tuple)):
+            self.data = [self.data]
 
         #: A list of messages with the responses to this command.
         self.replies = []
