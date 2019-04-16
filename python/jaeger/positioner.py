@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 13:30:38
+# @Last modified time: 2019-04-16 14:52:26
 
 import asyncio
 
@@ -207,9 +207,6 @@ class Positioner(StatusMixIn):
             timeout limit was reached.
 
         """
-
-        assert self.initialised, \
-            f'positioner {self.positioner_id}: not initialised.'
 
         self.status_poller.set_delay(delay)
 
