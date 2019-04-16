@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 13:24:48
+# @Last modified time: 2019-04-16 14:00:16
 
 import asyncio
 import logging
@@ -383,7 +383,7 @@ class Command(StatusMixIn, asyncio.Future):
                 self.finish_command(CommandStatus.DONE)
             else:
                 self._timeout_handle = self.loop.call_later(
-                    self.timeout, self.finish_command, CommandStatus.TIMEDOUT, True)
+                    self.timeout, self.finish_command, CommandStatus.TIMEDOUT)
         elif self.status.is_done:
             self.finish_command(self.status)
 
