@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 13:10:54
+# @Last modified time: 2019-04-16 13:24:01
 
 import enum
 
@@ -40,7 +40,7 @@ class CommandStatus(Maskbit):
     def is_done(self):
         """Returns True if the command is done (completed or failed)."""
 
-        return True if (self in self.DONE or self.failed or self.TIMEDOUT) else False
+        return True if (self in [self.DONE, self.failed, self.TIMEDOUT]) else False
 
     @property
     def is_running(self):
