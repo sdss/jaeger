@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 14:52:26
+# @Last modified time: 2019-04-16 16:18:02
 
 import asyncio
 
@@ -229,8 +229,9 @@ class Positioner(StatusMixIn):
 
         wait_for_status = [maskbits.PositionerStatus(ss) for ss in status]
 
-        assert not self.is_bootloader(), \
-            'this coroutine cannot be scheduled in bootloader mode.'
+        if self.is_bootloader():
+            log.error('this coroutine cannot be scheduled in bootloader mode.')
+            return False
 
         try:
             await asyncio.wait_for(status_poller(wait_for_status), timeout)
@@ -246,8 +247,9 @@ class Positioner(StatusMixIn):
 
         log.info(f'positioner {self.positioner_id}: initialising')
 
-        assert not self.is_bootloader(), \
-            'this coroutine cannot be scheduled in bootloader mode.'
+        if self.is_bootloader():
+            log.error('this coroutine cannot be scheduled in bootloader mode.')
+            return False
 
         if self.initialised:
             log.warning(f'positioner {self.positioner_id}: '
@@ -358,8 +360,9 @@ class Positioner(StatusMixIn):
     async def _goto_position(self, alpha, beta, relative=False):
         """Go to a position."""
 
-        assert self.initialised, \
-            f'positioner {self.positioner_id}: not initialised.'
+        if not self.initialised:
+            log.error(f'positioner {self.positioner_id}: not initialised.')
+            return False
 
         command_id = CommandID.GO_TO_RELATIVE_POSITION \
             if relative else CommandID.GO_TO_ABSOLUTE_POSITION
@@ -412,18 +415,20 @@ class Positioner(StatusMixIn):
 
         """
 
-        assert self.initialised, \
-            f'positioner {self.positioner_id}: not initialised.'
+        if not self.initialised:
+            log.error(f'positioner {self.positioner_id}: not initialised.')
+            return False
 
-        assert any([var is not None
-                    for var in [alpha, beta, alpha_speed, beta_speed]]), \
-            'no inputs.'
+        if not any([var is not None for var in [alpha, beta, alpha_speed, beta_speed]]):
+            log.error('no inputs.')
+            return False
 
         # Set the speed
         if alpha_speed is not None or beta_speed is not None:
 
-            assert alpha_speed is not None and beta_speed is not None, \
-                'the speed for both arms needs to be provided.'
+            if alpha_speed is None or beta_speed is None:
+                log.error('the speed for both arms needs to be provided.')
+                return False
 
             log.info(f'positioner {self.positioner_id}: setting speed '
                      f'({float(alpha_speed):.2f}, {float(beta_speed):.2f})')
@@ -435,8 +440,9 @@ class Positioner(StatusMixIn):
         # Go to position
         if alpha is not None or beta is not None:
 
-            assert alpha is not None and beta is not None, \
-                'the position for both arms needs to be provided.'
+            if alpha is None or beta is None:
+                log.error('the position for both arms needs to be provided.')
+                return False
 
             log.info(f'positioner {self.positioner_id}: goto position '
                      f'({float(alpha):.3f}, {float(beta):.3f}) degrees')

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 14:24:55
+# @Last modified time: 2019-04-16 17:13:25
 
 import asyncio
 import os
@@ -201,6 +201,10 @@ class FPS(object):
 
         await asyncio.gather(get_status_command, get_firmware_command)
 
+        if get_status_command.status.failed or get_firmware_command.status.failed:
+            log.error('failed retrieving status or firmware version.')
+            return False
+
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it. Checks how many positioner
         # did not reply.
@@ -258,6 +262,8 @@ class FPS(object):
             if positioner.initialised:
                 log.debug(f'positioner {positioner.positioner_id}: starting pollers.')
                 positioner.start_pollers()
+
+        return True
 
     async def update_status(self, positioners=None, timeout=1):
         """Update statuses for all positioners.
