@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 17:26:56
+# @Last modified time: 2019-04-16 17:34:19
 
 import asyncio
 
@@ -76,6 +76,7 @@ class Positioner(StatusMixIn):
             if self.status_poller is not None and self.status_poller.cancelled is False:
                 log.debug(f'positioner {self.positioner_id}: '
                           'status poller was already running.')
+                self.stop_pollers('status')
 
             self.status_poller = Poller(self.update_status,
                                         delay=_pos_conf['status_poller_delay'])
@@ -85,6 +86,7 @@ class Positioner(StatusMixIn):
             if self.position_poller is not None and self.position_poller.cancelled is False:
                 log.debug(f'positioner {self.positioner_id}: '
                           'position poller was already running.')
+                self.stop_pollers('position')
 
             self.position_poller = Poller(self.update_position,
                                           delay=_pos_conf['position_poller_delay'])
@@ -102,12 +104,14 @@ class Positioner(StatusMixIn):
 
         if poller == 'status' or poller == 'all':
 
-            self.status_poller.cancel()
+            if isinstance(self.status_poller, Poller):
+                self.status_poller.cancel()
             self.status_poller = None
 
         if poller == 'position' or poller == 'all':
 
-            self.position_poller.cancel()
+            if isinstance(self.position_poller, Poller):
+                self.position_poller.cancel()
             self.position_poller = None
 
     @property
