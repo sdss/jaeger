@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+≠#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # @Author: José Sánchez-Gallego (gallegoj@uw.edu)
@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 17:31:46
+# @Last modified time: 2019-04-16 17:39:20
 
 import asyncio
 import os
@@ -208,7 +208,6 @@ class FPS(object):
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it. Checks how many positioner
         # did not reply.
-        found_positioners = []
         for status_reply in get_status_command.replies:
 
             positioner_id = status_reply.positioner_id
@@ -253,10 +252,20 @@ class FPS(object):
 
             found_positioners.append(positioner_id)
 
-        n_unknown = len(self.positioners) - len(found_positioners)
+        n_unknown = len([pos for pos in self.positioner
+                         if pos.status == maskbits.PositionerStatus.UNKNOWN])
+
         if n_unknown > 0:
             log.warning(f'{n_unknown} positioners did not respond to '
                         f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
+
+        n_non_initialised = len([pos for pos in self.positioner
+                                 if (pos.status != maskbits.PositionerStatus.UNKNOWN and
+                                     not pos.initialised)])
+
+        if n_non_initialised > 0:
+            log.warning(f'{n_non_initialised} positioners responded but have '
+                        'not been initialised.', JaegerUserWarning)
 
         for positioner in self.positioners.values():
             if positioner.initialised:
