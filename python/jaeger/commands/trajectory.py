@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 15:28:31
+# @Last modified time: 2019-04-17 15:33:26
 
 import asyncio
 import pathlib
@@ -76,10 +76,11 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         log.warning('about to send a trajectory that has not been checked '
                     'by kaiju. This will end up in tears.', JaegerUserWarning)
 
-    await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
-
     log.info('stopping the pollers before sending the trajectory.')
     fps.stop_pollers()
+
+    await asyncio.sleep(1)
+    await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
 
     n_points = {}
     max_time = 0.0
