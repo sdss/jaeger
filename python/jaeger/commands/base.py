@@ -417,8 +417,23 @@ class Command(StatusMixIn, asyncio.Future):
         if len(data) == 0:
             data = [[]]
 
-        messages = [Message(self, positioner_id=self.positioner_id, data=data_chunk)
-                    for data_chunk in data]
+        messages = []
+
+        uid_bits = config['uid_bits']
+        max_uid = 2**uid_bits - 1
+
+        use_uids = True
+        if len(messages) > max_uid:
+            self._log('command has more messages than available UIDs. Not assigning UIDs.',
+                      level=logging.WARNING)
+            use_uids = False
+
+        for ii, data_chunk in enumerate(data):
+            messages.append(
+                Message(self,
+                        positioner_id=self.positioner_id,
+                        uid=ii if use_uids else 0,
+                        data=data_chunk))
 
         return messages
 
@@ -430,16 +445,6 @@ class Command(StatusMixIn, asyncio.Future):
         """
 
         messages = self._generate_messages_internal(data=data)
-
-        uid_bits = config['uid_bits']
-        max_uid = 2**uid_bits - 1
-
-        if len(messages) > max_uid:
-            self._log('command has more messages than available UIDs. Not assigning UIDs.',
-                      level=logging.WARNING)
-        else:
-            for ii, message in enumerate(messages):
-                message.uid = ii
 
         self.n_messages = len(messages)
         self.uids = [message.uid for message in messages]

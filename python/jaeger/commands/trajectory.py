@@ -258,20 +258,13 @@ class SendTrajectoryData(Command):
 
         self.trajectory_points = positions.astype(numpy.int)
 
-        super().__init__(**kwargs)
-
-    def _generate_messages_internal(self, data=None):
-        """Returns the list of messages associated with this command."""
-
-        messages = []
-
+        data = []
         for angle, time in self.trajectory_points:
+            data.append(int_to_bytes(time) + int_to_bytes(angle))
 
-            data = int_to_bytes(time) + int_to_bytes(angle)
-            messages.append(
-                Message(self, positioner_id=self.positioner_id, data=data))
+        kwargs['data'] = data
 
-        return messages
+        super().__init__(**kwargs)
 
 
 class TrajectoryDataEnd(Command):
