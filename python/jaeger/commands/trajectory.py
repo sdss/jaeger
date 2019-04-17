@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 14:17:34
+# @Last modified time: 2019-04-17 14:58:30
 
 import asyncio
 import pathlib
@@ -121,7 +121,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     n_chunk = config['trajectory_data_n_points']
 
     # Gets the maximum number of points for each arm for all positioners.
-    max_points = numpy.max(list(n_points.values()), axis=1)
+    max_points = numpy.max(list(n_points.values()), axis=0)
     max_points = {'alpha': max_points[0], 'beta': max_points[1]}
 
     # Send chunks of size n_chunk to all the positioners in parallel.
