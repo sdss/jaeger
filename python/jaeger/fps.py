@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 14:48:45
+# @Last modified time: 2019-04-17 15:49:45
 
 import asyncio
 import os
@@ -67,7 +67,7 @@ class FPS(object):
 
     def __init__(self, bus=None, layout=None, can_profile=None, loop=None, **kwargs):
 
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         if isinstance(bus, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
