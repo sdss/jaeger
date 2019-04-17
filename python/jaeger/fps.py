@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 17:39:20
+# @Last modified time: 2019-04-16 17:49:01
 
 import asyncio
 import os
@@ -398,6 +398,11 @@ class FPS(object):
         return commands
 
     async def shutdown(self):
+
+        log.info('stopping all pollers.')
+
+        self.stop_pollers()
+        await asyncio.sleep(1)
 
         log.info('cancelling all pending tasks and shutting down.')
 
