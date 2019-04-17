@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 12:36:05
+# @Last modified time: 2019-04-17 14:48:45
 
 import asyncio
 import os
@@ -358,7 +358,7 @@ class FPS(object):
         cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_id=0)
         return asyncio.create_task(cmd)
 
-    async def sent_to_all(self, command, positioners=None, data=None):
+    async def send_to_all(self, command, positioners=None, data=None):
         """Sends a command to multiple positioners and awaits completion.
 
         Parameters
