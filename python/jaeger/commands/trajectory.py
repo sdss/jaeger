@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 14:58:30
+# @Last modified time: 2019-04-17 15:23:35
 
 import asyncio
 import pathlib
@@ -17,7 +17,6 @@ from ruamel.yaml import YAML
 
 from jaeger import config, log, maskbits
 from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
-from jaeger.commands.base import Message
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import int_to_bytes
 
