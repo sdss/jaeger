@@ -314,7 +314,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         self.replies.append(reply)
 
-        self._log(f'positioner replied code={reply.response_code.name!r} '
+        self._log(f'positioner replied id={reply.message.arbitration_id}, '
+                  f'code={reply.response_code.name!r} '
                   f'data={reply.data}', positioner_id=reply.positioner_id)
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
