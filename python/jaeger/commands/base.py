@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 13:55:40
+# @Last modified time: 2019-04-17 14:23:47
 
 import asyncio
 import logging
@@ -272,25 +272,27 @@ class Command(StatusMixIn, asyncio.Future):
         if self.is_broadcast:
 
             if self.n_positioners is None:
-                return False
+                return None
             else:
                 # We expect a reply matching the UID of each message
                 # from each positioner.
                 replies_uids = self.n_positioners * replies_uids
 
         if len(self.replies) < self.n_messages:
-            return False
+            return None
 
         if len(self.replies) > self.n_messages:
             self._log('command received more replies than messages. '
                       'This should not be possible.',
                       level=logging.ERROR)
             self.finish_command(CommandStatus.FAILED)
-            return False
+            return None
 
         # Compares each message-reply UID.
         for ii in range(len(self.uids)):
             if replies_uids[ii] != sorted(self.uids)[ii]:
+                self._log('the UIDs of the messages and replies do not match.',
+                          level=logging.ERROR)
                 return False
 
         return True
@@ -327,9 +329,15 @@ class Command(StatusMixIn, asyncio.Future):
 
         # If this is not a broadcast, the message was accepted and we have as
         # many replies as messages sent, mark as done.
-        elif self._check_replies():
+        else:
 
-            self.finish_command(CommandStatus.DONE)
+            reply_status = self._check_replies()
+            if reply_status is True:
+                self.finish_command(CommandStatus.DONE)
+            elif reply_status is False:
+                self.finish_command(CommandStatus.FAILED)
+            else:
+                pass
 
     def finish_command(self, status):
         """Cancels the queue watcher and removes the running command.
@@ -369,6 +377,9 @@ class Command(StatusMixIn, asyncio.Future):
             if self.positioner_id != 0 and self.status == CommandStatus.TIMEDOUT:
                 self._log('this command timed out and it is not a broadcast.',
                           level=logging.WARNING)
+            elif self.status.failed:
+                self._log(f'command finished with status {self.status.name!r}',
+                          level=logging.ERROR)
 
             self._log(f'finished command with status {self.status.name!r}')
 
