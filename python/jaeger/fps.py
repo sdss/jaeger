@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 11:41:01
+# @Last modified time: 2019-04-17 12:36:05
 
 import asyncio
 import os
@@ -343,14 +343,14 @@ class FPS(object):
                                 timeout=timeout)
               for pid in positioners], loop=self.loop)
 
-    async def send_trajectory(self, **kwargs):
+    async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.
 
         See the documentation for `.send_trajectory`.
 
         """
 
-        return send_trajectory(self, **kwargs)
+        return await send_trajectory(self, *args, **kwargs)
 
     def abort(self):
         """Aborts trajectories and stops positioners."""
