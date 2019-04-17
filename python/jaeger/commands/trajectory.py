@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-15 14:31:55
+# @Last modified time: 2019-04-17 13:43:21
 
 import asyncio
 import pathlib
@@ -260,7 +260,7 @@ class SendTrajectoryData(Command):
 
         super().__init__(**kwargs)
 
-    def _generate_messages_internal(self):
+    def _generate_messages_internal(self, data=None):
         """Returns the list of messages associated with this command."""
 
         messages = []
