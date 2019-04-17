@@ -161,14 +161,14 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
             log.error(f'positioner_id={cmd.positioner_id} did not get '
                       f'a reply to {cmd.command_id.name!r}. '
                       'Aborting trajectory.')
-            fps._abort_trajectory(trajectories.keys())
+            await fps._abort_trajectory(trajectories.keys())
             failed = True
             break
 
         if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
             log.error(f'positioner_id={cmd.positioner_id} got an '
                       f'INVALID_TRAJECTORY reply. Aborting trajectory.')
-            fps._abort_trajectory(trajectories.keys())
+            await fps._abort_trajectory(trajectories.keys())
             failed = True
             break
 
