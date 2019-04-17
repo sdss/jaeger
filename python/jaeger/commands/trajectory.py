@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 13:43:21
+# @Last modified time: 2019-04-17 14:17:34
 
 import asyncio
 import pathlib
@@ -144,6 +144,11 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
                                      positions=arm_chunk))
 
             await asyncio.gather(*data_cmds)
+
+            for cmd in data_cmds:
+                if cmd.status.failed:
+                    log.error('at least one SEND_TRAJECTORY_COMMAND failed. Aborting.')
+                    return False
 
     # Finalise the trajectories
     end_traj_cmds = await fps.send_to_all('TRAJECTORY_DATA_END',
