@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 16:18:02
+# @Last modified time: 2019-04-16 17:26:56
 
 import asyncio
 
@@ -133,13 +133,7 @@ class Positioner(StatusMixIn):
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
 
-        if self.position_poller is not None:
-            self.position_poller.cancel()
-            self.position_poller = None
-
-        if self.status_poller is not None:
-            self.status_poller.cancel()
-            self.status_poller = None
+        self.stop_pollers('all')
 
     async def update_position(self, timeout=1):
         """Updates the position of the alpha and beta arms."""
@@ -169,7 +163,7 @@ class Positioner(StatusMixIn):
         command = self.fps.send_command(CommandID.GET_STATUS,
                                         positioner_id=self.positioner_id,
                                         timeout=timeout)
-        if await command is False:
+        if await command is False or command.status.failed:
             log.error(f'{CommandID.GET_STATUS.name!r} failed to complete.')
             return
 
@@ -208,6 +202,10 @@ class Positioner(StatusMixIn):
 
         """
 
+        if self.is_bootloader():
+            log.error('this coroutine cannot be scheduled in bootloader mode.')
+            return False
+
         self.status_poller.set_delay(delay)
 
         if not isinstance(status, (list, tuple)):
@@ -228,10 +226,6 @@ class Positioner(StatusMixIn):
                 await asyncio.sleep(delay)
 
         wait_for_status = [maskbits.PositionerStatus(ss) for ss in status]
-
-        if self.is_bootloader():
-            log.error('this coroutine cannot be scheduled in bootloader mode.')
-            return False
 
         try:
             await asyncio.wait_for(status_poller(wait_for_status), timeout)
@@ -260,6 +254,9 @@ class Positioner(StatusMixIn):
 
         # Resets all.
         self.reset()
+
+        # Waits a second to allow for replies to the cancelled pollers to return.
+        await asyncio.wait(1)
 
         # Make one status update and initialise status poller
         await self.update_status(timeout=1)
