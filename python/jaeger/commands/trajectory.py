@@ -157,10 +157,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     failed = False
     for cmd in end_traj_cmds:
 
-        if len(cmd.replies) == 0:
-            log.error(f'positioner_id={cmd.positioner_id} did not get '
-                      f'a reply to {cmd.command_id.name!r}. '
-                      'Aborting trajectory.')
+        if cmd.status.failed:
             await fps._abort_trajectory(trajectories.keys())
             failed = True
             break
