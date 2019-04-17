@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-12 09:58:52
+# @Last modified time: 2019-04-17 15:10:16
 
 import numpy
 
@@ -15,7 +15,7 @@ from jaeger.maskbits import ResponseCode
 
 
 __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
-           'get_identifier', 'parse_identifier']
+           'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory']
 
 
 def get_dtype_str(dtype, byteorder='little'):
@@ -232,3 +232,79 @@ def parse_identifier(identifier):
     response_flag = ResponseCode(response_code)
 
     return positioner_id, command_id, command_uid, response_flag
+
+
+def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
+    """Converts a raw kaiju trajectory to a jaeger trajectory format.
+
+    Parameters
+    ----------
+    path : str
+        The path to the raw trajectory.
+    speed : float
+        The maximum speed, used to convert from kaiju steps to times,
+        in degrees per second. If not set, uses the default positioner
+        speed from the configuration file.
+    step_size : float
+        The step size in degrees per step.
+    invert : bool
+        If `True`, inverts the order of the points.
+
+    Returns
+    -------
+    trajectory : `dict`
+        A dictionary with the trajectory in a format understood by
+        `~jaeger.commands.send_trajectory`.
+
+    """
+
+    # TODO: this is a rough estimate of the deg/sec if RPM=1000. Need to get the real speed.
+    speed = speed or 6.82 * 1.5
+
+    raw = open(path, 'r').read().splitlines()
+
+    alpha_steps = []
+    beta_steps = []
+    alpha_deg = []
+    beta_deg = []
+
+    for line in raw:
+        if line.startswith('smoothAlphaStep'):
+            alpha_steps = list(map(int, line.split(':')[1].split(',')))
+        elif line.startswith('smoothBetaStep'):
+            beta_steps = list(map(int, line.split(':')[1].split(',')))
+        elif line.startswith('smoothAlphaDeg'):
+            alpha_deg = list(map(float, line.split(':')[1].split(',')))
+        elif line.startswith('smoothBetaDeg'):
+            beta_deg = list(map(float, line.split(':')[1].split(',')))
+        else:
+            pass
+
+    alpha_times = numpy.array(alpha_steps) * 0.03 / speed
+    beta_times = numpy.array(beta_steps) * 0.03 / speed
+
+    alpha = numpy.zeros((len(alpha_times), 2))
+    beta = numpy.zeros((len(beta_times), 2))
+
+    alpha[:, 0] = alpha_deg
+    alpha[:, 1] = alpha_times
+    beta[:, 0] = beta_deg
+    beta[:, 1] = beta_times
+
+    # TODO: this is an ugly hack to avoid consecutive positions with the same value.
+    # Will be removed once the firmware or kaiju have been fixed.
+    for ii in list(range(alpha.shape[0]))[1:]:
+        if alpha[ii, 0] == alpha[ii - 1, 0]:
+            alpha[ii, 0] += 0.1
+
+    for ii in list(range(beta.shape[0]))[1:]:
+        if beta[ii, 0] == beta[ii - 1, 0]:
+            beta[ii, 0] += 0.1
+
+    if invert:
+        alpha = alpha[::-1]
+        beta = beta[::-1]
+        alpha[:, 1] = -alpha[:, 1] + alpha[0, 1]
+        beta[:, 1] = -beta[:, 1] + beta[0, 1]
+
+    return {'alpha': alpha.tolist(), 'beta': beta.tolist()}
