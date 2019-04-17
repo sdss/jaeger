@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 14:23:47
+# @Last modified time: 2019-04-17 15:05:09
 
 import asyncio
 import logging
@@ -268,6 +268,7 @@ class Command(StatusMixIn, asyncio.Future):
         """Checks if the UIDs of the replies match the messages."""
 
         replies_uids = sorted([reply.uid for reply in self.replies])
+        n_messages = self.n_messages
 
         if self.is_broadcast:
 
@@ -276,24 +277,26 @@ class Command(StatusMixIn, asyncio.Future):
             else:
                 # We expect a reply matching the UID of each message
                 # from each positioner.
-                replies_uids = self.n_positioners * replies_uids
+                replies_uids *= self.n_positioners
+                n_messages *= self.n_positioners
 
-        if len(self.replies) < self.n_messages:
+        if len(self.replies) < n_messages:
             return None
 
-        if len(self.replies) > self.n_messages:
+        if len(self.replies) > n_messages:
             self._log('command received more replies than messages. '
                       'This should not be possible.',
                       level=logging.ERROR)
             self.finish_command(CommandStatus.FAILED)
             return None
 
+        # TODO: disabled until a possible bug in the UIDs returned by the firmware is fixed.
         # Compares each message-reply UID.
-        for ii in range(len(self.uids)):
-            if replies_uids[ii] != sorted(self.uids)[ii]:
-                self._log('the UIDs of the messages and replies do not match.',
-                          level=logging.ERROR)
-                return False
+        # for ii in range(len(self.uids)):
+        #     if replies_uids[ii] != sorted(self.uids)[ii]:
+        #         self._log('the UIDs of the messages and replies do not match.',
+        #                   level=logging.ERROR)
+        #         return False
 
         return True
 
@@ -316,16 +319,17 @@ class Command(StatusMixIn, asyncio.Future):
 
         self.replies.append(reply)
 
-        self._log(f'positioner replied id={reply.message.arbitration_id}, '
-                  f'code={reply.response_code.name!r} '
-                  f'data={reply.data}', positioner_id=reply.positioner_id)
+        self._log(f'positioner {reply.positioner_id} replied with '
+                  f'id={reply.message.arbitration_id}, '
+                  f'code={reply.response_code.name!r}, '
+                  f'data={reply.data}')
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
 
-            self.finish_command(CommandStatus.FAILED)
-
             self._log(f'command failed with code {reply.response_code.name!r}.',
                       level=logging.ERROR, logs=[can_log, log])
+
+            self.finish_command(CommandStatus.FAILED)
 
         # If this is not a broadcast, the message was accepted and we have as
         # many replies as messages sent, mark as done.
