@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 14:34:31
+# @Last modified time: 2019-04-17 13:55:40
 
 import asyncio
 import logging
@@ -321,7 +321,7 @@ class Command(StatusMixIn, asyncio.Future):
 
             self.finish_command(CommandStatus.FAILED)
 
-            self._log(f'command failed with code {reply.response_code.name}.',
+            self._log(f'command failed with code {reply.response_code.name!r}.',
                       level=logging.ERROR, logs=[can_log, log])
 
         # If this is not a broadcast, the message was accepted and we have as
@@ -366,7 +366,10 @@ class Command(StatusMixIn, asyncio.Future):
                 self._done_callback()
 
             if self.positioner_id != 0 and self.status == CommandStatus.TIMEDOUT:
-                self._log('this command timed out and it is not a broadcast.')
+                self._log('this command timed out and it is not a broadcast.',
+                          level=logging.WARNING)
+
+            self._log(f'finished command with status {self.status.name!r}')
 
     def status_callback(self):
         """Callback for change status.
