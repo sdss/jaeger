@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 11:43:24
+# @Last modified time: 2019-04-17 11:51:05
 
 import asyncio
 
@@ -159,7 +159,8 @@ class Positioner(StatusMixIn):
                       'failed to receive current position.')
             return
 
-        log.debug(f'(alpha, beta)={self.alpha, self.beta}')
+        log.debug(f'positioner {self.positioner_id}: '
+                  f'(alpha, beta)={self.alpha, self.beta}')
 
     async def update_status(self, timeout=1.):
         """Updates the status of the positioner."""
@@ -168,7 +169,8 @@ class Positioner(StatusMixIn):
                                         positioner_id=self.positioner_id,
                                         timeout=timeout)
         if await command is False or command.status.failed:
-            log.error(f'{CommandID.GET_STATUS.name!r} failed to complete.')
+            log.error(f'positioner {self.positioner_id}: '
+                      f'{CommandID.GET_STATUS.name!r} failed to complete.')
             return
 
         if self.is_bootloader():
@@ -246,7 +248,9 @@ class Positioner(StatusMixIn):
         log.info(f'positioner {self.positioner_id}: initialising')
 
         if self.is_bootloader():
-            log.error('this coroutine cannot be scheduled in bootloader mode.')
+            log.error(f'positioner {self.positioner_id}: '
+                      'this coroutine cannot be scheduled in '
+                      'bootloader mode.')
             return False
 
         if self.initialised:
@@ -277,13 +281,14 @@ class Positioner(StatusMixIn):
                                                 timeout=_pos_conf['initialise_datums_timeout'])
 
             if result is False:
-                log.error(f'positioner={self.positioner_id}: '
+                log.error(f'positioner {self.positioner_id}: '
                           'did not reach a DATUM_INITIALIZED status.')
                 return False
 
         if PosStatus.DISPLACEMENT_COMPLETED not in self.status:
 
-            log.warning(f'positioner {self.positioner_id} is moving. '
+            log.warning(f'positioner {self.positioner_id}: '
+                        'moving during initialisation. '
                         'Stopping trajectories.', JaegerUserWarning)
 
             await self.fps.send_command(CommandID.STOP_TRAJECTORY,
@@ -293,7 +298,7 @@ class Positioner(StatusMixIn):
                 PosStatus.DISPLACEMENT_COMPLETED, timeout=2)
 
             if result is False:
-                log.error(f'positioner={self.positioner_id}: '
+                log.error(f'positioner {self.positioner_id}: '
                           'failed to stop trajectory.')
                 return False
 
@@ -421,28 +426,30 @@ class Positioner(StatusMixIn):
             return False
 
         if not any([var is not None for var in [alpha, beta, alpha_speed, beta_speed]]):
-            log.error('no inputs.')
+            log.error(f'positioner {self.positioner_id}: no inputs.')
             return False
 
         # Set the speed
         if alpha_speed is not None or beta_speed is not None:
 
             if alpha_speed is None or beta_speed is None:
-                log.error('the speed for both arms needs to be provided.')
+                log.error(f'positioner {self.positioner_id}: '
+                          'the speed for both arms needs to be provided.')
                 return False
 
             log.info(f'positioner {self.positioner_id}: setting speed '
                      f'({float(alpha_speed):.2f}, {float(beta_speed):.2f})')
 
             if not await self._set_speed(alpha_speed, beta_speed):
-                log.error('failed setting speed.')
+                log.error(f'positioner {self.positioner_id}: failed setting speed.')
                 return False
 
         # Go to position
         if alpha is not None or beta is not None:
 
             if alpha is None or beta is None:
-                log.error('the position for both arms needs to be provided.')
+                log.error(f'positioner {self.positioner_id}:'
+                          'the position for both arms needs to be provided.')
                 return False
 
             log.info(f'positioner {self.positioner_id}: goto position '
@@ -452,7 +459,8 @@ class Positioner(StatusMixIn):
                                                      relative=relative)
 
             if not goto_command:
-                log.error('failed sending the goto position command.')
+                log.error(f'positioner {self.positioner_id}: '
+                          'failed sending the goto position command.')
                 return False
 
             # Sleeps for the time the firmware believes it's going to take
@@ -461,7 +469,8 @@ class Positioner(StatusMixIn):
 
             move_time = max([alpha_time, beta_time])
 
-            log.info(f'the move will take {move_time:.2f} seconds')
+            log.info(f'positioner {self.positioner_id}: '
+                     f'the move will take {move_time:.2f} seconds')
 
             self.position_poller.set_delay(0.5)
 
@@ -485,5 +494,4 @@ class Positioner(StatusMixIn):
     def __repr__(self):
         status_names = '|'.join([status.name for status in self.status.active_bits])
         return (f'<Positioner (id={self.positioner_id}, '
-                f'status={status_names!r}, '
-                f'initialised={self.initialised})>')
+                f'status={status_names!r}, initialised={self.initialised})>')
