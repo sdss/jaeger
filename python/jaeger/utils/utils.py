@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 15:10:16
+# @Last modified time: 2019-04-17 15:54:36
 
 import numpy
 
@@ -259,7 +259,7 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
     """
 
     # TODO: this is a rough estimate of the deg/sec if RPM=1000. Need to get the real speed.
-    speed = speed or 6.82 * 1.5
+    speed = speed or 6.82
 
     raw = open(path, 'r').read().splitlines()
 
