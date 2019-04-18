@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 16:42:02
+# @Last modified time: 2019-04-17 17:01:21
 
 import asyncio
 import binascii
@@ -124,6 +124,10 @@ class Reply(object):
                  f'reply command_id={reply_cmd_id} do not match')
 
         self.command_id = CommandID(reply_cmd_id)
+
+        # Does not issue a warning if at the time of queuing the command there
+        # is already a command for the same positioner id running.
+        self._silent_on_conflict = False
 
     def __repr__(self):
         command_name = self.command.command_id.name if self.command else 'NONE'
@@ -457,7 +461,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         return messages
 
-    def send(self, bus=None, override=False):
+    def send(self, bus=None, override=False, silent_on_conflict=False):
         """Queues the command for execution.
 
         Adds the command to the
@@ -472,6 +476,12 @@ class Command(StatusMixIn, asyncio.Future):
             If another instance of this command_id with the same positioner_id
             is running, cancels it and schedules this one immediately.
             Otherwise the command is queued until the first one finishes.
+        silent_on_conflict : bool
+            If set, does not issue a warning if at the time of queuing this
+            command there is already a command for the same positioner id
+            running. This is useful for example for poller when we change the
+            delay and the previous command is still running. In those cases
+            this option avoids annoying messages.
 
         Returns
         -------
@@ -491,6 +501,7 @@ class Command(StatusMixIn, asyncio.Future):
             return False
 
         self._override = override
+        self._silent_on_conflict = silent_on_conflict
 
         bus.command_queue.put_nowait(self)
 

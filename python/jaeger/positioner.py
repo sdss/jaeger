@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 11:51:05
+# @Last modified time: 2019-04-17 16:57:23
 
 import asyncio
 
@@ -144,7 +144,8 @@ class Positioner(StatusMixIn):
 
         command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
                                         positioner_id=self.positioner_id,
-                                        timeout=timeout)
+                                        timeout=timeout,
+                                        silent_on_conflict=True)
         result = await command
 
         if not result:
@@ -167,7 +168,8 @@ class Positioner(StatusMixIn):
 
         command = self.fps.send_command(CommandID.GET_STATUS,
                                         positioner_id=self.positioner_id,
-                                        timeout=timeout)
+                                        timeout=timeout,
+                                        silent_on_conflict=True)
         if await command is False or command.status.failed:
             log.error(f'positioner {self.positioner_id}: '
                       f'{CommandID.GET_STATUS.name!r} failed to complete.')

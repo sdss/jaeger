@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 16:41:26
+# @Last modified time: 2019-04-17 17:05:52
 
 import asyncio
 import binascii
@@ -182,25 +182,28 @@ class JaegerCAN(object):
                                     break
 
                     if not found:
-                        raise RuntimeError('cannot find the running command '
-                                           'but _can_queue_command returned '
-                                           'False. This must be a bug.')
+                        can_log.error(log_header + 'cannot find the running command '
+                                      'but _can_queue_command returned '
+                                      'False. This must be a bug.')
+                        continue
 
                     other_cmd.finish_command(CommandStatus.CANCELLED)
                     self.running_commands[other_cmd.positioner_id].pop(other_cmd)
 
                 else:
 
-                    can_log.warning(log_header + 'another instance is already '
-                                    'running. Requeuing and trying later.',
-                                    JaegerUserWarning)
+                    if cmd._silent_on_conflict is False:
+                        can_log.warning(log_header + 'another instance is already '
+                                        'running. Requeuing and trying later.',
+                                        JaegerUserWarning)
 
                     # Requeue command but wait a bit.
                     self.loop.call_later(0.1, self.command_queue.put_nowait, cmd)
                     continue
 
-            assert cmd.status == CommandStatus.READY, \
-                log_header + 'command is not ready'
+            if cmd.status != CommandStatus.READY:
+                can_log.error(log_header + 'command is not ready')
+                continue
 
             can_log.debug(log_header + 'sending messages to CAN bus.')
 
@@ -212,7 +215,7 @@ class JaegerCAN(object):
                 if cmd.status.failed:
                     can_log.debug(log_header + 'not sending more messages ' +
                                   'since this command has failed.')
-                    return
+                    break
 
                 data_hex = binascii.hexlify(message.data).decode()
                 can_log.debug(log_header + 'sending message with '
