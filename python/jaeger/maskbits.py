@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-16 16:11:52
+# @Last modified time: 2019-04-19 15:05:53
 
 import enum
 
@@ -76,7 +76,9 @@ class PositionerStatus(Maskbit):
     ALPHA_DISPLACEMENT_COMPLETED = 0x02000000
     BETA_DISPLACEMENT_COMPLETED = 0x04000000
     DATUM_INITIALIZED = 0x20000000
-    UNKNOWN = 0x40000000
+    ESTIMATED_POSITION = 0x40000000
+    POSITION_RESTORED = 0x80000000
+    UNKNOWN = 0x100000000
 
 
 class BootloaderStatus(Maskbit):
