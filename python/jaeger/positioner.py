@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 09:53:50
+# @Last modified time: 2019-04-19 15:51:39
 
 import asyncio
 
@@ -244,10 +244,10 @@ class Positioner(StatusMixIn):
         self.status_poller.set_delay()
         return True
 
-    async def initialise(self):
+    async def initialise(self, force=False):
         """Initialises the datum and starts the position watcher."""
 
-        log.info(f'positioner {self.positioner_id}: initialising')
+        log.debug(f'positioner {self.positioner_id}: initialising')
 
         if self.is_bootloader():
             log.error(f'positioner {self.positioner_id}: '
@@ -255,62 +255,40 @@ class Positioner(StatusMixIn):
                       'bootloader mode.')
             return False
 
-        if self.initialised:
-            log.warning(f'positioner {self.positioner_id}: '
-                        'positioner had already been initialised. '
-                        'Reinitialising it.')
-
-        PosStatus = maskbits.PositionerStatus
-
         # Resets all.
         self.reset()
 
-        # Waits a second to allow for replies to the cancelled pollers to return.
-        await asyncio.sleep(1)
+        await self.update_status()
 
-        # Make one status update and initialise status poller
-        await self.update_status(timeout=1)
-        self.start_pollers(poller='status')
-
-        if PosStatus.DATUM_INITIALIZED not in self.status:
-
-            log.info(f'positioner {self.positioner_id}: initialising datums')
-
-            await self.fps.send_command(CommandID.INITIALIZE_DATUMS,
-                                        positioner_id=self.positioner_id)
-
-            result = await self.wait_for_status(PosStatus.DATUM_INITIALIZED,
-                                                timeout=_pos_conf['initialise_datums_timeout'])
-
-            if result is False:
-                log.error(f'positioner {self.positioner_id}: '
-                          'did not reach a DATUM_INITIALIZED status.')
-                return False
-
-        if PosStatus.DISPLACEMENT_COMPLETED not in self.status:
-
+        if not self.initialised:
             log.warning(f'positioner {self.positioner_id}: '
-                        'moving during initialisation. '
-                        'Stopping trajectories.', JaegerUserWarning)
+                        'not initialised. Set the position manually.',
+                        JaegerUserWarning)
+            return False
 
-            await self.fps.send_command(CommandID.STOP_TRAJECTORY,
-                                        positioner_id=self.positioner_id)
+        # Start pollers
+        self.start_pollers()
 
-            result = await self.wait_for_status(
-                PosStatus.DISPLACEMENT_COMPLETED, timeout=2)
+        result = await self.fps.send_command('STOP_TRAJECTORY',
+                                             positioner_id=self.positioner_id)
+        if not result:
+            log.warning(f'positioner {self.positioner_id}: failed stopping '
+                        'trajectories during initialisation.', JaegerUserWarning)
+            return False
 
-            if result is False:
-                log.error(f'positioner {self.positioner_id}: '
-                          'failed to stop trajectory.')
-                return False
-
-        # Initialise position poller
-        self.start_pollers(poller='position')
+        result = await self.fps.send_command('TRAJECTORY_TRANSMISSION_ABORT',
+                                             positioner_id=self.positioner_id)
+        if not result:
+            log.warning(f'positioner {self.positioner_id}: failed aborting '
+                        'trajectory transmission during initialisation.',
+                        JaegerUserWarning)
+            return False
 
         # Sets the default speed
         if not await self._set_speed(alpha=_pos_conf['motor_speed'],
                                      beta=_pos_conf['motor_speed']):
             return False
+        await self.update_status()
 
         return True
 
