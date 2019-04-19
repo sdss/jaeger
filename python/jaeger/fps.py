@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 15:49:45
+# @Last modified time: 2019-04-19 09:59:11
 
 import asyncio
 import os
@@ -164,11 +164,13 @@ class FPS(object):
         command_flag = CommandID(command_id)
         CommandClass = command_flag.get_command()
 
+        silent_on_conflict = kwargs.pop('silent_on_conflict', False)
+
         command = CommandClass(positioner_id=positioner_id,
                                bus=self.bus, loop=self.loop,
                                data=data, **kwargs)
 
-        if not command.send():
+        if not command.send(silent_on_conflict=silent_on_conflict):
             return False
 
         return command
