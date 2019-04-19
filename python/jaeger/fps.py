@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 09:59:11
+# @Last modified time: 2019-04-19 14:48:05
 
 import asyncio
 import os
@@ -267,10 +267,14 @@ class FPS(object):
             log.warning(f'{n_non_initialised} positioners responded but have '
                         'not been initialised.', JaegerUserWarning)
 
-        for positioner in self.positioners.values():
-            if positioner.initialised:
-                log.debug(f'positioner {positioner.positioner_id}: starting pollers.')
-                positioner.start_pollers()
+        initialise_cmds = [positioner.initialise()
+                           for positioner in self.positioners.values()
+                           if positioner.status != maskbits.PositionerStatus.UNKNOWN]
+        results = await asyncio.gather(*initialise_cmds)
+
+        if False in results:
+            log.error('some positioners failed to initialise.')
+            return False
 
         return True
 
