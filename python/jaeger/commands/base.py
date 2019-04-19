@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 17:01:21
+# @Last modified time: 2019-04-19 10:38:01
 
 import asyncio
 import binascii
@@ -333,7 +333,7 @@ class Command(StatusMixIn, asyncio.Future):
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
 
             self._log(f'command failed with code {reply.response_code.name!r}.',
-                      level=logging.ERROR, logs=[can_log, log])
+                      level=logging.ERROR)
 
             self.finish_command(CommandStatus.FAILED)
 
