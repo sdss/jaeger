@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 14:48:05
+# @Last modified time: 2019-04-24 11:27:14
 
 import asyncio
 import os
@@ -402,6 +402,7 @@ class FPS(object):
         return commands
 
     async def shutdown(self):
+        """Stops pollers and shuts down all remaining tasks."""
 
         log.info('stopping all pollers.')
 
@@ -410,16 +411,10 @@ class FPS(object):
 
         log.info('cancelling all pending tasks and shutting down.')
 
-        tasks = [task for task in asyncio.Task.all_tasks()
-                 if task is not asyncio.tasks.Task.current_task()]
+        tasks = [task for task in asyncio.Task.all_tasks(loop=self.loop)
+                 if task is not asyncio.tasks.Task.current_task(loop=self.loop)]
         list(map(lambda task: task.cancel(), tasks))
 
         await asyncio.gather(*tasks, return_exceptions=True)
 
         self.loop.stop()
-
-    def start_actor(self):
-        """Initialises the actor."""
-
-        raise NotImplementedError('the actor functionality '
-                                  'has not yet been implemented.')
