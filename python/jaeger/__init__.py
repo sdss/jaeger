@@ -55,7 +55,9 @@ else:
 # Add a logger for the CAN interface
 can_log = logging.getLogger('jaeger_can')
 can_log._set_defaults()
-can_log.start_file_logger('~/.jaeger/can.log')
+
+log_dir = config.get('log_dir', None) or '~/.jaeger/can.log'
+can_log.start_file_logger(log_dir)
 
 
 from .can import *
