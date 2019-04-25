@@ -7,12 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-10 00:10:06
+# @Last modified time: 2019-04-25 11:10:45
 
 import asyncio
+from concurrent.futures import Executor
+from threading import Thread
 
 
-__ALL__ = ['AsyncQueue', 'StatusMixIn', 'Poller']
+__ALL__ = ['AsyncQueue', 'StatusMixIn', 'Poller', 'AsyncioExecutor']
 
 
 class AsyncQueue(asyncio.Queue):
@@ -198,3 +200,35 @@ class Poller(asyncio.Task):
 
         if self._sleep_task and not self._sleep_task.cancelled():
             self._sleep_task.cancel()
+
+
+class AsyncioExecutor(Executor):
+    """An executor to run coroutines from a normal function.
+
+    Copied from `http://bit.ly/2IYmqzN`__.
+
+    To use, do ::
+
+        with AsyncioExecutor() as executor:
+            future = executor.submit(asyncio.sleep, 1)
+    """
+
+    def __init__(self):
+        self._loop = asyncio.new_event_loop()
+        self._thread = Thread(target=self._target)
+        self._thread.start()
+
+    def _target(self):
+        asyncio.set_event_loop(self._loop)
+        self._loop.run_forever()
+
+    def submit(self, fn, *args, **kwargs):
+        """Submit a coroutine to the executor."""
+
+        coro = fn(*args, **kwargs)
+        return asyncio.run_coroutine_threadsafe(coro, self._loop)
+
+    def shutdown(self, wait=True):
+        self._loop.call_soon_threadsafe(self._loop.stop)
+        if wait:
+            self._thread.join()
