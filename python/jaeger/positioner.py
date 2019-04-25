@@ -7,9 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 15:51:39
+# @Last modified time: 2019-04-25 09:44:28
 
 import asyncio
+from contextlib import suppress
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
@@ -56,11 +57,7 @@ class Positioner(StatusMixIn):
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
 
-        # If the positioner is initialised, starts the polling.
-        if self.initialised:
-            self.start_pollers()
-
-    def start_pollers(self, poller='all'):
+    async def start_pollers(self, poller='all'):
         """Starts the status or position poller.
 
         Parameters
@@ -73,25 +70,25 @@ class Positioner(StatusMixIn):
 
         if poller == 'status' or poller == 'all':
 
-            if self.status_poller is not None and self.status_poller.cancelled is False:
+            if self.status_poller is not None and self.status_poller.cancelled() is False:
                 log.debug(f'positioner {self.positioner_id}: '
                           'status poller was already running.')
-                self.stop_pollers('status')
+                await self.stop_pollers('status')
 
             self.status_poller = Poller(self.update_status,
                                         delay=_pos_conf['status_poller_delay'])
 
         if poller == 'position' or poller == 'all':
 
-            if self.position_poller is not None and self.position_poller.cancelled is False:
+            if self.position_poller is not None and self.position_poller.cancelled() is False:
                 log.debug(f'positioner {self.positioner_id}: '
                           'position poller was already running.')
-                self.stop_pollers('position')
+                await self.stop_pollers('position')
 
             self.position_poller = Poller(self.update_position,
                                           delay=_pos_conf['position_poller_delay'])
 
-    def stop_pollers(self, poller='all'):
+    async def stop_pollers(self, poller='all'):
         """Stops the status and position pollers.
 
         Parameters
@@ -106,12 +103,20 @@ class Positioner(StatusMixIn):
 
             if isinstance(self.status_poller, Poller):
                 self.status_poller.cancel()
-            self.status_poller = None
+
+                with suppress(asyncio.CancelledError):
+                    await self.status_poller
+
+                self.status_poller = None
 
         if poller == 'position' or poller == 'all':
 
             if isinstance(self.position_poller, Poller):
                 self.position_poller.cancel()
+
+                with suppress(asyncio.CancelledError):
+                    await self.position_poller
+
             self.position_poller = None
 
     @property
@@ -129,7 +134,7 @@ class Positioner(StatusMixIn):
 
         return True
 
-    def reset(self):
+    async def reset(self):
         """Resets positioner values and statuses."""
 
         self.alpha = None
@@ -137,7 +142,7 @@ class Positioner(StatusMixIn):
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
 
-        self.stop_pollers('all')
+        await self.stop_pollers('all')
 
     async def update_position(self, timeout=1):
         """Updates the position of the alpha and beta arms."""
@@ -256,7 +261,7 @@ class Positioner(StatusMixIn):
             return False
 
         # Resets all.
-        self.reset()
+        await self.reset()
 
         await self.update_status()
 
@@ -267,7 +272,7 @@ class Positioner(StatusMixIn):
             return False
 
         # Start pollers
-        self.start_pollers()
+        await self.start_pollers()
 
         result = await self.fps.send_command('STOP_TRAJECTORY',
                                              positioner_id=self.positioner_id)
@@ -288,7 +293,6 @@ class Positioner(StatusMixIn):
         if not await self._set_speed(alpha=_pos_conf['motor_speed'],
                                      beta=_pos_conf['motor_speed']):
             return False
-        await self.update_status()
 
         return True
 

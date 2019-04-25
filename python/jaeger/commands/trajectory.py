@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 15:38:21
+# @Last modified time: 2019-04-25 09:46:21
 
 import asyncio
 import pathlib
@@ -77,7 +77,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
                     'by kaiju. This will end up in tears.', JaegerUserWarning)
 
     log.info('stopping the pollers before sending the trajectory.')
-    fps.stop_pollers()
+    await fps.stop_pollers()
 
     await asyncio.sleep(1)
     await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
@@ -171,7 +171,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
     if failed:
         log.info('restarting the pollers.')
-        fps.start_pollers()
+        await fps.start_pollers()
         return False
 
     # Prepare to start the trajectories. Make position polling faster and
@@ -179,7 +179,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     log.info(f'expected time to complete trajectory: {max_time:.2f} seconds.')
 
     log.info('restarting the pollers.')
-    fps.start_pollers()
+    await fps.start_pollers()
 
     for pos_id in trajectories:
         fps.positioners[pos_id].position_poller.set_delay(0.5)

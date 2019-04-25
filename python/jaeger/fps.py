@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-24 11:27:14
+# @Last modified time: 2019-04-25 10:55:25
 
 import asyncio
 import os
@@ -298,7 +298,7 @@ class FPS(object):
             *[self.positioners[pid].update_status(timeout=timeout)
               for pid in positioners], loop=self.loop)
 
-    def start_pollers(self, poller='all'):
+    async def start_pollers(self, poller='all'):
         """Starts the pollers for all valid positioners.
 
         Parameters
@@ -311,9 +311,9 @@ class FPS(object):
 
         for positioner in self.positioners.values():
             if positioner.initialised:
-                positioner.start_pollers(poller=poller)
+                await positioner.start_pollers(poller=poller)
 
-    def stop_pollers(self, poller='all'):
+    async def stop_pollers(self, poller='all'):
         """Stops the pollers for all valid positioners.
 
         Parameters
@@ -325,7 +325,7 @@ class FPS(object):
         """
 
         for positioner in self.positioners.values():
-            positioner.stop_pollers(poller=poller)
+            await positioner.stop_pollers(poller=poller)
 
     async def _abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
@@ -406,7 +406,7 @@ class FPS(object):
 
         log.info('stopping all pollers.')
 
-        self.stop_pollers()
+        await self.stop_pollers()
         await asyncio.sleep(1)
 
         log.info('cancelling all pending tasks and shutting down.')
