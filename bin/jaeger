@@ -14,7 +14,8 @@ from functools import update_wrapper
 import click
 import numpy
 
-from jaeger import log
+from jaeger import config, log
+from jaeger.actor import JaegerActor
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
 from jaeger.maskbits import PositionerStatus
@@ -35,12 +36,13 @@ def cli_coro(f):
 @click.group(invoke_without_command=True)
 @click.option('-p', '--profile', type=str, help='the bus interface profile')
 @click.option('-l', '--layout', type=str, help='the FPS layout')
-@click.option('-a', '--actor', is_flag=True, help='start as an actor')
 @click.option('-v', '--verbose', is_flag=True, help='debug mode')
 @click.pass_context
 @cli_coro
 def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
-    """CLI for the SDSS-V focal plane system."""
+    """CLI for the SDSS-V focal plane system.
+
+    If called without subcommand starts the actor."""
 
     if verbose:
         log.set_level(logging.DEBUG)
@@ -51,12 +53,11 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
 
     # If we call jaeger without a subcommand and with the actor flag,
     # start the actor.
-    if actor and ctx.invoked_subcommand is None:
+    if ctx.invoked_subcommand is None:
         fps = FPS(**ctx.obj)
         yield from fps.initialise()
-        fps.start_actor()
-    elif ctx.invoked_subcommand is None:
-        raise click.UsageError('not enough arguments')
+        actor = JaegerActor(None, config=config['actor'])
+        yield from actor.run()
 
 
 @jaeger.command(name='upgrade-firmware')
