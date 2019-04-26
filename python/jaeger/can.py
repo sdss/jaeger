@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 08:42:56
+# @Last modified time: 2019-04-26 15:18:02
 
 import asyncio
 import binascii
@@ -17,6 +17,7 @@ import pprint
 import can
 import can.interfaces.slcan
 import can.interfaces.socketcan
+import can.interfaces.virtual
 
 import jaeger
 import jaeger.interfaces.cannet
@@ -33,7 +34,7 @@ __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 #: Accepted CAN interfaces
 VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
                     'socketcan': can.interfaces.socketcan.SocketcanBus,
-                    'test': jaeger.tests.bus.VirtualBusTester,
+                    'virtual': can.interfaces.virtual.VirtualBus,
                     'cannet': jaeger.interfaces.cannet.CANNetBus}
 
 
