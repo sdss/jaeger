@@ -10,7 +10,6 @@
 
 
 import collections
-# import datetime
 import logging
 import os
 import re
@@ -214,7 +213,7 @@ class MyLogger(Logger):
         else:
             self.warning_registry[category][msg] = 1
 
-    def _set_defaults(self, log_level=logging.INFO, redirect_stdout=False):
+    def set_defaults(self, log_level=logging.INFO, redirect_stdout=False):
         """Reset logger to its initial state."""
 
         # Remove all previous handlers
@@ -239,16 +238,16 @@ class MyLogger(Logger):
         # Catches exceptions
         sys.excepthook = self._catch_exceptions
 
-    def start_file_logger(self, path, log_file_level=logging.DEBUG):
+    def start_file_logger(self, name, log_dir, log_file_level=logging.DEBUG):
         """Start file logging."""
 
-        log_file_path = os.path.expanduser(path)
-        logdir = os.path.dirname(log_file_path)
+        log_dir = os.path.expanduser(log_dir)
+        log_file_path = os.path.join(log_dir, name + '.log')
 
         try:
 
-            if not os.path.exists(logdir):
-                os.mkdir(logdir)
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
 
             # if os.path.exists(log_file_path):
             #     strtime = datetime.datetime.utcnow().strftime(
@@ -279,6 +278,16 @@ class MyLogger(Logger):
             self.fh.setLevel(level)
 
 
-logging.setLoggerClass(MyLogger)
-log = logging.getLogger(__name__)
-log._set_defaults()  # Inits sh handler
+def get_logger(name):
+    """Gets a new logger."""
+
+    orig_logger = logging.getLoggerClass()
+
+    logging.setLoggerClass(MyLogger)
+
+    log = logging.getLogger(name)
+    log.set_defaults()
+
+    logging.setLoggerClass(orig_logger)
+
+    return log
