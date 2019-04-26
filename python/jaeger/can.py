@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 17:05:52
+# @Last modified time: 2019-04-26 08:42:56
 
 import asyncio
 import binascii
@@ -239,8 +239,13 @@ class JaegerCAN(object):
 
         """
 
+        assert 'interfaces' in config, \
+            'configuration file does not have an interfaces section.'
+
         if profile is None:
-            profile = 'default'
+            assert 'default' in config['interfaces'], \
+                'default interface not set in configuration.'
+            profile = config['interfaces']['default']
 
         if profile not in config['interfaces']:
             raise ValueError(f'invalid interface profile {profile}')

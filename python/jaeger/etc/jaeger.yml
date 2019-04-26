@@ -1,16 +1,15 @@
 ---
 
 interfaces:
-    default:
+    default: slcan
+    slcan:
         interface: slcan
         channel: /dev/tty.usbserial-LW3HTDSY
         ttyBaudrate: 1000000
         bitrate: 1000000
     test:
-        interface: test
-        channel: none
-        ttyBaudrate: 1000000
-        bitrate: 1000000
+        interface: virtual
+        channel: test
 
 fps:
     default_layout: central_park
