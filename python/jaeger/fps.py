@@ -40,8 +40,10 @@ class FPS(object):
     bus : `.JaegerCAN` instance
         The CAN bus to use.
     layout : str
-        A file describing the layout of the FPS. If `None`, the CAN interface
-        will be use to determine the positioners connected.
+        The layout describing the position of the robots on the focal plane.
+        If `None`, the default layout will be used. Can be either a layout name
+        to be recovered from the database, or a file path to the layout
+        configuration.
     can_profile : `str` or `None`
         The configuration profile for the CAN interface, or `None` to use the
         default one. Ignored if ``bus`` is passed.
