@@ -16,6 +16,8 @@ Contents
 
   maskbits
 
+  testing
+
   api
   commands
 

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 22:54:47
+# @Last modified time: 2019-04-26 23:23:24
 
 import asyncio
 
@@ -31,14 +31,13 @@ class VirtualFPS(jaeger.BaseFPS):
 
     This class listens to the
     `python-can <https://python-can.readthedocs.io/en/stable/>`__
-    :ref:`virtual bus <can:interfaces.virtual>`
-    and responds as if real positioners were plugged into the system.
+    virtual bus and responds as if real positioners were plugged into the
+    system.
 
     Parameters
     ----------
     channel : str
-        The channel of the :ref:`virtual bus <can:interfaces.virtual>` to
-        listen to.
+        The channel of the virtual bus to listen to.
     layout : str
         The layout describing the position of the robots on the focal plane.
         If `None`, the default layout will be used. Can be either a layout name
@@ -63,7 +62,7 @@ class VirtualFPS(jaeger.BaseFPS):
         #: a new message is received from the bus.
         self.listener = jaeger.JaegerReaderCallback(self.process_message, loop=self.loop)
 
-        #: A `.can.notifier.Notifier` instance that processes messages from
+        #: A `~.can.Notifier` instance that processes messages from
         #: the bus asynchronously.
         self.notifier = can.notifier.Notifier(self.bus, [self.listener], loop=self.loop)
 

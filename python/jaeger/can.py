@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 16:31:51
+# @Last modified time: 2019-04-26 23:12:30
 
 import asyncio
 import binascii
@@ -119,7 +119,7 @@ class JaegerCAN(object):
         #: a new message is received from the bus.
         self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
 
-        #: A `.can.notifier.Notifier` instance that processes messages from
+        #: A `~.can.Notifier` instance that processes messages from
         #: the bus asynchronously.
         self.notifier = can.notifier.Notifier(self, [self.listener], loop=self.loop)
 
