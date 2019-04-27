@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 22:55:59
+# @Last modified time: 2019-04-27 13:24:39
 
 import asyncio
 import os
@@ -142,6 +142,24 @@ class BaseFPS(object):
                              f'{positioner.positioner_id}.')
 
         self.positioners[positioner.positioner_id] = positioner
+
+    def report_status(self):
+        """Returns a dict with the position and status of each positioner."""
+
+        status = {}
+
+        for positioner in self.positioners.values():
+
+            pos_status = positioner.status
+            pos_firmware = positioner.firmware
+            pos_alpha = positioner.alpha
+            pos_beta = positioner.beta
+
+            status[positioner.positioner_id] = {'position': [pos_alpha, pos_beta],
+                                                'status': pos_status,
+                                                'firmware': pos_firmware}
+
+        return status
 
 
 class FPS(BaseFPS):
