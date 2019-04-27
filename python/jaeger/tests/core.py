@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 23:23:24
+# @Last modified time: 2019-04-27 11:12:59
 
 import asyncio
 
@@ -20,7 +20,7 @@ import jaeger.commands
 from jaeger.commands import Message
 from jaeger.maskbits import PositionerStatus
 from jaeger.positioner import VirtualPositioner
-from jaeger.utils import int_to_bytes, parse_identifier
+from jaeger.utils import int_to_bytes, motor_steps_to_angle, parse_identifier
 
 
 __ALL__ = ['VirtualFPS']
@@ -114,14 +114,17 @@ class VirtualFPS(jaeger.BaseFPS):
 
         positioner_ids = [pid] if pid != 0 else list(self.positioners)
 
-        command = jaeger.CommandID(cid).get_command()
+        CommandID = jaeger.CommandID
+        command = CommandID(cid).get_command()
 
         for pid in positioner_ids:
 
-            if cid == jaeger.CommandID.GET_STATUS:
+            if cid == CommandID.GET_STATUS:
                 data, response_code = self.get_status(pid)
-            elif cid == jaeger.CommandID.GET_FIRMWARE_VERSION:
+            elif cid == CommandID.GET_FIRMWARE_VERSION:
                 data, response_code = self.get_firmware_version(pid)
+            elif cid == CommandID.GET_ACTUAL_POSITION:
+                data, response_code = self.get_actual_position(pid)
             else:
                 data = []
                 response_code = 0
@@ -152,6 +155,23 @@ class VirtualFPS(jaeger.BaseFPS):
         data = bytearray()
         for chunk in firmware.split('.'):
             data += int_to_bytes(int(chunk), dtype=numpy.uint8)
+
+        response_code = 0
+
+        return data, response_code
+
+    def get_actual_position(self, positioner_id):
+        """Replies to GET_ACTUAL_POSITION."""
+
+        alpha = self.positioners[positioner_id].alpha
+        beta = self.positioners[positioner_id].beta
+
+        if alpha is None or beta is None:
+            raise ValueError('GET_ACTUAL_POSITION: alpha or beta are None '
+                             f'for positoner {positioner_id}')
+
+        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
+        data = int_to_bytes(alpha_steps) + int_to_bytes(beta_steps)
 
         response_code = 0
 
