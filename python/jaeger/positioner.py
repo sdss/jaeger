@@ -249,16 +249,17 @@ class Positioner(StatusMixIn):
 
         log.debug(f'positioner {self.positioner_id}: initialising')
 
+        # Resets all.
+        self.reset()
+
+        await self.update_status()
+        await self.get_firmware()
+
         if self.is_bootloader():
             log.error(f'positioner {self.positioner_id}: '
                       'this coroutine cannot be scheduled in '
                       'bootloader mode.')
             return False
-
-        # Resets all.
-        self.reset()
-
-        await self.update_status()
 
         if not self.initialised:
             log.warning(f'positioner {self.positioner_id}: '
