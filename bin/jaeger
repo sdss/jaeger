@@ -19,6 +19,7 @@ from jaeger.actor import JaegerActor
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
 from jaeger.maskbits import PositionerStatus
+from jaeger.tests import VirtualFPS
 
 
 def cli_coro(f):
@@ -47,6 +48,12 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
     if verbose:
         log.set_level(logging.DEBUG)
 
+    # If profile is test we start a VirtualFPS first so that it can respond
+    # to the FPS class.
+    if profile == 'test':
+        VirtualFPS('test', layout=layout)
+        yield from asyncio.sleep(3)
+
     ctx.obj = {}
     ctx.obj['can_profile'] = profile
     ctx.obj['layout'] = layout
@@ -56,7 +63,7 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
     if ctx.invoked_subcommand is None:
         fps = FPS(**ctx.obj)
         yield from fps.initialise()
-        actor = JaegerActor(None, config=config['actor'])
+        actor = JaegerActor(fps, config=config['actor'])
         yield from actor.run()
 
 
