@@ -7,7 +7,9 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 08:14:28
+# @Last modified time: 2019-04-27 13:20:39
+
+import json
 
 import asyncioActor
 
@@ -19,11 +21,14 @@ class JaegerActor(asyncioActor.Actor):
 
         self.fps = fps
 
-        super().__init__(**kwargs)
-
-        self.status_server.periodic_callback = self.report_status
+        super().__init__(status_callback=self.report_status, **kwargs)
 
     async def report_status(self, transport):
         """Reports the status to the status server."""
 
-        pass
+        status = self.fps.get_status()
+        status_json = json.dumps(status)
+
+        transport.write(status_json.encode() + '\n'.encode())
+
+        return status
