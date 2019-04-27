@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-21 08:54:37
+# @Last modified time: 2019-04-26 21:29:49
 
 import asyncio
 import binascii
@@ -48,7 +48,7 @@ class Message(can.Message):
     """
 
     def __init__(self, command, data=[], positioner_id=0, uid=0,
-                 extended_id=True, bus=None):
+                 response_code=0, extended_id=True, bus=None):
 
         self.command = command
         self.positioner_id = positioner_id
@@ -61,7 +61,8 @@ class Message(can.Message):
         if extended_id:
             arbitration_id = jaeger.utils.get_identifier(positioner_id,
                                                          int(command.command_id),
-                                                         uid=self.uid)
+                                                         uid=self.uid,
+                                                         response_code=response_code)
         else:
             arbitration_id = positioner_id
 
