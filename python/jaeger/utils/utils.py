@@ -7,15 +7,17 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 18:35:07
+# @Last modified time: 2019-04-27 11:10:00
 
 import numpy
 
+from jaeger.commands import MOTOR_STEPS
 from jaeger.maskbits import ResponseCode
 
 
 __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
-           'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory']
+           'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory',
+           'motor_steps_to_angle']
 
 
 def get_dtype_str(dtype, byteorder='little'):
@@ -234,6 +236,39 @@ def parse_identifier(identifier):
     response_flag = ResponseCode(response_code)
 
     return positioner_id, command_id, command_uid, response_flag
+
+
+def motor_steps_to_angle(alpha, beta, motor_steps=None, inverse=False):
+    """Converts motor steps to angles or vice-versa.
+
+    Parameters
+    ----------
+    alpha : float
+        The alpha position.
+    beta : float
+        The beta position.
+    motor_steps : int
+        The number of steps in the motor. Defaults to
+        `~jaeger.commands.MOTOR_STEPS`.
+    inverse : bool
+        If `True`, converts from angles to motor steps.
+
+    Returns
+    -------
+    angles : `tuple`
+        A tuple with the alpha and beta angles associated to the input
+        motor steps. If ``inverse=True``, ``alpha`` and ``beta`` are considered
+        to be angles and the associated motor steps are returned.
+
+    """
+
+    motor_steps = motor_steps or MOTOR_STEPS
+
+    if inverse:
+        return (int(numpy.round(alpha * motor_steps / 360.)),
+                int(numpy.round(beta * motor_steps / 360.)))
+
+    return alpha / motor_steps * 360., beta / motor_steps * 360.
 
 
 def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):

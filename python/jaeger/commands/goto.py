@@ -7,12 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-15 21:49:24
+# @Last modified time: 2019-04-27 11:05:27
 
 import numpy
 
-from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
-from jaeger.utils import bytes_to_int, int_to_bytes
+from jaeger.commands import TIME_STEP, Command, CommandID
+from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
 __ALL__ = ['InitialiseDatums', 'StartTrajectory', 'GotoAbsolutePosition',
@@ -34,8 +34,7 @@ class GotoAbsolutePosition(Command):
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
-        alpha_steps = int(alpha / 360. * MOTOR_STEPS)
-        beta_steps = int(beta / 360. * MOTOR_STEPS)
+        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
         data = int_to_bytes(alpha_steps) + int_to_bytes(beta_steps)
         kwargs['data'] = data
@@ -78,8 +77,7 @@ class SetActualPosition(Command):
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
-        alpha_steps = int(alpha / 360. * MOTOR_STEPS)
-        beta_steps = int(beta / 360. * MOTOR_STEPS)
+        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
         data = int_to_bytes(int(alpha_steps)) + int_to_bytes(int(beta_steps))
         kwargs['data'] = data
