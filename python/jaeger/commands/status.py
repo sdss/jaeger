@@ -46,7 +46,7 @@ class GetStatus(Command):
 
 
 class GetActualPosition(Command):
-    """Gets the current position of th alpha and beta arms."""
+    """Gets the current position of the alpha and beta arms."""
 
     command_id = CommandID.GET_ACTUAL_POSITION
     broadcastable = False
