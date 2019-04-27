@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 15:54:36
+# @Last modified time: 2019-04-26 18:35:07
 
 import numpy
 
@@ -146,7 +146,7 @@ def bytes_to_int(bytes, dtype='u4', byteorder='little'):
     return np_buffer[0]
 
 
-def get_identifier(positioner_id, command_id, uid=0):
+def get_identifier(positioner_id, command_id, uid=0, response_code=0):
     """Returns a 29 bits identifier with the correct format.
 
     The CAN identifier format for the positioners uses an extended frame with
@@ -162,6 +162,8 @@ def get_identifier(positioner_id, command_id, uid=0):
         The ID of the command to send.
     uid : int
         The unique identifier
+    response_code : int
+        The response code.
 
     Returns
     -------
@@ -182,7 +184,7 @@ def get_identifier(positioner_id, command_id, uid=0):
     posid_bin = format(positioner_id, '011b')
     cid_bin = format(command_id, '08b')
     cuid_bin = format(uid, '06b')
-    response_bin = format(0, '04b')
+    response_bin = format(response_code, '04b')
 
     identifier = posid_bin + cid_bin + cuid_bin + response_bin
 
