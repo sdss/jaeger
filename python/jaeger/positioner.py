@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 15:51:39
+# @Last modified time: 2019-04-26 23:02:12
 
 import asyncio
 
@@ -17,7 +17,7 @@ from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import Poller, StatusMixIn, bytes_to_int
 
 
-__ALL__ = ['Positioner']
+__ALL__ = ['Positioner', 'VirtualPositioner']
 
 _pos_conf = config['positioner']
 
@@ -477,3 +477,9 @@ class Positioner(StatusMixIn):
         status_names = '|'.join([status.name for status in self.status.active_bits])
         return (f'<Positioner (id={self.positioner_id}, '
                 f'status={status_names!r}, initialised={self.initialised})>')
+
+
+class VirtualPositioner(Positioner):
+    """Alias for `.Positioner` to be used by the `~jaeger.tests.VirtualFPS`."""
+
+    pass
