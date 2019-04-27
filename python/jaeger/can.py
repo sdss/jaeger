@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 15:18:02
+# @Last modified time: 2019-04-26 16:31:51
 
 import asyncio
 import binascii
@@ -21,7 +21,6 @@ import can.interfaces.virtual
 
 import jaeger
 import jaeger.interfaces.cannet
-import jaeger.tests.bus
 from jaeger import can_log, config, log
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
