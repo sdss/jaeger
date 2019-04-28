@@ -7,12 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-27 11:12:59
+# @Last modified time: 2019-04-27 18:41:13
 
 import asyncio
 
+import can
 import can.interfaces.virtual
-import can.notifier
 import numpy
 
 import jaeger
@@ -60,15 +60,16 @@ class VirtualFPS(jaeger.BaseFPS):
 
         #: A `.JaegerReaderCallback` instance that calls a callback when
         #: a new message is received from the bus.
-        self.listener = jaeger.JaegerReaderCallback(self.process_message, loop=self.loop)
+        self.listener = can.listener.AsyncBufferedReader(loop=self.loop)
 
         #: A `~.can.Notifier` instance that processes messages from
         #: the bus asynchronously.
-        self.notifier = can.notifier.Notifier(self.bus, [self.listener], loop=self.loop)
+        self.notifier = can.Notifier(self.bus, [self.listener], loop=self.loop)
 
         super().__init__(layout=layout, positioner_class=VirtualPositioner)
 
         self.initialise(positions)
+        self.listener_process_task = asyncio.create_task(self.process_queue())
 
     def initialise(self, positions=None):
         """Sets the initial states of the positioners."""
@@ -107,7 +108,14 @@ class VirtualFPS(jaeger.BaseFPS):
             self.positioners[positioner_id].alpha = alpha
             self.positioners[positioner_id].beta = beta
 
-    def process_message(self, message):
+    async def process_queue(self):
+        """Processes the listener queue."""
+
+        while True:
+            message = await self.listener.get_message()
+            asyncio.create_task(self.process_message(message))
+
+    async def process_message(self, message):
         """Processes a message from the virtual bus."""
 
         pid, cid, uid, __ = parse_identifier(message.arbitration_id)
