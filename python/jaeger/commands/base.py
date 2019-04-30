@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 12:15:08
+# @Last modified time: 2019-04-30 13:07:33
 
 import asyncio
 import binascii
@@ -283,7 +283,6 @@ class Command(StatusMixIn, asyncio.Future):
                 return None
             else:
                 uids = sorted(uids * self.n_positioners)
-                replies_uids = sorted(replies_uids * self.n_positioners)
                 n_messages *= self.n_positioners
 
         if len(self.replies) < n_messages:
