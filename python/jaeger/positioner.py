@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 14:33:30
+# @Last modified time: 2019-04-30 14:34:12
 
 import asyncio
 
@@ -244,7 +244,7 @@ class Positioner(StatusMixIn):
         self.status_poller.set_delay()
         return True
 
-    async def initialise(self, force=False):
+    async def initialise(self):
         """Initialises the datum and starts the position watcher."""
 
         log.debug(f'positioner {self.positioner_id}: initialising')
