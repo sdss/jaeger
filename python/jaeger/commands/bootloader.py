@@ -107,8 +107,8 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
     start_firmware_payload = int_to_bytes(filesize) + int_to_bytes(crc32)
 
-    log.info(f'CRC32: {start_firmware_payload[4:]}')
-    log.info(f'File size: {start_firmware_payload[0:4]}')
+    log.info(f'CRC32: {crc32}')
+    log.info(f'File size: {filesize} bytes')
 
     cmds = [fps.send_command(commands.CommandID.START_FIRMWARE_UPGRADE,
                              positioner_id=positioner.positioner_id,
