@@ -1,13 +1,15 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
-# @Author: José Sánchez-Gallego
-# @Date: Oct 11, 2017
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Date: 2017-10-11
 # @Filename: logger.py
-# @License: BSD 3-Clause
-# @Copyright: José Sánchez-Gallego
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+#
+# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Last modified time: 2019-04-30 15:45:02
 
 # Adapted from astropy's logging system.
-
 
 import collections
 import logging
@@ -169,52 +171,27 @@ class MyLogger(Logger):
         # First, we print to stdout with some colouring.
         print_exception_formatted(exctype, value, tb)
 
-    def warning(self, msg, category=None, use_filters=True):
-        """Custom ``logging.warning``.
-
-        Behaves like the default ``logging.warning`` but accepts ``category``
-        and ``use_filters`` as arguments. ``category`` is the type of warning
-        we are issuing (defaults to `UserWarning`). If ``use_filters=True``,
-        checks whether there are global filters set for the message or the
-        warning category and behaves accordingly.
-
-        """
+    def warning(self, msg, category=None, **kwargs):
+        """Redirects logging to `warnings.warn`."""
 
         if category is None:
             category = UserWarning
 
-        full_msg = '{0} {1}'.format(category.__name__, msg)
+        full_message = '{0} {1}'.format(category.__name__, msg)
 
-        n_issued = 0
-        if category in self.warning_registry:
-            if msg in self.warning_registry[category]:
-                n_issued = self.warning_registry[category]
-
-        if use_filters:
-
-            category_filter = None
-            regex_filter = None
-            for warnings_filter in warnings.filters:
-                if issubclass(category, warnings_filter[2]):
-                    category_filter = warnings_filter[0]
-                    regex_filter = warnings_filter[1]
-
-            if (category_filter == 'ignore') or (category_filter == 'once' and n_issued >= 1):
-                if regex_filter is None or regex_filter.search(msg) is not None:
-                    return
-
-            if category_filter == 'error':
-                raise ValueError(full_msg)
-
-        super(MyLogger, self).warning(full_msg)
-
-        if msg in self.warning_registry[category]:
-            self.warning_registry[category][msg] += 1
-        else:
-            self.warning_registry[category][msg] = 1
+        return Logger.warning(self, full_message, **kwargs)
 
     def set_defaults(self, log_level=logging.INFO, redirect_stdout=False):
         """Reset logger to its initial state."""
+
+        # Disable astropy logging if present because it uses the same override
+        # of showwarning than us and messes up things
+        try:
+            from astropy import log
+            log.disable_warnings_logging()
+            log.disable_exception_logging()
+        except Exception:
+            pass
 
         # Remove all previous handlers
         for handler in self.handlers[:]:
@@ -238,6 +215,31 @@ class MyLogger(Logger):
         # Catches exceptions
         sys.excepthook = self._catch_exceptions
 
+        warnings.showwarning = self._showwarning
+
+    def _showwarning(self, *args, **kwargs):
+
+        message = args[0]
+        category = args[1]
+        mod_path = args[2]
+
+        mod_name = None
+        mod_path, ext = os.path.splitext(mod_path)
+
+        for name, mod in list(sys.modules.items()):
+            try:
+                path = os.path.splitext(getattr(mod, '__file__', ''))[0]
+            except Exception:
+                continue
+            if path == mod_path:
+                mod_name = mod.__name__
+                break
+
+        if mod_name is not None:
+            self.warning(message, category, extra={'origin': mod_name})
+        else:
+            self.warning(message, category)
+
     def start_file_logger(self, name, log_dir, log_file_level=logging.DEBUG):
         """Start file logging."""
 
@@ -249,18 +251,17 @@ class MyLogger(Logger):
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
 
-            # if os.path.exists(log_file_path):
-            #     strtime = datetime.datetime.utcnow().strftime(
-            #         '%Y-%m-%d_%H:%M:%S')
-            #     shutil.move(log_file_path, log_file_path + '.' + strtime)
-
-            self.fh = TimedRotatingFileHandler(
-                str(log_file_path), when='midnight', utc=True)
+            self.fh = TimedRotatingFileHandler(str(log_file_path), when='midnight', utc=True)
             self.fh.suffix = '%Y-%m-%d_%H:%M:%S'
+
         except (IOError, OSError) as ee:
-            self.warning('log file {0!r} could not be opened for writing: {1}'.format(
-                log_file_path, ee), RuntimeWarning)
+
+            self.warning('log file {0!r} could not be '
+                         'opened for writing: {1}'.format(log_file_path, ee),
+                         RuntimeWarning)
+
         else:
+
             self.fh.setFormatter(MyFormatter())
             self.addHandler(self.fh)
             self.fh.setLevel(log_file_level)
