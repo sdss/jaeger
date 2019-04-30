@@ -175,16 +175,16 @@ class Positioner(StatusMixIn):
                       f'{CommandID.GET_STATUS.name!r} failed to complete.')
             return
 
-        if self.is_bootloader():
-            self.flag = maskbits.PositionerStatus
+        if not self.is_bootloader():
+            self.flags = maskbits.PositionerStatus
         else:
-            self.flag = maskbits.BootloaderStatus
+            self.flags = maskbits.BootloaderStatus
 
         if len(command.replies) == 1:
             status_int = int(bytes_to_int(command.replies[0].data))
-            self.status = self.flag(status_int)
+            self.status = self.flags(status_int)
         else:
-            self.status = self.flag.UNKNOWN
+            self.status = self.flags.UNKNOWN
 
     async def wait_for_status(self, status, delay=0.1, timeout=None):
         """Polls the status until it reaches a certain value.
