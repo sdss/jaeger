@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 23:02:12
+# @Last modified time: 2019-04-30 14:33:30
 
 import asyncio
 
@@ -255,11 +255,10 @@ class Positioner(StatusMixIn):
         await self.update_status()
         await self.get_firmware()
 
+        # Exists if we are in bootloader mode.
         if self.is_bootloader():
-            log.error(f'positioner {self.positioner_id}: '
-                      'this coroutine cannot be scheduled in '
-                      'bootloader mode.')
-            return False
+            log.debug(f'positioner {self.positioner_id}: positioner is in bootloader mode.')
+            return True
 
         if not self.initialised:
             log.warning(f'positioner {self.positioner_id}: '
@@ -289,6 +288,7 @@ class Positioner(StatusMixIn):
         if not await self._set_speed(alpha=_pos_conf['motor_speed'],
                                      beta=_pos_conf['motor_speed']):
             return False
+
         await self.update_status()
 
         return True
