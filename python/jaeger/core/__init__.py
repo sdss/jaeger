@@ -1,4 +1,4 @@
 
 # flake8: noqa
 
-from .logger import log
+from .logger import get_logger

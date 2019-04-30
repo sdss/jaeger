@@ -1,16 +1,15 @@
 ---
 
 interfaces:
-    default:
+    default: slcan
+    slcan:
         interface: slcan
         channel: /dev/tty.usbserial-LW3HTDSY
         ttyBaudrate: 1000000
         bitrate: 1000000
     test:
-        interface: test
-        channel: none
-        ttyBaudrate: 1000000
-        bitrate: 1000000
+        interface: virtual
+        channel: test
 
 fps:
     default_layout: central_park
@@ -22,10 +21,12 @@ positioner:
     initialise_datums_timeout: 60
 
 actor:
+    name: jaeger
+    host: 127.0.0.1
     port: 19990
-    tron:
-        host: localhost
-        port: 6093
+    version: 0.2.0dev
+    status_port: 19991
+    status_delay: 5
     logging:
         file_level: 10
         shell_level: 20

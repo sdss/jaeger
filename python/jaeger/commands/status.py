@@ -7,14 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-11 11:01:51
+# @Last modified time: 2019-04-27 11:01:02
 
 
 import numpy
 
-from jaeger.commands import MOTOR_STEPS, Command, CommandID
+from jaeger.commands import Command, CommandID
 from jaeger.maskbits import PositionerStatus
-from jaeger.utils import bytes_to_int
+from jaeger.utils import bytes_to_int, motor_steps_to_angle
 
 
 __ALL__ = ['GetID', 'GetStatus']
@@ -46,7 +46,7 @@ class GetStatus(Command):
 
 
 class GetActualPosition(Command):
-    """Gets the current position of th alpha and beta arms."""
+    """Gets the current position of the alpha and beta arms."""
 
     command_id = CommandID.GET_ACTUAL_POSITION
     broadcastable = False
@@ -69,4 +69,4 @@ class GetActualPosition(Command):
         beta = bytes_to_int(data[4:])
         alpha = bytes_to_int(data[0:4])
 
-        return numpy.array([alpha, beta]) / MOTOR_STEPS * 360.
+        return numpy.array(motor_steps_to_angle(alpha, beta))

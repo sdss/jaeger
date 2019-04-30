@@ -7,15 +7,17 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 15:54:36
+# @Last modified time: 2019-04-27 11:10:00
 
 import numpy
 
+from jaeger.commands import MOTOR_STEPS
 from jaeger.maskbits import ResponseCode
 
 
 __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
-           'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory']
+           'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory',
+           'motor_steps_to_angle']
 
 
 def get_dtype_str(dtype, byteorder='little'):
@@ -146,7 +148,7 @@ def bytes_to_int(bytes, dtype='u4', byteorder='little'):
     return np_buffer[0]
 
 
-def get_identifier(positioner_id, command_id, uid=0):
+def get_identifier(positioner_id, command_id, uid=0, response_code=0):
     """Returns a 29 bits identifier with the correct format.
 
     The CAN identifier format for the positioners uses an extended frame with
@@ -162,6 +164,8 @@ def get_identifier(positioner_id, command_id, uid=0):
         The ID of the command to send.
     uid : int
         The unique identifier
+    response_code : int
+        The response code.
 
     Returns
     -------
@@ -182,7 +186,7 @@ def get_identifier(positioner_id, command_id, uid=0):
     posid_bin = format(positioner_id, '011b')
     cid_bin = format(command_id, '08b')
     cuid_bin = format(uid, '06b')
-    response_bin = format(0, '04b')
+    response_bin = format(response_code, '04b')
 
     identifier = posid_bin + cid_bin + cuid_bin + response_bin
 
@@ -232,6 +236,39 @@ def parse_identifier(identifier):
     response_flag = ResponseCode(response_code)
 
     return positioner_id, command_id, command_uid, response_flag
+
+
+def motor_steps_to_angle(alpha, beta, motor_steps=None, inverse=False):
+    """Converts motor steps to angles or vice-versa.
+
+    Parameters
+    ----------
+    alpha : float
+        The alpha position.
+    beta : float
+        The beta position.
+    motor_steps : int
+        The number of steps in the motor. Defaults to
+        `~jaeger.commands.MOTOR_STEPS`.
+    inverse : bool
+        If `True`, converts from angles to motor steps.
+
+    Returns
+    -------
+    angles : `tuple`
+        A tuple with the alpha and beta angles associated to the input
+        motor steps. If ``inverse=True``, ``alpha`` and ``beta`` are considered
+        to be angles and the associated motor steps are returned.
+
+    """
+
+    motor_steps = motor_steps or MOTOR_STEPS
+
+    if inverse:
+        return (int(numpy.round(alpha * motor_steps / 360.)),
+                int(numpy.round(beta * motor_steps / 360.)))
+
+    return alpha / motor_steps * 360., beta / motor_steps * 360.
 
 
 def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):

@@ -8,12 +8,7 @@ import os
 
 from ruamel.yaml import YAML
 
-# Inits the logging system. Only shell logging, and exception and warning catching.
-# File logging can be started by calling log.start_file_logger(name).
-from .core import log
-
-
-log.start_file_logger('~/.jaeger/jaeger.log')
+from .core import get_logger
 
 
 def merge(user, default):
@@ -52,12 +47,13 @@ else:
     __IPYTHON__ = True
 
 
-# Add a logger for the CAN interface
-can_log = logging.getLogger('jaeger_can')
-can_log._set_defaults()
+log = get_logger('jaeger')
+log_dir = config.get('log_dir', None) or '~/.jaeger'
 
-log_dir = config.get('log_dir', None) or '~/.jaeger/can.log'
-can_log.start_file_logger(log_dir)
+can_log = get_logger('jaeger_can')
+
+log.start_file_logger('jaeger', log_dir)
+can_log.start_file_logger('can', log_dir)
 
 
 from .can import *

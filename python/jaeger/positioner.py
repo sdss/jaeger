@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-25 09:44:28
+# @Last modified time: 2019-04-30 16:17:01
 
 import asyncio
 from contextlib import suppress
@@ -18,7 +18,7 @@ from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.utils import Poller, StatusMixIn, bytes_to_int
 
 
-__ALL__ = ['Positioner']
+__ALL__ = ['Positioner', 'VirtualPositioner']
 
 _pos_conf = config['positioner']
 
@@ -180,16 +180,16 @@ class Positioner(StatusMixIn):
                       f'{CommandID.GET_STATUS.name!r} failed to complete.')
             return
 
-        if self.is_bootloader():
-            self.flag = maskbits.PositionerStatus
+        if not self.is_bootloader():
+            self.flags = maskbits.PositionerStatus
         else:
-            self.flag = maskbits.BootloaderStatus
+            self.flags = maskbits.BootloaderStatus
 
         if len(command.replies) == 1:
             status_int = int(bytes_to_int(command.replies[0].data))
-            self.status = self.flag(status_int)
+            self.status = self.flags(status_int)
         else:
-            self.status = self.flag.UNKNOWN
+            self.status = self.flags.UNKNOWN
 
     async def wait_for_status(self, status, delay=0.1, timeout=None):
         """Polls the status until it reaches a certain value.
@@ -218,6 +218,9 @@ class Positioner(StatusMixIn):
         if self.is_bootloader():
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
+
+        if not self.status_poller:
+            self.start_pollers('status')
 
         self.status_poller.set_delay(delay)
 
@@ -249,26 +252,30 @@ class Positioner(StatusMixIn):
         self.status_poller.set_delay()
         return True
 
-    async def initialise(self, force=False):
+    async def initialise(self, initialise_datums=False):
         """Initialises the datum and starts the position watcher."""
 
         log.debug(f'positioner {self.positioner_id}: initialising')
-
-        if self.is_bootloader():
-            log.error(f'positioner {self.positioner_id}: '
-                      'this coroutine cannot be scheduled in '
-                      'bootloader mode.')
-            return False
 
         # Resets all.
         await self.reset()
 
         await self.update_status()
+        await self.get_firmware()
+
+        # Exists if we are in bootloader mode.
+        if self.is_bootloader():
+            log.debug(f'positioner {self.positioner_id}: positioner is in bootloader mode.')
+            return True
+
+        if initialise_datums:
+            result = await self.initialise_datums()
+            if not result:
+                return False
 
         if not self.initialised:
-            log.warning(f'positioner {self.positioner_id}: '
-                        'not initialised. Set the position manually.',
-                        JaegerUserWarning)
+            log.error(f'positioner {self.positioner_id}: not initialised. '
+                      'Set the position manually.')
             return False
 
         # Start pollers
@@ -284,14 +291,41 @@ class Positioner(StatusMixIn):
         result = await self.fps.send_command('TRAJECTORY_TRANSMISSION_ABORT',
                                              positioner_id=self.positioner_id)
         if not result:
-            log.warning(f'positioner {self.positioner_id}: failed aborting '
-                        'trajectory transmission during initialisation.',
-                        JaegerUserWarning)
+            log.error(f'positioner {self.positioner_id}: failed aborting '
+                      'trajectory transmission during initialisation.')
             return False
 
         # Sets the default speed
         if not await self._set_speed(alpha=_pos_conf['motor_speed'],
                                      beta=_pos_conf['motor_speed']):
+            return False
+
+        log.debug(f'positioner {self.positioner_id}: initialisation complete.')
+
+        return True
+
+    async def initialise_datums(self):
+        """Initialise datums by driving the positioner against hard stops."""
+
+        log.warning(f'positioner {self.positioner_id}: reinitialise datums.',
+                    JaegerUserWarning)
+
+        result = await self.fps.send_command('INITIALIZE_DATUMS',
+                                             positioner_id=self.positioner_id)
+
+        if not result:
+            log.error(f'positioner {self.positioner_id}: failed reinitialising datums.')
+            return False
+
+        self.status = maskbits.PositionerStatus.UNKNOWN
+
+        log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
+
+        result = await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED, 300)
+
+        if not result:
+            log.error(f'positioner {self.positioner_id}: timeout waiting for '
+                      'datums to be reinitialised.')
             return False
 
         return True
@@ -480,3 +514,9 @@ class Positioner(StatusMixIn):
         status_names = '|'.join([status.name for status in self.status.active_bits])
         return (f'<Positioner (id={self.positioner_id}, '
                 f'status={status_names!r}, initialised={self.initialised})>')
+
+
+class VirtualPositioner(Positioner):
+    """Alias for `.Positioner` to be used by the `~jaeger.tests.VirtualFPS`."""
+
+    pass

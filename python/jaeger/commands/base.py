@@ -7,7 +7,11 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
+<<<<<<< HEAD
 # @Last modified time: 2019-04-25 11:12:53
+=======
+# @Last modified time: 2019-04-30 13:07:33
+>>>>>>> develop
 
 import asyncio
 import binascii
@@ -48,7 +52,7 @@ class Message(can.Message):
     """
 
     def __init__(self, command, data=[], positioner_id=0, uid=0,
-                 extended_id=True, bus=None):
+                 response_code=0, extended_id=True, bus=None):
 
         self.command = command
         self.positioner_id = positioner_id
@@ -61,7 +65,8 @@ class Message(can.Message):
         if extended_id:
             arbitration_id = jaeger.utils.get_identifier(positioner_id,
                                                          int(command.command_id),
-                                                         uid=self.uid)
+                                                         uid=self.uid,
+                                                         response_code=response_code)
         else:
             arbitration_id = positioner_id
 
@@ -272,6 +277,7 @@ class Command(StatusMixIn, asyncio.Future):
     def _check_replies(self):
         """Checks if the UIDs of the replies match the messages."""
 
+        uids = sorted(self.uids)
         replies_uids = sorted([reply.uid for reply in self.replies])
         n_messages = self.n_messages
 
@@ -280,9 +286,7 @@ class Command(StatusMixIn, asyncio.Future):
             if self.n_positioners is None:
                 return None
             else:
-                # We expect a reply matching the UID of each message
-                # from each positioner.
-                replies_uids *= self.n_positioners
+                uids = sorted(uids * self.n_positioners)
                 n_messages *= self.n_positioners
 
         if len(self.replies) < n_messages:
@@ -295,13 +299,11 @@ class Command(StatusMixIn, asyncio.Future):
             self.finish_command(CommandStatus.FAILED)
             return None
 
-        # TODO: disabled until a possible bug in the UIDs returned by the firmware is fixed.
         # Compares each message-reply UID.
-        # for ii in range(len(self.uids)):
-        #     if replies_uids[ii] != sorted(self.uids)[ii]:
-        #         self._log('the UIDs of the messages and replies do not match.',
-        #                   level=logging.ERROR)
-        #         return False
+        if not uids == replies_uids:
+            self._log('the UIDs of the messages and replies do not match.',
+                      level=logging.ERROR)
+            return False
 
         return True
 
@@ -328,7 +330,7 @@ class Command(StatusMixIn, asyncio.Future):
         self._log(f'positioner {reply.positioner_id} replied with '
                   f'id={reply.message.arbitration_id}, '
                   f'code={reply.response_code.name!r}, '
-                  f'data={data_hex}')
+                  f'data={data_hex!r}')
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
 

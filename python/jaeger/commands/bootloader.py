@@ -7,13 +7,16 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 23:20:23
+# @Last modified time: 2019-04-30 14:58:20
 
 import asyncio
+import contextlib
 import os
 import pathlib
 import time
 import zlib
+
+import numpy
 
 from jaeger import commands, log
 from jaeger.core.exceptions import JaegerError, JaegerUserWarning
@@ -47,7 +50,8 @@ def _process_replies(cmds):
     return True
 
 
-async def load_firmware(fps, firmware_file, positioners=None, force=False):
+async def load_firmware(fps, firmware_file, positioners=None, force=False,
+                        show_progressbar=False):
     """Convenience function to run through the steps of loading a new firmware.
 
     This function is a coroutine and not intendend for direct use. Use the
@@ -65,8 +69,19 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
     force : bool
         Forces the firmware load to continue even if some positioners are not
         responding or are not in bootloader mode.
+    show_progressbar : bool
+        Whether to show a progress bar.
 
     """
+
+    if show_progressbar:
+        try:
+            import progressbar
+        except ImportError:
+            log.warning('progressbar2 is not installed. '
+                        'Cannot show a progress bar.',
+                        JaegerUserWarning)
+            show_progressbar = False
 
     start_time = time.time()
 
@@ -82,6 +97,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
     # Check to make sure all positioners are in bootloader mode.
     valid_positioners = []
+    n_bad = 0
 
     for positioner_id in fps.positioners:
 
@@ -94,21 +110,30 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
                 BootloaderStatus.BOOTLOADER_INIT not in positioner.status or
                 BootloaderStatus.UNKNOWN in positioner.status):
 
-            msg = (f'positioner_id={positioner_id} not in bootloader '
-                   'mode or state is invalid.')
-            if force:
-                log.warning(msg + ' Skipping because force=True.',
-                            JaegerUserWarning)
-                continue
-
-            raise JaegerError(msg)
+            n_bad += 1
+            continue
 
         valid_positioners.append(positioner)
 
+    if len(valid_positioners) == 0:
+        raise JaegerError('no positioners found in bootloader mode or '
+                          'with valid status.')
+        return
+
+    if n_bad > 0:
+
+        msg = (f'{n_bad} positioners not in bootloader mode or state is invalid.')
+        if force:
+            log.warning(msg + ' Proceeding becasuse force=True.', JaegerUserWarning)
+        else:
+            raise JaegerError(msg)
+
+    log.info(f'upgrading firmware on {len(valid_positioners)} positioners.')
+
     start_firmware_payload = int_to_bytes(filesize) + int_to_bytes(crc32)
 
-    log.info(f'CRC32: {start_firmware_payload[4:]}')
-    log.info(f'File size: {start_firmware_payload[0:4]}')
+    log.info(f'CRC32: {crc32}')
+    log.info(f'File size: {filesize} bytes')
 
     cmds = [fps.send_command(commands.CommandID.START_FIRMWARE_UPGRADE,
                              positioner_id=positioner.positioner_id,
@@ -125,24 +150,37 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
     log.info('starting data send.')
 
-    while True:
+    chunk_size = 8
+    n_chunks = int(numpy.ceil(filesize / chunk_size))
 
-        chunk = firmware_data.read(8)
-        packetdata = bytearray(chunk)
-        # packetdata.reverse()  # IMPORTANT! no longer needed for P1
+    with contextlib.ExitStack() as stack:
 
-        if len(packetdata) == 0:
-            break
+        if show_progressbar:
+            bar = stack.enter_context(progressbar.ProgressBar(max_value=n_chunks))
 
-        cmds = [fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
-                                 positioner_id=positioner.positioner_id,
-                                 data=packetdata, timeout=15)
-                for positioner in valid_positioners]
+        ii = 0
+        while True:
 
-        await asyncio.gather(*cmds)
+            chunk = firmware_data.read(chunk_size)
+            packetdata = bytearray(chunk)
+            # packetdata.reverse()  # IMPORTANT! no longer needed for P1
 
-        if not _process_replies(cmds):
-            return
+            if len(packetdata) == 0:
+                break
+
+            cmds = [fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
+                                     positioner_id=positioner.positioner_id,
+                                     data=packetdata, timeout=15)
+                    for positioner in valid_positioners]
+
+            await asyncio.gather(*cmds)
+
+            if not _process_replies(cmds):
+                return
+
+            ii += 1
+            if show_progressbar:
+                bar.update(ii)
 
     log.info('firmware upgrade complete.')
 

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-25 10:55:25
+# @Last modified time: 2019-04-30 16:16:37
 
 import asyncio
 import os
@@ -29,57 +29,41 @@ except ImportError:
     targetdb = False
 
 
-__ALL__ = ['FPS']
+__ALL__ = ['BaseFPS', 'FPS']
 
 
-class FPS(object):
-    """A class describing the Focal Plane System that can be used as an actor.
+class BaseFPS(object):
+    """A class describing the Focal Plane System.
+
+    This class includes methods to read the layout and construct positioner
+    objects and can be used by the real `FPS` class or the
+    `~jaeger.tests.core.VirtualFPS`.
 
     Parameters
     ----------
-    bus : `.JaegerCAN` instance
-        The CAN bus to use.
     layout : str
-        A file describing the layout of the FPS. If `None`, the CAN interface
-        will be use to determine the positioners connected.
-    can_profile : `str` or `None`
-        The configuration profile for the CAN interface, or `None` to use the
-        default one. Ignored if ``bus`` is passed.
-    loop : event loop or `None`
-        The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
-        get a valid loop.
-
-    Examples
-    --------
-    After instantiating a new `.FPS` object it is necessary to call
-    `~.FPS.initialise` to retrieve the positioner layout and the status of
-    the connected positioners. Note that `~.FPS.initialise` is a coroutine
-    which needs to be awaited ::
-
-        >>> fps = FPS(can_profile='default')
-        >>> await fps.initialise()
-        >>> fps.positioners[4].status
-        <Positioner (id=4, status='SYSTEM_INITIALIZATION|
-        DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|
-        BETA_DISPLACEMENT_COMPLETED')>
+        The layout describing the position of the robots on the focal plane.
+        If `None`, the default layout will be used. Can be either a layout name
+        to be recovered from the database, or a file path to the layout
+        configuration.
+    positioner_class : class
+        The class to be used to create a new positioner. In principle this will
+        be `.Positioner` but it may be different if the positioners are created
+        for a `~jaeger.tests.core.VirtualFPS`.
 
     """
 
-    def __init__(self, bus=None, layout=None, can_profile=None, loop=None, **kwargs):
+    def __init__(self, layout=None, positioner_class=Positioner):
 
-        self.loop = loop or asyncio.get_event_loop()
-
-        if isinstance(bus, JaegerCAN):
-            #: The `.JaegerCAN` instance that serves as a CAN bus interface.
-            self.bus = bus
-        else:
-            self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
+        self._class_name = self.__class__.__name__
 
         self.layout = layout or config['fps']['default_layout']
 
         #: A list of `~jaeger.positioner.Positioner` instances associated with
         #: this `.FPS` instance.
         self.positioners = {}
+
+        self._positioner_class = positioner_class
 
         # Loads the positioners from the layout
         self._load_layout(self.layout)
@@ -103,7 +87,7 @@ class FPS(object):
 
         if isinstance(layout, pathlib.Path) or os.path.exists(layout):
 
-            log.info(f'reading layout from file {layout!s}')
+            log.info(f'{self._class_name}: reading layout from file {layout!s}.')
 
             data = astropy.table.Table.read(layout, format='ascii.no_header',
                                             names=['row', 'pos', 'x', 'y', 'type'])
@@ -112,7 +96,8 @@ class FPS(object):
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
-                new_positioner = Positioner(pos_id, self, centre=(row['x'], row['y']))
+                new_positioner = self._positioner_class(
+                    pos_id, self, centre=(row['x'], row['y']))
                 pos_id += 1
                 self.add_positioner(new_positioner)
 
@@ -120,11 +105,12 @@ class FPS(object):
 
         elif targetdb is not None:
 
-            log.info(f'reading profile {layout} from database')
+            log.info(f'{self._class_name}: reading profile {layout!r} from database.')
 
             if not targetdb.database.connected:
                 targetdb.database.connect()
-            assert targetdb.database.connected, 'database is not connected.'
+            assert targetdb.database.connected, \
+                f'{self._class_name}: database is not connected.'
 
             positioners_db = targetdb.Actuator.select().join(
                 targetdb.FPSLayout).switch(targetdb.Actuator).join(
@@ -133,16 +119,95 @@ class FPS(object):
                         targetdb.ActuatorType.label == 'Robot')
 
             for pos in positioners_db:
-                self.add_positioner(Positioner(pos.id, self,
-                                               centre=(pos.xcen, pos.ycen)))
+                self.add_positioner(self._positioner_class(
+                    pos.id, self, centre=(pos.xcen, pos.ycen)))
 
             n_pos = positioners_db.count()
 
         else:
 
-            raise RuntimeError('database is not available.')
+            raise RuntimeError(f'{self._class_name}: database is not available.')
 
-        log.debug(f'loaded positions for {n_pos} positioners')
+        log.debug(f'{self._class_name}: loaded positions for {n_pos} positioners.')
+
+    def add_positioner(self, positioner):
+        """Adds a new positioner to the list, and checks for duplicates."""
+
+        assert isinstance(positioner, self._positioner_class), \
+            f'{self._class_name}: positioner must be a Positioner instance.'
+
+        if positioner.positioner_id in self.positioners:
+            raise ValueError(f'{self._class_name}: there is already a '
+                             f'positioner in the list with positioner_id '
+                             f'{positioner.positioner_id}.')
+
+        self.positioners[positioner.positioner_id] = positioner
+
+    def report_status(self):
+        """Returns a dict with the position and status of each positioner."""
+
+        status = {}
+
+        for positioner in self.positioners.values():
+
+            pos_status = positioner.status
+            pos_firmware = positioner.firmware
+            pos_alpha = positioner.alpha
+            pos_beta = positioner.beta
+
+            status[positioner.positioner_id] = {'position': [pos_alpha, pos_beta],
+                                                'status': pos_status,
+                                                'firmware': pos_firmware}
+
+        return status
+
+
+class FPS(BaseFPS):
+    """A class describing the Focal Plane System.
+
+    Parameters
+    ----------
+    bus : `.JaegerCAN` instance
+        The CAN bus to use.
+    layout : str
+        The layout describing the position of the robots on the focal plane.
+        If `None`, the default layout will be used. Can be either a layout name
+        to be recovered from the database, or a file path to the layout
+        configuration.
+    can_profile : `str` or `None`
+        The configuration profile for the CAN interface, or `None` to use the
+        default one. Ignored if ``bus`` is passed.
+    loop : event loop or `None`
+        The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
+        get a valid loop.
+
+    Examples
+    --------
+    After instantiating a new `.FPS` object it is necessary to call
+    `~.FPS.initialise` to retrieve the positioner layout and the status of
+    the connected positioners. Note that `~.FPS.initialise` is a coroutine
+    which needs to be awaited ::
+
+        >>> fps = FPS(can_profile='default')
+        >>> await fps.initialise()
+        >>> fps.positioners[4].status
+        <Positioner (id=4, status='SYSTEM_INITIALIZATION|
+        DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|
+        BETA_DISPLACEMENT_COMPLETED')>
+
+    """
+
+    def __init__(self, bus=None, layout=None, can_profile=None, loop=None):
+
+        self.loop = loop or asyncio.get_event_loop()
+
+        if isinstance(bus, JaegerCAN):
+            #: The `.JaegerCAN` instance that serves as a CAN bus interface.
+            self.bus = bus
+        else:
+            self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
+
+        super().__init__(layout=layout)
 
     def send_command(self, command_id, positioner_id=0, data=[], **kwargs):
         """Sends a command to the bus.
@@ -175,18 +240,6 @@ class FPS(object):
 
         return command
 
-    def add_positioner(self, positioner, **kwargs):
-        """Adds a new positioner to the list, and checks for duplicates."""
-
-        assert isinstance(positioner, Positioner), \
-            'positioner must be a Positioner instance'
-
-        if positioner.positioner_id in self.positioners:
-            raise ValueError(f'there is already a positioner in the list with '
-                             f'positioner_id {positioner.positioner_id}.')
-
-        self.positioners[positioner.positioner_id] = positioner
-
     async def initialise(self, layout=None, check_positioners=True):
         """Initialises all positioners with status and firmware version."""
 
@@ -196,10 +249,12 @@ class FPS(object):
 
         get_status_command = self.send_command(CommandID.GET_STATUS,
                                                positioner_id=0,
-                                               timeout=2)
+                                               timeout=5,
+                                               n_positioners=len(self.positioners))
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
-                                                 timeout=2)
+                                                 timeout=5,
+                                                 n_positioners=len(self.positioners))
 
         await asyncio.gather(get_status_command, get_firmware_command)
 

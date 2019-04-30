@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-17 17:05:52
+# @Last modified time: 2019-04-30 11:59:28
 
 import asyncio
 import binascii
@@ -17,10 +17,10 @@ import pprint
 import can
 import can.interfaces.slcan
 import can.interfaces.socketcan
+import can.interfaces.virtual
 
 import jaeger
 import jaeger.interfaces.cannet
-import jaeger.tests.bus
 from jaeger import can_log, config, log
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
@@ -33,7 +33,7 @@ __ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'VALID_INTERFACES']
 #: Accepted CAN interfaces
 VALID_INTERFACES = {'slcan': can.interfaces.slcan.slcanBus,
                     'socketcan': can.interfaces.socketcan.SocketcanBus,
-                    'test': jaeger.tests.bus.VirtualBusTester,
+                    'virtual': can.interfaces.virtual.VirtualBus,
                     'cannet': jaeger.interfaces.cannet.CANNetBus}
 
 
@@ -119,7 +119,7 @@ class JaegerCAN(object):
         #: a new message is received from the bus.
         self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
 
-        #: A `.can.notifier.Notifier` instance that processes messages from
+        #: A `~.can.Notifier` instance that processes messages from
         #: the bus asynchronously.
         self.notifier = can.notifier.Notifier(self, [self.listener], loop=self.loop)
 
@@ -220,7 +220,7 @@ class JaegerCAN(object):
                 data_hex = binascii.hexlify(message.data).decode()
                 can_log.debug(log_header + 'sending message with '
                               f'arbitration_id={message.arbitration_id} '
-                              f'and data={data_hex}.')
+                              f'and data={data_hex!r}.')
 
                 self.send(message)
 
@@ -239,8 +239,13 @@ class JaegerCAN(object):
 
         """
 
+        assert 'interfaces' in config, \
+            'configuration file does not have an interfaces section.'
+
         if profile is None:
-            profile = 'default'
+            assert 'default' in config['interfaces'], \
+                'default interface not set in configuration.'
+            profile = config['interfaces']['default']
 
         if profile not in config['interfaces']:
             raise ValueError(f'invalid interface profile {profile}')
