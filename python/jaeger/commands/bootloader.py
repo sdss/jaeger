@@ -82,6 +82,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
 
     # Check to make sure all positioners are in bootloader mode.
     valid_positioners = []
+    n_bad = 0
 
     for positioner_id in fps.positioners:
 
@@ -94,16 +95,25 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False):
                 BootloaderStatus.BOOTLOADER_INIT not in positioner.status or
                 BootloaderStatus.UNKNOWN in positioner.status):
 
-            msg = (f'positioner_id={positioner_id} not in bootloader '
-                   'mode or state is invalid.')
-            if force:
-                log.warning(msg + ' Skipping because force=True.',
-                            JaegerUserWarning)
-                continue
-
-            raise JaegerError(msg)
+            n_bad += 1
+            continue
 
         valid_positioners.append(positioner)
+
+    if len(valid_positioners) == 0:
+        raise JaegerError('no positioners found in bootloader mode or '
+                          'with valid status.')
+        return
+
+    if n_bad > 0:
+
+        msg = (f'{n_bad} positioners not in bootloader mode or state is invalid.')
+        if force:
+            log.warning(msg + ' Proceeding becasuse force=True.', JaegerUserWarning)
+        else:
+            raise JaegerError(msg)
+
+    log.info(f'upgrading firmware on {len(valid_positioners)} positioners.')
 
     start_firmware_payload = int_to_bytes(filesize) + int_to_bytes(crc32)
 
