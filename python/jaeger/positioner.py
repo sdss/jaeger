@@ -214,6 +214,9 @@ class Positioner(StatusMixIn):
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
 
+        if not self.status_poller:
+            self.start_pollers('status')
+
         self.status_poller.set_delay(delay)
 
         if not isinstance(status, (list, tuple)):
