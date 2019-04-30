@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 21:29:49
+# @Last modified time: 2019-04-30 11:58:04
 
 import asyncio
 import binascii
@@ -329,7 +329,7 @@ class Command(StatusMixIn, asyncio.Future):
         self._log(f'positioner {reply.positioner_id} replied with '
                   f'id={reply.message.arbitration_id}, '
                   f'code={reply.response_code.name!r}, '
-                  f'data={data_hex}')
+                  f'data={data_hex!r}')
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
 

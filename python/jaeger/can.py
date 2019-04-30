@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-26 23:12:30
+# @Last modified time: 2019-04-30 11:59:28
 
 import asyncio
 import binascii
@@ -220,7 +220,7 @@ class JaegerCAN(object):
                 data_hex = binascii.hexlify(message.data).decode()
                 can_log.debug(log_header + 'sending message with '
                               f'arbitration_id={message.arbitration_id} '
-                              f'and data={data_hex}.')
+                              f'and data={data_hex!r}.')
 
                 self.send(message)
 
