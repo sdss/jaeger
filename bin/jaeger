@@ -82,7 +82,8 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
     fps = FPS(**ctx.obj)
     yield from fps.initialise()
 
-    yield from load_firmware(fps, firmware_file, positioners=positioners, force=force)
+    yield from load_firmware(fps, firmware_file, positioners=positioners,
+                             force=force, show_progressbar=True)
 
 
 @jaeger.command()

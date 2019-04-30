@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 14:34:12
+# @Last modified time: 2019-04-30 15:59:40
 
 import asyncio
 
@@ -247,7 +247,7 @@ class Positioner(StatusMixIn):
         self.status_poller.set_delay()
         return True
 
-    async def initialise(self):
+    async def initialise(self, initialise_datums=False):
         """Initialises the datum and starts the position watcher."""
 
         log.debug(f'positioner {self.positioner_id}: initialising')
@@ -263,10 +263,14 @@ class Positioner(StatusMixIn):
             log.debug(f'positioner {self.positioner_id}: positioner is in bootloader mode.')
             return True
 
+        if initialise_datums:
+            result = await self.initialise_datums()
+            if not result:
+                return False
+
         if not self.initialised:
-            log.warning(f'positioner {self.positioner_id}: '
-                        'not initialised. Set the position manually.',
-                        JaegerUserWarning)
+            log.error(f'positioner {self.positioner_id}: not initialised. '
+                      'Set the position manually.')
             return False
 
         # Start pollers
@@ -282,9 +286,8 @@ class Positioner(StatusMixIn):
         result = await self.fps.send_command('TRAJECTORY_TRANSMISSION_ABORT',
                                              positioner_id=self.positioner_id)
         if not result:
-            log.warning(f'positioner {self.positioner_id}: failed aborting '
-                        'trajectory transmission during initialisation.',
-                        JaegerUserWarning)
+            log.error(f'positioner {self.positioner_id}: failed aborting '
+                      'trajectory transmission during initialisation.')
             return False
 
         # Sets the default speed
@@ -293,6 +296,34 @@ class Positioner(StatusMixIn):
             return False
 
         await self.update_status()
+
+        log.debug(f'positioner {self.positioner_id}: initialisation complete.')
+
+        return True
+
+    async def initialise_datums(self):
+        """Initialise datums by driving the positioner against hard stops."""
+
+        log.warning(f'positioner {self.positioner_id}: reinitialise datums.',
+                    JaegerUserWarning)
+
+        result = await self.fps.send_command('INITIALIZE_DATUMS',
+                                             positioner_id=self.positioner_id)
+
+        if not result:
+            log.error(f'positioner {self.positioner_id}: failed reinitialising datums.')
+            return False
+
+        self.status = maskbits.PositionerStatus.UNKNOWN
+
+        log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
+
+        result = await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED, 300)
+
+        if not result:
+            log.error(f'positioner {self.positioner_id}: timeout waiting for '
+                      'datums to be reinitialised.')
+            return False
 
         return True
 
