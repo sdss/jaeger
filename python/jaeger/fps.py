@@ -245,7 +245,7 @@ class FPS(BaseFPS):
 
         # Resets all positioner
         for positioner in self.positioners.values():
-            positioner.reset()
+            await positioner.reset()
 
         get_status_command = self.send_command(CommandID.GET_STATUS,
                                                positioner_id=0,
