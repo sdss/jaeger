@@ -364,9 +364,9 @@ class FPS(BaseFPS):
 
         """
 
-        for positioner in self.positioners.values():
-            if positioner.initialised:
-                await positioner.start_pollers(poller=poller)
+        await asyncio.gather(*[positioner.start_pollers(poller=poller)
+                               for positioner in self.positioners.values()
+                               if positioner.initialised])
 
     async def stop_pollers(self, poller='all'):
         """Stops the pollers for all valid positioners.
@@ -379,8 +379,9 @@ class FPS(BaseFPS):
 
         """
 
-        for positioner in self.positioners.values():
-            await positioner.stop_pollers(poller=poller)
+        await asyncio.gather(*[positioner.stop_pollers(poller=poller)
+                               for positioner in self.positioners.values()
+                               if positioner.initialised])
 
     async def _abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
