@@ -7,11 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-<<<<<<< HEAD
-# @Last modified time: 2019-04-25 11:12:53
-=======
-# @Last modified time: 2019-04-30 13:07:33
->>>>>>> develop
+# @Last modified time: 2019-04-30 22:03:19
 
 import asyncio
 import binascii
@@ -23,7 +19,7 @@ import jaeger.utils
 from jaeger import can_log, config, log
 from jaeger.core import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
-from jaeger.utils import AsyncioExecutor, AsyncQueue, StatusMixIn
+from jaeger.utils import AsyncQueue, StatusMixIn
 from . import CommandID
 
 
@@ -351,7 +347,7 @@ class Command(StatusMixIn, asyncio.Future):
             else:
                 pass
 
-    async def finish_command(self, status):
+    def finish_command(self, status):
         """Cancels the queue watcher and removes the running command.
 
         Parameters
@@ -384,8 +380,9 @@ class Command(StatusMixIn, asyncio.Future):
 
             if is_done and self._done_callback:
                 if asyncio.iscoroutinefunction(self._done_callback):
-                    with AsyncioExecutor() as executor:
-                        executor.submit(self._done_callback)
+                    # I don't love this because this task is unawaited but ...
+                    asyncio.create_task(self._done_callback())
+                    pass
                 else:
                     self._done_callback()
 

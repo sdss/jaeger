@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 16:16:37
+# @Last modified time: 2019-04-30 18:21:51
 
 import asyncio
 import os
@@ -463,12 +463,13 @@ class FPS(BaseFPS):
         log.info('stopping all pollers.')
 
         await self.stop_pollers()
+
         await asyncio.sleep(1)
 
         log.info('cancelling all pending tasks and shutting down.')
 
-        tasks = [task for task in asyncio.Task.all_tasks(loop=self.loop)
-                 if task is not asyncio.tasks.Task.current_task(loop=self.loop)]
+        tasks = [task for task in asyncio.all_tasks(loop=self.loop)
+                 if task is not asyncio.current_task(loop=self.loop)]
         list(map(lambda task: task.cancel(), tasks))
 
         await asyncio.gather(*tasks, return_exceptions=True)
