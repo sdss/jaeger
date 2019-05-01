@@ -7,10 +7,11 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-25 11:10:45
+# @Last modified time: 2019-04-30 22:16:10
 
 import asyncio
 from concurrent.futures import Executor
+from contextlib import suppress
 from threading import Thread
 
 
@@ -143,7 +144,7 @@ class StatusMixIn(object):
         self.watcher = None
 
 
-class Poller(asyncio.Task):
+class Poller(object):
     """A task that runs a callback periodically.
 
     Parameters
@@ -166,26 +167,35 @@ class Poller(asyncio.Task):
 
         self.loop = loop or asyncio.get_event_loop()
 
-        self._sleep_task = None
+        self.stopping = False
 
-        super().__init__(self.poller(), loop=self.loop)
+        # Create two tasks, one for the sleep timer and another for the poller
+        # itself. We do this because we want to be able to cancell the sleep
+        # coroutine if we are going to change the delay.
+        self._sleep_task = None
+        self._task = None
 
     async def poller(self):
         """The polling loop."""
 
         while True:
 
-            cb = self.callback()
-            if asyncio.iscoroutine(cb):
-                await cb
+            if asyncio.iscoroutinefunction(self.callback):
+                await asyncio.create_task(self.callback())
+            else:
+                self.callback()
 
-            self._sleep_task = asyncio.create_task(
-                asyncio.sleep(self.delay, loop=self.loop))
+            self._sleep_task = asyncio.create_task(asyncio.sleep(self.delay))
 
+            # We want to be careful with the propagation of cancelled errors.
+            # If we are just stopping the sleep task to change the delay
+            # we ignore the CancelledError. If we are stopping the poller
+            # we raise the error and we deal with it in stop().
             try:
                 await self._sleep_task
             except asyncio.CancelledError:
-                pass
+                if self.stopping:
+                    raise
 
     def set_delay(self, delay=None):
         """Sets the delay for polling.
@@ -200,6 +210,44 @@ class Poller(asyncio.Task):
 
         if self._sleep_task and not self._sleep_task.cancelled():
             self._sleep_task.cancel()
+
+    async def start(self, delay=None):
+        """Starts the poller.
+
+        Parameters
+        ----------
+        delay : float
+            The delay between calls to the callback. If not specified,
+            restores the original delay used when the class was instantiated.
+
+        """
+
+        if self.running:
+            raise RuntimeError('poller is already running.')
+
+        self.set_delay(delay)
+        self._task = asyncio.create_task(self.poller())
+
+    async def stop(self):
+        """Cancel the poller."""
+
+        if not self.running:
+            return
+
+        self.stopping = True
+        self._task.cancel()
+
+        with suppress(asyncio.CancelledError):
+            await self._task
+
+    @property
+    def running(self):
+        """Returns `True` if the poller is running."""
+
+        if self._task and not self._task.cancelled():
+            return True
+
+        return False
 
 
 class AsyncioExecutor(Executor):
