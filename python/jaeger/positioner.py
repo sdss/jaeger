@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 16:17:01
+# @Last modified time: 2019-04-30 22:19:13
 
 import asyncio
 from contextlib import suppress
@@ -49,10 +49,12 @@ class Positioner(StatusMixIn):
 
         #: A `~asyncio.Task` that polls the current position of alpha and
         #: beta periodically.
-        self.position_poller = None
+        self.position_poller = Poller(self.update_position,
+                                      delay=_pos_conf['position_poller_delay'])
 
         #: A `~asyncio.Task` that polls the current status periodically.
-        self.status_poller = None
+        self.status_poller = Poller(self.update_status,
+                                    delay=_pos_conf['status_poller_delay'])
 
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
@@ -68,25 +70,15 @@ class Positioner(StatusMixIn):
 
         """
 
+        assert poller in ['status', 'position', 'all']
+
         if poller == 'status' or poller == 'all':
-
-            if self.status_poller is not None and self.status_poller.cancelled() is False:
-                log.debug(f'positioner {self.positioner_id}: '
-                          'status poller was already running.')
-                await self.stop_pollers('status')
-
-            self.status_poller = Poller(self.update_status,
-                                        delay=_pos_conf['status_poller_delay'])
+            if not self.status_poller.running:
+                await self.status_poller.start()
 
         if poller == 'position' or poller == 'all':
-
-            if self.position_poller is not None and self.position_poller.cancelled() is False:
-                log.debug(f'positioner {self.positioner_id}: '
-                          'position poller was already running.')
-                await self.stop_pollers('position')
-
-            self.position_poller = Poller(self.update_position,
-                                          delay=_pos_conf['position_poller_delay'])
+            if not self.position_poller.running:
+                await self.position_poller.start()
 
     async def stop_pollers(self, poller='all'):
         """Stops the status and position pollers.
@@ -94,30 +86,18 @@ class Positioner(StatusMixIn):
         Parameters
         ----------
         poller : str
-            Either ``'position'`` or ``'status'`` to start the position or
-            status pollers, or ``'all'`` to start both.
+            Either ``'position'`` or ``'status'`` to stop the position or
+            status pollers, or ``'all'`` to stop both.
 
         """
 
+        assert poller in ['status', 'position', 'all']
+
         if poller == 'status' or poller == 'all':
-
-            if isinstance(self.status_poller, Poller):
-                self.status_poller.cancel()
-
-                with suppress(asyncio.CancelledError):
-                    await self.status_poller
-
-                self.status_poller = None
+            await self.status_poller.stop()
 
         if poller == 'position' or poller == 'all':
-
-            if isinstance(self.position_poller, Poller):
-                self.position_poller.cancel()
-
-                with suppress(asyncio.CancelledError):
-                    await self.position_poller
-
-            self.position_poller = None
+            await self.position_poller.stop()
 
     @property
     def initialised(self):
@@ -219,8 +199,9 @@ class Positioner(StatusMixIn):
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
 
-        if not self.status_poller:
-            self.start_pollers('status')
+        # Make sure status poller is running.
+        if not self.status_poller.running:
+            await self.start_pollers('status')
 
         self.status_poller.set_delay(delay)
 
@@ -442,6 +423,10 @@ class Positioner(StatusMixIn):
         if not self.initialised:
             log.error(f'positioner {self.positioner_id}: not initialised.')
             return False
+
+        if not self.position_poller.running or not self.status_poller.running:
+            log.error(f'positioner {self.positioner_id}: some pollers are not running. '
+                      'Try initialising the positioner.')
 
         if not any([var is not None for var in [alpha, beta, alpha_speed, beta_speed]]):
             log.error(f'positioner {self.positioner_id}: no inputs.')
