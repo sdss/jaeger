@@ -249,11 +249,11 @@ class FPS(BaseFPS):
 
         get_status_command = self.send_command(CommandID.GET_STATUS,
                                                positioner_id=0,
-                                               timeout=5,
+                                               timeout=2,
                                                n_positioners=len(self.positioners))
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
-                                                 timeout=5,
+                                                 timeout=2,
                                                  n_positioners=len(self.positioners))
 
         await asyncio.gather(get_status_command, get_firmware_command)
