@@ -7,10 +7,9 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 22:19:13
+# @Last modified time: 2019-05-01 11:06:54
 
 import asyncio
-from contextlib import suppress
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
@@ -106,6 +105,11 @@ class Positioner(StatusMixIn):
         if self.status is None:
             return False
 
+        if self.is_bootloader():
+            if self.status != maskbits.BootloaderStatus.UNKNOWN:
+                return True
+            return False
+
         PositionerStatus = maskbits.PositionerStatus
 
         if (PositionerStatus.SYSTEM_INITIALIZATION not in self.status or
@@ -160,7 +164,9 @@ class Positioner(StatusMixIn):
                       f'{CommandID.GET_STATUS.name!r} failed to complete.')
             return
 
-        if not self.is_bootloader():
+        if self.is_bootloader() is None:
+            raise ValueError('firmware is not known. Cannot update status.')
+        elif self.is_bootloader() is False:
             self.flags = maskbits.PositionerStatus
         else:
             self.flags = maskbits.BootloaderStatus
@@ -241,8 +247,8 @@ class Positioner(StatusMixIn):
         # Resets all.
         await self.reset()
 
-        await self.update_status()
         await self.get_firmware()
+        await self.update_status()
 
         # Exists if we are in bootloader mode.
         if self.is_bootloader():
