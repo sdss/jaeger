@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-27 11:10:00
+# @Last modified time: 2019-05-02 13:09:19
 
 import numpy
 
@@ -327,16 +327,6 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
     alpha[:, 1] = alpha_times
     beta[:, 0] = beta_deg
     beta[:, 1] = beta_times
-
-    # TODO: this is an ugly hack to avoid consecutive positions with the same value.
-    # Will be removed once the firmware or kaiju have been fixed.
-    for ii in list(range(alpha.shape[0]))[1:]:
-        if alpha[ii, 0] == alpha[ii - 1, 0]:
-            alpha[ii, 0] += 0.1
-
-    for ii in list(range(beta.shape[0]))[1:]:
-        if beta[ii, 0] == beta[ii - 1, 0]:
-            beta[ii, 0] += 0.1
 
     if invert:
         alpha = alpha[::-1]
