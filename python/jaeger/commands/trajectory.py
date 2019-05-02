@@ -262,7 +262,7 @@ class SendTrajectoryData(Command):
 
         data = []
         for angle, time in self.trajectory_points:
-            data.append(int_to_bytes(time) + int_to_bytes(angle))
+            data.append(int_to_bytes(angle) + int_to_bytes(time))
 
         kwargs['data'] = data
 
