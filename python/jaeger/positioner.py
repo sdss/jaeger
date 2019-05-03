@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-01 11:06:54
+# @Last modified time: 2019-05-02 16:41:02
 
 import asyncio
 
@@ -209,7 +209,7 @@ class Positioner(StatusMixIn):
         if not self.status_poller.running:
             await self.start_pollers('status')
 
-        self.status_poller.set_delay(delay)
+        await self.status_poller.set_delay(delay)
 
         if not isinstance(status, (list, tuple)):
             status = [status]
@@ -222,6 +222,7 @@ class Positioner(StatusMixIn):
                 for ss in wait_for_status:
                     if ss not in self.status:
                         all_reached = False
+                        break
 
                 if all_reached:
                     return
@@ -233,10 +234,10 @@ class Positioner(StatusMixIn):
         try:
             await asyncio.wait_for(status_poller(wait_for_status), timeout)
         except asyncio.TimeoutError:
-            self.status_poller.set_delay()
+            await self.status_poller.set_delay()
             return False
 
-        self.status_poller.set_delay()
+        await self.status_poller.set_delay()
         return True
 
     async def initialise(self, initialise_datums=False):
@@ -481,7 +482,7 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: '
                      f'the move will take {move_time:.2f} seconds')
 
-            self.position_poller.set_delay(0.5)
+            await self.position_poller.set_delay(0.5)
 
             await asyncio.sleep(move_time)
 
@@ -497,7 +498,7 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: position reached.')
 
             # Restore position delay
-            self.position_poller.set_delay()
+            await self.position_poller.set_delay()
 
         return True
 

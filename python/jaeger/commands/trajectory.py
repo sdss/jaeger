@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 16:15:30
+# @Last modified time: 2019-05-02 16:44:55
 
 import asyncio
 import pathlib
@@ -182,7 +182,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     await fps.start_pollers()
 
     for pos_id in trajectories:
-        fps.positioners[pos_id].position_poller.set_delay(0.5)
+        await fps.positioners[pos_id].position_poller.set_delay(0.5)
 
     # Start trajectories
     await fps.send_command('START_TRAJECTORY', positioner_id=0, timeout=1,
@@ -207,7 +207,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
     # Restore default polling time
     for pos_id in trajectories:
-        fps.positioners[pos_id].position_poller.set_delay()
+        await fps.positioners[pos_id].position_poller.set_delay()
 
     return True
 
