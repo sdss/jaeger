@@ -225,7 +225,7 @@ class SendNewTrajectory(Command):
 
         assert alpha_positions > 0 and beta_positions > 0
 
-        data = int_to_bytes(beta_positions) + int_to_bytes(alpha_positions)
+        data = int_to_bytes(alpha_positions) + int_to_bytes(beta_positions)
         kwargs['data'] = data
 
         super().__init__(**kwargs)
