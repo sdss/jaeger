@@ -177,6 +177,9 @@ class Positioner(StatusMixIn):
         else:
             self.status = self.flags.UNKNOWN
 
+        log.debug(f'positioner {self.positioner_id}: '
+                  f'status={self.status.name} ({self.status.value})')
+
     async def wait_for_status(self, status, delay=0.1, timeout=None):
         """Polls the status until it reaches a certain value.
 

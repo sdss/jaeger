@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-19 15:05:53
+# @Last modified time: 2019-05-02 15:45:46
 
 import enum
 
@@ -24,6 +24,16 @@ class Maskbit(enum.IntFlag):
         """Returns a list of flags that match the value."""
 
         return [bit for bit in self.__class__ if bit.value & self.value]
+
+    @property
+    def name(self):
+        """The name of the bit or bits active."""
+
+        names = []
+        for bit in self.active_bits:
+            names.append(super(Maskbit, bit).name)
+
+        return '|'.join(names)
 
 
 class CommandStatus(Maskbit):
