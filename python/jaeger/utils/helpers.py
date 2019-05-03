@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 22:16:10
+# @Last modified time: 2019-05-02 16:42:52
 
 import asyncio
 from concurrent.futures import Executor
@@ -167,8 +167,6 @@ class Poller(object):
 
         self.loop = loop or asyncio.get_event_loop()
 
-        self.stopping = False
-
         # Create two tasks, one for the sleep timer and another for the poller
         # itself. We do this because we want to be able to cancell the sleep
         # coroutine if we are going to change the delay.
@@ -187,17 +185,9 @@ class Poller(object):
 
             self._sleep_task = asyncio.create_task(asyncio.sleep(self.delay))
 
-            # We want to be careful with the propagation of cancelled errors.
-            # If we are just stopping the sleep task to change the delay
-            # we ignore the CancelledError. If we are stopping the poller
-            # we raise the error and we deal with it in stop().
-            try:
-                await self._sleep_task
-            except asyncio.CancelledError:
-                if self.stopping:
-                    raise
+            await self._sleep_task
 
-    def set_delay(self, delay=None):
+    async def set_delay(self, delay=None):
         """Sets the delay for polling.
 
         Parameters
@@ -206,10 +196,8 @@ class Poller(object):
             The delay between calls to the callback. If `None`, restores the
             original delay."""
 
-        self.delay = delay or self._orig_delay
-
-        if self._sleep_task and not self._sleep_task.cancelled():
-            self._sleep_task.cancel()
+        await self.stop()
+        await self.start(delay)
 
     async def start(self, delay=None):
         """Starts the poller.
@@ -225,7 +213,7 @@ class Poller(object):
         if self.running:
             raise RuntimeError('poller is already running.')
 
-        self.set_delay(delay)
+        self.delay = delay or self._orig_delay
         self._task = asyncio.create_task(self.poller())
 
     async def stop(self):
@@ -234,7 +222,6 @@ class Poller(object):
         if not self.running:
             return
 
-        self.stopping = True
         self._task.cancel()
 
         with suppress(asyncio.CancelledError):
