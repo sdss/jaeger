@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 15:45:02
+# @Last modified time: 2019-05-06 13:34:13
 
 # Adapted from astropy's logging system.
 
@@ -56,6 +56,7 @@ def colored_formatter(record):
                'debug': ('magenta', 'normal'),
                'warning': ('yellow', 'normal'),
                'print': ('green', 'normal'),
+               'critical': ('red', 'bold'),
                'error': ('red', 'bold')}
 
     levelname = record.levelname.lower()
@@ -108,6 +109,9 @@ class MyFormatter(logging.Formatter):
             self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.ERROR:
+            self._fmt = MyFormatter.base_fmt
+
+        elif record.levelno == logging.CRITICAL:
             self._fmt = MyFormatter.base_fmt
 
         elif record.levelno == logging.WARNING:

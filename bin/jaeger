@@ -48,6 +48,8 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
     if verbose:
         log.set_level(logging.DEBUG)
 
+    log.critical('test')
+
     # If profile is test we start a VirtualFPS first so that it can respond
     # to the FPS class.
     if profile == 'test':
