@@ -63,7 +63,9 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
     if ctx.invoked_subcommand is None:
         fps = FPS(**ctx.obj)
         yield from fps.initialise()
-        actor = JaegerActor(fps, config=config['actor'])
+        actor = JaegerActor.from_config(fps, config['actor'])
+        yield from actor.start_status_server(config['actor']['status']['port'],
+                                             delay=config['actor']['status']['delay'])
         yield from actor.run()
 
 

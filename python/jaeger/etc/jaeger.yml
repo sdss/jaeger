@@ -1,5 +1,18 @@
 ---
 
+actor:
+    name: jaeger_actor
+    host: 127.0.0.1
+    port: 19990
+    version: 0.2.0dev
+    status:
+        port: 19991
+        delay: 5
+    tron:
+        host: 127.0.0.1
+        port: 6093
+    log_dir: ~/logs/jaeger
+
 interfaces:
     default: slcan
     slcan:
@@ -19,18 +32,6 @@ positioner:
     status_poller_delay: 1
     position_poller_delay: 1
     initialise_datums_timeout: 60
-
-actor:
-    name: jaeger
-    host: 127.0.0.1
-    port: 19990
-    version: 0.2.0dev
-    status_port: 19991
-    status_delay: 5
-    logging:
-        file_level: 10
-        shell_level: 20
-        log_dir: /data/logs/actors/jaeger
 
 log_dir: ~/logs/jaeger
 

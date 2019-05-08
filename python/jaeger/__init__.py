@@ -52,8 +52,8 @@ log_dir = config.get('log_dir', None) or '~/.jaeger'
 
 can_log = get_logger('jaeger_can')
 
-log.start_file_logger('jaeger', log_dir)
-can_log.start_file_logger('can', log_dir)
+log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
+can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
 
 
 from .can import *
