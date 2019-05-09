@@ -39,14 +39,6 @@ if os.path.exists(custom_config_fn):
 __version__ = '0.2.0dev'
 
 
-try:
-    __IPYTHON__
-except NameError:
-    __IPYTHON__ = False
-else:
-    __IPYTHON__ = True
-
-
 log = get_logger('jaeger')
 log_dir = config.get('log_dir', None) or '~/.jaeger'
 
