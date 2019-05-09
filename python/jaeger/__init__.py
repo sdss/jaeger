@@ -25,5 +25,8 @@ log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
 can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
 
 
+from .actor import *
 from .can import *
 from .fps import *
+from .maskbits import *
+from .positioner import *
