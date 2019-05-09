@@ -1,4 +1,4 @@
 
 # flake8: noqa
 
-from .logger import get_logger
+from .logger import SDSSLogger, get_logger
