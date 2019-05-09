@@ -7,9 +7,10 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-02 16:41:02
+# @Last modified time: 2019-05-08 16:07:59
 
 import asyncio
+import warnings
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
@@ -207,7 +208,7 @@ class Positioner(StatusMixIn):
         if self.is_bootloader():
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
-
+        print('waiting for status')
         # Make sure status poller is running.
         if not self.status_poller.running:
             await self.start_pollers('status')
@@ -216,7 +217,7 @@ class Positioner(StatusMixIn):
 
         if not isinstance(status, (list, tuple)):
             status = [status]
-
+        print('here')
         async def status_poller(wait_for_status):
 
             while True:
@@ -275,8 +276,8 @@ class Positioner(StatusMixIn):
         result = await self.fps.send_command('STOP_TRAJECTORY',
                                              positioner_id=self.positioner_id)
         if not result:
-            log.warning(f'positioner {self.positioner_id}: failed stopping '
-                        'trajectories during initialisation.', JaegerUserWarning)
+            warnings.warn(f'positioner {self.positioner_id}: failed stopping '
+                          'trajectories during initialisation.', JaegerUserWarning)
             return False
 
         result = await self.fps.send_command('TRAJECTORY_TRANSMISSION_ABORT',
@@ -298,8 +299,8 @@ class Positioner(StatusMixIn):
     async def initialise_datums(self):
         """Initialise datums by driving the positioner against hard stops."""
 
-        log.warning(f'positioner {self.positioner_id}: reinitialise datums.',
-                    JaegerUserWarning)
+        warnings.warn(f'positioner {self.positioner_id}: reinitialise datums.',
+                      JaegerUserWarning)
 
         result = await self.fps.send_command('INITIALIZE_DATUMS',
                                              positioner_id=self.positioner_id)
@@ -312,7 +313,8 @@ class Positioner(StatusMixIn):
 
         log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
 
-        result = await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED, 300)
+        result = await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED,
+                                            timeout=300)
 
         if not result:
             log.error(f'positioner {self.positioner_id}: timeout waiting for '

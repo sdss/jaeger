@@ -7,13 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 14:58:20
+# @Last modified time: 2019-05-08 15:20:48
 
 import asyncio
 import contextlib
 import os
 import pathlib
 import time
+import warnings
 import zlib
 
 import numpy
@@ -78,9 +79,9 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
         try:
             import progressbar
         except ImportError:
-            log.warning('progressbar2 is not installed. '
-                        'Cannot show a progress bar.',
-                        JaegerUserWarning)
+            warnings.warn('progressbar2 is not installed. '
+                          'Cannot show a progress bar.',
+                          JaegerUserWarning)
             show_progressbar = False
 
     start_time = time.time()
@@ -124,7 +125,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
 
         msg = (f'{n_bad} positioners not in bootloader mode or state is invalid.')
         if force:
-            log.warning(msg + ' Proceeding becasuse force=True.', JaegerUserWarning)
+            warnings.warn(msg + ' Proceeding becasuse force=True.', JaegerUserWarning)
         else:
             raise JaegerError(msg)
 

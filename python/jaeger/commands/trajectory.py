@@ -7,10 +7,11 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-02 16:44:55
+# @Last modified time: 2019-05-08 15:21:18
 
 import asyncio
 import pathlib
+import warnings
 
 import numpy
 from ruamel.yaml import YAML
@@ -73,8 +74,8 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         # TODO: implement call to kaiju
         pass
     else:
-        log.warning('about to send a trajectory that has not been checked '
-                    'by kaiju. This will end up in tears.', JaegerUserWarning)
+        warnings.warn('about to send a trajectory that has not been checked '
+                      'by kaiju. This will end up in tears.', JaegerUserWarning)
 
     log.info('stopping the pollers before sending the trajectory.')
     await fps.stop_pollers()

@@ -50,7 +50,7 @@ else:
 log = get_logger('jaeger')
 log_dir = config.get('log_dir', None) or '~/.jaeger'
 
-can_log = get_logger('jaeger_can')
+can_log = get_logger('jaeger_can', capture_warnings=False)
 
 log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
 can_log.start_file_logger(os.path.join(log_dir, 'can.log'))

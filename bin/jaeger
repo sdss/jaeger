@@ -9,6 +9,7 @@
 
 import asyncio
 import logging
+import warnings
 from functools import update_wrapper
 
 import click
@@ -200,7 +201,7 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
         alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
         beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
 
-        log.warning(f'running step {done_moves+1}')
+        warnings.warn(f'running step {done_moves+1}')
 
         result = yield from positioner.goto(alpha=alpha_move, beta=beta_move,
                                             alpha_speed=alpha_speed,
@@ -210,8 +211,8 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
             if skip_errors is False:
                 return
             else:
-                log.warning('an error happened but ignoring it '
-                            'because skip-error=True')
+                warnings.warn('an error happened but ignoring it '
+                              'because skip-error=True')
                 continue
 
         done_moves += 1
@@ -239,8 +240,8 @@ def home(ctx, positioner_id):
                          if PositionerStatus.SYSTEM_INITIALIZATION in positioner.status]
 
     if len(valid_positioners) < len(positioners):
-        log.warning(f'{len(positioners) - len(valid_positioners)} positioners '
-                    'have not been initialised and will not be homed.')
+        warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
+                      'have not been initialised and will not be homed.')
 
     yield from asyncio.gather(*[
         fps.send_command('INITIALIZE_DATUMS', positioner_id=pos.positioner_id)

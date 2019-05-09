@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 11:59:28
+# @Last modified time: 2019-05-08 15:22:53
 
 import asyncio
 import binascii
@@ -23,7 +23,6 @@ import jaeger
 import jaeger.interfaces.cannet
 from jaeger import can_log, config, log
 from jaeger.commands import CommandID
-from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.maskbits import CommandStatus
 
 
@@ -170,8 +169,7 @@ class JaegerCAN(object):
                 if cmd._override:
                     can_log.warning(log_header + 'another instance is already '
                                     'running but the new command overrides it. '
-                                    'Cancelling previous command.',
-                                    JaegerUserWarning)
+                                    'Cancelling previous command.')
 
                     found = False
                     for pos_id in [0, cmd.positioner_id]:
@@ -194,8 +192,7 @@ class JaegerCAN(object):
 
                     if cmd._silent_on_conflict is False:
                         can_log.warning(log_header + 'another instance is already '
-                                        'running. Requeuing and trying later.',
-                                        JaegerUserWarning)
+                                        'running. Requeuing and trying later.')
 
                     # Requeue command but wait a bit.
                     self.loop.call_later(0.1, self.command_queue.put_nowait, cmd)

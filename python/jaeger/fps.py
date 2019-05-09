@@ -7,11 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 18:21:51
+# @Last modified time: 2019-05-08 15:23:28
 
 import asyncio
 import os
 import pathlib
+import warnings
 
 import astropy.table
 
@@ -277,7 +278,7 @@ class FPS(BaseFPS):
             try:
                 positioner.firmware = get_firmware_command.get_firmware(positioner_id)
             except ValueError:
-                log.warning(
+                warnings.warn(
                     f'({get_firmware_command.command_id.name}, {positioner_id}): '
                     'did not receive a reply. Skipping positioner.',
                     JaegerUserWarning)
@@ -298,29 +299,29 @@ class FPS(BaseFPS):
                 if response_code == maskbits.ResponseCode.COMMAND_ACCEPTED:
                     positioner.status = status
                 else:
-                    log.warning(f'({command_name}, {positioner_id}): responded '
-                                f' with response code {response_code.name!r}',
-                                JaegerUserWarning)
+                    warnings.warn(f'({command_name}, {positioner_id}): responded '
+                                  f' with response code {response_code.name!r}',
+                                  JaegerUserWarning)
             else:
-                log.warning(f'({command_name}, {positioner_id}): replied but '
-                            f'if not in the layout. Skipping it.',
-                            JaegerUserWarning)
+                warnings.warn(f'({command_name}, {positioner_id}): replied but '
+                              f'if not in the layout. Skipping it.',
+                              JaegerUserWarning)
                 continue
 
         n_unknown = len([pos for pos in self.positioners
                          if self[pos].status == maskbits.PositionerStatus.UNKNOWN])
 
         if n_unknown > 0:
-            log.warning(f'{n_unknown} positioners did not respond to '
-                        f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
+            warnings.warn(f'{n_unknown} positioners did not respond to '
+                          f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
 
         n_non_initialised = len([pos for pos in self.positioners
                                  if (self[pos].status != maskbits.PositionerStatus.UNKNOWN and
                                      not self[pos].initialised)])
 
         if n_non_initialised > 0:
-            log.warning(f'{n_non_initialised} positioners responded but have '
-                        'not been initialised.', JaegerUserWarning)
+            warnings.warn(f'{n_non_initialised} positioners responded but have '
+                          'not been initialised.', JaegerUserWarning)
 
         initialise_cmds = [positioner.initialise()
                            for positioner in self.positioners.values()
