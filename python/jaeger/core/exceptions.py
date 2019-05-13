@@ -9,6 +9,9 @@
 # @Last Modified time: 2017-12-05 12:19:32
 
 
+__all__ = ['JaegerError', 'JaegerCANError', 'JaegerUserWarning']
+
+
 class JaegerError(Exception):
     """A custom core Jaeger exception"""
 
