@@ -4,6 +4,7 @@
 # isort:skip_file
 
 import os
+import warnings
 
 from .core import get_config, get_logger
 
@@ -25,9 +26,17 @@ log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
 can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
 
 
-from .actor import *
 from .can import *
 from .core.exceptions import *
 from .fps import *
 from .maskbits import *
 from .positioner import *
+
+try:
+    from .actor import *
+except ImportError as ee:
+    if 'No module named \'clu\'' in str(ee):
+        warnings.warn('clu not in PYTHONPATH. Cannot import JaegerActor.', JaegerUserWarning)
+        JaegerActor = None
+    else:
+        raise
