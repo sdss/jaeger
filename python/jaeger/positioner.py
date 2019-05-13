@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-08 16:07:59
+# @Last modified time: 2019-05-13 11:06:13
 
 import asyncio
 import warnings
@@ -208,7 +208,7 @@ class Positioner(StatusMixIn):
         if self.is_bootloader():
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
-        print('waiting for status')
+
         # Make sure status poller is running.
         if not self.status_poller.running:
             await self.start_pollers('status')
@@ -217,7 +217,7 @@ class Positioner(StatusMixIn):
 
         if not isinstance(status, (list, tuple)):
             status = [status]
-        print('here')
+
         async def status_poller(wait_for_status):
 
             while True:
