@@ -1,7 +1,7 @@
 ---
 
 actor:
-    name: jaeger_actor
+    name: jaeger
     host: 127.0.0.1
     port: 19990
     version: 0.2.0dev
@@ -11,7 +11,7 @@ actor:
     tron:
         host: 127.0.0.1
         port: 6093
-    log_dir: ~/logs/jaeger
+    log_dir: /data/logs/actors/jaeger
 
 interfaces:
     default: slcan
