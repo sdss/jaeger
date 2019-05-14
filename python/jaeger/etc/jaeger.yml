@@ -25,7 +25,7 @@ interfaces:
         channel: test
 
 fps:
-    default_layout: central_park
+    default_layout: filled_hex
 
 positioner:
     motor_speed: 1000
