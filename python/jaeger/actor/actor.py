@@ -7,22 +7,27 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-08 18:34:44
+# @Last modified time: 2019-05-13 14:27:37
 
 import json
 
 import clu
+from .commands import jaeger_parser  # noqa
 
 
 __all__ = ['JaegerActor']
 
 
-class JaegerActor(clu.Actor):
+class JaegerActor(clu.LegacyActor):
     """The jaeger SDSS-style actor."""
 
     def __init__(self, fps, *args, **kwargs):
 
         self.fps = fps
+
+        # Pass the FPS instance as the second argument to each parser
+        # command (the first argument is always the actor command).
+        self.parser_args = [fps]
 
         super().__init__(*args, **kwargs)
 
@@ -30,9 +35,7 @@ class JaegerActor(clu.Actor):
     def from_config(cls, fps, config):
         """Creates an actor instance from a configuration file or dict."""
 
-        new_actor = super().from_config(config, fps)
-
-        return new_actor
+        return super().from_config(config, fps)
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
