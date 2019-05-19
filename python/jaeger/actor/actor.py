@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-13 14:27:37
+# @Last modified time: 2019-05-18 17:37:31
 
 import json
 
@@ -32,7 +32,7 @@ class JaegerActor(clu.LegacyActor):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def from_config(cls, fps, config):
+    def from_config(cls, config, fps):
         """Creates an actor instance from a configuration file or dict."""
 
         return super().from_config(config, fps)
