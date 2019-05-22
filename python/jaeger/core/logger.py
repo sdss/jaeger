@@ -113,6 +113,9 @@ class SDSSLogger(logging.Logger):
 
     def __init__(self, name):
 
+        # Placeholder for the last error-level message emitted.
+        self._last_error = None
+
         super(SDSSLogger, self).__init__(name)
 
     def init(self, log_level=logging.INFO, capture_warnings=True):
@@ -199,6 +202,19 @@ class SDSSLogger(logging.Logger):
                 self.warnings_logger.addHandler(self.fh)
 
             self.log_filename = log_file_path
+
+    def handle(self, record):
+        """Handles a record but first stores it."""
+
+        if record.levelno == logging.ERROR:
+            self._last_error = record.getMessage()
+
+        return super().handle(record)
+
+    def get_last_error(self):
+        """Returns the last error emitted."""
+
+        return self._last_error
 
     def set_level(self, level):
         """Sets levels for both sh and (if initialised) fh."""
