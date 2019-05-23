@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-13 11:06:13
+# @Last modified time: 2019-05-22 08:11:27
 
 import asyncio
 import warnings
@@ -439,6 +439,7 @@ class Positioner(StatusMixIn):
         if not self.position_poller.running or not self.status_poller.running:
             log.error(f'positioner {self.positioner_id}: some pollers are not running. '
                       'Try initialising the positioner.')
+            return False
 
         if not any([var is not None for var in [alpha, beta, alpha_speed, beta_speed]]):
             log.error(f'positioner {self.positioner_id}: no inputs.')
