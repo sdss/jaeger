@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-08 15:23:28
+# @Last modified time: 2019-05-22 18:10:31
 
 import asyncio
 import os
@@ -384,7 +384,7 @@ class FPS(BaseFPS):
                                for positioner in self.positioners.values()
                                if positioner.initialised])
 
-    async def _abort_trajectory(self, positioners=None, timeout=1):
+    async def abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
 
         Parameters

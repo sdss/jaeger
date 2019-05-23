@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-08 15:21:18
+# @Last modified time: 2019-05-22 18:10:23
 
 import asyncio
 import pathlib
@@ -159,14 +159,14 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     for cmd in end_traj_cmds:
 
         if cmd.status.failed:
-            await fps._abort_trajectory(trajectories.keys())
+            await fps.abort_trajectory(trajectories.keys())
             failed = True
             break
 
         if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
             log.error(f'positioner_id={cmd.positioner_id} got an '
                       f'INVALID_TRAJECTORY reply. Aborting trajectory.')
-            await fps._abort_trajectory(trajectories.keys())
+            await fps.abort_trajectory(trajectories.keys())
             failed = True
             break
 
