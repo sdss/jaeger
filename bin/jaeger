@@ -36,6 +36,9 @@ def cli_coro(f):
 
 
 @click.group(invoke_without_command=True)
+@click.option('-p', '--profile', type=str, help='The bus interface profile')
+@click.option('-l', '--layout', type=str, help='The FPS layout')
+@click.option('-v', '--verbose', is_flag=True, help='Debug mode')
 @click.option('--no-tron', is_flag=True, help='Does not connect to Tron')
 @click.pass_context
 @cli_coro
@@ -78,8 +81,8 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=F
 
 @jaeger.command(name='upgrade-firmware')
 @click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
-@click.option('-f', '--force', is_flag=True, help='forces skipping of invalid positioners')
-@click.option('-s', '--positioners', type=str, help='comma-separated positioners to upgrade')
+@click.option('-f', '--force', is_flag=True, help='Forces skipping of invalid positioners')
+@click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
 @click.pass_context
 @cli_coro
 def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
@@ -100,7 +103,7 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
 @click.argument('alpha', metavar='ALPHA', type=float)
 @click.argument('beta', metavar='BETA', type=float)
 @click.option('--speed', type=(float, float), default=(1000, 1000),
-              help='the speed for the alpha and beta motors.',
+              help='The speed for the alpha and beta motors.',
               show_default=True)
 @click.pass_context
 @cli_coro
@@ -165,15 +168,15 @@ def set_positions(ctx, positioner_id, alpha, beta):
 @jaeger.command()
 @click.argument('positioner_id', metavar='POSITIONER', type=int)
 @click.option('-n', '--moves', type=int,
-              help='number of moves to perform. Otherwise runs forever.')
+              help='Number of moves to perform. Otherwise runs forever.')
 @click.option('--alpha', type=(int, int), default=(0, 360),
-              help='range of alpha positions.', show_default=True)
+              help='Range of alpha positions.', show_default=True)
 @click.option('--beta', type=(int, int), default=(0, 180),
-              help='range of beta positions.', show_default=True)
+              help='Range of beta positions.', show_default=True)
 @click.option('--speed', type=(int, int), default=(500, 1500),
-              help='range of speed.', show_default=True)
+              help='Range of speed.', show_default=True)
 @click.option('-f', '--skip-errors', is_flag=True,
-              help='if an error occurs, ignores it and '
+              help='If an error occurs, ignores it and '
                    'commands another move.')
 @click.pass_context
 @cli_coro
