@@ -36,12 +36,10 @@ def cli_coro(f):
 
 
 @click.group(invoke_without_command=True)
-@click.option('-p', '--profile', type=str, help='the bus interface profile')
-@click.option('-l', '--layout', type=str, help='the FPS layout')
-@click.option('-v', '--verbose', is_flag=True, help='debug mode')
+@click.option('--no-tron', is_flag=True, help='Does not connect to Tron')
 @click.pass_context
 @cli_coro
-def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
+def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=False):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor."""
@@ -53,7 +51,6 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
     # to the FPS class.
     if profile == 'test':
         VirtualFPS('test', layout=layout)
-        yield from asyncio.sleep(3)
 
     ctx.obj = {}
     ctx.obj['can_profile'] = profile
@@ -62,12 +59,20 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False):
     # If we call jaeger without a subcommand and with the actor flag,
     # start the actor.
     if ctx.invoked_subcommand is None:
+
         fps = FPS(**ctx.obj)
         yield from fps.initialise()
-        actor = JaegerActor.from_config(config['actor'], fps)
+
+        actor_config = config['actor'].copy()
+        actor_config.pop('status', None)
+
+        if no_tron:
+            actor_config.pop('tron', None)
+
+        actor = yield from JaegerActor.from_config(actor_config, fps).run()
         yield from actor.start_status_server(config['actor']['status']['port'],
                                              delay=config['actor']['status']['delay'])
-        yield from actor.run()
+
         yield from actor.server.server.serve_forever()
 
 
