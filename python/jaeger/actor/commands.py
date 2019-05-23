@@ -59,6 +59,20 @@ async def initialise(command, fps, positioner_id, datums=False):
         command.set_status(clu.CommandStatus.DONE, text='Initialisation complete')
 
 
+@jaeger_parser.command()
+@click.argument('positioner-id', type=int, nargs=-1, required=True)
+async def status(command, fps, positioner_id):
+    """Reports the position and status bit of a list of positioners."""
+
+    for pid in positioner_id:
+        positioner = fps[pid]
+        command.write('i', status=[positioner.alpha,
+                                   positioner.beta,
+                                   int(positioner.status),
+                                   positioner.initialised])
+
+    command.set_status(clu.CommandStatus.DONE)
+
 
     if not result:
         command.set_status(clu.CommandStatus.FAILED, text='initialise failed')
