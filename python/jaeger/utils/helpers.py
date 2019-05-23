@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 19:06:59
+# @Last modified time: 2019-05-23 08:52:38
 
 import asyncio
 from concurrent.futures import Executor
@@ -15,7 +15,7 @@ from contextlib import suppress
 from threading import Thread
 
 
-__ALL__ = ['AsyncQueue', 'StatusMixIn', 'Poller', 'AsyncioExecutor', 'as_complete_failer']
+__ALL__ = ['AsyncQueue', 'StatusMixIn', 'Poller', 'AsyncioExecutor']
 
 
 class AsyncQueue(asyncio.Queue):
@@ -267,53 +267,3 @@ class AsyncioExecutor(Executor):
         self._loop.call_soon_threadsafe(self._loop.stop)
         if wait:
             self._thread.join()
-
-
-async def as_complete_failer(aws, on_fail_callback=None, **kwargs):
-    """Similar to `~asyncio.as_complete` but cancels all the tasks
-    if any of them returns `False`.
-
-    Parameters
-    ----------
-    aws : list
-        A list of awaitable objects.
-    on_fail_callback
-        A function or coroutine to call if any of the tasks failed.
-    kwargs : dict
-        A dictionary of keywords to be passed to `~asyncio.as_complete`.
-
-    Returns
-    -------
-    result : bool
-        `True` if all the tasks complete, `False` if any of them failed and
-        the rest were cancelled.
-
-    """
-
-    loop = kwargs.get('loop', asyncio.get_event_loop())
-
-    tasks = [loop.create_task(aw) for aw in aws]
-
-    failed = False
-    for next_completed in asyncio.as_completed(tasks, **kwargs):
-        if not await next_completed:
-            failed = True
-            break
-
-    if failed:
-
-        # Cancel tasks
-        [task.cancel() for task in tasks]
-
-        with suppress(asyncio.CancelledError):
-            await asyncio.gather(*[task for task in tasks])
-
-        if on_fail_callback:
-            if asyncio.iscoroutinefunction(on_fail_callback):
-                await on_fail_callback()
-            else:
-                on_fail_callback()
-
-        return False
-
-    return True

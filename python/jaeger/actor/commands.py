@@ -13,7 +13,6 @@ import click
 
 import clu
 from clu import command_parser as jaeger_parser
-from jaeger.utils import as_complete_failer
 
 
 @jaeger_parser.command()
@@ -32,10 +31,11 @@ async def goto(command, fps, positioner_id, alpha, beta, speed=None):
                                                alpha_speed=speed[0],
                                                beta_speed=speed[1]))
 
-    result = await as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
+    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
 
-    if not result:
-        command.set_status(clu.CommandStatus.FAILED, text='goto failed')
+    if not result[0]:
+        error_message = result[1] or 'goto command failed'
+        command.set_status(clu.CommandStatus.FAILED, text=error_message)
     else:
         command.set_status(clu.CommandStatus.DONE, text='Position reached')
 
@@ -50,7 +50,15 @@ async def initialise(command, fps, positioner_id, datums=False):
     for pid in positioner_id:
         tasks.append(fps.positioners[pid].initialise(initialise_datums=datums))
 
-    result = await as_complete_failer(tasks)
+    result = await clu.as_complete_failer(tasks)
+
+    if not result[0]:
+        error_message = result[1] or 'initialise failed'
+        command.set_status(clu.CommandStatus.FAILED, text=error_message)
+    else:
+        command.set_status(clu.CommandStatus.DONE, text='Initialisation complete')
+
+
 
     if not result:
         command.set_status(clu.CommandStatus.FAILED, text='initialise failed')
