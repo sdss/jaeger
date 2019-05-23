@@ -7,11 +7,15 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-18 17:37:31
+# @Last modified time: 2019-05-22 18:58:12
 
 import json
+import logging
 
 import clu
+from clu.misc.logger import ActorHandler
+from jaeger import log
+
 from .commands import jaeger_parser  # noqa
 
 
@@ -30,6 +34,11 @@ class JaegerActor(clu.LegacyActor):
         self.parser_args = [fps]
 
         super().__init__(*args, **kwargs)
+
+        # Add ActorHandler to log
+        self.actor_handler = ActorHandler(self)
+        log.addHandler(self.actor_handler)
+        self.actor_handler.setLevel(logging.ERROR)
 
     @classmethod
     def from_config(cls, config, fps):
