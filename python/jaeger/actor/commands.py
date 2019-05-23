@@ -21,7 +21,7 @@ from clu import command_parser as jaeger_parser
 @click.argument('beta', type=click.FloatRange(0., 360.))
 @click.option('--speed', type=click.FloatRange(0., 2000.), nargs=2)
 async def goto(command, fps, positioner_id, alpha, beta, speed=None):
-    """Sends a positioner to a given (alpha, beta) position."""
+    """Sends positioners to a given (alpha, beta) position."""
 
     speed = speed or [None, None]
 
@@ -44,7 +44,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed=None):
 @click.argument('positioner-id', type=int, nargs=-1)
 @click.option('--datums', is_flag=True, help='If set, initialises the datums.')
 async def initialise(command, fps, positioner_id, datums=False):
-    """Sends a positioner to a given (alpha, beta) position."""
+    """Initialises positioners."""
 
     tasks = []
     for pid in positioner_id:
