@@ -7,7 +7,9 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 19:14:44
+# @Last modified time: 2019-05-23 23:21:03
+
+import pathlib
 
 import click
 
@@ -74,7 +76,15 @@ async def status(command, fps, positioner_id):
     command.set_status(clu.CommandStatus.DONE)
 
 
-    if not result:
-        command.set_status(clu.CommandStatus.FAILED, text='initialise failed')
-    else:
-        command.set_status(clu.CommandStatus.DONE, text='Initialisation complete')
+@jaeger_parser.command()
+@click.argument('path', type=str)
+async def trajectory(command, fps, path):
+    """Sends a trajectory from a file."""
+
+    path = pathlib.Path(path).expanduser()
+    if not path.exists():
+        raise click.BadParameter(f'path {path!s} does not exist.')
+
+    await fps.send_trajectory(str(path))
+
+    command.set_status(clu.CommandStatus.DONE, text='Trajectory completed')
