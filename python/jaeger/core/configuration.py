@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-08 22:11:28
+# @Last modified time: 2019-06-16 16:35:26
 
 import os
 
@@ -90,7 +90,7 @@ def get_config(name, allow_user=True, user_path=None, config_envvar=None,
     else:
         return config
 
-    user_config = yaml.load(open(custom_config_fn))
+    user_config = yaml.load(open(custom_config_fn)) or {}
 
     if merge_mode == 'update':
         return merge_config(user_config, config)
