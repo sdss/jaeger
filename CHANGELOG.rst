@@ -15,7 +15,8 @@ Changelog
 * Load layout when `.FPS` is instantiated.
 * Improved logging system.
 * Added initial actor features.
-* Initial implementation of the ``CAN@net`` bus.
+* :feature:`9` Initial implementation of the ``CAN@net`` bus.
+* Renamed ``interfaces -> profiles`` in configuration.
 
 * :release:`0.1.0 <2018-10-10>`
 * Initial documentation.
