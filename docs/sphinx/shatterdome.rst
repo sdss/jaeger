@@ -90,7 +90,7 @@ This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` 
 Initialisation
 ^^^^^^^^^^^^^^
 
-Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected and sets their status. Each one of the positioners that have replied are subsequently initialised as detailed in :ref:`positioner-initialise`.
+Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `~.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected and sets their status. Each one of the positioners that have replied are subsequently initialised as detailed in :ref:`positioner-initialise`.
 
 Sending commands
 ^^^^^^^^^^^^^^^^
