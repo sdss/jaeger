@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 12:00:51
+# @Last modified time: 2019-06-18 16:37:41
 
 import asyncio
 import os
@@ -159,6 +159,11 @@ class BaseFPS(object):
             status[positioner.positioner_id] = {'position': [pos_alpha, pos_beta],
                                                 'status': pos_status,
                                                 'firmware': pos_firmware}
+
+        try:
+            status['devices'] = self.can.device_status
+        except AttributeError:
+            pass
 
         return status
 
