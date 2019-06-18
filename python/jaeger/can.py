@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 16:20:25
+# @Last modified time: 2019-06-18 16:54:37
 
 import asyncio
 import binascii
@@ -136,7 +136,11 @@ class JaegerCAN(object):
         for channel in channels:
             log.info(f'creating interface {interface_name}, '
                      f'channel={channel!r}, args={args}, kwargs={kwargs}.')
-            self.interfaces.append(InterfaceClass(channel, *args, **kwargs))
+            try:
+                self.interfaces.append(InterfaceClass(channel, *args, **kwargs))
+            except Exception as ee:
+                raise ConnectionRefusedError(
+                    f'connection to {interface_name}:{channel} failed: {ee}.')
 
         self._start_notifier()
 
