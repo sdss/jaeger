@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 22:06:30
+# @Last modified time: 2019-06-18 11:29:39
 
 import asyncio
 import os
@@ -219,7 +219,7 @@ class FPS(BaseFPS):
 
         self.positioner_to_bus = {}
 
-        if not self.can.multichannel and not self.can.multibus:
+        if len(self.can.interfaces) == 1 and not self.can.multibus:
             self._is_multibus = False
             return
 

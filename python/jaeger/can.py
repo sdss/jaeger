@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 11:00:19
+# @Last modified time: 2019-06-18 11:33:53
 
 import asyncio
 import binascii
@@ -29,26 +29,22 @@ from jaeger.maskbits import CommandStatus
 __ALL__ = ['JaegerCAN', 'CANnetInterface', 'JaegerReaderCallback', 'INTERFACES']
 
 
-#: Accepted CAN interfaces with the format.
+#: Accepted CAN interfaces and whether they are multibus.
 INTERFACES = {
     'slcan': {
         'class': can.interfaces.slcan.slcanBus,
-        'multichannel': False,
         'multibus': False
     },
     'socketcan': {
         'class': can.interfaces.socketcan.SocketcanBus,
-        'multichannel': False,
         'multibus': False
     },
     'virtual': {
         'class': can.interfaces.virtual.VirtualBus,
-        'multichannel': False,
         'multibus': False
     },
     'cannet': {
         'class': jaeger.interfaces.cannet.CANNetBus,
-        'multichannel': True,
         'multibus': True
     }
 }
@@ -108,11 +104,11 @@ class JaegerCAN(object):
         Queue of messages to be sent to the bus. The messages are sent as
         soon as the bus has finished processing any commands with the same
         ``command_id`` and ``positioner_id``.
-    interfaces
-        A list of `python-can`_ interfaces, one for each of the ``channels``.
     listener : JaegerReaderCallback
         A `.JaegerReaderCallback` instance that runs a callback when
         a new message is received from the bus.
+    multibus : bool
+        Whether the interfaces are multibus.
     notifier : can.Notifier
         A `can.Notifier` instance that processes messages from the list
         of buses, asynchronously.
@@ -127,15 +123,16 @@ class JaegerCAN(object):
         self.interface_name = interface_name
 
         InterfaceClass = INTERFACES[interface_name]['class']
-        self.multichannel = INTERFACES[interface_name]['multichannel']
+
         self.multibus = INTERFACES[interface_name]['multibus']
 
         if not isinstance(channels, (list, tuple)):
             channels = [channels]
 
+        #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
         self.interfaces = []
         for channel in channels:
-            log.info(f'starting bus with interface {interface_name}, '
+            log.info(f'creating interface {interface_name}, '
                      f'channel={channel!r}, args={args}, kwargs={kwargs}.')
             self.interfaces.append(InterfaceClass(channel, *args, **kwargs))
 
@@ -185,7 +182,7 @@ class JaegerCAN(object):
         log_header = (f'({message.command.command_id.name!r}, '
                       f'{message.command.positioner_id}): ')
 
-        if not self.multichannel and not self.multibus:
+        if len(self.interfaces) == 1 and not self.multibus:
             self.interfaces[0].send(message)
             return
 
@@ -202,7 +199,8 @@ class JaegerCAN(object):
             can_log.debug(log_header + 'sending message with '
                           f'arbitration_id={message.arbitration_id} '
                           f'and data={data_hex!r} to '
-                          f'interface {iface_idx}, bus={0 if not bus else bus!r}.')
+                          f'interface {iface_idx}, '
+                          f'bus={0 if not bus else bus!r}.')
 
             if bus:
                 iface.send(message, bus=bus)
@@ -308,13 +306,13 @@ class JaegerCAN(object):
         if interface not in INTERFACES:
             raise ValueError(f'invalid interface {interface}')
 
-        multichannel = INTERFACES[interface]['multichannel']
-        if multichannel:
-            assert 'channels' in config_data, 'missing configuration argument \'channels\'.'
-            channels = config_data.pop('channels')
-        else:
-            assert 'channel' in config_data, 'missing configuration argument \'channel\'.'
+        if 'channel' in config_data:
             channels = [config_data.pop('channel')]
+        elif 'channels' in config_data:
+            channels = config_data.pop('channels')
+            assert isinstance(channels, (list, tuple)), 'channels must be a list'
+        else:
+            raise KeyError('channel or channels key not found.')
 
         if interface == 'cannet':
             return CANnetInterface(interface, channels, loop=loop, **config_data)
@@ -351,7 +349,8 @@ class JaegerCAN(object):
     def _can_queue_command(self, command):
         """Checks whether we can queue the command."""
 
-        return not self.is_command_running(command.positioner_id, command.command_id)
+        return not self.is_command_running(command.positioner_id,
+                                           command.command_id)
 
 
 class CANnetInterface(JaegerCAN):
