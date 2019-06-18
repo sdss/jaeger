@@ -6,7 +6,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 16:12:00
+# @Last modified time: 2019-06-17 17:23:54
 
 import socket
 import time
@@ -146,7 +146,7 @@ class CANNetBus(BusABC):
                           dlc=0,
                           data=msgStr)
             msg.bus = None
-            msg.interface = None
+            msg.interface = self
             return msg, False
 
         # check if it is the proper CAN bus
