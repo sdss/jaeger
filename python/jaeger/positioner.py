@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 21:06:42
+# @Last modified time: 2019-06-18 15:06:38
 
 import asyncio
 import warnings
@@ -74,11 +74,11 @@ class Positioner(StatusMixIn):
 
         if poller == 'status' or poller == 'all':
             if not self.status_poller.running:
-                await self.status_poller.start()
+                self.status_poller.start()
 
         if poller == 'position' or poller == 'all':
             if not self.position_poller.running:
-                await self.position_poller.start()
+                self.position_poller.start()
 
     async def stop_pollers(self, poller='all'):
         """Stops the status and position pollers.

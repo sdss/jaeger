@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 21:34:04
+# @Last modified time: 2019-06-18 15:06:19
 
 import asyncio
 from concurrent.futures import Executor
@@ -197,9 +197,9 @@ class Poller(object):
             original delay."""
 
         await self.stop()
-        await self.start(delay)
+        self.start(delay)
 
-    async def start(self, delay=None):
+    def start(self, delay=None):
         """Starts the poller.
 
         Parameters
