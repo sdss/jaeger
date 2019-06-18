@@ -6,7 +6,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 17:24:17
+# @Last modified time: 2019-06-18 11:41:39
 
 import socket
 import time
@@ -15,7 +15,7 @@ from can import BusABC, Message
 
 
 class CANNetBus(BusABC):
-    """Interface for Ixxat CAN@net NT 200/420.
+    """Interface for Ixxat CAN\@net NT 200/420.
 
     Parameters
     ----------
