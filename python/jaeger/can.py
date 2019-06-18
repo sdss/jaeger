@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 16:57:37
+# @Last modified time: 2019-06-17 17:03:32
 
 import asyncio
 import binascii
@@ -26,7 +26,7 @@ from jaeger.commands import CommandID
 from jaeger.maskbits import CommandStatus
 
 
-__ALL__ = ['JaegerCAN', 'JaegerReaderCallback', 'INTERFACES']
+__ALL__ = ['JaegerCAN', 'CANnetInterface', 'JaegerReaderCallback', 'INTERFACES']
 
 
 #: Accepted CAN interfaces with the format.
