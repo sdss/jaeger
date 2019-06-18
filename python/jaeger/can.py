@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 17:03:32
+# @Last modified time: 2019-06-17 17:21:14
 
 import asyncio
 import binascii
@@ -183,6 +183,9 @@ class JaegerCAN(object):
     def send_to_interface(self, message, interfaces=None, bus=None):
         """Sends the message to the appropriate interface and bus."""
 
+        log_header = (f'({message.command.command_id.name!r}, '
+                      f'{message.command.positioner_id}): ')
+
         if not self.multichannel and not self.multibus:
             self.interfaces[0].send(message)
             return
@@ -194,6 +197,14 @@ class JaegerCAN(object):
             interfaces = [interfaces]
 
         for iface in interfaces:
+
+            iface_idx = self.interfaces.index(iface)
+            data_hex = binascii.hexlify(message.data).decode()
+            can_log.debug(log_header + 'sending message with '
+                          f'arbitration_id={message.arbitration_id} '
+                          f'and data={data_hex!r} to '
+                          f'interface {iface_idx}, bus={0 if not bus else bus!r}.')
+
             if bus:
                 iface.send(message, bus=bus)
             else:
@@ -255,19 +266,14 @@ class JaegerCAN(object):
 
             for message in cmd.get_messages():
 
+                # Get the interface and bus to which to send the message
+                interfaces = getattr(cmd, '_interface', None)
+                bus = getattr(cmd, '_bus', None)
+
                 if cmd.status.failed:
                     can_log.debug(log_header + 'not sending more messages ' +
                                   'since this command has failed.')
                     break
-
-                data_hex = binascii.hexlify(message.data).decode()
-                can_log.debug(log_header + 'sending message with '
-                              f'arbitration_id={message.arbitration_id} '
-                              f'and data={data_hex!r}.')
-
-                # Get the interface and bus to which to send the message
-                interfaces = getattr(cmd, '_interface', None)
-                bus = getattr(cmd, '_bus', None)
 
                 self.send_to_interface(message, interfaces=interfaces, bus=bus)
 
