@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 15:06:19
+# @Last modified time: 2019-06-18 16:42:01
 
 import asyncio
 from concurrent.futures import Executor
@@ -215,6 +215,8 @@ class Poller(object):
 
         self.delay = delay or self._orig_delay
         self._task = asyncio.create_task(self.poller())
+
+        return self
 
     async def stop(self):
         """Cancel the poller."""
