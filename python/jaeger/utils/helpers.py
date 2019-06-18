@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-23 08:52:38
+# @Last modified time: 2019-06-17 21:34:04
 
 import asyncio
 from concurrent.futures import Executor
@@ -240,7 +240,7 @@ class Poller(object):
 class AsyncioExecutor(Executor):
     """An executor to run coroutines from a normal function.
 
-    Copied from `http://bit.ly/2IYmqzN`__.
+    Copied from http://bit.ly/2IYmqzN.
 
     To use, do ::
 
