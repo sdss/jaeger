@@ -6,22 +6,28 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-14 18:33:55
+# @Last modified time: 2019-06-17 16:12:00
 
-import time
-import logging
 import socket
+import time
 
 from can import BusABC, Message
 
-logger = logging.getLogger(__name__)
-
 
 class CANNetBus(BusABC):
-    """Interface for ixxat can@Net NT 200 compatible interfaces (win32/linux).
+    """Interface for Ixxat CAN@net NT 200/420.
 
-    Only one CAN channel supported at the moment (NT200 has 2 channels and
-    NT420 has 4 channels)
+    Parameters
+    ----------
+    channel : str
+        The IP address of the remote device (e.g. ``192.168.1.1``, ...).
+    port : int
+        The port of the device.
+    bitrate : int
+        Bitrate in bit/s.
+    buses : list
+        The buses to open in the device. Messages that do not specify a
+        bus will be sent to all the open buses.
 
     """
 
@@ -44,62 +50,72 @@ class CANNetBus(BusABC):
 
     LINE_TERMINATOR = b'\n'
 
-    def __init__(self, ip, channel=1, bitrate=None, **kwargs):
-        """
-        ip : str
-            IP address of remote device (e.g. ``192.168.1.1``, ...).
-        channel : int
-            The channel of the device to use.
-        bitrate:
-            Bitrate in bit/s
-        """
+    def __init__(self, channel, port=None, bitrate=None, buses=[1], **kwargs):
 
-        if not ip:  # if None or empty
+        if not channel:  # if None or empty
             raise TypeError('Must specify a TCP address.')
 
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._serverAddress = (ip, self._REMOTE_PORT)
+        if not bitrate:
+            raise TypeError('Must specify a bitrate.')
 
-        # self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        port = port or self._REMOTE_PORT
+
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._serverAddress = (channel, port)
 
         self._socket.connect(self._serverAddress)
 
-        # self._socket.setblocking(False)
-
         self._buffer = bytearray()
 
-        self._channel = channel    # TODO only using channel 1 so far
-        if bitrate is not None:
-            self.close()
-            if bitrate in self._BITRATES:
-                self.write(f'CAN {self._channel} INIT STD {self._BITRATES[bitrate]}')
-                print(self._socket.recv(64))
-                self.write(f'CAN {self._channel} FILTER CLEAR')
-                print(self._socket.recv(64))
-                self.write(f'CAN {self._channel} FILTER ADD EXT 00000000 00000000')
-                print(self._socket.recv(64))
-            else:
-                raise ValueError('Invalid bitrate, choose one of ' +
-                                 (', '.join(self._BITRATES)) + '.')
+        self.bitrate = bitrate
+        self.buses = buses
 
         self.open()
 
-        super(CANNetBus, self).__init__(ip, bitrate=None, **kwargs)
+        self.channel_info = f'CAN@net channel={channel!r}, buses={self.buses!r}'
+
+        super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
 
     def write(self, string):
+
         self._socket.send(string.encode() + self.LINE_TERMINATOR)
 
-    def open(self):
-        self.write(f'CAN {self._channel} START')
-        print(self._socket.recv(64))
+    def _write_to_buses(self, string, buses=None):
+        """Writes a string to the correct bus."""
 
-    def close(self):
-        self.write(f'CAN {self._channel} STOP')
-        print(self._socket.recv(64))
+        if not buses:
+            buses = self.buses
+        elif not isinstance(buses, (list, tuple)):
+            buses = [buses]
+
+        for bus in buses:
+            self.write(string.format(bus=bus))
+
+    def open(self):
+
+        self.close()
+
+        if self.bitrate in self._BITRATES:
+            self._write_to_buses('CAN {bus} ' + f'INIT STD {self._BITRATES[self.bitrate]}')
+            self._write_to_buses('CAN {bus} ' + f'FILTER CLEAR')
+            self._write_to_buses('CAN {bus} ' + 'FILTER ADD EXT 00000000 00000000')
+        else:
+            raise ValueError('Invalid bitrate, choose one of ' +
+                             (', '.join(self._BITRATES)) + '.')
+
+        self._write_to_buses('CAN {bus} START')
+
+        # Clear buffer
+        self._socket.recv(8192)
+
+    def close(self, buses=None):
+
+        self._write_to_buses('CAN {bus} STOP', buses=buses)
 
     def _recv_internal(self, timeout):
-        # if timeout != self._socket.gettimeout():
-        #    self._socket.settimeout(timeout)
+
+        if timeout != self._socket.gettimeout():
+            self._socket.settimeout(timeout)
 
         canId = None
         remote = False
@@ -115,22 +131,27 @@ class CANNetBus(BusABC):
             return None, False
 
         msgStr, _, self._buffer = self._buffer.partition(self.LINE_TERMINATOR)
-        # print('message: ' + msgStr.decode())
-        # print('still in buffer: ' + self._buffer.decode())
 
         readStr = msgStr.decode()
         if not readStr:
             return None, False
 
-        # message is M 1 CSD 100 55 AA 55 AA or M 2 CED 18FE0201 01 02 03 04 05 06 07 08
-        # check if we have a message
+        # Message is M 1 CSD 100 55 AA 55 AA or M 2 CED 18FE0201 01 02 03 04 05 06 07 08
+        # Check if we have a message from the CAN network. Otherwise this is a messahe
+        # from the device so we return it.
         data = readStr.split(' ')
         if data[0] != 'M':
-            # we don't have a message
-            return None, False
+            msg = Message(arbitration_id=0,
+                          timestamp=time.time(),
+                          dlc=0,
+                          data=msgStr)
+            msg.bus = None
+            msg.interface = None
+            return msg, False
 
-        # check if it is the proper CAN bus (TODO handle multiple CAN buses)
-        if int(data[1]) != self._channel:
+        # check if it is the proper CAN bus
+        bus = int(data[1])
+        if bus not in self.buses:
             return None, False
 
         # check if standard packet, FD not supported
@@ -167,28 +188,36 @@ class CANNetBus(BusABC):
                           is_remote_frame=remote,
                           dlc=dlc,
                           data=frame)
-            # print(msg)
+            msg.bus = bus
+            msg.interface = self
             return msg, False
+
         return None, False
 
-    def send(self, msg, timeout=None):
-        # if timeout != self._socket.gettimeout():
-        #     self._socket.settimeout(timeout)
+    def send(self, msg, bus=None, timeout=None):
 
-        if msg.is_extended_id:
-            if msg.is_remote_frame:
-                sendStr = f'M {self._channel} CER {msg.arbitration_id:08X}'
+        buses = bus or self.buses
+        if not isinstance(buses, (list, tuple)):
+            buses = [buses]
+
+        for bus in buses:
+
+            sendStr = f'M {bus} '
+
+            if msg.is_extended_id:
+                if msg.is_remote_frame:
+                    sendStr += f'CER {msg.arbitration_id:08X}'
+                else:
+                    sendStr += f'CED {msg.arbitration_id:08X}'
             else:
-                sendStr = f'M {self._channel} CED {msg.arbitration_id:08X}'
-        else:
-            if msg.is_remote_frame:
-                sendStr = f'M {self._channel} CSR {msg.arbitration_id:03X}'
-            else:
-                sendStr = f'M {self._channel} CSD {msg.arbitration_id:03X}'
+                if msg.is_remote_frame:
+                    sendStr += f'CSR {msg.arbitration_id:03X}'
+                else:
+                    sendStr += f'CSD {msg.arbitration_id:03X}'
 
-        sendStr += ''.join([' %02X' % b for b in msg.data])
+            sendStr += ''.join([' %02X' % b for b in msg.data])
 
-        self.write(sendStr)
+            self.write(sendStr)
 
     def shutdown(self):
         self.close()
