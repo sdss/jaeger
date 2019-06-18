@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 11:29:39
+# @Last modified time: 2019-06-18 12:00:51
 
 import asyncio
 import os
@@ -202,6 +202,9 @@ class FPS(BaseFPS):
 
         self.loop = loop or asyncio.get_event_loop()
 
+        #: dict: The mapping between positioners and buses.
+        self.positioner_to_bus = {}
+
         if isinstance(can, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
             self.can = can
@@ -216,8 +219,6 @@ class FPS(BaseFPS):
         Only relevant if the bus interface is multichannel/multibus.
 
         """
-
-        self.positioner_to_bus = {}
 
         if len(self.can.interfaces) == 1 and not self.can.multibus:
             self._is_multibus = False

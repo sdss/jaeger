@@ -9,30 +9,32 @@ In the `shatterdome <http://pacificrim.wikia.com/wiki/Shatterdome>`__ we'll have
 The `CAN bus <.JaegerCAN>`
 --------------------------
 
-The `.JaegerCAN` class provides the lowest level access to the positioners via the `CAN <https://en.wikipedia.org/wiki/CAN_bus>`__ bus. `.JaegerCAN` is simply a class factory that allows to subclass from the appropriate python-can_ `~can.BusABC` subclass, while also adding specific jaeger functionality. Normally `.JaegerCAN` is instantiated when `.FPS` is and you won't have to use it unless you want to access the bus directly.
+The `.JaegerCAN` class provides the lowest level access to the positioners via the `CAN <https://en.wikipedia.org/wiki/CAN_bus>`__ bus. `.JaegerCAN` provides access to the appropriate python-can_ `~can.BusABC` subclass, while also adding including jaeger functionality. Normally `.JaegerCAN` is instantiated when `.FPS` is and you won't have to use it unless you want to access the bus directly.
 
-`.JaegerCAN` can be instantiated by passing it an ``interface`` and the parameters necessary to instantiate the corresponding python-can_ bus. ``interface`` must be one of `~.can.VALID_INTERFACES`, which defines the correlation between interfaces and python-can buses. For instance, to create a `slcan <can.interfaces.slcan.slcanBus>` bus we do ::
+`.JaegerCAN` can be instantiated by passing it an ``interface`` and the parameters necessary to instantiate the corresponding python-can_ bus. ``interface`` must be one of `~.can.INTERFACES`, which defines the correlation between interfaces and python-can buses. For instance, to create a `slcan <can.interfaces.slcan.slcanBus>` bus we do ::
 
-    >>> bus = JaegerCAN('slcan', channel='/dev/tty.usbserial-LW1FJ8ZR', ttyBaudrate=1000000 bitrate=1000000)
-    >>> isinstance(bus, slcanBus)
+    >>> can = JaegerCAN('slcan', channel='/dev/tty.usbserial-LW1FJ8ZR', ttyBaudrate=1000000 bitrate=1000000)
+    >>> isinstance(bus.interfaces[0], slcanBus)
     True
 
 Loading from a profile
 ^^^^^^^^^^^^^^^^^^^^^^
 
-The `configuration file <config-files>`_ contains a section in which multiple bus interfaces can be defined. An example of bus interfaces is
+The `configuration file <config-files>`_ contains a section in which multiple bus interfaces can be defined. An example of bus profile is
 
 .. code-block:: YAML
 
-    interfaces:
-        default:
-            interface: slcan
-            channel: /dev/tty.usbserial-LW1FJ8ZR
-            ttyBaudrate: 1000000
+    profiles:
+        default: cannet
+        cannet:
+            interface: cannet
+            channels: [192.168.0.10]
+            port: 19228
+            buses: [1, 2, 3, 4]
             bitrate: 1000000
-        test:
-            interface: test
-            channel: none
+        slcan:
+            interface: slcan
+            channel: /dev/tty.usbserial-LW3HTDSY
             ttyBaudrate: 1000000
             bitrate: 1000000
 
@@ -42,17 +44,36 @@ These configurations can be loaded by using the `.JaegerCAN.from_profile` classm
     >>> bus
     <jaeger.can.JaegerCAN at 0x117594128>
 
-The ``default`` interface can be loaded by calling `~.JaegerCAN.from_profile` without arguments.
+The ``default`` profile can be loaded by calling `~.JaegerCAN.from_profile` without arguments. Note that in the case of ``cannet`` we define multiple interfaces as a list of ``channels`` instead of as a single ``channel``. We'll talk about multiple interfaces in :ref:`multibus`.
 
 .. _can-queue:
 
 The command queue
 ^^^^^^^^^^^^^^^^^
 
-Because we need to be able to associate replies from the bus with the command that triggered them, and given that commands and replies don't have unique identifiers beyond the command and positioner ids, we do not allow more than one instance the pair (`command_id <jaeger.commands.CommandID>`, positioner_id) to run at the same time. When a command is executed (ultimately by calling `.Command.send`), the command is put in a queue. When a new command is available in the queue, the code checks that no other command with the same ``command_id`` and ``positioner_id`` are `already running <.JaegerCAN.running_commands>`. If no identical command is running, all the messages from the command are sent to the bus and the command remains in `~.JaegerCAN.running_commands` until it has been completed (see the command-done_ section for more details). If a command is running, the new command is re-queued until the previous command has finished.
+Because we need to be able to associate replies from the bus with the command that triggered them, and given that commands and replies don't have unique identifiers beyond the command and positioner ids, we do not allow more than one instance the pair (`command_id <jaeger.commands.CommandID>`, positioner_id) to run at the same time. When a command is executed (ultimately by calling `.FPS.send_command`), the command is put in a queue. When a new command is available in the queue, the code checks that no other command with the same ``command_id`` and ``positioner_id`` are `already running <.JaegerCAN.running_commands>`. If no identical command is running, all the messages from the command are sent to the bus and the command remains in `~.JaegerCAN.running_commands` until it has been completed (see the command-done_ section for more details). If a command is running, the new command is re-queued until the previous command has finished.
 
 Broadcast commands are a bit special: when a broadcast command (``positioner_id=0``) is running no other command with the same ``command_id`` will run until the broadcast has finished, regardless of ``positioner_id``.
 
+.. _multibus:
+
+Multibus interfaces
+^^^^^^^^^^^^^^^^^^^
+
+Some CAN devices provide multiple buses (for example, the `Ixxat CAN\@net device <.CANNetBus>`). In addition, the positioners in the FPS may not form a single CAN network since they can be connected to different buses in different devices. `.JaegerCAN` provides support for multichannel and multibus CAN networks. Because these terms can sometimes be confusing, we assume the following nomenclature:
+
+- A CAN device is called an *interface*, which may consist of one or multiple *buses*.
+- Each interface is defined by its *channel* or route to it. The channel can be a TCP address, a device path, etc. Some interfaces require more parameters to define the connection method (for example, a TCP port). Sometimes we use channel and interface as synonyms.
+- A *bus* is the minimal CAN network unit. All positioners connected to the same bus belong to the same CAN network.
+
+In jaeger, the `.JaegerCAN` instance represents the entirety of the CAN network, even when it's composed of multiple interfaces with several buses each. The attribute `~.JaegerCAN.interfaces` contains a list of all the loaded interfaces. At this point, jaeger does not support mixing interfaces of different types.
+
+Whether an interface is multibus or not is defined in `.INTERFACES`. The buses to be used can be defined to `.JaegerCAN` via the ``buses`` argument. An example of a multibus, python-can_ interface is `.CANNetBus`.
+
+The mapping between positioners and buses is done in the :ref:`FPS class <fps>`. When `.FPS` is instantiated using multibus interfaces (or multiple single bus interfaces), a `.GET_ID` command is broadcast to all the available interfaces and buses. The replies from the positioners are used to create a `.positioner_to_bus` mapping. Because we need to know from what interface and bus the messages originate from, it is assumed that a multibus interface appends ``interface`` and ``bus`` attributes to the returned messages.
+
+
+.. _fps:
 
 The `.FPS` class
 ----------------
@@ -64,14 +85,12 @@ To instantiate with the default options, simply do ::
     >>> from jaeger import FPS
     >>> fps = FPS()
 
-This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` interface profile and will use the default layout stored in the configuration file under ``config['fps']['default_layout']`` to add instances of `.Positioner` to `.FPS.positioners`.
+This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` profile and will use the default layout stored in the configuration file under ``config['fps']['default_layout']`` to add instances of `.Positioner` to `.FPS.positioners`.
 
 Initialisation
 ^^^^^^^^^^^^^^
 
-Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected and sets their status.
-
-.. important:: At this time running `.FPS.initialise` does not ensure that each one of the positioners will have their datums initialised. This is because initialising datums will move the positioners which, without path planning, could induce collisions. Instead, each positioner needs to be manually initialised with `.Positioner.initialise`. See the `positioner initialisation <positioner-initialise>`_ section for more details.
+Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected and sets their status. Each one of the positioners that have replied are subsequently initialised as detailed in :ref:`positioner-initialise`.
 
 Sending commands
 ^^^^^^^^^^^^^^^^
@@ -197,20 +216,20 @@ Commands
 
 `.Command` provides a base class to implement wrappers around firmware commands. It handles the creation of messages to be passed to the bus, encodes the ``arbitration id`` from the ``command_id` and ``positioner_id``, processes replies, and keeps a record of the status of a command. Commands that accept extra data (e.g., positions of the alpha and beta arms) also do the encoding of the input parameters to the format that the firmware command understands, making them easier to use. Commands are `asyncio.Future` objects and can be awaited until complete. A list of all the available commands can be found `here <command-list>`_.
 
-Commands can sent directly to the bus ::
+Commands can sent directly to the FPS ::
 
     >>> from jaeger.commands import GetStatus
     >>> status_cmd = GetStatus(positioner_id=4)
     >>> status_cmd
     <Command GET_STATUS (positioner_id=4, status='READY')>
-    >>> status_cmd.send()
+    >>> fps.send_command(status_cmd)
     True
     >>> await status_cmd
 
 This is what happens when you execute the above snippet:
 
 - When created, the command has status `~.maskbits.CommandStatus.READY` and is prepared to be sent to the bus.
-- When we `~.Command.send` the command, it gets put in the `bus queue <can-queue>`_.
+- When we `~.FPS.send_command` the command, it gets put in the `bus queue <can-queue>`_.
 - Shortly after, the bus processes the command from the queue and checks that no other command with the same ``(command_id, positioner_id)`` is running. If that's the case the command status is changed to `~.maskbits.CommandStatus.RUNNING` and all the `~.commands.base.Message` that compose the command are sent to the bus. A `~.commands.base.Message` is just a wrapper that contains the ``arbitration_id`` and the data to send as bytes. Most command will issue just a message but some such as `~.commands.SendTrajectoryData` can send multiple messages.
 - The bus listens to replies from the bus and redirects them to the command with the matching ``(command_id, positioner_id)`` where they are processed.
 - Once the expected replies have been received, or when the command times out, the command is marked `~.maskbits.CommandStatus.DONE` or `~.maskbits.CommandStatus.FAILED`. See the :ref:`command-done` section for more details.
@@ -275,7 +294,6 @@ The ``timeout`` can be set to `None`, in which case the command will never time 
     asyncio.run(get_status())
 
 
-
 Internals
 ---------
 
@@ -288,8 +306,9 @@ jaeger uses the default configuration file system from the `SDSS Python template
 
 .. code-block:: YAML
 
-    interfaces:
-        default:
+    profiles:
+        default: slcan
+        slcan:
             interface: slcan
             channel: /dev/tty.usbserial-LW1FJ8ZR
             ttyBaudrate: 1000000

@@ -4,7 +4,7 @@
 Introduction to jaeger
 ======================
 
-`jaeger <http://pacificrim.wikia.com/wiki/Jaeger>`_ provides high level control for the SDSS-V `Focal Plane System <https://wiki.sdss.org/display/FPS>`__. Some of the things that jaeger does are:
+`jaeger <http://pacificrim.wikia.com/wiki/Jaeger>`_ provides high level control for the SDSS-V `Focal Plane System <https://wiki.sdss.org/display/FPS>`__. Some of the features that jaeger provide are:
 
 - Wraps the low level CAN commands for simpler use.
 - Provides a framework that is independent of the CAN interface used (by using the python-can_ library).
@@ -21,11 +21,9 @@ The code for jaeger is developed in `GitHub <https://github.com/sdss/jaeger>`__ 
 
 To check out the development version do ::
 
-    git clone --recurse-submodules git://github.com/sdss/jaeger.git
+    git clone git://github.com/sdss/jaeger.git
 
-.. note:: Currently jaeger uses a custom version of the python-can_ library, included as a submodule. Once a new version of python-can has been released with the necessary changes we should be able to deprecate the use of the submodule.
-
-jaeger is developed as an `asyncio <https://docs.python.org/3/library/asyncio.html>`__ library and a certain familiarity with asynchronous programming. The actor functionality (TCP/IP connection, command parser, inter-actor communication) is built on top of `asyncioActor <https://github.com/albireox/asyncioActor>`__.
+jaeger is developed as an `asyncio <https://docs.python.org/3/library/asyncio.html>`__ library and a certain familiarity with asynchronous programming. The actor functionality (TCP/IP connection, command parser, inter-actor communication) is built on top of `CLU <https://github.com/sdss/clu>`__.
 
 
 .. _intro-simple:
@@ -47,9 +45,8 @@ A simple jaeger program
         fps = FPS()
         await fps.initialise()
 
-        # Initialise positioner 4
-        pos = fps.positioners[4]
-        await pos.initialise()
+        # Print the status of positioner 4
+        print(fps[4].status)
 
         # Send positioner 4 to alpha=90, beta=45
         await pos.goto(alpha=90, beta=45)
@@ -61,9 +58,7 @@ A simple jaeger program
 
 This code runs the `coroutine <https://docs.python.org/3/library/asyncio-task.html#coroutines>`__ ``main()`` until it completes. First we create an instance of `~jaeger.fps.FPS` , the main jaeger class that contains information about all the positioners and the `CAN bus <jaeger.can.JaegerCAN>`. When called without extra parameters, `~jaeger.fps.FPS` loads the default CAN interface and positioner layout. The real initialisation happens when calling `fps.initialise <jaeger.fps.FPS.initialise>`. Note that `~jaeger.fps.FPS.initialise` is a coroutine and needs to be awaited until completion. During initialisation, all the robots in the layout are queried by their status and firmware, and `~jaeger.positioner.Positioner` instances are added to `fps.positioners <jaeger.fps.FPS.positioners>`.
 
-Next we initialise one of the positioners. This make sure that the positioner is not moving, initialises the datums if necessary, and starts a loop for polling status and position. It also sets the default motor speeds. Finally, we command the positioner to go to a certain position in alpha and beta. The `Positioner.goto <jaeger.positioner.Positioner.goto>` coroutine finishes once the move has been completed and the status reaches `~jaeger.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.
-
-.. note:: At this time we do not autoinitialise the positioners because initialising datums in robots that do not know their position can result in large movements that, without path planning, could cause collisions. This will be improved and streamlined once the interface with kaiju_ has been implemented.
+Once the initialisation is complete we command the positioner to go to a certain position in alpha and beta. The `Positioner.goto <jaeger.positioner.Positioner.goto>` coroutine finishes once the move has been completed and the status reaches `~jaeger.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.
 
 
 Using jaeger from IPython
@@ -75,9 +70,7 @@ Since its 7.0 version, IPython provides `experimental support for asyncio <https
 Scheduling commands
 -------------------
 
-The are two ways to send a new command to the CAN bus and wait for a reply:
-
-- Use the `.FPS.send_command` method, which returns a `.Command` instance. Note that the command does *not* get executed until it is awaited ::
+To schedule a command you must use the `.FPS.send_command` method, which returns a `.Command` instance. Note that the command does *not* get executed until it is awaited ::
 
     >>> fps = FPS()
     >>> cmd = fps.send_command('GO_TO_ABSOLUTE_POSITION', positioner_id=4, alpha=100, beta=30)
@@ -85,11 +78,10 @@ The are two ways to send a new command to the CAN bus and wait for a reply:
     <Command GO_TO_ABSOLUTE_POSITION (positioner_id=4, status='READY')>
     >>> await cmd
 
-- Alternatively you can create a `.Command` instance directly, send it to the bus, and await the command ::
+The replies to the command are stored in the ``replies`` attribute: ::
 
-    >>> from jaeger.commands import GetStatus
     >>> status_cmd = GetStatus(positioner_id=4)
-    >>> status_cmd.send(bus=can_bus)  # can_bus must be an instance of JaegerCAN
+    >>> fps.send_command(status_cmd)
     >>> await status_cmd
     >>> reply = status_cmd.replies[0]
     >>> reply
@@ -110,12 +102,11 @@ To move positioner 8 to :math:`\alpha=85,\,\beta=30` at a speed of 1500 RPM, you
     >>> positioner = fps.positioners[8]
     >>> positioner
     <Positioner (id=8, status='DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZATION', initialised=False)>
-    >>> await positioner.initialise()
     >>> await positioner.goto(alpha=85, beta=30, speed_alpha=1500, speed_beta=1500)
 
 The command will asynchronously block until the position has been reached and the status is again `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.
 
-Trajectories can be sent either a `YAML <http://yaml.org>`__ file or a dictionary. In both cases the trajectory must include, for each positioner, a list of positions and times for the ``'alpha'`` arm in the format :math:`\rm [(\alpha_1, t_1), (\alpha_2, t_2), ...]`, and a similar dictionary for ``'beta'``. An example of YAML file with a valid trajectory for positioners 1 and 4 is
+Trajectories can be sent either through a `YAML <http://yaml.org>`__ file or a dictionary. In both cases the trajectory must include, for each positioner, a list of positions and times for the ``'alpha'`` arm in the format :math:`\rm [(\alpha_1, t_1), (\alpha_2, t_2), ...]`, and a similar dictionary for ``'beta'``. An example of YAML file with a valid trajectory for positioners 1 and 4 is
 
 .. code-block:: yaml
 
