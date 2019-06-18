@@ -6,7 +6,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 17:23:54
+# @Last modified time: 2019-06-17 17:24:17
 
 import socket
 import time
@@ -137,7 +137,7 @@ class CANNetBus(BusABC):
             return None, False
 
         # Message is M 1 CSD 100 55 AA 55 AA or M 2 CED 18FE0201 01 02 03 04 05 06 07 08
-        # Check if we have a message from the CAN network. Otherwise this is a messahe
+        # Check if we have a message from the CAN network. Otherwise this is a message
         # from the device so we return it.
         data = readStr.split(' ')
         if data[0] != 'M':
