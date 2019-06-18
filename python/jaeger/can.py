@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 17:21:14
+# @Last modified time: 2019-06-18 11:00:19
 
 import asyncio
 import binascii
@@ -116,9 +116,6 @@ class JaegerCAN(object):
     notifier : can.Notifier
         A `can.Notifier` instance that processes messages from the list
         of buses, asynchronously.
-    running_commands : dict
-        Commands currently running ordered by ``positioner_id`` (or zero for
-        broadcast).
 
     """
 
@@ -147,6 +144,8 @@ class JaegerCAN(object):
         self.command_queue = asyncio.Queue(maxsize=100)
         self._command_queue_task = self.loop.create_task(self._process_queue())
 
+        #: dict: Commands currently running ordered by ``positioner_id``
+        #: (or zero forbroadcast).
         self.running_commands = collections.defaultdict(dict)
 
     def _start_notifier(self):
