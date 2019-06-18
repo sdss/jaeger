@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 16:52:51
+# @Last modified time: 2019-06-17 22:06:30
 
 import asyncio
 import os
@@ -18,7 +18,7 @@ import astropy.table
 
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
-from jaeger.commands import CommandID, send_trajectory
+from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.positioner import Positioner
 from jaeger.utils import bytes_to_int
@@ -233,16 +233,16 @@ class FPS(BaseFPS):
             self.positioner_to_bus[reply.positioner_id] = (reply.message.interface,
                                                            reply.message.bus)
 
-    def send_command(self, command_id, positioner_id=0, data=[],
+    def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
                      silent_on_conflict=False, override=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
         ----------
-        command_id : `str`, `int`, or `~jaeger.commands.CommandID`
+        command : str, int, .CommandID or .Command
             The ID of the command, either as the integer value, a string,
-            or the `~jaeger.commands.CommandID` flag
+            or the `.CommandID` flag. Alternatively, the `.Command` to send.
         positioner_id : int
             The positioner ID to command, or zero for broadcast.
         data : bytearray
@@ -272,13 +272,13 @@ class FPS(BaseFPS):
 
         """
 
-        command_flag = CommandID(command_id)
-        CommandClass = command_flag.get_command()
+        if not isinstance(command, Command):
+            command_flag = CommandID(command)
+            CommandClass = command_flag.get_command()
 
-        command = CommandClass(positioner_id=positioner_id,
-                               loop=self.loop, data=data, **kwargs)
+            command = CommandClass(positioner_id=positioner_id,
+                                   loop=self.loop, data=data, **kwargs)
 
-        command_id = command.command_id
         command_name = command.name
 
         if command.status.is_done:
@@ -506,8 +506,9 @@ class FPS(BaseFPS):
 
         Parameters
         ----------
-        command : str
-            The name of the command to send.
+        command : str, int, .CommandID or .Command
+            The ID of the command, either as the integer value, a string,
+            or the `.CommandID` flag. Alternatively, the `.Command` to send.
         positioners : list
             The list of ``positioner_id`` of the positioners to command. If
             `None`, sends the command to all the positioners in the FPS.
