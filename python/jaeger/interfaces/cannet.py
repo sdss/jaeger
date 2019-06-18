@@ -6,7 +6,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 11:41:39
+# @Last modified time: 2019-06-18 15:04:13
 
 import socket
 import time
@@ -145,8 +145,8 @@ class CANNetBus(BusABC):
                           timestamp=time.time(),
                           dlc=0,
                           data=msgStr)
-            msg.bus = None
             msg.interface = self
+            msg.bus = None
             return msg, False
 
         # check if it is the proper CAN bus
@@ -188,8 +188,8 @@ class CANNetBus(BusABC):
                           is_remote_frame=remote,
                           dlc=dlc,
                           data=frame)
-            msg.bus = bus
             msg.interface = self
+            msg.bus = bus
             return msg, False
 
         return None, False
