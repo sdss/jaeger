@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-08 15:20:48
+# @Last modified time: 2019-06-19 13:53:34
 
 import asyncio
 import contextlib
@@ -220,7 +220,7 @@ class GetFirmwareVersion(commands.Command):
         """
 
         def format_version(reply):
-            return '.'.join(format(byt, '02d') for byt in reply.data[0:3])
+            return '.'.join(format(byt, '02d') for byt in reply.data[0:3][::-1])
 
         # If not a broadcast, use the positioner_id of the command
         if self.positioner_id != 0:
