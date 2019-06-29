@@ -4,6 +4,9 @@
 Changelog
 =========
 
+* :release:`0.2.1 <2019-06-29>`
+* Fix ``MANIFEST.in`` not including the requirements files.
+
 * :release:`0.2.0 <2019-06-29>`
 * Added ``home`` command to ``jaeger`` CLI.
 * Fixed bug in which the positions for ``SetActualPosition`` were being sent in degrees instead of in steps.

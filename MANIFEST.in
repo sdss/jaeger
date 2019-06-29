@@ -1,2 +1,4 @@
 recursive-include python/jaeger/etc *
 recursive-include python/jaeger/extern *
+
+include requirements*.txt
