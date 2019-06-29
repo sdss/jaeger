@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* :release:`0.2.0 <2019-06-29>`
 * Added ``home`` command to ``jaeger`` CLI.
 * Fixed bug in which the positions for ``SetActualPosition`` were being sent in degrees instead of in steps.
 * Fixed bug that would raise an exception during initialisation if no positioner had replied to ``GET_STATUS``.
@@ -18,6 +19,7 @@ Changelog
 * :feature:`9` Initial implementation of the ``CAN@net`` bus.
 * Renamed ``interfaces -> profiles`` in configuration.
 * :bug:`11` Fix endianess of firmware version.
+* :feature:`7` Poll CAN@net device for status.
 
 * :release:`0.1.0 <2018-10-10>`
 * Initial documentation.
