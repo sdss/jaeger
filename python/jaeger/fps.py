@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 18:10:31
+# @Last modified time: 2019-06-18 16:57:36
 
 import asyncio
 import os
@@ -18,7 +18,7 @@ import astropy.table
 
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
-from jaeger.commands import CommandID, send_trajectory
+from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.positioner import Positioner
 from jaeger.utils import bytes_to_int
@@ -160,6 +160,11 @@ class BaseFPS(object):
                                                 'status': pos_status,
                                                 'firmware': pos_firmware}
 
+        try:
+            status['devices'] = self.can.device_status
+        except AttributeError:
+            pass
+
         return status
 
 
@@ -168,7 +173,7 @@ class FPS(BaseFPS):
 
     Parameters
     ----------
-    bus : `.JaegerCAN` instance
+    can : `.JaegerCAN` instance
         The CAN bus to use.
     layout : str
         The layout describing the position of the robots on the focal plane.
@@ -198,51 +203,135 @@ class FPS(BaseFPS):
 
     """
 
-    def __init__(self, bus=None, layout=None, can_profile=None, loop=None):
+    def __init__(self, can=None, layout=None, can_profile=None, loop=None):
 
         self.loop = loop or asyncio.get_event_loop()
 
-        if isinstance(bus, JaegerCAN):
+        #: dict: The mapping between positioners and buses.
+        self.positioner_to_bus = {}
+
+        if isinstance(can, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
-            self.bus = bus
+            self.can = can
         else:
-            self.bus = JaegerCAN.from_profile(can_profile, loop=loop)
+            try:
+                self.can = JaegerCAN.from_profile(can_profile, loop=loop)
+            except ConnectionRefusedError:
+                raise
 
         super().__init__(layout=layout)
 
-    def send_command(self, command_id, positioner_id=0, data=[], **kwargs):
+    async def _get_positioner_bus_map(self):
+        """Creates the positioner-to-bus map.
+
+        Only relevant if the bus interface is multichannel/multibus.
+
+        """
+
+        if len(self.can.interfaces) == 1 and not self.can.multibus:
+            self._is_multibus = False
+            return
+
+        self._is_multibus = True
+
+        id_cmd = self.send_command(CommandID.GET_ID, broadcast=True)
+        await id_cmd
+
+        # Parse the replies
+        for reply in id_cmd.replies:
+            self.positioner_to_bus[reply.positioner_id] = (reply.message.interface,
+                                                           reply.message.bus)
+
+    def send_command(self, command, positioner_id=0, data=[],
+                     interface=None, bus=None, broadcast=False,
+                     silent_on_conflict=False, override=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
         ----------
-        command_id : `str`, `int`, or `~jaeger.commands.CommandID`
+        command : str, int, .CommandID or .Command
             The ID of the command, either as the integer value, a string,
-            or the `~jaeger.commands.CommandID` flag
+            or the `.CommandID` flag. Alternatively, the `.Command` to send.
         positioner_id : int
             The positioner ID to command, or zero for broadcast.
         data : bytearray
             The bytes to send.
+        interface : int
+            The index in the interface list for the interface to use. Only
+            relevant in case of a multibus interface. If `None`, the positioner
+            to bus map will be used.
+        bus : int
+            The bus within the interface to be used. Only relevant in case of
+            a multibus interface. If `None`, the positioner to bus map will
+            be used.
+        broadcast : bool
+            If `True`, sends the command to all the buses.
+        silent_on_conflict : bool
+            If set, does not issue a warning if at the time of queuing this
+            command there is already a command for the same positioner id
+            running. This is useful for example for poller when we change the
+            delay and the previous command is still running. In those cases
+            this option avoids annoying messages.
+        override : bool
+            If another instance of this command_id with the same positioner_id
+            is running, cancels it and schedules this one immediately.
+            Otherwise the command is queued until the first one finishes.
         kwargs : dict
             Extra arguments to be passed to the command.
 
         """
 
-        command_flag = CommandID(command_id)
-        CommandClass = command_flag.get_command()
+        if not isinstance(command, Command):
+            command_flag = CommandID(command)
+            CommandClass = command_flag.get_command()
 
-        silent_on_conflict = kwargs.pop('silent_on_conflict', False)
+            command = CommandClass(positioner_id=positioner_id,
+                                   loop=self.loop, data=data, **kwargs)
 
-        command = CommandClass(positioner_id=positioner_id,
-                               bus=self.bus, loop=self.loop,
-                               data=data, **kwargs)
+        command_name = command.name
 
-        if not command.send(silent_on_conflict=silent_on_conflict):
+        if command.status.is_done:
+            log.error(f'{command_name, positioner_id}: trying to send a done command.')
             return False
+
+        command._override = override
+        command._silent_on_conflict = silent_on_conflict
+
+        # By default a command will be sent to all interfaces and buses.
+        # Normally we want to set the interface and bus to which the command
+        # will be sent.
+        if not broadcast:
+            self.set_interface(command, bus=bus, interface=interface)
+
+        self.can.command_queue.put_nowait(command)
+        log.debug(f'{command_name, positioner_id}: added command to CAN processing queue.')
 
         return command
 
+    def set_interface(self, command, interface=None, bus=None):
+        """Sets the interface and bus to which to send a command."""
+
+        # Don't do anything if the interface is not multibus
+        if not self._is_multibus or command.positioner_id == 0:
+            return
+
+        if bus or interface:
+            command._interface = interface
+            command._bus = bus
+            return
+
+        interface, bus = self.positioner_to_bus[command.positioner_id]
+
+        command._interface = interface
+        command._bus = bus
+
+        return
+
     async def initialise(self, layout=None, check_positioners=True):
         """Initialises all positioners with status and firmware version."""
+
+        # Get the positioner-to-bus map
+        await self._get_positioner_bus_map()
 
         # Resets all positioner
         for positioner in self.positioners.values():
@@ -426,8 +515,9 @@ class FPS(BaseFPS):
 
         Parameters
         ----------
-        command : str
-            The name of the command to send.
+        command : str, int, .CommandID or .Command
+            The ID of the command, either as the integer value, a string,
+            or the `.CommandID` flag. Alternatively, the `.Command` to send.
         positioners : list
             The list of ``positioner_id`` of the positioners to command. If
             `None`, sends the command to all the positioners in the FPS.

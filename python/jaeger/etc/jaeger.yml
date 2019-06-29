@@ -13,8 +13,14 @@ actor:
         port: 6093
     log_dir: /data/logs/actors/jaeger
 
-interfaces:
-    default: slcan
+profiles:
+    default: cannet
+    cannet:
+        interface: cannet
+        channels: [192.168.0.10]
+        port: 19228
+        buses: [1, 2, 3, 4]
+        bitrate: 1000000
     slcan:
         interface: slcan
         channel: /dev/tty.usbserial-LW3HTDSY

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-30 22:03:19
+# @Last modified time: 2019-06-17 16:41:41
 
 import asyncio
 import binascii
@@ -48,7 +48,7 @@ class Message(can.Message):
     """
 
     def __init__(self, command, data=[], positioner_id=0, uid=0,
-                 response_code=0, extended_id=True, bus=None):
+                 response_code=0, extended_id=True):
 
         self.command = command
         self.positioner_id = positioner_id
@@ -65,8 +65,6 @@ class Message(can.Message):
                                                          response_code=response_code)
         else:
             arbitration_id = positioner_id
-
-        self.bus = bus
 
         can.Message.__init__(self,
                              data=data,
@@ -165,8 +163,6 @@ class Command(StatusMixIn, asyncio.Future):
     positioner_id : int or list
         The id or list of ids of the robot(s) to which this command will be
         sent. Use ``positioner_id=0`` to broadcast to all robots.
-    bus : `~jaeger.bus.JaegerCAN`
-        The bus to which to send messages.
     loop : event loop
         The running event loop, or uses `~asyncio.get_event_loop`.
     timeout : float
@@ -195,7 +191,7 @@ class Command(StatusMixIn, asyncio.Future):
     #: The default timeout for this command.
     timeout = 5
 
-    def __init__(self, positioner_id, bus=None, loop=None, timeout=None,
+    def __init__(self, positioner_id, loop=None, timeout=None,
                  done_callback=None, n_positioners=None, data=None):
 
         assert self.broadcastable is not None, 'broadcastable not set'
@@ -205,7 +201,6 @@ class Command(StatusMixIn, asyncio.Future):
         if self.positioner_id == 0 and self.broadcastable is False:
             raise exceptions.JaegerError('this command cannot be broadcast.')
 
-        self.bus = bus
         self.loop = loop or asyncio.get_event_loop()
 
         #: The data payload for the messages to send.
@@ -229,6 +224,12 @@ class Command(StatusMixIn, asyncio.Future):
         self.n_positioners = n_positioners
 
         self.timeout = timeout or self.timeout
+
+        # What interface and bus this command should be sent to. Only relevant
+        # for multibus interfaces. To be filled by the FPS class when queueing
+        # the command.
+        self._interface = None
+        self._bus = None
 
         self._done_callback = done_callback
 
@@ -269,6 +270,12 @@ class Command(StatusMixIn, asyncio.Future):
         """Returns `True` if the command is a broadcast."""
 
         return self.positioner_id == 0
+
+    @property
+    def name(self):
+        """Returns the name of this command."""
+
+        return CommandID(self.command_id).name
 
     def _check_replies(self):
         """Checks if the UIDs of the replies match the messages."""
@@ -366,11 +373,6 @@ class Command(StatusMixIn, asyncio.Future):
 
         self.reply_queue.watcher.cancel()
 
-        if self.bus is not None:
-            r_command = self.bus.is_command_running(self.positioner_id, self.command_id)
-            if r_command:
-                self.bus.running_commands[r_command.positioner_id].pop(r_command.command_id)
-
         if not self.done():
 
             self.set_result(self)
@@ -462,54 +464,6 @@ class Command(StatusMixIn, asyncio.Future):
         self.uids = [message.uid for message in messages]
 
         return messages
-
-    def send(self, bus=None, override=False, silent_on_conflict=False):
-        """Queues the command for execution.
-
-        Adds the command to the
-        `JaegerCAN.command_queue <jaeger.can.JaegerCAN.command_queue>` so that
-        it can be processed.
-
-        Parameters
-        ----------
-        fps : `~jaeger.fps.FPS`
-            The focal plane system instance.
-        override : bool
-            If another instance of this command_id with the same positioner_id
-            is running, cancels it and schedules this one immediately.
-            Otherwise the command is queued until the first one finishes.
-        silent_on_conflict : bool
-            If set, does not issue a warning if at the time of queuing this
-            command there is already a command for the same positioner id
-            running. This is useful for example for poller when we change the
-            delay and the previous command is still running. In those cases
-            this option avoids annoying messages.
-
-        Returns
-        -------
-        result : `bool`
-            `True` if the command was sent to the bus command queue. `False` if
-            and error occurred. The error is logged.
-
-        """
-
-        bus = bus or self.bus
-        if bus is None:
-            raise RuntimeError('bus not defined.')
-
-        if self.status.is_done:
-            self._log('trying to send a done command.', level=logging.ERROR,
-                      logs=[can_log, log])
-            return False
-
-        self._override = override
-        self._silent_on_conflict = silent_on_conflict
-
-        bus.command_queue.put_nowait(self)
-
-        self._log('added command to CAN processing queue.')
-
-        return True
 
     def get_reply_for_positioner(self, positioner_id):
         """Returns the reply for a given ``positioner_id``.

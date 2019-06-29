@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-23 08:52:38
+# @Last modified time: 2019-06-18 16:42:01
 
 import asyncio
 from concurrent.futures import Executor
@@ -197,9 +197,9 @@ class Poller(object):
             original delay."""
 
         await self.stop()
-        await self.start(delay)
+        self.start(delay)
 
-    async def start(self, delay=None):
+    def start(self, delay=None):
         """Starts the poller.
 
         Parameters
@@ -215,6 +215,8 @@ class Poller(object):
 
         self.delay = delay or self._orig_delay
         self._task = asyncio.create_task(self.poller())
+
+        return self
 
     async def stop(self):
         """Cancel the poller."""
@@ -240,7 +242,7 @@ class Poller(object):
 class AsyncioExecutor(Executor):
     """An executor to run coroutines from a normal function.
 
-    Copied from `http://bit.ly/2IYmqzN`__.
+    Copied from http://bit.ly/2IYmqzN.
 
     To use, do ::
 
