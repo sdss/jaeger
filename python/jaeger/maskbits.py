@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-02 15:45:46
+# @Last modified time: 2019-07-04 22:58:34
 
 import enum
 
@@ -85,10 +85,19 @@ class PositionerStatus(Maskbit):
     DISPLACEMENT_COMPLETED = 0x01000000
     ALPHA_DISPLACEMENT_COMPLETED = 0x02000000
     BETA_DISPLACEMENT_COMPLETED = 0x04000000
+    ALPHA_COLLISION = 0x08000000
+    BETA_COLLISION = 0x10000000
     DATUM_INITIALIZED = 0x20000000
     ESTIMATED_POSITION = 0x40000000
     POSITION_RESTORED = 0x80000000
     UNKNOWN = 0x100000000
+
+    @property
+    def collided(self):
+        """Returns `True` if the positioner is collided."""
+
+        return True if (PositionerStatus.ALPHA_COLLISION & self or
+                        PositionerStatus.BETA_COLLISION & self) else False
 
 
 class BootloaderStatus(Maskbit):
