@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-04 22:58:34
+# @Last modified time: 2019-07-05 17:35:35
 
 import enum
 
@@ -93,7 +93,7 @@ class PositionerStatus(Maskbit):
     UNKNOWN = 0x100000000
 
     @property
-    def collided(self):
+    def collision(self):
         """Returns `True` if the positioner is collided."""
 
         return True if (PositionerStatus.ALPHA_COLLISION & self or
