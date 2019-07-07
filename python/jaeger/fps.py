@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 16:57:36
+# @Last modified time: 2019-07-06 20:25:38
 
 import asyncio
 import os
@@ -19,7 +19,7 @@ import astropy.table
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.core.exceptions import JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.positioner import Positioner
 from jaeger.utils import bytes_to_int
 
@@ -219,6 +219,8 @@ class FPS(BaseFPS):
             except ConnectionRefusedError:
                 raise
 
+        self._locked = False
+
         super().__init__(layout=layout)
 
     async def _get_positioner_bus_map(self):
@@ -281,6 +283,9 @@ class FPS(BaseFPS):
 
         """
 
+        if self.locked:
+            raise FPSLockedError('unlock the FPS before sending commands.')
+
         if not isinstance(command, Command):
             command_flag = CommandID(command)
             CommandClass = command_flag.get_command()
@@ -327,8 +332,44 @@ class FPS(BaseFPS):
 
         return
 
-    async def initialise(self, layout=None, check_positioners=True):
-        """Initialises all positioners with status and firmware version."""
+    @property
+    def locked(self):
+        """Returns `True` if the `.FPS` is locked."""
+
+        return self._locked
+
+    def lock(self, abort_trajectories=True):
+        """Locks the `.FPS` and prevents commands to be sent.
+
+        Parameters
+        ----------
+        abort_trajectories : bool
+            Whether to abort trajectories when locking.
+
+        """
+
+        warnings.warn('locking FPS.', JaegerUserWarning)
+        self._locked = True
+
+        if abort_trajectories:
+            self.abort_trajectory()
+
+    def unlock(self, force=False):
+        """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        for positioner in self.positioners.values():
+            if positioner.collision:
+                self._locked = True
+                log.error('cannot unlock the FPS until all '
+                          'the collisions have been cleared.')
+                return False
+
+        self._locked = False
+
+        return True
+
+    async def initialise(self):
+        """Initialises all positioners."""
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
@@ -411,6 +452,14 @@ class FPS(BaseFPS):
         if n_non_initialised > 0:
             warnings.warn(f'{n_non_initialised} positioners responded but have '
                           'not been initialised.', JaegerUserWarning)
+
+        if self.locked:
+            log.info('FPS is locked. Trying to unlock it.')
+            if not self.unlock():
+                log.error('FPS cannot be unlocked. Initialisation failed.')
+                return False
+            else:
+                log.info('FPS unlocked successfully.')
 
         initialise_cmds = [positioner.initialise()
                            for positioner in self.positioners.values()
@@ -544,7 +593,11 @@ class FPS(BaseFPS):
                                           data=data[ii])
                         for ii, positioner_id in enumerate(positioners)]
 
-        await asyncio.gather(*commands)
+        results = await asyncio.gather(*commands, return_exceptions=True)
+
+        if any([isinstance(rr, FPSLockedError) for rr in results]):
+            raise FPSLockedError('one or more of the commands failed because '
+                                 'the FPS is locked.')
 
         return commands
 
