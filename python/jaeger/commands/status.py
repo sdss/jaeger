@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 16:27:59
+# @Last modified time: 2019-07-06 20:36:17
 
 
 import numpy
@@ -26,6 +26,7 @@ class GetID(Command):
     command_id = CommandID.GET_ID
     broadcastable = True
     timeout = 1
+    safe = True
 
     def get_ids(self):
         """Returns a list of positioners that replied back."""
@@ -38,6 +39,7 @@ class GetStatus(Command):
 
     command_id = CommandID.GET_STATUS
     broadcastable = True
+    safe = True
 
     def get_positioner_status(self):
         """Returns the `~.maskbit.PositionerStatus` flag for each reply."""
@@ -51,6 +53,7 @@ class GetActualPosition(Command):
 
     command_id = CommandID.GET_ACTUAL_POSITION
     broadcastable = False
+    safe = True
 
     def get_positions(self):
         """Returns the positions of alpha and beta in degrees.

@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 16:41:41
+# @Last modified time: 2019-07-06 20:27:14
 
 import asyncio
 import binascii
@@ -190,6 +190,8 @@ class Command(StatusMixIn, asyncio.Future):
     broadcastable = None
     #: The default timeout for this command.
     timeout = 5
+    #: Whether it's safe to execute this command when the FPS is locked.
+    safe = False
 
     def __init__(self, positioner_id, loop=None, timeout=None,
                  done_callback=None, n_positioners=None, data=None):

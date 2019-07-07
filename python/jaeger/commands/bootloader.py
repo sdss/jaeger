@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-19 13:53:34
+# @Last modified time: 2019-07-06 20:35:46
 
 import asyncio
 import contextlib
@@ -193,6 +193,7 @@ class GetFirmwareVersion(commands.Command):
 
     command_id = commands.CommandID.GET_FIRMWARE_VERSION
     broadcastable = True
+    safe = True
 
     def get_firmware(self, positioner_id=None):
         """Returns the firmware version string.
@@ -239,9 +240,11 @@ class StartFirmwareUpgrade(commands.Command):
 
     command_id = commands.CommandID.START_FIRMWARE_UPGRADE
     broadcastable = False
+    safe = True
 
 
 class SendFirmwareData(commands.Command):
 
     command_id = commands.CommandID.SEND_FIRMWARE_DATA
     broadcastable = False
+    safe = True

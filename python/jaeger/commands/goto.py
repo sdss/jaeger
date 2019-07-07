@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-27 11:05:27
+# @Last modified time: 2019-07-06 20:36:04
 
 import numpy
 
@@ -74,6 +74,7 @@ class SetActualPosition(Command):
 
     command_id = CommandID.SET_ACTUAL_POSITION
     broadcastable = False
+    safe = True
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
@@ -90,6 +91,7 @@ class SetSpeed(Command):
 
     command_id = CommandID.SET_SPEED
     broadcastable = False
+    safe = True
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 

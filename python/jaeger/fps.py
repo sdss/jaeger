@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-06 20:25:38
+# @Last modified time: 2019-07-06 20:35:02
 
 import asyncio
 import os
@@ -246,7 +246,8 @@ class FPS(BaseFPS):
 
     def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
-                     silent_on_conflict=False, override=False, **kwargs):
+                     silent_on_conflict=False, override=False,
+                     safe=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -278,13 +279,12 @@ class FPS(BaseFPS):
             If another instance of this command_id with the same positioner_id
             is running, cancels it and schedules this one immediately.
             Otherwise the command is queued until the first one finishes.
+        safe : bool
+            Whether the command is safe to send to a locked `.FPS`.
         kwargs : dict
             Extra arguments to be passed to the command.
 
         """
-
-        if self.locked:
-            raise FPSLockedError('unlock the FPS before sending commands.')
 
         if not isinstance(command, Command):
             command_flag = CommandID(command)
@@ -294,6 +294,13 @@ class FPS(BaseFPS):
                                    loop=self.loop, data=data, **kwargs)
 
         command_name = command.name
+
+        if self.locked:
+            if command.safe or safe:
+                warnings.warn(f'FPS is locked but {command_name} is safe.',
+                              JaegerUserWarning)
+            else:
+                raise FPSLockedError('unlock the FPS before sending commands.')
 
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
