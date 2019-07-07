@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 18:10:23
+# @Last modified time: 2019-07-06 20:43:21
 
 import asyncio
 import pathlib
@@ -18,7 +18,7 @@ from ruamel.yaml import YAML
 
 from jaeger import config, log, maskbits
 from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
-from jaeger.core.exceptions import JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.utils import int_to_bytes
 
 
@@ -59,6 +59,9 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
                                            'beta': [(20, 0), (23, 4)]}})
 
     """
+
+    if fps.locked:
+        raise FPSLockedError('FPS is locked. Cannot send trajectories.')
 
     PosStatus = maskbits.PositionerStatus
 
