@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 15:06:38
+# @Last modified time: 2019-07-06 21:06:10
 
 import asyncio
 import warnings
@@ -100,7 +100,7 @@ class Positioner(StatusMixIn):
             await self.position_poller.stop()
 
     @property
-    def positioner(self):
+    def position(self):
         """Returns a tuple with the ``(alpha, beta)`` position."""
 
         return (self.alpha, self.beta)
