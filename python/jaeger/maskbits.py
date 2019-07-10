@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-05 17:35:35
+# @Last modified time: 2019-07-10 13:28:10
 
 import enum
 
@@ -92,12 +92,24 @@ class PositionerStatus(Maskbit):
     POSITION_RESTORED = 0x80000000
     UNKNOWN = 0x100000000
 
+    # The following bits are internal and not set by the firmware.
+    DISABLED_UNKNWON_POSITION = 0x00000020
+    DISABLED_KNWON_POSITION = 0x00000040
+
+    DISABLED = DISABLED_KNWON_POSITION | DISABLED_UNKNWON_POSITION
+
     @property
     def collision(self):
         """Returns `True` if the positioner is collided."""
 
         return True if (PositionerStatus.ALPHA_COLLISION & self or
                         PositionerStatus.BETA_COLLISION & self) else False
+
+    @property
+    def disabled(self):
+        """Returns `True` if the positioner is disabled."""
+
+        return bool(self & self.DISABLED)
 
 
 class BootloaderStatus(Maskbit):
