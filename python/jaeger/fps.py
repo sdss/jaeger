@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-06 20:35:02
+# @Last modified time: 2019-07-10 15:58:55
 
 import asyncio
 import os
@@ -245,9 +245,8 @@ class FPS(BaseFPS):
                                                            reply.message.bus)
 
     def send_command(self, command, positioner_id=0, data=[],
-                     interface=None, bus=None, broadcast=False,
-                     silent_on_conflict=False, override=False,
-                     safe=False, **kwargs):
+                     interface=None, bus=None, silent_on_conflict=False,
+                     override=False, safe=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -267,8 +266,6 @@ class FPS(BaseFPS):
             The bus within the interface to be used. Only relevant in case of
             a multibus interface. If `None`, the positioner to bus map will
             be used.
-        broadcast : bool
-            If `True`, sends the command to all the buses.
         silent_on_conflict : bool
             If set, does not issue a warning if at the time of queuing this
             command there is already a command for the same positioner id
@@ -312,8 +309,7 @@ class FPS(BaseFPS):
         # By default a command will be sent to all interfaces and buses.
         # Normally we want to set the interface and bus to which the command
         # will be sent.
-        if not broadcast:
-            self.set_interface(command, bus=bus, interface=interface)
+        self.set_interface(command, bus=bus, interface=interface)
 
         self.can.command_queue.put_nowait(command)
         log.debug(f'{command_name, positioner_id}: added command to CAN processing queue.')
