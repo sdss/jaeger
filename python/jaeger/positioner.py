@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-05 17:36:31
+# @Last modified time: 2019-07-10 15:38:53
 
 import asyncio
 import warnings
@@ -140,6 +140,67 @@ class Positioner(StatusMixIn):
 
         return True
 
+    @property
+    def disabled(self):
+        """Whether this positioner is disabled."""
+
+        return (self.flags == maskbits.PositionerStatus) and self.status.disabled
+
+    async def disable(self, trust_position=False, alpha=None, beta=None):
+        """Sets the disabled status for the positioner. Pollers are stopped.
+
+        Parameters
+        ----------
+        trust_position : bool
+            Whether the position of the robot can be trusted or not. Unless
+            ``alpha`` and ``beta`` are passed, assumes that the current
+            position is valid.
+        alpha : bool
+            The ``alpha`` position to set.
+        beta : bool
+            The ``beta`` position to set.
+
+        """
+
+        assert self.flags == maskbits.PositionerStatus, 'invalid maskbit flags.'
+
+        if trust_position is False:
+            warnings.warn(f'positioner {self.positioner_id}: '
+                          'disabling robot with unknown position.', JaegerUserWarning)
+            self.status |= maskbits.PositionerStatus.DISABLED_UNKNWON_POSITION
+            return True
+
+        if trust_position and alpha and beta:
+            self.set_position(alpha, beta)
+
+        warnings.warn(f'positioner {self.positioner_id}: disabling robot '
+                      f'with known position {self.position!r}.', JaegerUserWarning)
+
+        self.status |= maskbits.PositionerStatus.DISABLED_KNWON_POSITION
+
+        await self.stop_pollers('all')
+
+        return True
+
+    def _is_positioner_ready(self):
+        """Returns `True` if the positioner is ready to be commanded."""
+
+        log_header = f'positioner {self.positioner_id}: '
+
+        if self.disabled:
+            log.error(log_header + 'positioner is disabled.')
+            return False
+
+        if not self.initialised:
+            log.error(log_header + 'positioner is not initialised.')
+            return False
+
+        if self.collision:
+            log.error(log_header + 'collision detected.')
+            return False
+
+        return True
+
     async def reset(self):
         """Resets positioner values and statuses."""
 
@@ -153,10 +214,13 @@ class Positioner(StatusMixIn):
     async def update_position(self, timeout=1):
         """Updates the position of the alpha and beta arms."""
 
+        if not self.disabled:
+            log.error(f'positioner {self.positioner_id}: disabled, cannot update position.')
+            return False
+
         command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
                                         positioner_id=self.positioner_id,
-                                        timeout=timeout,
-                                        silent_on_conflict=True)
+                                        timeout=timeout, silent_on_conflict=True)
         result = await command
 
         if not result:
@@ -177,10 +241,15 @@ class Positioner(StatusMixIn):
     async def update_status(self, timeout=1.):
         """Updates the status of the positioner."""
 
+        if not self.disabled:
+            log.error(f'positioner {self.positioner_id}: disabled, cannot update status.')
+            return False
+
         command = self.fps.send_command(CommandID.GET_STATUS,
                                         positioner_id=self.positioner_id,
                                         timeout=timeout,
                                         silent_on_conflict=True)
+
         if await command is False or command.status.failed:
             log.error(f'positioner {self.positioner_id}: '
                       f'{CommandID.GET_STATUS.name!r} failed to complete.')
@@ -274,6 +343,11 @@ class Positioner(StatusMixIn):
     async def initialise(self, initialise_datums=False):
         """Initialises the datum and starts the position watcher."""
 
+        if self.disabled:
+            log.error(f'positioner {self.positioner_id}: positioner is '
+                      'disabled and cannot be initialised.')
+            return False
+
         log.debug(f'positioner {self.positioner_id}: initialising')
 
         # Resets all.
@@ -281,6 +355,12 @@ class Positioner(StatusMixIn):
 
         await self.get_firmware()
         await self.update_status()
+
+        if self.collision:
+            log.error(f'positioner {self.positioner_id}: collision detected. '
+                      'Clear the collision before initialising.')
+            self.status ^= maskbits.PositionerStatus.SYSTEM_INITIALIZATION
+            return False
 
         # Exists if we are in bootloader mode.
         if self.is_bootloader():
@@ -326,6 +406,10 @@ class Positioner(StatusMixIn):
     async def initialise_datums(self):
         """Initialise datums by driving the positioner against hard stops."""
 
+        if self.disabled or self.collision:
+            log.error(f'positioner {self.positioner_id}: cannot initialise datums.')
+            return False
+
         warnings.warn(f'positioner {self.positioner_id}: reinitialise datums.',
                       JaegerUserWarning)
 
@@ -369,6 +453,13 @@ class Positioner(StatusMixIn):
 
     async def set_position(self, alpha, beta, start_pollers=True):
         """Sets the internal position of the motors."""
+
+        if self.disabled():
+            log.error(f'positioner {self.positioner_id}: cannot set position.')
+            return False
+
+        log.debug(f'positioner {self.positioner_id}: setting position to '
+                  f'({alpha:.2f}, {beta:.2f}).')
 
         done_callback = self.start_pollers if start_pollers else None
 
@@ -459,8 +550,8 @@ class Positioner(StatusMixIn):
 
         """
 
-        if not self.initialised:
-            log.error(f'positioner {self.positioner_id}: not initialised.')
+        if not self._is_positioner_ready():
+            log.error(f'positioner {self.positioner_id}: cannot run goto.')
             return False
 
         if not self.position_poller.running or not self.status_poller.running:

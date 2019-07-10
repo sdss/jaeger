@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-10 15:58:55
+# @Last modified time: 2019-07-10 16:47:23
 
 import asyncio
 import os
@@ -292,15 +292,22 @@ class FPS(BaseFPS):
 
         command_name = command.name
 
+        log_header = f'{command_name, positioner_id}: '
+
+        # Check for disabled positioners
+        if positioner_id > 0 and self.positioners[positioner_id].disabled:
+            log.error(log_header + 'positioner is disabled. Cannot send commands.')
+            return False
+
         if self.locked:
             if command.safe or safe:
-                warnings.warn(f'FPS is locked but {command_name} is safe.',
+                warnings.warn(log_header + f'FPS is locked but {command_name} is safe.',
                               JaegerUserWarning)
             else:
-                raise FPSLockedError('unlock the FPS before sending commands.')
+                raise FPSLockedError(log_header + 'unlock the FPS before sending commands.')
 
         if command.status.is_done:
-            log.error(f'{command_name, positioner_id}: trying to send a done command.')
+            log.error(log_header + 'trying to send a done command.')
             return False
 
         command._override = override
@@ -312,7 +319,7 @@ class FPS(BaseFPS):
         self.set_interface(command, bus=bus, interface=interface)
 
         self.can.command_queue.put_nowait(command)
-        log.debug(f'{command_name, positioner_id}: added command to CAN processing queue.')
+        log.debug(log_header + 'added command to CAN processing queue.')
 
         return command
 
