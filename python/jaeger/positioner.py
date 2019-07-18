@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-10 15:38:53
+# @Last modified time: 2019-07-18 13:12:29
 
 import asyncio
 import warnings
@@ -45,8 +45,6 @@ class Positioner(StatusMixIn):
         self.positioner_id = positioner_id
 
         self.centre = centre
-
-        self.status = None
 
         self.alpha = None
         self.beta = None

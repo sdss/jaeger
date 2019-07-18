@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 16:54:37
+# @Last modified time: 2019-07-18 12:48:29
 
 import asyncio
 import binascii
@@ -416,7 +416,10 @@ class CANnetInterface(JaegerCAN):
             interface.write('DEV IDENTIFY')
             interface.write('DEV VERSION')
 
-        self.device_status_poller = Poller(self._get_device_status, delay=5).start()
+        # We use call_soon later to be sure the event loop is running when we start
+        # the poller. This prevents problems when using the library in IPython.
+        self.device_status_poller = Poller(self._get_device_status, delay=5, loop=self.loop)
+        self.loop.call_soon(self.device_status_poller.start)
 
     def _process_reply(self, msg):
         """Processes a message checking first if it comes from the device."""

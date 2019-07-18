@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-10 16:47:23
+# @Last modified time: 2019-07-18 13:12:24
 
 import asyncio
 import os
@@ -236,7 +236,7 @@ class FPS(BaseFPS):
 
         self._is_multibus = True
 
-        id_cmd = self.send_command(CommandID.GET_ID, broadcast=True)
+        id_cmd = self.send_command(CommandID.GET_ID)
         await id_cmd
 
         # Parse the replies
