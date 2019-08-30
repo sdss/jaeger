@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-08-30 13:25:24
+# @Last modified time: 2019-08-30 13:27:43
 
 import asyncio
 import os
@@ -100,7 +100,7 @@ class BaseFPS(object):
                     row['pos'], self, centre=(row['x'], row['y']))
                 self.add_positioner(new_positioner)
 
-            n_pos = pos_id - 1
+            n_pos = len(self.positioners)
 
         elif targetdb is not None:
 
