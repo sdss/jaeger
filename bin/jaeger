@@ -63,6 +63,11 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=F
     # start the actor.
     if ctx.invoked_subcommand is None:
 
+        try:
+            from jaeger.actor import JaegerActor
+        except ImportError:
+            raise ImportError('CLU needs to be installed to run jaeger as an actor.')
+
         fps = FPS(**ctx.obj)
         yield from fps.initialise()
 
