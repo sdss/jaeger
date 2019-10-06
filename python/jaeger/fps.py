@@ -7,7 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 #
 # @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-08-30 13:36:57
+# @Last modified time: 2019-09-02 18:44:31
 
 import asyncio
 import os
@@ -91,18 +91,16 @@ class BaseFPS(object):
             log.info(f'{self._class_name}: reading layout from file {layout!s}.')
 
             data = astropy.table.Table.read(layout, format='ascii.no_header',
-                                            names=['row', 'pos', 'x', 'y', 'type'])
+                                            names=['id', 'row', 'pos', 'x', 'y', 'type'])
 
-            pos_id = 1
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
                 new_positioner = self._positioner_class(
-                    pos_id, self, centre=(row['x'], row['y']))
-                pos_id += 1
+                    row['id'], self, centre=(row['x'], row['y']))
                 self.add_positioner(new_positioner)
 
-            n_pos = pos_id - 1
+            n_pos = len(self.positioners)
 
         elif targetdb is not None:
 
