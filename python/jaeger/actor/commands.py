@@ -9,6 +9,7 @@
 import pathlib
 
 import click
+import numpy
 
 import clu
 from clu import command_parser as jaeger_parser
@@ -59,14 +60,19 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 
 @jaeger_parser.command()
-@click.argument('positioner-id', type=int, nargs=-1, required=True)
+@click.argument('positioner-id', type=int, nargs=-1, required=False)
 async def status(command, fps, positioner_id):
     """Reports the position and status bit of a list of positioners."""
 
+    positioner_id = positioner_id or list(fps.positioners.keys())
+
     for pid in positioner_id:
         positioner = fps[pid]
-        command.write('i', status=[positioner.alpha,
-                                   positioner.beta,
+        alpha_pos = -999 if positioner.alpha is None else numpy.round(positioner.alpha, 4)
+        beta_pos = -999 if positioner.beta is None else numpy.round(positioner.beta, 4)
+        command.write('i', status=[positioner.positioner_id,
+                                   alpha_pos,
+                                   beta_pos,
                                    int(positioner.status),
                                    positioner.initialised,
                                    positioner.is_bootloader()])
