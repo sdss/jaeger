@@ -6,11 +6,10 @@
 # @Filename: jaeger
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-
 import asyncio
 import logging
 import warnings
-from functools import update_wrapper
+from functools import wraps
 
 import click
 import numpy
@@ -25,13 +24,11 @@ from jaeger.tests import VirtualFPS
 def cli_coro(f):
     """Decorator function that allows defining coroutines with click."""
 
-    f = asyncio.coroutine(f)
-
+    @wraps(f)
     def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(f(*args, **kwargs))
+        return asyncio.run(f(*args, **kwargs))
 
-    return update_wrapper(wrapper, f)
+    return wrapper
 
 
 @click.group(invoke_without_command=True)
@@ -41,7 +38,7 @@ def cli_coro(f):
 @click.option('--no-tron', is_flag=True, help='Does not connect to Tron')
 @click.pass_context
 @cli_coro
-def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=False):
+async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=False):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor."""
@@ -68,7 +65,7 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=F
             raise ImportError('CLU needs to be installed to run jaeger as an actor.')
 
         fps = FPS(**ctx.obj)
-        yield from fps.initialise()
+        await fps.initialise()
 
         actor_config = config['actor'].copy()
         actor_config.pop('status', None)
@@ -76,11 +73,11 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=F
         if no_tron:
             actor_config.pop('tron', None)
 
-        actor = yield from JaegerActor.from_config(actor_config, fps).run()
-        yield from actor.start_status_server(config['actor']['status']['port'],
-                                             delay=config['actor']['status']['delay'])
+        actor = await JaegerActor.from_config(actor_config, fps).run()
+        await actor.start_status_server(config['actor']['status']['port'],
+                                        delay=config['actor']['status']['delay'])
 
-        yield from actor.server.server.serve_forever()
+        await actor.server.server.serve_forever()
 
 
 @jaeger.command(name='upgrade-firmware')
@@ -89,17 +86,17 @@ def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=F
 @click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
 @click.pass_context
 @cli_coro
-def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
+async def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
     """Upgrades the firmaware."""
 
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
 
     fps = FPS(**ctx.obj)
-    yield from fps.initialise()
+    await fps.initialise()
 
-    yield from load_firmware(fps, firmware_file, positioners=positioners,
-                             force=force, show_progressbar=True)
+    await load_firmware(fps, firmware_file, positioners=positioners,
+                        force=force, show_progressbar=True)
 
 
 @jaeger.command()
@@ -111,7 +108,7 @@ def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
               show_default=True)
 @click.pass_context
 @cli_coro
-def goto(ctx, positioner_id, alpha, beta, speed=None):
+async def goto(ctx, positioner_id, alpha, beta, speed=None):
     """Moves a robot to a given position."""
 
     if alpha < 0 or alpha >= 360:
@@ -124,17 +121,17 @@ def goto(ctx, positioner_id, alpha, beta, speed=None):
         raise click.UsageError('speed must be in the range [0, 3000)')
 
     fps = FPS(**ctx.obj)
-    yield from fps.initialise()
+    await fps.initialise()
 
     positioner = fps.positioners[positioner_id]
-    result = yield from positioner.initialise()
+    result = await positioner.initialise()
     if not result:
         log.error('positioner is not connected or failed to initialise.')
         return
 
-    result = yield from positioner.goto(alpha=alpha, beta=beta,
-                                        alpha_speed=speed[0],
-                                        beta_speed=speed[1])
+    result = await positioner.goto(alpha=alpha, beta=beta,
+                                   alpha_speed=speed[0],
+                                   beta_speed=speed[1])
 
     if result is False:
         return
@@ -146,7 +143,7 @@ def goto(ctx, positioner_id, alpha, beta, speed=None):
 @click.argument('beta', metavar='BETA', type=float)
 @click.pass_context
 @cli_coro
-def set_positions(ctx, positioner_id, alpha, beta):
+async def set_positions(ctx, positioner_id, alpha, beta):
     """Sets the position of the alpha and beta arms."""
 
     if alpha < 0 or alpha >= 360:
@@ -156,11 +153,11 @@ def set_positions(ctx, positioner_id, alpha, beta):
         raise click.UsageError('beta must be in the range [0, 360)')
 
     fps = FPS(**ctx.obj)
-    yield from fps.initialise()
+    await fps.initialise()
 
     positioner = fps.positioners[positioner_id]
 
-    result = yield from positioner.set_position(alpha, beta)
+    result = await positioner.set_position(alpha, beta)
 
     if not result:
         log.error('failed to set positions.')
@@ -184,8 +181,8 @@ def set_positions(ctx, positioner_id, alpha, beta):
                    'commands another move.')
 @click.pass_context
 @cli_coro
-def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
-         skip_errors=False):
+async def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
+               skip_errors=False):
     """Moves a robot to random positions."""
 
     if (alpha[0] >= alpha[1]) or (alpha[0] < 0 or alpha[1] > 360):
@@ -198,10 +195,10 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
         raise click.UsageError('speed must be in the range [0, 3000)')
 
     fps = FPS(**ctx.obj)
-    yield from fps.initialise()
+    await fps.initialise()
 
     positioner = fps.positioners[positioner_id]
-    result = yield from positioner.initialise()
+    result = await positioner.initialise()
     if not result:
         log.error('positioner is not connected or failed to initialise.')
         return
@@ -216,9 +213,9 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
 
         warnings.warn(f'running step {done_moves+1}')
 
-        result = yield from positioner.goto(alpha=alpha_move, beta=beta_move,
-                                            alpha_speed=alpha_speed,
-                                            beta_speed=beta_speed)
+        result = await positioner.goto(alpha=alpha_move, beta=beta_move,
+                                       alpha_speed=alpha_speed,
+                                       beta_speed=beta_speed)
 
         if result is False:
             if skip_errors is False:
@@ -238,11 +235,11 @@ def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
 @click.argument('positioner_id', metavar='POSITIONER', type=int, required=False)
 @click.pass_context
 @cli_coro
-def home(ctx, positioner_id):
+async def home(ctx, positioner_id):
     """Initialise datums."""
 
     fps = FPS(**ctx.obj)
-    yield from fps.initialise()
+    await fps.initialise()
 
     if positioner_id is None:
         positioners = fps.positioners.values()
@@ -256,7 +253,7 @@ def home(ctx, positioner_id):
         warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
                       'have not been initialised and will not be homed.')
 
-    yield from asyncio.gather(*[
+    await asyncio.gather(*[
         fps.send_command('INITIALIZE_DATUMS', positioner_id=pos.positioner_id)
         for pos in valid_positioners])
 
