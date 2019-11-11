@@ -12,7 +12,7 @@ from can import BusABC, Message
 
 
 class CANNetBus(BusABC):
-    """Interface for Ixxat CAN\@net NT 200/420.
+    r"""Interface for Ixxat CAN\@net NT 200/420.
 
     Parameters
     ----------
