@@ -56,7 +56,7 @@ def test_get_identifier(positioner_id, command_id, result):
 
 @pytest.mark.parametrize('identifier, result',
                          [(1315072, (5, 17, 0)), (117966081, (450, 5, 1))])
-def test_get_identifier(identifier, result):
+def test_parse_identifier(identifier, result):
 
     positioner_id, command_id, response_flag = jaeger.utils.parse_identifier(identifier)
 
