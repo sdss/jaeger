@@ -5,9 +5,6 @@
 # @Date: 2018-10-03
 # @Filename: goto.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-27 11:05:27
 
 import numpy
 

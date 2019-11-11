@@ -5,9 +5,6 @@
 # @Date: 2019-04-24
 # @Filename: actor.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 18:58:12
 
 import json
 import logging

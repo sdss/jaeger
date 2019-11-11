@@ -5,9 +5,6 @@
 # @Date: 2018-09-11
 # @Filename: maskbits.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-02 15:45:46
 
 import enum
 

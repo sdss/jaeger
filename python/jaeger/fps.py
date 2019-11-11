@@ -5,9 +5,6 @@
 # @Date: 2018-09-06
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-09-02 18:44:31
 
 import asyncio
 import os

@@ -4,9 +4,6 @@
 # @Author: Ricardo Araujo
 # @Filename: cannet.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 15:04:13
 
 import socket
 import time
