@@ -394,7 +394,7 @@ CANNET_ERRORS = {
 
 
 class CANnetInterface(JaegerCAN):
-    """An interface class specifically for the CAN\@net 200/420 device.
+    r"""An interface class specifically for the CAN\@net 200/420 device.
 
     This class bahaves as `.JaegerCAN` but allows communication with the
     device itself and tracks its status.
