@@ -33,4 +33,4 @@ install:
   - pip install .[dev]
 
 script:
-  - pytest --cov basecam --cov-report html
+  - pytest --cov jaeger --cov-report html
