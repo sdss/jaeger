@@ -5,6 +5,7 @@ Changelog
 =========
 
 * Change file layout to include a positioner ID.
+* Add command `.SetCurrent`.
 
 * :release:`0.2.1 <2019-06-29>`
 * Fix ``MANIFEST.in`` not including the requirements files.
