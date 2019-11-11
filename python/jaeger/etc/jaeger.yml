@@ -11,7 +11,7 @@ actor:
     tron:
         host: 127.0.0.1
         port: 6093
-    log_dir: /Users/albireo/Documents/Data/logs/actors/jaeger
+    log_dir: /data/logs/actors/jaeger
 
 profiles:
     default: cannet
