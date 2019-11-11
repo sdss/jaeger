@@ -75,7 +75,7 @@ async def status(command, fps, positioner_id):
                                    beta_pos,
                                    int(positioner.status),
                                    positioner.initialised,
-                                   positioner.is_bootloader()])
+                                   positioner.is_bootloader() or False])
 
     command.set_status(clu.CommandStatus.DONE)
 
