@@ -61,10 +61,8 @@ dev = ["pytest", "pytest-asyncio", "pytest-cov", "pytest-sugar"]
 
 [tool.coverage]
 branch = true
-include = "python/jeager/*""
-omit = [
-    "*/core/*.py"
-]
+include = "python/jaeger/*""
+omit = ["python/jaeger/core/*.py"]
 
 [tool.isort]
 line_length = 99
