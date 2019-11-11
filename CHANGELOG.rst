@@ -7,6 +7,7 @@ Changelog
 * Change file layout to include a positioner ID.
 * Add command `.SetCurrent`.
 * Modify ``jaeger`` CLI command to use ``async def`` and ``await``.
+* Add ``is_bootloader`` to output of ``status`` command.
 
 * :release:`0.2.1 <2019-06-29>`
 * Fix ``MANIFEST.in`` not including the requirements files.

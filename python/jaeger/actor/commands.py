@@ -68,7 +68,8 @@ async def status(command, fps, positioner_id):
         command.write('i', status=[positioner.alpha,
                                    positioner.beta,
                                    int(positioner.status),
-                                   positioner.initialised])
+                                   positioner.initialised,
+                                   positioner.is_bootloader()])
 
     command.set_status(clu.CommandStatus.DONE)
 
