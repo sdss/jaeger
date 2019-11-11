@@ -1,39 +1,35 @@
-language: python
-
 cache:
   pip: true
   timeout: 1000
 
-sudo: false
-
-python:
-- '3.6'
-
-os:
-- linux
+language: python
 
 matrix:
   fast_finish: true
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
+      after_success:
+        - coveralls
+    - python: 3.8
+      dist: xenial
+      sudo: true
 
 notifications:
   email: false
 
 # repo branches to test
 branches:
-- master
+  - master
 
 install:
-- pip install -U pip wheel --quiet
-- pip install --upgrade setuptools --quiet
-- pip install -r requirements.txt --quiet
-- pip install --upgrade pytest
-- pip install --upgrade pytest-coverage
-- pip install --upgrade coveralls
-- pip install --upgrade codecov
-- python setup.py install
+  - pip install -U pip wheel --quiet
+  - pip install --upgrade setuptools --quiet
+  - pip install pytest
+  - pip install pytest-coverage
+  - pip install coveralls
+  - pip install .[dev]
 
 script:
-- pytest python/jaeger/tests --cov python/jaeger --cov-report html
-
-after_success:
-- codecov
+  - pytest --cov basecam --cov-report html
