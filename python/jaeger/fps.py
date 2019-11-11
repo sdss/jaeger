@@ -177,7 +177,7 @@ class FPS(BaseFPS):
         configuration.
     can_profile : `str` or `None`
         The configuration profile for the CAN interface, or `None` to use the
-        default one. Ignored if ``bus`` is passed.
+        default one. Ignored if ``can`` is passed.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
