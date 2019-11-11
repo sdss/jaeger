@@ -59,6 +59,13 @@ pytest-sugar = "^0.9.2"
 docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click"]
 dev = ["pytest", "pytest-asyncio", "pytest-cov", "pytest-sugar"]
 
+[tool.coverage]
+branch = true
+include = "python/jeager/*""
+omit = [
+    "*/core/*.py"
+]
+
 [tool.isort]
 line_length = 99
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
