@@ -30,7 +30,7 @@ class PLC(object):
     module : .Module
         The `.Module` to which this PLC is connected to.
     name : str
-        The name of the PLC.
+        The name of the PLC. It is treated as case-insensitive.
     channel : int
         The channel of the PLC inside the module. The first channel must be 1
         so that the full address of the PLC is
@@ -156,7 +156,7 @@ class Module(object):
         Parameters
         ----------
         name : str
-            The name of the PLC.
+            The name of the PLC. It is treated as case-insensitive.
         channel : int
             The channel of the PLC in the module (relative to the
             module address).
@@ -166,7 +166,7 @@ class Module(object):
         """
 
         for module in self.wago.modules:
-            if name in self.wago.modules[module].plcs:
+            if name in [plc.lower() for plc in self.wago.modules[module].plcs]:
                 raise ValueError(f'PLC {name!r} is already '
                                  f'connected to module {module!r}.')
 
@@ -182,10 +182,11 @@ class Module(object):
 
         """
 
-        if name not in self.plcs:
-            raise ValueError(f'{name} is not a valid PLC name.')
+        for plc in self.plcs:
+            if plc.lower() == name.lower():
+                return self.plcs.pop(plc)
 
-        return self.plcs.pop(name)
+        raise ValueError(f'{name} is not a valid PLC name.')
 
 
 class WAGO(object):
@@ -247,9 +248,10 @@ class WAGO(object):
     def get_plc(self, name):
         """Gets the `.PLC` instance that matches ``name``."""
 
-        for module in self.modules:
-            if name in self.modules[module].plcs:
-                return self.modules[module].plcs[name]
+        for module in self.modules.values():
+            for plc in module.plcs.values():
+                if plc.name.lower() == name.lower():
+                    return plc
 
         raise ValueError(f'PLC {name} is not connected.')
 
@@ -319,7 +321,7 @@ class WAGO(object):
 
         # Wait a delay to allow the relay to change.
         if plc.category.lower() == 'do':
-            await asyncio.sleep(DELAY)
+            await asyncio.sleep(self.DELAY)
 
         # Check that the value has changed
         assert await plc.read(convert=False) == value, \
