@@ -11,7 +11,7 @@ matrix:
       dist: xenial
       sudo: true
       after_success:
-        - coveralls
+        - poetry run coveralls
     - python: 3.8
       dist: xenial
       sudo: true
@@ -31,4 +31,4 @@ install:
   - poetry install
 
 script:
-  - pytest --cov jaeger --cov-report html
+  - poetry run pytest --cov jaeger --cov-report html
