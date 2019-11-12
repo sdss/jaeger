@@ -21,6 +21,8 @@ CONVERT_PLC_VALUE = {
     'ee_rh': wago_utils.convert_ee_rh
 }
 
+DELAY = 0.1
+
 
 class PLC(object):
     """An object representing a PLC.
@@ -288,8 +290,22 @@ class WAGO(object):
     async def write_plc(self, name, value):
         """Writes to a PLC."""
 
-        if not await self.get_plc(name).write(value):
+        plc = self.get_plc(name)
+
+        initial_value = await plc.read(convert=False)
+        if initial_value == value:
+            return True
+
+        if not await plc.write(value):
             raise RuntimeError('failed writing value to PLC.')
+
+        # Wait a delay to allow the relay to change.
+        if plc.category.lower() == 'do':
+            await asyncio.sleep(DELAY)
+
+        # Check that the value has changed
+        assert await plc.read(convert=False) == value, \
+            'failed changing value of PLC coil/register.'
 
         return True
 
