@@ -31,6 +31,9 @@ install:
   - pip install pytest-coverage
   - pip install coveralls
   - pip install .[dev]
+  - pip install toml
+  - pip install --pre --upgrade coverage
+
 
 script:
   - pytest --cov jaeger --cov-report html

@@ -58,7 +58,6 @@ coverage = {version = "^5.0b1", allows-prereleases = true}
 
 [tool.poetry.extras]
 docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click"]
-dev = ["pytest", "pytest-asyncio", "pytest-cov", "pytest-sugar", "toml", "coverage"]
 
 [tool.coverage.run]
 branch = true
