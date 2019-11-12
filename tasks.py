@@ -24,7 +24,7 @@ from invoke import Collection, task
 def clean_docs(ctx):
     """Cleans up the docs"""
     print('Cleaning the docs')
-    ctx.run('rm -rf docs/_build')
+    ctx.run('rm -rf docs/sphinx/_build')
 
 
 @task
@@ -33,7 +33,7 @@ def build_docs(ctx, clean=False):
 
     if clean:
         print('Cleaning the docs')
-        ctx.run('rm -rf docs/_build')
+        ctx.run('rm -rf docs/sphinx/_build')
 
     print('Building the docs')
     os.chdir('docs/sphinx')
@@ -44,7 +44,7 @@ def build_docs(ctx, clean=False):
 def show_docs(ctx):
     """Shows the Sphinx docs"""
     print('Showing the docs')
-    os.chdir('docs/_build/html')
+    os.chdir('docs/sphinx/_build/html')
     ctx.run('open ./index.html')
 
 
