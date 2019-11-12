@@ -85,7 +85,7 @@ WAGO:
             device: "750-530"
             mode: output
             channels: 8
-            address: 40512
+            address: 40513
             comment: "Power relays"
             plcs:
                 "24V":
