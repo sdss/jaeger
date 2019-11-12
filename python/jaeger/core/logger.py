@@ -58,6 +58,11 @@ def colored_formatter(record):
         if warning_category_groups is not None:
             warning_category, warning_text = warning_category_groups.groups()
 
+            # Temporary ignore warnings from pymodbus. The normal warnings.simplefilter
+            # does not work because pymodbus forces them to show.
+            if re.match('"@coroutine" decorator is deprecated.+', warning_text):
+                return
+
             warning_category_colour = color_text('({})'.format(warning_category), 'cyan')
             message = '{} {}'.format(color_text(warning_text, ''), warning_category_colour)
 
