@@ -24,14 +24,11 @@ branches:
   - master
   - build-cleanup
 
-install:
-  - pip install -U pip wheel --quiet
-  - pip install --upgrade setuptools --quiet
-  - pip install pytest
-  - pip install pytest-coverage
-  - pip install coveralls
-  - pip install .[dev]
+before_install:
+  - pip install poetry
 
+install:
+  - poetry install
 
 script:
   - pytest --cov jaeger --cov-report html
