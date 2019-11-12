@@ -99,7 +99,7 @@ class BaseFPS(object):
 
             n_pos = len(self.positioners)
 
-        elif targetdb is not None:
+        elif targetdb:
 
             log.info(f'{self._class_name}: reading profile {layout!r} from database.')
 
