@@ -249,6 +249,20 @@ class WAGO(object):
 
         raise ValueError(f'PLC {name} is not connected.')
 
+    def list_categories(self):
+        """Returns a list of available, non-null PLC categories."""
+
+        categories = []
+
+        for module in self.modules.values():
+            categories += [plc.category for plc in module.plcs.values()]
+
+        categories = sorted(list(set(categories)))
+        if '' in categories:
+            categories.remove('')
+
+        return categories
+
     async def read_plc(self, name, convert=True):
         """Reads a PLC.
 
@@ -283,7 +297,7 @@ class WAGO(object):
         for module in self.modules:
             for plc in self.modules[module].plcs.values():
                 if plc.category.lower() == category:
-                    values[plc.name] = plc.read(convert=convert)
+                    values[plc.name] = await plc.read(convert=convert)
 
         return values
 
