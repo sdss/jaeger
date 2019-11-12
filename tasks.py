@@ -24,7 +24,7 @@ from invoke import Collection, task
 def clean_docs(ctx):
     """Cleans up the docs"""
     print('Cleaning the docs')
-    ctx.run("rm -rf docs/sphinx/_build")
+    ctx.run('rm -rf docs/_build')
 
 
 @task
@@ -33,18 +33,18 @@ def build_docs(ctx, clean=False):
 
     if clean:
         print('Cleaning the docs')
-        ctx.run("rm -rf docs/sphinx/_build")
+        ctx.run('rm -rf docs/_build')
 
     print('Building the docs')
     os.chdir('docs/sphinx')
-    ctx.run("make html", pty=True)
+    ctx.run('make html', pty=True)
 
 
 @task
 def show_docs(ctx):
     """Shows the Sphinx docs"""
     print('Showing the docs')
-    os.chdir('docs/sphinx/_build/html')
+    os.chdir('docs/_build/html')
     ctx.run('open ./index.html')
 
 
@@ -57,21 +57,28 @@ def clean(ctx):
     ctx.run('rm -rf build')
     ctx.run('rm -rf dist')
     ctx.run('rm -rf *.egg-info')
-    ctx.run('rm -rf python/*.egg-info')
+
+
+@task(clean, default=True)
+def deploy(ctx):
+    """Deploy the project to PyPI"""
+    print('Deploying to PyPI!')
+    ctx.run('python setup.py sdist bdist_wheel --universal')
+    ctx.run('twine upload dist/*')
 
 
 @task(clean)
-def deploy(ctx):
-    """Deploy the project to pypi"""
-    print('Deploying to Pypi!')
+def deploy_test(ctx):
+    """Deploy the project to the test version of  PyPI"""
+    print('Deploying to Test PyPI!')
     ctx.run('python setup.py sdist bdist_wheel --universal')
-    ctx.run('twine upload dist/*')
+    ctx.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
 
 
 os.chdir(os.path.dirname(__file__))
 
 # create a collection of tasks
-ns = Collection(clean, deploy)
+ns = Collection(clean)
 
 # create a sub-collection for the doc tasks
 docs = Collection('docs')
@@ -79,3 +86,8 @@ docs.add_task(build_docs, 'build')
 docs.add_task(clean_docs, 'clean')
 docs.add_task(show_docs, 'show')
 ns.add_collection(docs)
+
+deploy_task = Collection('deploy')
+deploy_task.add_task(deploy, 'pypi')
+deploy_task.add_task(deploy_test, 'test')
+ns.add_collection(deploy_task)

@@ -1,9 +1,0 @@
-[flake8]
-
-ignore =
-    # H101: Use TODO(NAME)
-    H101
-    N
-    W504
-
-max-line-length = 99
