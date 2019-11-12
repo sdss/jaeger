@@ -31,4 +31,4 @@ install:
   - poetry install
 
 script:
-  - poetry run pytest --cov jaeger --cov-report html
+  - poetry run pytest -- --cov jaeger --cov-report html
