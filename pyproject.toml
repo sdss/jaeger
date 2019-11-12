@@ -61,6 +61,9 @@ coveralls = "^1.8.2"
 [tool.poetry.extras]
 docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click", "semantic_version"]
 
+[tool.poetry.scripts]
+jaeger = "jaeger.cli:jaeger"
+
 [tool.isort]
 line_length = 99
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
