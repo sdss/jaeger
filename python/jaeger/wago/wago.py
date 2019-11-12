@@ -33,7 +33,8 @@ class PLC(object):
         The name of the PLC.
     channel : int
         The channel of the PLC inside the module. The first channel must be 1
-        so that the full address of the PLC is ``module_address + channel -``.
+        so that the full address of the PLC is
+        ``module_address + channel - 40001``.
     category : str
         The type of PLC (e.g., ``temperature``, ``humidity``, ``do``).
     description : str
@@ -73,7 +74,7 @@ class PLC(object):
     def address(self):
         """Returns the full address of this PLC."""
 
-        return self.module.address + self.channel - 1
+        return self.module.address + self.channel - 40002
 
     @property
     def client(self):
@@ -94,17 +95,17 @@ class PLC(object):
         assert self.client.connected, 'client is not connected'
 
         if self.coil:
-            resp = await self.client.protocol.read_coil(self.address, count=1)
+            resp = await self.client.protocol.read_coils(self.address, count=1)
         else:
-            resp = await self.client.protocol.read_register(self.address, count=1)
+            resp = await self.client.protocol.read_input_registers(self.address, count=1)
 
         assert resp.function_code < 0x80, f'invalid response for PLC {self.name!r}.'
 
-        value = resp.registers[0] if not self.coil else resp.coils[0]
+        value = resp.registers[0] if not self.coil else resp.bits[0]
 
         if convert:
             if self.category == 'do':
-                return 'on' if resp.coils[0] == self.on_value else 'off'
+                return 'on' if resp.bits[0] == self.on_value else 'off'
             if self.category in CONVERT_PLC_VALUE:
                 return CONVERT_PLC_VALUE[self.category](value)
 
@@ -114,6 +115,8 @@ class PLC(object):
         """Writes values to a coil or register."""
 
         assert self.client.connected, 'client is not connected'
+        assert self.module.mode == 'output', \
+            'writing is not allowed to this input module.'
 
         if self.coil:
             resp = await self.client.protocol.write_coil(self.address, value)
@@ -201,7 +204,6 @@ class WAGO(object):
 
         self.address = address
         self.client = AsyncioModbusTcpClient(address, loop=loop)
-        self.protocol = None
         self.loop = self.client.loop
 
         self.modules = {}
