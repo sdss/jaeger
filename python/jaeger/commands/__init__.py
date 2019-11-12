@@ -5,9 +5,6 @@
 # @Date: 2018-08-27
 # @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2018-10-09 00:12:12
 
 # flake8: noqa
 # isort:skip_file
@@ -40,6 +37,7 @@ class CommandID(enum.IntEnum):
     GET_ACTUAL_POSITION = 32
     SET_ACTUAL_POSITION = 33
     SET_SPEED = 40
+    SET_CURRENT = 41
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
 

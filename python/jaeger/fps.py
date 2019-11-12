@@ -5,9 +5,6 @@
 # @Date: 2018-09-06
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-08-30 13:36:57
 
 import asyncio
 import os
@@ -91,18 +88,16 @@ class BaseFPS(object):
             log.info(f'{self._class_name}: reading layout from file {layout!s}.')
 
             data = astropy.table.Table.read(layout, format='ascii.no_header',
-                                            names=['row', 'pos', 'x', 'y', 'type'])
+                                            names=['id', 'row', 'pos', 'x', 'y', 'type'])
 
-            pos_id = 1
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
                 new_positioner = self._positioner_class(
-                    pos_id, self, centre=(row['x'], row['y']))
-                pos_id += 1
+                    row['id'], self, centre=(row['x'], row['y']))
                 self.add_positioner(new_positioner)
 
-            n_pos = pos_id - 1
+            n_pos = len(self.positioners)
 
         elif targetdb is not None:
 
@@ -182,7 +177,7 @@ class FPS(BaseFPS):
         configuration.
     can_profile : `str` or `None`
         The configuration profile for the CAN interface, or `None` to use the
-        default one. Ignored if ``bus`` is passed.
+        default one. Ignored if ``can`` is passed.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.

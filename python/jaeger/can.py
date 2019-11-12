@@ -5,9 +5,6 @@
 # @Date: 2018-08-27
 # @Filename: can.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 16:54:37
 
 import asyncio
 import binascii
@@ -144,7 +141,7 @@ class JaegerCAN(object):
 
         self._start_notifier()
 
-        self.command_queue = asyncio.Queue(maxsize=100)
+        self.command_queue = asyncio.Queue()
         self._command_queue_task = self.loop.create_task(self._process_queue())
 
         #: dict: Commands currently running ordered by ``positioner_id``
@@ -397,7 +394,7 @@ CANNET_ERRORS = {
 
 
 class CANnetInterface(JaegerCAN):
-    """An interface class specifically for the CAN\@net 200/420 device.
+    r"""An interface class specifically for the CAN\@net 200/420 device.
 
     This class bahaves as `.JaegerCAN` but allows communication with the
     device itself and tracks its status.

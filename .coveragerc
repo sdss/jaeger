@@ -1,0 +1,5 @@
+[run]
+branch = true
+include = python/jaeger/*
+omit =
+    */core/*.py
