@@ -9,10 +9,10 @@
 import pathlib
 
 import click
+import clu
 import numpy
 
-import clu
-from clu import command_parser as jaeger_parser
+from . import jaeger_parser
 
 
 @jaeger_parser.command()
