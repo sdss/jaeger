@@ -54,15 +54,9 @@ pytest = "^5.2.2"
 pytest-asyncio = "^0.10.0"
 pytest-cov = "^2.8.1"
 pytest-sugar = "^0.9.2"
-coverage = {version = "^5.0b1", allows-prereleases = true}
 
 [tool.poetry.extras]
 docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click"]
-
-[tool.coverage.run]
-branch = true
-include = ["python/jaeger/*"]
-omit = ["python/jaeger/core/*.py"]
 
 [tool.isort]
 line_length = 99

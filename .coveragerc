@@ -1,0 +1,4 @@
+[coverage:run]
+branch = true
+include = ["python/jaeger/*"]
+omit = ["python/jaeger/core/*.py"]
