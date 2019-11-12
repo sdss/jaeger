@@ -11,3 +11,4 @@
 from ..actor import jaeger_parser
 
 from .positioner import *
+from .wago import *
