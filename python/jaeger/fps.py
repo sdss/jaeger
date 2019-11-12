@@ -35,7 +35,7 @@ class BaseFPS(object):
 
     This class includes methods to read the layout and construct positioner
     objects and can be used by the real `FPS` class or the
-    `~jaeger.tests.core.VirtualFPS`.
+    `~jaeger.testing.VirtualFPS`.
 
     Parameters
     ----------
@@ -47,7 +47,7 @@ class BaseFPS(object):
     positioner_class : class
         The class to be used to create a new positioner. In principle this will
         be `.Positioner` but it may be different if the positioners are created
-        for a `~jaeger.tests.core.VirtualFPS`.
+        for a `~jaeger.testing.VirtualFPS`.
 
     """
 

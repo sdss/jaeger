@@ -36,7 +36,7 @@ def build_docs(ctx, clean=False):
         ctx.run('rm -rf docs/_build')
 
     print('Building the docs')
-    os.chdir('docs')
+    os.chdir('docs/sphinx')
     ctx.run('make html', pty=True)
 
 
