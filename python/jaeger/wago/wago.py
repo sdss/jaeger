@@ -21,8 +21,6 @@ CONVERT_PLC_VALUE = {
     'ee_rh': wago_utils.convert_ee_rh
 }
 
-DELAY = 0.1
-
 
 class PLC(object):
     """An object representing a PLC.
@@ -207,6 +205,12 @@ class WAGO(object):
         self.address = address
         self.client = AsyncioModbusTcpClient(address, loop=loop)
         self.loop = self.client.loop
+
+        #: Delay to way before considering that a digital output has been written.
+        if 'WAGO' in jaeger_config:
+            self.DELAY = jaeger_config['WAGO'].get('DO_delay', 0.5)
+        else:
+            self.DELAY = 0.5
 
         self.modules = {}
 
