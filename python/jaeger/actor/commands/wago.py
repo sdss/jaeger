@@ -8,12 +8,20 @@
 
 import click
 
+from clu.parser import pass_args
 from . import jaeger_parser
 
 
 @jaeger_parser.group()
-def wago():
-    pass
+@pass_args()
+def wago(command, fps):
+
+    wago = fps.wago
+    if wago is None:
+        command.failed(text='WAGO not set up.')
+        raise click.Abort()
+
+    return
 
 
 @wago.command()
