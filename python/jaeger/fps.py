@@ -346,6 +346,8 @@ class FPS(BaseFPS):
 
         """
 
+        unknwon_positioners = []
+
         # Start by initialising the WAGO.
         if self.wago:
 
@@ -394,10 +396,7 @@ class FPS(BaseFPS):
 
             if positioner_id not in self.positioners:
                 if allow_unknown:
-                    warnings.warn(f'found positioner with ID={positioner_id} '
-                                  'that is not in the layout. '
-                                  'Adding it with unknown position.',
-                                  JaegerUserWarning)
+                    unknwon_positioners.append(positioner_id)
                     self.add_positioner(positioner_id)
                 else:
                     log.error(f'found positioner with ID={positioner_id} '
@@ -439,11 +438,16 @@ class FPS(BaseFPS):
                               JaegerUserWarning)
                 continue
 
-        n_unknown = len([pos for pos in self.positioners
-                         if self[pos].status == maskbits.PositionerStatus.UNKNOWN])
+        if len(unknwon_positioners) > 0:
+            warnings.warn(f'found {len(unknwon_positioners)} unknown positioners '
+                          f'with IDs {sorted(unknwon_positioners)!r}. '
+                          'They have been added to the layout.', JaegerUserWarning)
 
-        if n_unknown > 0:
-            warnings.warn(f'{n_unknown} positioners did not respond to '
+        n_did_not_reply = len([pos for pos in self.positioners
+                               if self[pos].status == maskbits.PositionerStatus.UNKNOWN])
+
+        if n_did_not_reply > 0:
+            warnings.warn(f'{n_did_not_reply} positioners did not respond to '
                           f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
 
         n_non_initialised = len([pos for pos in self.positioners
