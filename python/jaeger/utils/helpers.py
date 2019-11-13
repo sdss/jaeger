@@ -211,7 +211,7 @@ class Poller(object):
             raise RuntimeError('poller is already running.')
 
         self.delay = delay or self._orig_delay
-        self._task = asyncio.create_task(self.poller())
+        self._task = self.loop.create_task(self.poller())
 
         return self
 
