@@ -8,6 +8,8 @@ Changelog
 * Add command `.SetCurrent`.
 * Modify ``jaeger`` CLI command to use ``async def`` and ``await``.
 * Add ``is_bootloader`` to output of ``status`` command.
+* :feature:`24` (with :issue:`28`) Initial implementation of WAGO PLCs and associated actor commands.
+* :feature:`12` Initial but fully functional implementation of TCP/IP actor.
 
 * :release:`0.2.1 <2019-06-29>`
 * Fix ``MANIFEST.in`` not including the requirements files.
