@@ -31,7 +31,7 @@ pygments = "^2.2.0"
 Click = "^7.0"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
-sdss-clu = "^0.1.4"
+sdss-clu = {git = "https://github.com/sdss/clu.git"}
 pyserial = "^3.4"
 pymodbus = "^2.3.0"
 
