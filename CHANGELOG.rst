@@ -14,6 +14,7 @@ Changelog
 * :feature:`40` Allow to instantiate an FPS without a WAGO connection.
 * :feature:`37` Support power cycling a PLC.
 * :support:`22` Moved some configuration parameters under ``positioner``.
+* :feature:`29` Output WAGO status on a timer.
 
 * :release:`0.2.1 <2019-06-29>`
 * Fix ``MANIFEST.in`` not including the requirements files.
