@@ -801,10 +801,10 @@ description = "A new protocol for SDSS actors"
 name = "sdss-clu"
 optional = false
 python-versions = ">=3.7"
-version = "0.1.5.dev0"
+version = "0.1.5"
 
 [package.dependencies]
-aio_pika = ">=5.5.3"
+aio-pika = ">=5.5.3"
 click = ">=7.0"
 jsonschema = ">=3.0.1"
 numpy = ">=1.15.1"
@@ -816,10 +816,6 @@ pygments = ">=2.2.0"
 dev = ["asynctest (>=0.13.0)", "flake8", "ipython", "pytest", "pytest-asyncio", "pytest-cov", "pytest-sugar", "invoke", "bump2version", "wheel"]
 docs = ["Sphinx (>=1.8.0)", "releases (>=1.6.1)", "sphinxcontrib-trio (>=1.0.1)", "sphinx-click (>=1.3.0)", "semantic-version (2.6.0)"]
 
-[package.source]
-reference = "f7be398772c35bcc8d19f3345dfea97ef8e68980"
-type = "git"
-url = "https://github.com/sdss/clu.git"
 [[package]]
 category = "main"
 description = "A library implementing the 'SemVer' scheme."
@@ -1077,7 +1073,7 @@ testing = ["pathlib2", "contextlib2", "unittest2"]
 docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click", "semantic_version"]
 
 [metadata]
-content-hash = "a5cbfd1de663ad66130948c2f869d4e2663a43a2244c581d3faafcbc9ca012ff"
+content-hash = "16561660165d810ed0dd6a7eed258ad3bbdefdda8be31e292b40b53a46e9cccd"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1519,7 +1515,10 @@ restructuredtext-lint = [
     {file = "ruamel.yaml-0.15.100-cp37-cp37m-win_amd64.whl", hash = "sha256:4b1674a936cdae9735578d4fd64bcbc6cfbb77a1a8f7037a50c6e3874ba4c9d8"},
     {file = "ruamel.yaml-0.15.100.tar.gz", hash = "sha256:8e42f3067a59e819935a2926e247170ed93c8f0b2ab64526f888e026854db2e4"},
 ]
-sdss-clu = []
+sdss-clu = [
+    {file = "sdss-clu-0.1.5.tar.gz", hash = "sha256:6ed149eac3897386b139a75c7a4047d4866d984dc74099c9db67ef2717166110"},
+    {file = "sdss_clu-0.1.5-py3-none-any.whl", hash = "sha256:f4991e67a7594c3f4d507902efd5427051c3eb764dd2e4c82619dfe45a74bb36"},
+]
 semantic-version = [
     {file = "semantic_version-2.6.0-py3-none-any.whl", hash = "sha256:2d06ab7372034bcb8b54f2205370f4aa0643c133b7e6dbd129c5200b83ab394b"},
     {file = "semantic_version-2.6.0.tar.gz", hash = "sha256:2a4328680073e9b243667b201119772aefc5fc63ae32398d6afafff07c4f54c0"},
