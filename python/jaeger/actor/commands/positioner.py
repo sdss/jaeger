@@ -80,10 +80,8 @@ async def status(ctx, command, fps, positioner_id, full):
                                    positioner.initialised,
                                    positioner.is_bootloader() or False])
 
-    # TODO: improve this when CLU has support for linked commands.
     if full:
-        await ctx.invoke(wago_status, command, fps)
-        return  # No need to finish the command, already done.
+        await clu.Command('wago status', parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
 
