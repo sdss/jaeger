@@ -35,7 +35,7 @@ class Positioner(StatusMixIn):
 
     """
 
-    def __init__(self, positioner_id, fps, centre):
+    def __init__(self, positioner_id, fps, centre=(None, None)):
 
         self.fps = fps
         self.positioner_id = positioner_id
