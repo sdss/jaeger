@@ -19,6 +19,7 @@ from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.positioner import Positioner
 from jaeger.utils import bytes_to_int
+from jaeger.wago import WAGO
 
 
 try:
@@ -99,7 +100,7 @@ class BaseFPS(object):
 
             n_pos = len(self.positioners)
 
-        elif targetdb is not None:
+        elif targetdb:
 
             log.info(f'{self._class_name}: reading profile {layout!r} from database.')
 
@@ -214,6 +215,9 @@ class FPS(BaseFPS):
             except ConnectionRefusedError:
                 raise
 
+        #: .WAGO: The WAGO PLC system that controls the FPS.
+        self.wago = None
+
         super().__init__(layout=layout)
 
     async def _get_positioner_bus_map(self):
@@ -324,6 +328,23 @@ class FPS(BaseFPS):
 
     async def initialise(self, layout=None, check_positioners=True):
         """Initialises all positioners with status and firmware version."""
+
+        # Start by initialising the WAGO.
+        if 'WAGO' in config:
+
+            self.wago = WAGO.from_config()
+
+            try:
+                await self.wago.connect()
+            except RuntimeError as ee:
+                log.error(f'failed to initialise WAGO: {ee}')
+
+        if self.wago is None or self.wago.client.connected is False:
+            log.error('failed to initialise WAGO: the WAGO is not '
+                      'present or failed to connect.')
+
+        log.info(f'WAGO connected on host {self.wago.client.host}')
+        return False
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()

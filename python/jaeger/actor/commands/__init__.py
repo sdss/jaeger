@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 #
 # @Author: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Date: 2017-12-01
-# @Filename: jaeger
+# @Date: 2019-11-12
+# @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from jaeger import cli
+# flake8: noqa
 
+from ..actor import jaeger_parser
 
-cli.jaeger()
+from .positioner import *
+from .wago import *
