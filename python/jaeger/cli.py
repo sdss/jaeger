@@ -36,9 +36,11 @@ def cli_coro(f):
 @click.option('-l', '--layout', type=str, help='The FPS layout')
 @click.option('-v', '--verbose', is_flag=True, help='Debug mode')
 @click.option('--no-tron', is_flag=True, help='Does not connect to Tron')
+@click.option('--no-wago', is_flag=True, help='Does not connect to the WAGO')
 @click.pass_context
 @cli_coro
-async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=False):
+async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False,
+                 no_tron=False, no_wago=False):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor."""
@@ -55,7 +57,7 @@ async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_
     ctx.obj['can_profile'] = profile
     ctx.obj['layout'] = layout
 
-    fps = FPS(**ctx.obj)
+    fps = FPS(**ctx.obj, wago=not no_wago)
     await fps.initialise()
     ctx.obj['fps'] = fps
 

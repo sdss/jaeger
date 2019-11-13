@@ -29,7 +29,7 @@ async def status(command, fps):
     """Outputs the status of the PLCs."""
 
     wago = fps.wago
-    if wago is None:
+    if not wago:
         command.failed(text='WAGO not set up.')
         return
 

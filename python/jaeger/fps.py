@@ -176,9 +176,11 @@ class FPS(BaseFPS):
         If `None`, the default layout will be used. Can be either a layout name
         to be recovered from the database, or a file path to the layout
         configuration.
-    can_profile : `str` or `None`
+    can_profile : str or None
         The configuration profile for the CAN interface, or `None` to use the
         default one. Ignored if ``can`` is passed.
+    wago : bool or .WAGO
+        If `True`, connects the WAGO PLC controller.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
@@ -199,7 +201,7 @@ class FPS(BaseFPS):
 
     """
 
-    def __init__(self, can=None, layout=None, can_profile=None, loop=None):
+    def __init__(self, can=None, layout=None, can_profile=None, wago=True, loop=None):
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -216,7 +218,14 @@ class FPS(BaseFPS):
                 raise
 
         #: .WAGO: The WAGO PLC system that controls the FPS.
-        self.wago = None
+            self.wago = None
+
+        if isinstance(wago, WAGO):
+            self.wago = wago
+        elif wago is True:
+            self.wago = WAGO.from_config()
+        else:
+            self.wago = False
 
         super().__init__(layout=layout)
 
@@ -338,20 +347,13 @@ class FPS(BaseFPS):
         """
 
         # Start by initialising the WAGO.
-        if 'WAGO' in config:
-
-            self.wago = WAGO.from_config()
+        if self.wago:
 
             try:
                 await self.wago.connect()
+                log.info(f'WAGO connected on host {self.wago.client.host}')
             except RuntimeError as ee:
                 log.error(f'failed to initialise WAGO: {ee}')
-
-        if self.wago is None or self.wago.client.connected is False:
-            log.error('failed to initialise WAGO: the WAGO is not '
-                      'present or failed to connect.')
-
-        log.info(f'WAGO connected on host {self.wago.client.host}')
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()

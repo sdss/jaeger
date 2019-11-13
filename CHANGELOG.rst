@@ -11,6 +11,7 @@ Changelog
 * :feature:`24` (with :issue:`28`) Initial implementation of WAGO PLCs and associated actor commands.
 * :feature:`12` Initial but fully functional implementation of TCP/IP actor.
 * :bug:`39` Use ``loop.create_task`` instead of `asyncio.create_task` in `.Poller`, which seems to fix using jaeger in IPython.
+* :feature:`40` Allow to instantiate an FPS without a WAGO connection.
 
 * :release:`0.2.1 <2019-06-29>`
 * Fix ``MANIFEST.in`` not including the requirements files.
