@@ -5,30 +5,14 @@
 # @Date: 2018-09-16
 # @Filename: conf.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-17 14:05:23
 
 import os
-import shutil
-import sys
-import tempfile
 
 # import matplotlib
 from pkg_resources import parse_version
 
 from jaeger import __version__
 
-
-# Copy jaeger CLI script to a temporary location so that it can be imported
-tempdir = tempfile.TemporaryDirectory().name
-os.makedirs(os.path.join(tempdir, 'jaegercli'))
-
-os.chdir(os.path.dirname(__file__))
-shutil.copyfile('../../bin/jaeger', os.path.join(tempdir, 'jaegercli', 'jaegercli.py'))
-open(os.path.join(tempdir, 'jaegercli', '__init__.py'), 'w')
-
-sys.path.insert(0, os.path.join(tempdir, 'jaegercli'))
 
 # Are we building in RTD?
 on_rtd = os.environ.get('READTHEDOCS') == 'True'

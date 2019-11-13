@@ -5,9 +5,6 @@
 # @Date: 2018-09-14
 # @Filename: helpers.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-06-18 16:42:01
 
 import asyncio
 from concurrent.futures import Executor

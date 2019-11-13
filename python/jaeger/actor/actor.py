@@ -5,9 +5,6 @@
 # @Date: 2019-04-24
 # @Filename: actor.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-05-22 18:58:12
 
 import json
 import logging
@@ -16,7 +13,7 @@ import clu
 from clu.misc.logger import ActorHandler
 from jaeger import log
 
-from .commands import jaeger_parser  # noqa
+from clu import command_parser as jaeger_parser
 
 
 __all__ = ['JaegerActor']
@@ -33,7 +30,7 @@ class JaegerActor(clu.LegacyActor):
         # command (the first argument is always the actor command).
         self.parser_args = [fps]
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, parser=jaeger_parser, **kwargs)
 
         # Add ActorHandler to log
         self.actor_handler = ActorHandler(self)

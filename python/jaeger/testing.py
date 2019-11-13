@@ -2,12 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 # @Author: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Date: 2018-09-04
-# @Filename: core.py
+# @Date: 2019-11-12
+# @Filename: testing.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-04-27 18:41:13
 
 import asyncio
 

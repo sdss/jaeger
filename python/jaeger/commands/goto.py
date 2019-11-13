@@ -5,9 +5,6 @@
 # @Date: 2018-10-03
 # @Filename: goto.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-06 20:36:04
 
 import numpy
 
@@ -16,7 +13,7 @@ from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
 __ALL__ = ['InitialiseDatums', 'StartTrajectory', 'GotoAbsolutePosition',
-           'SetSpeed']
+           'SetSpeed', 'SetCurrent']
 
 
 class InitialiseDatums(Command):
@@ -93,7 +90,21 @@ class SetSpeed(Command):
     broadcastable = False
     safe = True
 
-    def __init__(self, alpha=0.0, beta=0.0, **kwargs):
+    def __init__(self, alpha=0, beta=0, **kwargs):
+
+        data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
+        kwargs['data'] = data
+
+        super().__init__(**kwargs)
+
+
+class SetCurrent(Command):
+    """Sets the current of the alpha and beta motors."""
+
+    command_id = CommandID.SET_CURRENT
+    broadcastable = False
+
+    def __init__(self, alpha=0, beta=0, **kwargs):
 
         data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
         kwargs['data'] = data

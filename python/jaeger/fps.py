@@ -5,9 +5,6 @@
 # @Date: 2018-09-06
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
-#
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Last modified time: 2019-07-10 17:36:25
 
 import asyncio
 import os
@@ -22,6 +19,7 @@ from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.positioner import Positioner
 from jaeger.utils import bytes_to_int
+from jaeger.wago import WAGO
 
 
 try:
@@ -38,7 +36,7 @@ class BaseFPS(object):
 
     This class includes methods to read the layout and construct positioner
     objects and can be used by the real `FPS` class or the
-    `~jaeger.tests.core.VirtualFPS`.
+    `~jaeger.testing.VirtualFPS`.
 
     Parameters
     ----------
@@ -50,7 +48,7 @@ class BaseFPS(object):
     positioner_class : class
         The class to be used to create a new positioner. In principle this will
         be `.Positioner` but it may be different if the positioners are created
-        for a `~jaeger.tests.core.VirtualFPS`.
+        for a `~jaeger.testing.VirtualFPS`.
 
     """
 
@@ -91,20 +89,18 @@ class BaseFPS(object):
             log.info(f'{self._class_name}: reading layout from file {layout!s}.')
 
             data = astropy.table.Table.read(layout, format='ascii.no_header',
-                                            names=['row', 'pos', 'x', 'y', 'type'])
+                                            names=['id', 'row', 'pos', 'x', 'y', 'type'])
 
-            pos_id = 1
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
                 new_positioner = self._positioner_class(
-                    pos_id, self, centre=(row['x'], row['y']))
-                pos_id += 1
+                    row['id'], self, centre=(row['x'], row['y']))
                 self.add_positioner(new_positioner)
 
-            n_pos = pos_id - 1
+            n_pos = len(self.positioners)
 
-        elif targetdb is not None:
+        elif targetdb:
 
             log.info(f'{self._class_name}: reading profile {layout!r} from database.')
 
@@ -182,7 +178,7 @@ class FPS(BaseFPS):
         configuration.
     can_profile : `str` or `None`
         The configuration profile for the CAN interface, or `None` to use the
-        default one. Ignored if ``bus`` is passed.
+        default one. Ignored if ``can`` is passed.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
@@ -218,6 +214,9 @@ class FPS(BaseFPS):
                 self.can = JaegerCAN.from_profile(can_profile, loop=loop)
             except ConnectionRefusedError:
                 raise
+
+        #: .WAGO: The WAGO PLC system that controls the FPS.
+        self.wago = None
 
         self._locked = False
 
@@ -377,6 +376,22 @@ class FPS(BaseFPS):
 
     async def initialise(self):
         """Initialises all positioners."""
+
+        # Start by initialising the WAGO.
+        if 'WAGO' in config:
+
+            self.wago = WAGO.from_config()
+
+            try:
+                await self.wago.connect()
+            except RuntimeError as ee:
+                log.error(f'failed to initialise WAGO: {ee}')
+
+        if self.wago is None or self.wago.client.connected is False:
+            log.error('failed to initialise WAGO: the WAGO is not '
+                      'present or failed to connect.')
+
+        log.info(f'WAGO connected on host {self.wago.client.host}')
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
