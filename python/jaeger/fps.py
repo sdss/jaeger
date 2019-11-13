@@ -80,7 +80,10 @@ class BaseFPS(object):
         layout : `str` or `pathlib.Path`
             Either the path to a layout file or a string with the layout name
             to be retrieved from the database. If ``layout=None``, retrieves
-            the default layout as defined in the config from the DB.
+            the default layout as defined in the config from the DB. If
+            no DB is present and no layout file is provided, loads an empty
+            layout to which connected positioners will be added but without
+            spatial information.
 
         """
 
@@ -94,9 +97,7 @@ class BaseFPS(object):
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
-                new_positioner = self._positioner_class(
-                    row['id'], self, centre=(row['x'], row['y']))
-                self.add_positioner(new_positioner)
+                self.add_positioner(row['id'], centre=(row['x'], row['y']))
 
             n_pos = len(self.positioners)
 
@@ -116,29 +117,28 @@ class BaseFPS(object):
                         targetdb.ActuatorType.label == 'Robot')
 
             for pos in positioners_db:
-                self.add_positioner(self._positioner_class(
-                    pos.id, self, centre=(pos.xcen, pos.ycen)))
+                self.add_positioner(pos.id, centre=(pos.xcen, pos.ycen))
 
             n_pos = positioners_db.count()
 
         else:
 
-            raise RuntimeError(f'{self._class_name}: database is not available.')
+            n_pos = 0
+            warnings.warn('no layout was provided. Loading an empty FPS.',
+                          JaegerUserWarning)
 
         log.debug(f'{self._class_name}: loaded positions for {n_pos} positioners.')
 
-    def add_positioner(self, positioner):
+    def add_positioner(self, positioner_id, centre=(None, None)):
         """Adds a new positioner to the list, and checks for duplicates."""
 
-        assert isinstance(positioner, self._positioner_class), \
-            f'{self._class_name}: positioner must be a Positioner instance.'
-
-        if positioner.positioner_id in self.positioners:
+        if positioner_id in self.positioners:
             raise ValueError(f'{self._class_name}: there is already a '
                              f'positioner in the list with positioner_id '
-                             f'{positioner.positioner_id}.')
+                             f'{positioner_id}.')
 
-        self.positioners[positioner.positioner_id] = positioner
+        self.positioners[positioner_id] = self._positioner_class(positioner_id, self,
+                                                                 centre=centre)
 
     def report_status(self):
         """Returns a dict with the position and status of each positioner."""
@@ -326,8 +326,16 @@ class FPS(BaseFPS):
 
         return
 
-    async def initialise(self, layout=None, check_positioners=True):
-        """Initialises all positioners with status and firmware version."""
+    async def initialise(self, allow_unknown=True):
+        """Initialises all positioners with status and firmware version.
+
+        Parameters
+        ----------
+        allow_unknown : bool
+            If `True`, allows to add positioners that are connected but not
+            in the layout.
+
+        """
 
         # Start by initialising the WAGO.
         if 'WAGO' in config:
@@ -352,14 +360,19 @@ class FPS(BaseFPS):
         for positioner in self.positioners.values():
             await positioner.reset()
 
+        if len(self.positioners) > 0:
+            n_expected_positioners = len(self.positioners)
+        else:
+            n_expected_positioners = None
+
         get_status_command = self.send_command(CommandID.GET_STATUS,
                                                positioner_id=0,
                                                timeout=2,
-                                               n_positioners=len(self.positioners))
+                                               n_positioners=n_expected_positioners)
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
                                                  timeout=2,
-                                                 n_positioners=len(self.positioners))
+                                                 n_positioners=n_expected_positioners)
 
         await asyncio.gather(get_status_command, get_firmware_command)
 
@@ -376,6 +389,18 @@ class FPS(BaseFPS):
             command_id = status_reply.command_id
             command_name = command_id.name
             response_code = status_reply.response_code
+
+            if positioner_id not in self.positioners:
+                if allow_unknown:
+                    warnings.warn(f'found positioner with ID={positioner_id} '
+                                  'that is not in the layout. '
+                                  'Adding it with unknown position.',
+                                  JaegerUserWarning)
+                    self.add_positioner(positioner_id)
+                else:
+                    log.error(f'found positioner with ID={positioner_id} '
+                              'that is not in the layout.')
+                    return False
 
             positioner = self.positioners[positioner_id]
 
