@@ -6,6 +6,8 @@
 # @Filename: wago.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import asyncio
+
 import click
 
 from clu.parser import pass_args
@@ -29,9 +31,6 @@ async def status(command, fps):
     """Outputs the status of the PLCs."""
 
     wago = fps.wago
-    if not wago:
-        command.failed(text='WAGO not set up.')
-        return
 
     for category in wago.list_categories():
         measured = await wago.read_category(category)
@@ -45,15 +44,15 @@ async def status(command, fps):
 @click.option('--on/--off', default=None,
               help='the value of the PLC. If not provided, '
                    'switches the current status.')
-async def switch(command, fps, plc, on):
+@click.option('--cycle', is_flag=True, help='power cycles a relay. '
+                                            'The final status is on.')
+async def switch(command, fps, plc, on, cycle):
     """Switches the status of an on/off PLC."""
 
-    desired_status = None
-
     wago = fps.wago
-    if wago is None:
-        command.failed(text='WAGO not set up.')
-        return
+
+    if cycle:
+        on = False
 
     try:
         plc_obj = wago.get_plc(plc)
@@ -75,20 +74,25 @@ async def switch(command, fps, plc, on):
                                 'is not on or off.')
             return
 
-    if on is True:
-        await wago.turn_on(plc_obj.name)
-        desired_status = 'on'
-    elif on is False:
-        await wago.turn_off(plc_obj.name)
-        desired_status = 'off'
-
-    # Do a sanity check
-    status = await plc_obj.read(convert=True)
-
-    if not status == desired_status:
+    try:
+        if on is True:
+            await wago.turn_on(plc_obj.name)
+        elif on is False:
+            await wago.turn_off(plc_obj.name)
+    except Exception:
         command.failed(text=f'failed to set status of PLC {plc_obj.name}.')
         return
 
-    command.done(text=f'PLC {plc_obj.name!r} is now {desired_status!r}.')
+    if cycle:
+        command.write('d', text='waiting 1 second before powering up.')
+        await asyncio.sleep(1)
+        try:
+            await wago.turn_on(plc_obj.name)
+        except Exception:
+            command.failed(text=f'failed to power PLC {plc_obj.name} back on.')
+            return
+
+    status = await plc_obj.read(convert=True)
+    command.done(text=f'PLC {plc_obj.name!r} is now {status!r}.')
 
     return
