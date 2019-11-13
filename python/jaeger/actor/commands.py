@@ -9,11 +9,10 @@
 import pathlib
 
 import click
-import clu
 import numpy
 
-from . import jaeger_parser
-from .wago import status as wago_status
+import clu
+from clu import command_parser as jaeger_parser
 
 
 @jaeger_parser.command()
@@ -62,9 +61,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 @jaeger_parser.command()
 @click.argument('positioner-id', type=int, nargs=-1, required=False)
-@click.option('-f', '--full', is_flag=True, default=False, help='outputs more statuses.')
-@click.pass_context
-async def status(ctx, command, fps, positioner_id, full):
+async def status(command, fps, positioner_id):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_id = positioner_id or list(fps.positioners.keys())
@@ -79,11 +76,6 @@ async def status(ctx, command, fps, positioner_id, full):
                                    int(positioner.status),
                                    positioner.initialised,
                                    positioner.is_bootloader() or False])
-
-    # TODO: improve this when CLU has support for linked commands.
-    if full:
-        await ctx.invoke(wago_status, command, fps)
-        return  # No need to finish the command, already done.
 
     command.set_status(clu.CommandStatus.DONE)
 
