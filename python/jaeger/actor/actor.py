@@ -13,7 +13,7 @@ import clu
 from clu.misc.logger import ActorHandler
 from jaeger import log
 
-from .commands import jaeger_parser  # noqa
+from clu import command_parser as jaeger_parser
 
 
 __all__ = ['JaegerActor']
@@ -30,7 +30,7 @@ class JaegerActor(clu.LegacyActor):
         # command (the first argument is always the actor command).
         self.parser_args = [fps]
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, parser=jaeger_parser, **kwargs)
 
         # Add ActorHandler to log
         self.actor_handler = ActorHandler(self)

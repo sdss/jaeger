@@ -31,6 +31,9 @@ pygments = "^2.2.0"
 Click = "^7.0"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
+sdss-clu = "^0.1.4"
+pyserial = "^3.4"
+pymodbus = "^2.3.0"
 
 # Docs extras. Need to be added to dependencies and not to dev-dependencies because otherwise
 # they won't be installed on pip install .[docs]
@@ -41,8 +44,6 @@ releases = {git = "https://github.com/albireox/releases.git", branch = "sphinx-v
 sphinxcontrib-trio = {version = "1.1.0", optional = true}
 semantic_version = {version = "2.6.0", optional = true}
 sphinx-click = {version = "2.3.0", optional = true}
-sdss-clu = "^0.1.4"
-pyserial = "^3.4"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.9.0"
@@ -59,6 +60,9 @@ coveralls = "^1.8.2"
 
 [tool.poetry.extras]
 docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click", "semantic_version"]
+
+[tool.poetry.scripts]
+jaeger = "jaeger.cli:jaeger"
 
 [tool.isort]
 line_length = 99
