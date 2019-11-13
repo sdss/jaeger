@@ -39,8 +39,8 @@ pymodbus = "^2.3.0"
 # they won't be installed on pip install .[docs]
 # See https://github.com/sdispater/poetry/pull/606#issuecomment-437943927
 # Need to do poetry install -E docs to actually install everything.
-Sphinx = {version = "^2.1", optional = true}
-releases = {git = "https://github.com/albireox/releases.git", branch = "sphinx-version", optional = true}
+Sphinx = {version = "^1.0", optional = true}
+releases = {version = "^1.6.1", optional = true}
 sphinxcontrib-trio = {version = "1.1.0", optional = true}
 semantic_version = {version = "2.6.0", optional = true}
 sphinx-click = {version = "2.3.0", optional = true}
