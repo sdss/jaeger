@@ -50,6 +50,7 @@ trajectory_data_n_points: 3
 
 WAGO:
     address: 192.168.1.11
+    DO_delay: 1  # Seconds to wait when writing digital output relays
     modules:
         RTD:
             device: "750-450"
