@@ -344,7 +344,6 @@ class FPS(BaseFPS):
                       'present or failed to connect.')
 
         log.info(f'WAGO connected on host {self.wago.client.host}')
-        return False
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
