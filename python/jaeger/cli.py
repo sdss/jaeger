@@ -26,7 +26,8 @@ def cli_coro(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        return asyncio.run(f(*args, **kwargs))
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
 
