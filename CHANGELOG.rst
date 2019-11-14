@@ -4,7 +4,7 @@
 Changelog
 =========
 
-* :release:`0.3.1dev <2019-11-13>`
+* :release:`0.3.0 <2019-11-13>`
 * Change file layout to include a positioner ID.
 * Add command `.SetCurrent`.
 * Modify ``jaeger`` CLI command to use ``async def`` and ``await``.

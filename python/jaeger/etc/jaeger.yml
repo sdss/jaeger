@@ -4,7 +4,7 @@ actor:
     name: jaeger
     host: 127.0.0.1
     port: 19990
-    version: 0.3.1dev
+    version: 0.3.1-dev
     status:
         port: 19991
         delay: 5
@@ -43,11 +43,6 @@ positioner:
                                  # are we putting in each SEND_TRAJECTORY_DATA command.
 
 log_dir: ~/logs/jaeger
-
-
-
-
-
 
 WAGO:
     address: 192.168.1.11

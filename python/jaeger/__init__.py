@@ -11,7 +11,7 @@ from .core import get_config, get_logger
 
 NAME = 'jaeger'
 
-__version__ = '0.3.1dev'
+__version__ = '0.3.1-dev'
 
 
 config = get_config(NAME, allow_user=True)
