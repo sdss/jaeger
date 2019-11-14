@@ -13,7 +13,6 @@ import clu
 import numpy
 
 from . import jaeger_parser
-from .wago import status as wago_status
 
 
 @jaeger_parser.command()

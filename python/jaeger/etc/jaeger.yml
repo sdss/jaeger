@@ -46,6 +46,7 @@ positioner:
 
 files:
     log_dir: ~/logs/jaeger
+    qa_database: /data/fps/positioners.sqlite
 
 WAGO:
     address: 192.168.1.11
