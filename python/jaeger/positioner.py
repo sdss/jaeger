@@ -7,6 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import datetime
 import warnings
 
 from jaeger import config, log, maskbits
@@ -42,6 +43,7 @@ class Positioner(StatusMixIn):
         self.centre = centre
         self.alpha = None
         self.beta = None
+        self.speed = [None, None]
         self.firmware = None
 
         #: A `~asyncio.Task` that polls the current position of alpha and
@@ -375,6 +377,8 @@ class Positioner(StatusMixIn):
         if speed_command.status.failed:
             return False
 
+        self.speed = [alpha, beta]
+
         return speed_command
 
     async def _goto_position(self, alpha, beta, relative=False):
@@ -400,7 +404,8 @@ class Positioner(StatusMixIn):
         return goto_command
 
     async def goto(self, alpha=None, beta=None,
-                   alpha_speed=None, beta_speed=None, relative=False):
+                   alpha_speed=None, beta_speed=None,
+                   relative=False):
         """Moves positioner to a given position.
 
         Parameters
@@ -474,10 +479,19 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: goto position '
                      f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
 
+            # Stores the QA information in the DB before the move
+            record = self._store_move_qa()
+            if record:
+                record.alpha_move = alpha
+                record.beta_move = beta
+                record.relative = relative
+
             goto_command = await self._goto_position(alpha, beta,
                                                      relative=relative)
 
             if not goto_command:
+                self._store_move_qa(record, success=False,
+                                    fail_reason='CAN command failed')
                 log.error(f'positioner {self.positioner_id}: '
                           'failed sending the goto position command.')
                 return False
@@ -500,16 +514,72 @@ class Positioner(StatusMixIn):
                 maskbits.PositionerStatus.DISPLACEMENT_COMPLETED, timeout=3)
 
             if result is False:
+                self._store_move_qa(record, success=False,
+                                    fail_reason='Failed to reach position')
                 log.error(f'positioner {self.positioner_id}: '
                           'failed to reach commanded position.')
                 return False
 
             log.info(f'positioner {self.positioner_id}: position reached.')
 
+            self._store_move_qa(record, success=True)
+
             # Restore position delay
             await self.position_poller.set_delay()
 
         return True
+
+    def _store_move_qa(self, record=None, success=True, fail_reason=''):
+        """Stores information about a goto move to the QA DB.
+
+        Parameters
+        ----------
+        record
+            The information is stored in two stages. In the first one, before
+            the move, ``record=None`` and a new record is created. In the
+            second stage, after the move or if it fails, the previously
+            generated record is passed, completed, and saved.
+        success : bool
+            Whether the move succeeded.
+        fail_reason : str
+            If ``success=False``, the reason why it failed.
+
+        Returns
+        -------
+        record
+            The DB record, or `None` if there is not a QA database.
+
+        """
+
+        if not self.fps or not self.fps.qa_db:
+            return
+
+        if not record:
+            Goto = self.fps.qa_db.models['Goto']
+            record = Goto()
+            record.positioner = self.positioner_id
+            record.x_center = self.centre[0] or -999.
+            record.y_center = self.centre[1] or -999.
+            record.start_time = datetime.datetime.now()
+            record.alpha_start = self.position[0]
+            record.beta_start = self.position[1]
+            record.alpha_speed = self.speed[0]
+            record.beta_speed = self.speed[1]
+            record.status_start = self.status
+            return record
+
+        record.end_time = datetime.datetime.now()
+        record.alpha_end = self.position[0]
+        record.beta_end = self.position[1]
+        record.status_end = self.status
+
+        record.success = success
+        if not success:
+            record.fail_reason = fail_reason
+
+        record.save(force_insert=True)
+
+        return record
 
     def __repr__(self):
         status_names = '|'.join([status.name for status in self.status.active_bits])
