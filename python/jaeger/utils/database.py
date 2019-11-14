@@ -9,7 +9,7 @@
 import os
 
 from peewee import (AutoField, BooleanField, DateTimeField, FloatField,
-                    ForeignKeyField, IntegerField, Model, SqliteDatabase)
+                    ForeignKeyField, IntegerField, Model, SqliteDatabase, TextField)
 
 
 # The foreign_keys pragma enforces that foreign key values exist.
@@ -28,21 +28,27 @@ class Positioner(BaseModel):
     y_center = FloatField(null=True)
 
 
-class Move(BaseModel):
+class Goto(BaseModel):
 
     pk = AutoField(primary_key=True)
     positioner = ForeignKeyField(Positioner, field='id', backref='moves')
+    x_center = FloatField(null=True)
+    y_center = FloatField(null=True)
     start_time = DateTimeField(null=True)
     end_time = DateTimeField(null=True)
     alpha_start = FloatField(null=True)
     beta_start = FloatField(null=True)
+    alpha_move = FloatField(null=True)
+    beta_move = FloatField(null=True)
+    alpha_speed = FloatField(null=False)
+    beta_speed = FloatField(null=False)
     alpha_end = FloatField(null=True)
     beta_end = FloatField(null=True)
+    relative = BooleanField(null=True)
     status_start = IntegerField(null=True)
     status_end = IntegerField(null=True)
-    x_center = FloatField(null=True)
-    y_center = FloatField(null=True)
     success = BooleanField(null=True)
+    fail_reason = TextField(null=True)
 
 
 def get_qa_database(path, create=True):
@@ -73,9 +79,9 @@ def get_qa_database(path, create=True):
 
     db.init(path)
     db.connect()
-    db.create_tables([Positioner, Move],)
+    db.create_tables([Positioner, Goto])
 
     db.models = {'Positioner': Positioner,
-                 'Move': Move}
+                 'Goto': Goto}
 
     return db
