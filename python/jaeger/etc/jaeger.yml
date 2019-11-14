@@ -33,7 +33,7 @@ profiles:
 fps:
     default_layout: filled_hex
     wago: true
-    qa: true
+    qa: false
 
 positioner:
     motor_speed: 1000
