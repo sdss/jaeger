@@ -37,7 +37,7 @@ class JaegerActor(clu.LegacyActor):
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.ERROR)
 
-        if fps.wago:
+        if fps.wago and fps.wago.connected:
             self.timer_commands.add_command('wago status', delay=10)
 
     @classmethod
