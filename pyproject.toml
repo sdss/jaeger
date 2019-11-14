@@ -34,6 +34,7 @@ progressbar2 = "^3.39.3"
 sdss-clu = "^0.1.5"
 pyserial = "^3.4"
 pymodbus = "^2.3.0"
+peewee = "^3.11.2"
 
 # Docs extras. Need to be added to dependencies and not to dev-dependencies because otherwise
 # they won't be installed on pip install .[docs]
