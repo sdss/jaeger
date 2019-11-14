@@ -79,11 +79,11 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa):
         if no_tron:
             actor_config.pop('tron', None)
 
-        actor = await JaegerActor.from_config(actor_config, fps).run()
+        actor = await JaegerActor.from_config(actor_config, fps).start()
         await actor.start_status_server(config['actor']['status']['port'],
                                         delay=config['actor']['status']['delay'])
 
-        await actor.server.server.serve_forever()
+        await actor.run_forever()
 
 
 @jaeger.command(name='upgrade-firmware')
