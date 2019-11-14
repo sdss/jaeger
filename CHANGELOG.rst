@@ -4,6 +4,8 @@
 Changelog
 =========
 
+* :feature:`46` Implement a QA database for moves.
+
 * :release:`0.3.0 <2019-11-13>`
 * Change file layout to include a positioner ID.
 * Add command `.SetCurrent`.
