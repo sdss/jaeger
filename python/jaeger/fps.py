@@ -16,7 +16,7 @@ import astropy.table
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.core.exceptions import JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.positioner import Positioner
 from jaeger.utils import bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
@@ -236,9 +236,11 @@ class FPS(BaseFPS):
             self.can = can
         else:
             try:
-                self.can = JaegerCAN.from_profile(can_profile, loop=loop)
+                self.can = JaegerCAN.from_profile(can_profile, fps=self, loop=loop)
             except ConnectionRefusedError:
                 raise
+
+        self._locked = False
 
         #: .WAGO: The WAGO PLC system that controls the FPS.
         self.wago = None
@@ -278,7 +280,7 @@ class FPS(BaseFPS):
 
         self._is_multibus = True
 
-        id_cmd = self.send_command(CommandID.GET_ID, broadcast=True)
+        id_cmd = self.send_command(CommandID.GET_ID)
         await id_cmd
 
         # Parse the replies
@@ -288,7 +290,8 @@ class FPS(BaseFPS):
 
     def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
-                     silent_on_conflict=False, override=False, **kwargs):
+                     silent_on_conflict=False, override=False,
+                     safe=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -320,6 +323,8 @@ class FPS(BaseFPS):
             If another instance of this command_id with the same positioner_id
             is running, cancels it and schedules this one immediately.
             Otherwise the command is queued until the first one finishes.
+        safe : bool
+            Whether the command is safe to send to a locked `.FPS`.
         kwargs : dict
             Extra arguments to be passed to the command.
 
@@ -333,6 +338,14 @@ class FPS(BaseFPS):
                                    loop=self.loop, data=data, **kwargs)
 
         command_name = command.name
+
+        if self.locked:
+            if command.safe or safe:
+                log.debug(f'FPS is locked but {command_name} is safe.')
+            else:
+                command.cancel(silent=True)
+                raise FPSLockedError('solve the problem and unlock the FPS '
+                                     'before sending commands.')
 
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
@@ -370,6 +383,42 @@ class FPS(BaseFPS):
         command._bus = bus
 
         return
+
+    @property
+    def locked(self):
+        """Returns `True` if the `.FPS` is locked."""
+
+        return self._locked
+
+    async def lock(self, abort_trajectories=True):
+        """Locks the `.FPS` and prevents commands to be sent.
+
+        Parameters
+        ----------
+        abort_trajectories : bool
+            Whether to abort trajectories when locking.
+
+        """
+
+        warnings.warn('locking FPS.', JaegerUserWarning)
+        self._locked = True
+
+        if abort_trajectories:
+            await self.abort_trajectory()
+
+    def unlock(self, force=False):
+        """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        for positioner in self.positioners.values():
+            if positioner.collision:
+                self._locked = True
+                log.error('cannot unlock the FPS until all '
+                          'the collisions have been cleared.')
+                return False
+
+        self._locked = False
+
+        return True
 
     async def initialise(self, allow_unknown=True):
         """Initialises all positioners with status and firmware version.
@@ -493,6 +542,14 @@ class FPS(BaseFPS):
         if n_non_initialised > 0:
             warnings.warn(f'{n_non_initialised} positioners responded but have '
                           'not been initialised.', JaegerUserWarning)
+
+        if self.locked:
+            log.info('FPS is locked. Trying to unlock it.')
+            if not self.unlock():
+                log.error('FPS cannot be unlocked. Initialisation failed.')
+                return False
+            else:
+                log.info('FPS unlocked successfully.')
 
         initialise_cmds = [positioner.initialise()
                            for positioner in self.positioners.values()
@@ -626,7 +683,11 @@ class FPS(BaseFPS):
                                           data=data[ii])
                         for ii, positioner_id in enumerate(positioners)]
 
-        await asyncio.gather(*commands)
+        results = await asyncio.gather(*commands, return_exceptions=True)
+
+        if any([isinstance(rr, FPSLockedError) for rr in results]):
+            raise FPSLockedError('one or more of the commands failed because '
+                                 'the FPS is locked.')
 
         return commands
 

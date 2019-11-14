@@ -71,6 +71,7 @@ class SetActualPosition(Command):
 
     command_id = CommandID.SET_ACTUAL_POSITION
     broadcastable = False
+    safe = True
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
@@ -87,6 +88,7 @@ class SetSpeed(Command):
 
     command_id = CommandID.SET_SPEED
     broadcastable = False
+    safe = True
 
     def __init__(self, alpha=0, beta=0, **kwargs):
 

@@ -15,7 +15,7 @@ from ruamel.yaml import YAML
 
 from jaeger import config, log, maskbits
 from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
-from jaeger.core.exceptions import JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.utils import int_to_bytes
 
 
@@ -56,6 +56,9 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
                                            'beta': [(20, 0), (23, 4)]}})
 
     """
+
+    if fps.locked:
+        raise FPSLockedError('FPS is locked. Cannot send trajectories.')
 
     PosStatus = maskbits.PositionerStatus
 

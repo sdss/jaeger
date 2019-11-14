@@ -20,7 +20,7 @@ import can.interfaces.virtual
 import jaeger
 import jaeger.interfaces.cannet
 from jaeger import can_log, config, log
-from jaeger.commands import CommandID
+from jaeger.commands import CommandID, StopTrajectory
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller
 
@@ -93,6 +93,8 @@ class JaegerCAN(object):
         A list of channels to be used to instantiate the interfaces.
     loop
         The event loop to use.
+    fps : .FPS
+        The focal plane system.
     args,kwargs
         Arguments and keyword arguments to pass to the interfaces when
         initialising it (e.g., port, baudrate, etc).
@@ -114,9 +116,9 @@ class JaegerCAN(object):
 
     """
 
-    def __init__(self, interface_name, channels, *args, loop=None, **kwargs):
+    def __init__(self, interface_name, channels, *args, loop=None, fps=None, **kwargs):
 
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
 
         assert interface_name in INTERFACES, f'invalid interface {interface_name}.'
         self.interface_name = interface_name
@@ -127,6 +129,8 @@ class JaegerCAN(object):
 
         if not isinstance(channels, (list, tuple)):
             channels = [channels]
+
+        self.fps = fps
 
         #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
         self.interfaces = []
@@ -160,6 +164,20 @@ class JaegerCAN(object):
         """Processes replies from the bus."""
 
         positioner_id, command_id, __, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
+
+        if command_id == CommandID.COLLISION_DETECTED:
+
+            log.error('a collision was detected. Sending STOP_TRAJECTORIES '
+                      'and locking the FPS.')
+
+            # Manually send the stop trajectory to be sure it has
+            # priority over other messages.
+            stop_trajectory_command = StopTrajectory(positioner_id=0)
+            self.send_to_interface(stop_trajectory_command.get_messages()[0])
+
+            # Now lock the FPS.
+            if self.fps:
+                self.loop.create_task(self.fps.lock(abort_trajectories=False))
 
         if command_id == 0:
             can_log.warning('invalid command with command_id=0, '
@@ -278,7 +296,7 @@ class JaegerCAN(object):
                 self.send_to_interface(message, interfaces=interfaces, bus=bus)
 
     @classmethod
-    def from_profile(cls, profile=None, loop=None):
+    def from_profile(cls, profile=None, **kwargs):
         """Creates a new bus interface from a configuration profile.
 
         Parameters
@@ -286,9 +304,6 @@ class JaegerCAN(object):
         profile : `str` or `None`
             The name of the profile that defines the bus interface, or `None`
             to use the default configuration.
-        loop : event loop or `None`
-            The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
-            get a valid loop.
 
         """
 
@@ -318,9 +333,9 @@ class JaegerCAN(object):
             raise KeyError('channel or channels key not found.')
 
         if interface == 'cannet':
-            return CANnetInterface(interface, channels, loop=loop, **config_data)
+            return CANnetInterface(interface, channels, **kwargs, **config_data)
 
-        return cls(interface, channels, loop=loop, **config_data)
+        return cls(interface, channels, **kwargs, **config_data)
 
     @staticmethod
     def print_profiles():
@@ -413,7 +428,10 @@ class CANnetInterface(JaegerCAN):
             interface.write('DEV IDENTIFY')
             interface.write('DEV VERSION')
 
-        self.device_status_poller = Poller(self._get_device_status, delay=5).start()
+        # We use call_soon later to be sure the event loop is running when we start
+        # the poller. This prevents problems when using the library in IPython.
+        self.device_status_poller = Poller(self._get_device_status, delay=5, loop=self.loop)
+        self.loop.call_soon(self.device_status_poller.start)
 
     def _process_reply(self, msg):
         """Processes a message checking first if it comes from the device."""

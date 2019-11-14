@@ -39,8 +39,11 @@ class Positioner(StatusMixIn):
     def __init__(self, positioner_id, fps, centre=(None, None)):
 
         self.fps = fps
+
         self.positioner_id = positioner_id
+
         self.centre = centre
+
         self.alpha = None
         self.beta = None
         self.speed = [None, None]
@@ -103,6 +106,15 @@ class Positioner(StatusMixIn):
         """Returns a tuple with the ``(alpha, beta)`` position."""
 
         return (self.alpha, self.beta)
+
+    @property
+    def collision(self):
+        """Returns `True` if the positioner is collided."""
+
+        if not self.status:
+            return False
+
+        return self.status.collision
 
     @property
     def initialised(self):
@@ -185,6 +197,12 @@ class Positioner(StatusMixIn):
 
         log.debug(f'positioner {self.positioner_id}: '
                   f'status={self.status.name} ({self.status.value})')
+
+        # Checks if the positioner is collided. If so, locks the FPS.
+        if not self.is_bootloader() and self.collision and not self.fps.locked:
+            log.error(f'positioner {self.positioner_id} has collided. '
+                      'Locking the FPS.')
+            await self.fps.lock()
 
     async def wait_for_status(self, status, delay=0.1, timeout=None):
         """Polls the status until it reaches a certain value.
