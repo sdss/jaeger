@@ -42,7 +42,8 @@ positioner:
     trajectory_data_n_points: 3  # How many points from the trajectory
                                  # are we putting in each SEND_TRAJECTORY_DATA command.
 
-log_dir: ~/logs/jaeger
+files:
+    log_dir: ~/logs/jaeger
 
 WAGO:
     address: 192.168.1.11
