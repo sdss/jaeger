@@ -218,7 +218,10 @@ class FPS(BaseFPS):
                 raise
 
         #: .WAGO: The WAGO PLC system that controls the FPS.
-            self.wago = None
+        self.wago = None
+
+        if wago is None:
+            wago = config['fps']['wago']
 
         if isinstance(wago, WAGO):
             self.wago = wago
