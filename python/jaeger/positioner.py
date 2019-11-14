@@ -46,11 +46,7 @@ class Positioner(StatusMixIn):
 
         self.alpha = None
         self.beta = None
-<<<<<<< HEAD
-
-=======
         self.speed = [None, None]
->>>>>>> master
         self.firmware = None
 
         #: A `~asyncio.Task` that polls the current position of alpha and
@@ -206,7 +202,7 @@ class Positioner(StatusMixIn):
         if not self.is_bootloader() and self.collision and not self.fps.locked:
             log.error(f'positioner {self.positioner_id} has collided. '
                       'Locking the FPS.')
-            self.fps.lock()
+            await self.fps.lock()
 
     async def wait_for_status(self, status, delay=0.1, timeout=None):
         """Polls the status until it reaches a certain value.

@@ -236,7 +236,7 @@ class FPS(BaseFPS):
             self.can = can
         else:
             try:
-                self.can = JaegerCAN.from_profile(can_profile, loop=loop)
+                self.can = JaegerCAN.from_profile(can_profile, fps=self, loop=loop)
             except ConnectionRefusedError:
                 raise
 
@@ -390,7 +390,7 @@ class FPS(BaseFPS):
 
         return self._locked
 
-    def lock(self, abort_trajectories=True):
+    async def lock(self, abort_trajectories=True):
         """Locks the `.FPS` and prevents commands to be sent.
 
         Parameters
@@ -404,7 +404,7 @@ class FPS(BaseFPS):
         self._locked = True
 
         if abort_trajectories:
-            self.abort_trajectory()
+            await self.abort_trajectory()
 
     def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
