@@ -65,7 +65,7 @@ docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click"]
 jaeger = "jaeger.cli:jaeger"
 
 [tool.isort]
-line_length = 99
+line_length = 79
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
 known_first_party = "jaeger"
