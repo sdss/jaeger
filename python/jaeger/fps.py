@@ -18,7 +18,7 @@ from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import JaegerUserWarning
 from jaeger.positioner import Positioner
-from jaeger.utils import bytes_to_int
+from jaeger.utils import bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
 
 
@@ -140,6 +140,24 @@ class BaseFPS(object):
         self.positioners[positioner_id] = self._positioner_class(positioner_id, self,
                                                                  centre=centre)
 
+        if self.qa_db:
+
+            Positioner = self.qa_db.models['Positioner']
+
+            # Check if the positioner exists.
+            db_pos = Positioner.select().filter(Positioner.id == positioner_id).first()
+
+            if not db_pos:
+                new = True
+                db_pos = Positioner(id=positioner_id)
+            else:
+                new = False
+
+            db_pos.x_center = centre[0] or -999.
+            db_pos.y_center = centre[1] or -999.
+
+            db_pos.save(force_insert=new)
+
     def report_status(self):
         """Returns a dict with the position and status of each positioner."""
 
@@ -181,6 +199,10 @@ class FPS(BaseFPS):
         default one. Ignored if ``can`` is passed.
     wago : bool or .WAGO
         If `True`, connects the WAGO PLC controller.
+    qa : bool or path
+        A path to the database used to store QA information. If `True`, uses
+        the value from ``config.files.qa_database``. If `False`, does not do
+        any QA recording.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
@@ -201,7 +223,8 @@ class FPS(BaseFPS):
 
     """
 
-    def __init__(self, can=None, layout=None, can_profile=None, wago=True, loop=None):
+    def __init__(self, can=None, layout=None, can_profile=None,
+                 wago=None, qa=None, loop=None):
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -218,7 +241,10 @@ class FPS(BaseFPS):
                 raise
 
         #: .WAGO: The WAGO PLC system that controls the FPS.
-            self.wago = None
+        self.wago = None
+
+        if wago is None:
+            wago = config['fps']['wago']
 
         if isinstance(wago, WAGO):
             self.wago = wago
@@ -226,6 +252,16 @@ class FPS(BaseFPS):
             self.wago = WAGO.from_config()
         else:
             self.wago = False
+
+        if qa is None:
+            qa = config['fps']['qa']
+
+        if qa is True:
+            self.qa_db = get_qa_database(config['files']['qa_database'])
+        elif qa is False:
+            self.qa_db = None
+        else:
+            self.qa_db = get_qa_database(qa)
 
         super().__init__(layout=layout)
 
