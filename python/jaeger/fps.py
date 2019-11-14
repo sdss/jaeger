@@ -341,10 +341,11 @@ class FPS(BaseFPS):
 
         if self.locked:
             if command.safe or safe:
-                warnings.warn(f'FPS is locked but {command_name} is safe.',
-                              JaegerUserWarning)
+                log.debug(f'FPS is locked but {command_name} is safe.')
             else:
-                raise FPSLockedError('unlock the FPS before sending commands.')
+                command.cancel(silent=True)
+                raise FPSLockedError('solve the problem and unlock the FPS '
+                                     'before sending commands.')
 
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
