@@ -18,7 +18,7 @@ from . import jaeger_parser
 def check_positioners(positioner_ids, command, fps):
     """Checks if some of the positioners are not connected."""
 
-    if any([pid not in fps for pid in positioner_ids]):
+    if any([pid not in fps.positioners for pid in positioner_ids]):
         command.failed('some positioners are not connected.')
         return False
 
