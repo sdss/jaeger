@@ -15,6 +15,16 @@ import numpy
 from . import jaeger_parser
 
 
+def check_positioners(positioner_ids, command, fps):
+    """Checks if some of the positioners are not connected."""
+
+    if any([pid not in fps for pid in positioner_ids]):
+        command.failed('some positioners are not connected.')
+        return False
+
+    return True
+
+
 @jaeger_parser.command()
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
 @click.argument('alpha', type=click.FloatRange(0., 360.))
@@ -22,6 +32,9 @@ from . import jaeger_parser
 @click.option('--speed', type=click.FloatRange(0., 2000.), nargs=2)
 async def goto(command, fps, positioner_id, alpha, beta, speed=None):
     """Sends positioners to a given (alpha, beta) position."""
+
+    if not check_positioners(positioner_id, command, fps):
+        return
 
     speed = speed or [None, None]
 
@@ -46,6 +59,9 @@ async def goto(command, fps, positioner_id, alpha, beta, speed=None):
 async def initialise(command, fps, positioner_id, datums=False):
     """Initialises positioners."""
 
+    if not check_positioners(positioner_id, command, fps):
+        return
+
     tasks = []
     for pid in positioner_id:
         tasks.append(fps.positioners[pid].initialise(initialise_datums=datums))
@@ -66,9 +82,12 @@ async def initialise(command, fps, positioner_id, datums=False):
 async def status(ctx, command, fps, positioner_id, full):
     """Reports the position and status bit of a list of positioners."""
 
-    positioner_id = positioner_id or list(fps.positioners.keys())
+    positioner_ids = positioner_id or list(fps.positioners.keys())
 
-    for pid in positioner_id:
+    if not check_positioners(positioner_id, command, fps):
+        return
+
+    for pid in positioner_ids:
         positioner = fps[pid]
         alpha_pos = -999 if positioner.alpha is None else numpy.round(positioner.alpha, 4)
         beta_pos = -999 if positioner.beta is None else numpy.round(positioner.beta, 4)
