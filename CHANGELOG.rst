@@ -4,12 +4,18 @@
 Changelog
 =========
 
+* :release:`0.3.0 <2019-11-13>`
 * Change file layout to include a positioner ID.
 * Add command `.SetCurrent`.
 * Modify ``jaeger`` CLI command to use ``async def`` and ``await``.
 * Add ``is_bootloader`` to output of ``status`` command.
 * :feature:`24` (with :issue:`28`) Initial implementation of WAGO PLCs and associated actor commands.
 * :feature:`12` Initial but fully functional implementation of TCP/IP actor.
+* :bug:`39` Use ``loop.create_task`` instead of `asyncio.create_task` in `.Poller`, which seems to fix using jaeger in IPython.
+* :feature:`40` Allow to instantiate an FPS without a WAGO connection.
+* :feature:`37` Support power cycling a PLC.
+* :support:`22` Moved some configuration parameters under ``positioner``.
+* :feature:`29` Output WAGO status on a timer.
 
 * :release:`0.2.1 <2019-06-29>`
 * Fix ``MANIFEST.in`` not including the requirements files.

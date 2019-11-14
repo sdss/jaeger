@@ -119,7 +119,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     await asyncio.gather(*new_traj_cmds)
 
     # How many points from the trajectory are we putting in each command.
-    n_chunk = config['trajectory_data_n_points']
+    n_chunk = config['positioner']['trajectory_data_n_points']
 
     # Gets the maximum number of points for each arm for all positioners.
     max_points = numpy.max(list(n_points.values()), axis=0)

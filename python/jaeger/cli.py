@@ -26,22 +26,27 @@ def cli_coro(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        return asyncio.run(f(*args, **kwargs))
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
 
 
 @click.group(invoke_without_command=True)
-@click.option('-p', '--profile', type=str, help='The bus interface profile')
-@click.option('-l', '--layout', type=str, help='The FPS layout')
-@click.option('-v', '--verbose', is_flag=True, help='Debug mode')
-@click.option('--no-tron', is_flag=True, help='Does not connect to Tron')
+@click.option('-p', '--profile', type=str, help='The bus interface profile.')
+@click.option('-l', '--layout', type=str, help='The FPS layout.')
+@click.option('-v', '--verbose', is_flag=True, help='Debug mode.')
+@click.option('--no-tron', is_flag=True, help='Does not connect to Tron.')
+@click.option('--no-wago', is_flag=True, help='Does not connect to the WAGO.')
+@click.option('--no-qa', is_flag=True, help='Does not use the QA database.')
 @click.pass_context
 @cli_coro
-async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_tron=False):
+async def jaeger(ctx, layout, profile, verbose, no_tron, no_wago, no_qa):
     """CLI for the SDSS-V focal plane system.
 
-    If called without subcommand starts the actor."""
+    If called without subcommand starts the actor.
+
+    """
 
     if verbose:
         log.set_level(logging.DEBUG)
@@ -55,6 +60,10 @@ async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_
     ctx.obj['can_profile'] = profile
     ctx.obj['layout'] = layout
 
+    fps = FPS(**ctx.obj, wago=not no_wago, qa=not no_qa)
+    await fps.initialise()
+    ctx.obj['fps'] = fps
+
     # If we call jaeger without a subcommand and with the actor flag,
     # start the actor.
     if ctx.invoked_subcommand is None:
@@ -63,9 +72,6 @@ async def jaeger(ctx, layout=None, profile=None, actor=False, verbose=False, no_
             from jaeger.actor import JaegerActor
         except ImportError:
             raise ImportError('CLU needs to be installed to run jaeger as an actor.')
-
-        fps = FPS(**ctx.obj)
-        await fps.initialise()
 
         actor_config = config['actor'].copy()
         actor_config.pop('status', None)
@@ -92,8 +98,7 @@ async def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
 
-    fps = FPS(**ctx.obj)
-    await fps.initialise()
+    fps = ctx.obj['fps']
 
     await load_firmware(fps, firmware_file, positioners=positioners,
                         force=force, show_progressbar=True)
@@ -120,8 +125,7 @@ async def goto(ctx, positioner_id, alpha, beta, speed=None):
     if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
         raise click.UsageError('speed must be in the range [0, 3000)')
 
-    fps = FPS(**ctx.obj)
-    await fps.initialise()
+    fps = ctx.obj['fps']
 
     positioner = fps.positioners[positioner_id]
     result = await positioner.initialise()
@@ -152,8 +156,7 @@ async def set_positions(ctx, positioner_id, alpha, beta):
     if beta < 0 or beta >= 360:
         raise click.UsageError('beta must be in the range [0, 360)')
 
-    fps = FPS(**ctx.obj)
-    await fps.initialise()
+    fps = ctx.obj['fps']
 
     positioner = fps.positioners[positioner_id]
 
@@ -194,8 +197,7 @@ async def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None
     if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
         raise click.UsageError('speed must be in the range [0, 3000)')
 
-    fps = FPS(**ctx.obj)
-    await fps.initialise()
+    fps = ctx.obj['fps']
 
     positioner = fps.positioners[positioner_id]
     result = await positioner.initialise()
@@ -238,8 +240,7 @@ async def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None
 async def home(ctx, positioner_id):
     """Initialise datums."""
 
-    fps = FPS(**ctx.obj)
-    await fps.initialise()
+    fps = ctx.obj['fps']
 
     if positioner_id is None:
         positioners = fps.positioners.values()

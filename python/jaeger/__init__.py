@@ -11,14 +11,18 @@ from .core import get_config, get_logger
 
 NAME = 'jaeger'
 
-__version__ = '0.3.0dev'
+__version__ = '0.3.1-dev'
 
 
 config = get_config(NAME, allow_user=True)
 
 
 log = get_logger('jaeger')
-log_dir = config.get('log_dir', None) or '~/.jaeger'
+
+if 'files' in config and 'log_dir' in config['files']:
+    log_dir = config['files']['log_dir']
+else:
+    log_dir = '~/.jaeger'
 
 can_log = get_logger('jaeger_can', capture_warnings=False)
 

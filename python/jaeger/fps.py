@@ -18,7 +18,7 @@ from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.positioner import Positioner
-from jaeger.utils import bytes_to_int
+from jaeger.utils import bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
 
 
@@ -80,7 +80,10 @@ class BaseFPS(object):
         layout : `str` or `pathlib.Path`
             Either the path to a layout file or a string with the layout name
             to be retrieved from the database. If ``layout=None``, retrieves
-            the default layout as defined in the config from the DB.
+            the default layout as defined in the config from the DB. If
+            no DB is present and no layout file is provided, loads an empty
+            layout to which connected positioners will be added but without
+            spatial information.
 
         """
 
@@ -94,9 +97,7 @@ class BaseFPS(object):
             for row in data:
                 if row['type'].lower() == 'fiducial':
                     continue
-                new_positioner = self._positioner_class(
-                    row['id'], self, centre=(row['x'], row['y']))
-                self.add_positioner(new_positioner)
+                self.add_positioner(row['id'], centre=(row['x'], row['y']))
 
             n_pos = len(self.positioners)
 
@@ -116,29 +117,46 @@ class BaseFPS(object):
                         targetdb.ActuatorType.label == 'Robot')
 
             for pos in positioners_db:
-                self.add_positioner(self._positioner_class(
-                    pos.id, self, centre=(pos.xcen, pos.ycen)))
+                self.add_positioner(pos.id, centre=(pos.xcen, pos.ycen))
 
             n_pos = positioners_db.count()
 
         else:
 
-            raise RuntimeError(f'{self._class_name}: database is not available.')
+            n_pos = 0
+            warnings.warn('no layout was provided. Loading an empty FPS.',
+                          JaegerUserWarning)
 
         log.debug(f'{self._class_name}: loaded positions for {n_pos} positioners.')
 
-    def add_positioner(self, positioner):
+    def add_positioner(self, positioner_id, centre=(None, None)):
         """Adds a new positioner to the list, and checks for duplicates."""
 
-        assert isinstance(positioner, self._positioner_class), \
-            f'{self._class_name}: positioner must be a Positioner instance.'
-
-        if positioner.positioner_id in self.positioners:
+        if positioner_id in self.positioners:
             raise ValueError(f'{self._class_name}: there is already a '
                              f'positioner in the list with positioner_id '
-                             f'{positioner.positioner_id}.')
+                             f'{positioner_id}.')
 
-        self.positioners[positioner.positioner_id] = positioner
+        self.positioners[positioner_id] = self._positioner_class(positioner_id, self,
+                                                                 centre=centre)
+
+        if self.qa_db:
+
+            Positioner = self.qa_db.models['Positioner']
+
+            # Check if the positioner exists.
+            db_pos = Positioner.select().filter(Positioner.id == positioner_id).first()
+
+            if not db_pos:
+                new = True
+                db_pos = Positioner(id=positioner_id)
+            else:
+                new = False
+
+            db_pos.x_center = centre[0] or -999.
+            db_pos.y_center = centre[1] or -999.
+
+            db_pos.save(force_insert=new)
 
     def report_status(self):
         """Returns a dict with the position and status of each positioner."""
@@ -176,9 +194,15 @@ class FPS(BaseFPS):
         If `None`, the default layout will be used. Can be either a layout name
         to be recovered from the database, or a file path to the layout
         configuration.
-    can_profile : `str` or `None`
+    can_profile : str or None
         The configuration profile for the CAN interface, or `None` to use the
         default one. Ignored if ``can`` is passed.
+    wago : bool or .WAGO
+        If `True`, connects the WAGO PLC controller.
+    qa : bool or path
+        A path to the database used to store QA information. If `True`, uses
+        the value from ``config.files.qa_database``. If `False`, does not do
+        any QA recording.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
@@ -199,7 +223,8 @@ class FPS(BaseFPS):
 
     """
 
-    def __init__(self, can=None, layout=None, can_profile=None, loop=None):
+    def __init__(self, can=None, layout=None, can_profile=None,
+                 wago=None, qa=None, loop=None):
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -215,10 +240,30 @@ class FPS(BaseFPS):
             except ConnectionRefusedError:
                 raise
 
+        self._locked = False
+
         #: .WAGO: The WAGO PLC system that controls the FPS.
         self.wago = None
 
-        self._locked = False
+        if wago is None:
+            wago = config['fps']['wago']
+
+        if isinstance(wago, WAGO):
+            self.wago = wago
+        elif wago is True:
+            self.wago = WAGO.from_config()
+        else:
+            self.wago = False
+
+        if qa is None:
+            qa = config['fps']['qa']
+
+        if qa is True:
+            self.qa_db = get_qa_database(config['files']['qa_database'])
+        elif qa is False:
+            self.qa_db = None
+        else:
+            self.qa_db = get_qa_database(qa)
 
         super().__init__(layout=layout)
 
@@ -374,24 +419,27 @@ class FPS(BaseFPS):
 
         return True
 
-    async def initialise(self):
-        """Initialises all positioners."""
+    async def initialise(self, allow_unknown=True):
+        """Initialises all positioners with status and firmware version.
+
+        Parameters
+        ----------
+        allow_unknown : bool
+            If `True`, allows to add positioners that are connected but not
+            in the layout.
+
+        """
+
+        unknwon_positioners = []
 
         # Start by initialising the WAGO.
-        if 'WAGO' in config:
-
-            self.wago = WAGO.from_config()
+        if self.wago:
 
             try:
                 await self.wago.connect()
+                log.info(f'WAGO connected on host {self.wago.client.host}')
             except RuntimeError as ee:
                 log.error(f'failed to initialise WAGO: {ee}')
-
-        if self.wago is None or self.wago.client.connected is False:
-            log.error('failed to initialise WAGO: the WAGO is not '
-                      'present or failed to connect.')
-
-        log.info(f'WAGO connected on host {self.wago.client.host}')
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
@@ -400,14 +448,19 @@ class FPS(BaseFPS):
         for positioner in self.positioners.values():
             await positioner.reset()
 
+        if len(self.positioners) > 0:
+            n_expected_positioners = len(self.positioners)
+        else:
+            n_expected_positioners = None
+
         get_status_command = self.send_command(CommandID.GET_STATUS,
                                                positioner_id=0,
                                                timeout=2,
-                                               n_positioners=len(self.positioners))
+                                               n_positioners=n_expected_positioners)
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
                                                  timeout=2,
-                                                 n_positioners=len(self.positioners))
+                                                 n_positioners=n_expected_positioners)
 
         await asyncio.gather(get_status_command, get_firmware_command)
 
@@ -424,6 +477,15 @@ class FPS(BaseFPS):
             command_id = status_reply.command_id
             command_name = command_id.name
             response_code = status_reply.response_code
+
+            if positioner_id not in self.positioners:
+                if allow_unknown:
+                    unknwon_positioners.append(positioner_id)
+                    self.add_positioner(positioner_id)
+                else:
+                    log.error(f'found positioner with ID={positioner_id} '
+                              'that is not in the layout.')
+                    return False
 
             positioner = self.positioners[positioner_id]
 
@@ -460,11 +522,16 @@ class FPS(BaseFPS):
                               JaegerUserWarning)
                 continue
 
-        n_unknown = len([pos for pos in self.positioners
-                         if self[pos].status == maskbits.PositionerStatus.UNKNOWN])
+        if len(unknwon_positioners) > 0:
+            warnings.warn(f'found {len(unknwon_positioners)} unknown positioners '
+                          f'with IDs {sorted(unknwon_positioners)!r}. '
+                          'They have been added to the layout.', JaegerUserWarning)
 
-        if n_unknown > 0:
-            warnings.warn(f'{n_unknown} positioners did not respond to '
+        n_did_not_reply = len([pos for pos in self.positioners
+                               if self[pos].status == maskbits.PositionerStatus.UNKNOWN])
+
+        if n_did_not_reply > 0:
+            warnings.warn(f'{n_did_not_reply} positioners did not respond to '
                           f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
 
         n_non_initialised = len([pos for pos in self.positioners

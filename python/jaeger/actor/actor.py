@@ -10,10 +10,10 @@ import json
 import logging
 
 import clu
-from clu.misc.logger import ActorHandler
-from jaeger import log
-
 from clu import command_parser as jaeger_parser
+from clu.misc.logger import ActorHandler
+
+from jaeger import log
 
 
 __all__ = ['JaegerActor']
@@ -36,6 +36,9 @@ class JaegerActor(clu.LegacyActor):
         self.actor_handler = ActorHandler(self)
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.ERROR)
+
+        if fps.wago and fps.wago.connected:
+            self.timer_commands.add_command('wago status', delay=10)
 
     @classmethod
     def from_config(cls, config, fps):

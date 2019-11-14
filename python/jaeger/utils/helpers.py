@@ -176,11 +176,11 @@ class Poller(object):
         while True:
 
             if asyncio.iscoroutinefunction(self.callback):
-                await asyncio.create_task(self.callback())
+                await self.loop.create_task(self.callback())
             else:
                 self.callback()
 
-            self._sleep_task = asyncio.create_task(asyncio.sleep(self.delay))
+            self._sleep_task = self.loop.create_task(asyncio.sleep(self.delay))
 
             await self._sleep_task
 
@@ -211,7 +211,7 @@ class Poller(object):
             raise RuntimeError('poller is already running.')
 
         self.delay = delay or self._orig_delay
-        self._task = asyncio.create_task(self.poller())
+        self._task = self.loop.create_task(self.poller())
 
         return self
 

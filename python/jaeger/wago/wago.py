@@ -226,9 +226,16 @@ class WAGO(object):
         except asyncio.TimeoutError:
             raise RuntimeError(f'failed connecting to WAGO on address {self.address}.')
 
-        assert self.client.connected, f'failed connecting to WAGO on address {self.address}.'
+        if not self.client.connected:
+            raise RuntimeError(f'failed connecting to WAGO on address {self.address}.')
 
         return True
+
+    @property
+    def connected(self):
+        """Returns `True` if the client is connected."""
+
+        return self.client.connected
 
     def add_module(self, name, **params):
         """Adds a new module.

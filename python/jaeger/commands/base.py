@@ -51,7 +51,7 @@ class Message(can.Message):
         self.positioner_id = positioner_id
         self.uid = uid
 
-        uid_bits = config['uid_bits']
+        uid_bits = config['positioner']['uid_bits']
         max_uid = 2**uid_bits - 1
         assert self.uid < max_uid, f'UID must be <= {max_uid}.'
 
@@ -432,7 +432,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         messages = []
 
-        uid_bits = config['uid_bits']
+        uid_bits = config['positioner']['uid_bits']
         max_uid = 2**uid_bits - 1
 
         use_uids = True
