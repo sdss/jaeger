@@ -353,7 +353,7 @@ class Command(StatusMixIn, asyncio.Future):
             else:
                 pass
 
-    def finish_command(self, status):
+    def finish_command(self, status, silent=False):
         """Cancels the queue watcher and removes the running command.
 
         Parameters
@@ -362,6 +362,8 @@ class Command(StatusMixIn, asyncio.Future):
             The status to set the command to. If `None` the command will be set
             to `~.CommandStatus.DONE` if one reply for each message has been
             received, `~.CommandStatus.FAILED` otherwise.
+        silent : bool
+            If `True`, issues error log messages as debug.
 
         """
 
@@ -388,11 +390,11 @@ class Command(StatusMixIn, asyncio.Future):
                     self._done_callback()
 
             if self.positioner_id != 0 and self.status == CommandStatus.TIMEDOUT:
-                self._log('this command timed out and it is not a broadcast.',
-                          level=logging.WARNING)
+                level = logging.WARNING if not silent else logging.DEBUG
+                self._log('this command timed out and it is not a broadcast.', level=level)
             elif self.status.failed:
-                self._log(f'command finished with status {self.status.name!r}',
-                          level=logging.ERROR)
+                level = logging.ERROR if not silent else logging.DEBUG
+                self._log(f'command finished with status {self.status.name!r}', level=level)
 
             self._log(f'finished command with status {self.status.name!r}')
 
