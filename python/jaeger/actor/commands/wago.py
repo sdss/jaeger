@@ -19,8 +19,8 @@ from . import jaeger_parser
 def wago(command, fps):
 
     wago = fps.wago
-    if wago is None:
-        command.failed(text='WAGO not set up.')
+    if wago is None or not wago.connected:
+        command.failed(text='WAGO not connected.')
         raise click.Abort()
 
     return
