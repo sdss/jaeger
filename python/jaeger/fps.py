@@ -148,12 +148,15 @@ class BaseFPS(object):
             db_pos = Positioner.select().filter(Positioner.id == positioner_id).first()
 
             if not db_pos:
+                new = True
                 db_pos = Positioner(id=positioner_id)
+            else:
+                new = False
 
             db_pos.x_center = centre[0] or -999.
             db_pos.y_center = centre[1] or -999.
 
-            db_pos.save(force_insert=True)
+            db_pos.save(force_insert=new)
 
     def report_status(self):
         """Returns a dict with the position and status of each positioner."""
