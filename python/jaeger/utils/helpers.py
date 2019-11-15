@@ -12,7 +12,7 @@ from contextlib import suppress
 from threading import Thread
 
 
-__ALL__ = ['AsyncQueue', 'StatusMixIn', 'Poller', 'AsyncioExecutor']
+__ALL__ = ['AsyncQueue', 'StatusMixIn', 'PollerList', 'Poller', 'AsyncioExecutor']
 
 
 class AsyncQueue(asyncio.Queue):
@@ -139,6 +139,76 @@ class StatusMixIn(object):
                 self.watcher.clear()
 
         self.watcher = None
+
+
+class PollerList(list):
+    """A list of `.Poller` to be managed jointly."""
+
+    def __init__(self, pollers=[]):
+
+        names = [poller.name for poller in pollers]
+        assert len(names) == len(set(names)), 'repeated names in poller list.'
+
+        list.__init__(self, pollers)
+
+    def append(self, poller):
+        """Adds a poller."""
+
+        assert isinstance(poller, Poller), 'not a poller.'
+
+        names = [pp.name for pp in self]
+        if poller.name in names:
+            raise ValueError(f'a poller with name {poller.name} is '
+                             'already in the list.')
+
+        list.append(self, poller)
+
+    def __getattr__(self, name):
+        """Gets a poller by its name."""
+
+        for poller in self:
+            if name == poller.name:
+                return poller
+
+        return list.__getitem__(self, name)
+
+    async def set_delay(self, delay=None):
+        """Sets the delay for all the pollers.
+
+        Parameters
+        ----------
+        delay : float
+            The delay between calls to the callback. If `None`, restores the
+            original delay."""
+
+        delay_coros = [poller.set_delay(delay=delay) for poller in self]
+        await asyncio.gather(*delay_coros)
+
+    def start(self, delay=None):
+        """Starts all the pollers.
+
+        Parameters
+        ----------
+        delay : float
+            The delay between calls to the callback. If not specified,
+            uses the default delays for each poller.
+
+        """
+
+        for poller in self:
+            poller.start(delay=delay)
+
+    async def stop(self):
+        """Cancels all the poller."""
+
+        stop_coros = [poller.stop() for poller in self]
+        await asyncio.gather(*stop_coros)
+
+    @property
+    def running(self):
+        """Returns `True` if at least one poller is running."""
+
+        return any([poller.running for poller in self])
 
 
 class Poller(object):
