@@ -13,7 +13,7 @@ import warnings
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
-from jaeger.utils import Poller, StatusMixIn, bytes_to_int
+from jaeger.utils import StatusMixIn, bytes_to_int
 
 
 __ALL__ = ['Positioner', 'VirtualPositioner']
@@ -49,57 +49,8 @@ class Positioner(StatusMixIn):
         self.speed = [None, None]
         self.firmware = None
 
-        #: A `~asyncio.Task` that polls the current position of alpha and
-        #: beta periodically.
-        self.position_poller = Poller(self.update_position,
-                                      delay=_pos_conf['position_poller_delay'])
-
-        #: A `~asyncio.Task` that polls the current status periodically.
-        self.status_poller = Poller(self.update_status,
-                                    delay=_pos_conf['status_poller_delay'])
-
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
-
-    async def start_pollers(self, poller='all'):
-        """Starts the status or position poller.
-
-        Parameters
-        ----------
-        poller : str
-            Either ``'position'`` or ``'status'`` to start the position or
-            status pollers, or ``'all'`` to start both.
-
-        """
-
-        assert poller in ['status', 'position', 'all']
-
-        if poller == 'status' or poller == 'all':
-            if not self.status_poller.running:
-                self.status_poller.start()
-
-        if poller == 'position' or poller == 'all':
-            if not self.position_poller.running:
-                self.position_poller.start()
-
-    async def stop_pollers(self, poller='all'):
-        """Stops the status and position pollers.
-
-        Parameters
-        ----------
-        poller : str
-            Either ``'position'`` or ``'status'`` to stop the position or
-            status pollers, or ``'all'`` to stop both.
-
-        """
-
-        assert poller in ['status', 'position', 'all']
-
-        if poller == 'status' or poller == 'all':
-            await self.status_poller.stop()
-
-        if poller == 'position' or poller == 'all':
-            await self.position_poller.stop()
 
     @property
     def position(self):
@@ -144,43 +95,42 @@ class Positioner(StatusMixIn):
         self.status = maskbits.PositionerStatus.UNKNOWN
         self.firmware = None
 
-        await self.stop_pollers('all')
-
-    async def update_position(self, timeout=1):
+    async def update_position(self, position=None, timeout=1):
         """Updates the position of the alpha and beta arms."""
 
-        command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
-                                        positioner_id=self.positioner_id,
-                                        timeout=timeout,
-                                        silent_on_conflict=True)
-        result = await command
+        if position is None:
 
-        if not result:
-            log.error(f'positioner {self.positioner_id}: '
-                      'failed updating position')
-            return
+            if self.fps and self.fps.pollers.position.running:
+                raise RuntimeError('position poller is running. '
+                                   'Cannot manually call update_position.')
 
-        try:
-            self.alpha, self.beta = command.get_positions()
-        except ValueError:
-            log.debug(f'positioner {self.positioner_id}: '
-                      'failed to receive current position.')
-            return
+            command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
+                                            positioner_id=self.positioner_id,
+                                            timeout=timeout,
+                                            silent_on_conflict=True)
+
+            await command
+
+            if command.status.failed:
+                log.error(f'positioner {self.positioner_id}: '
+                          'failed updating position')
+                self.alpha = self.beta = None
+                return
+
+            try:
+                position = command.get_positions()
+            except ValueError:
+                log.debug(f'positioner {self.positioner_id}: '
+                          'failed to receive current position.')
+                return
+
+        self.alpha, self.beta = position
 
         log.debug(f'positioner {self.positioner_id}: '
                   f'(alpha, beta)={self.alpha, self.beta}')
 
-    async def update_status(self, timeout=1.):
+    async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""
-
-        command = self.fps.send_command(CommandID.GET_STATUS,
-                                        positioner_id=self.positioner_id,
-                                        timeout=timeout,
-                                        silent_on_conflict=True)
-        if await command is False or command.status.failed:
-            log.error(f'positioner {self.positioner_id}: '
-                      f'{CommandID.GET_STATUS.name!r} failed to complete.')
-            return
 
         if self.is_bootloader() is None:
             raise ValueError('firmware is not known. Cannot update status.')
@@ -189,22 +139,45 @@ class Positioner(StatusMixIn):
         else:
             self.flags = maskbits.BootloaderStatus
 
-        if len(command.replies) == 1:
-            status_int = int(bytes_to_int(command.replies[0].data))
-            self.status = self.flags(status_int)
-        else:
-            self.status = self.flags.UNKNOWN
+        if not status:
 
+            if self.fps and self.fps.pollers.status.running:
+                raise RuntimeError('status poller is running. '
+                                   'Cannot manually call update_status.')
+
+            command = self.fps.send_command(CommandID.GET_STATUS,
+                                            positioner_id=self.positioner_id,
+                                            timeout=timeout,
+                                            silent_on_conflict=True)
+
+            await command
+            if command.status.failed:
+                log.error(f'positioner {self.positioner_id}: '
+                          f'{CommandID.GET_STATUS.name!r} failed to complete.')
+                return False
+
+            if len(command.replies) == 1:
+                status = int(bytes_to_int(command.replies[0].data))
+            else:
+                log.error(f'positioner {self.positioner_id}: '
+                          f'{CommandID.GET_STATUS.name!r} received '
+                          f'{len(command.replies)} replies.')
+                self.status = self.flags.UNKNOWN
+                return False
+
+        self.status = self.flags(status)
         log.debug(f'positioner {self.positioner_id}: '
                   f'status={self.status.name} ({self.status.value})')
 
         # Checks if the positioner is collided. If so, locks the FPS.
         if not self.is_bootloader() and self.collision and not self.fps.locked:
-            log.error(f'positioner {self.positioner_id} has collided. '
-                      'Locking the FPS.')
+            log.error(f'positioner {self.positioner_id} has collided. Locking the FPS.')
             await self.fps.lock()
+            return False
 
-    async def wait_for_status(self, status, delay=0.1, timeout=None):
+        return True
+
+    async def wait_for_status(self, status, delay=None, timeout=None):
         """Polls the status until it reaches a certain value.
 
         Parameters
@@ -213,7 +186,8 @@ class Positioner(StatusMixIn):
             The status to wait for. Can be a list in which case it will wait
             until all the statuses in the list have been reached.
         delay : float
-            How many seconds to sleep between polls to get the current status.
+            If set, modifies the status poller to poll each ``delay`` seconds.
+            Note that this will affect the polling of all positioners.
             The original status polling delay is restored at the end of the
             command.
         timeout : float
@@ -232,16 +206,21 @@ class Positioner(StatusMixIn):
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
 
-        # Make sure status poller is running.
-        if not self.status_poller.running:
-            await self.start_pollers('status')
+        if not self.fps or not self.fps.pollers.status.running:
+            log.error('no FPS associated with this positioner or poller '
+                      'is not running. wait_for_status needs a running '
+                      'status poller.')
+            return False
 
-        await self.status_poller.set_delay(delay)
+        if delay:
+            await self.fps.pollers.status.set_delay(delay)
+        else:
+            delay = self.fps.pollers.status.delay
 
         if not isinstance(status, (list, tuple)):
             status = [status]
 
-        async def status_poller(wait_for_status):
+        async def status_waiter(wait_for_status):
 
             while True:
                 # Check all statuses in the list
@@ -259,12 +238,12 @@ class Positioner(StatusMixIn):
         wait_for_status = [maskbits.PositionerStatus(ss) for ss in status]
 
         try:
-            await asyncio.wait_for(status_poller(wait_for_status), timeout)
+            await asyncio.wait_for(status_waiter(wait_for_status), timeout)
         except asyncio.TimeoutError:
-            await self.status_poller.set_delay()
+            await self.fps.pollers.status.set_delay()
             return False
 
-        await self.status_poller.set_delay()
+        await self.fps.pollers.status.set_delay()
         return True
 
     async def initialise(self, initialise_datums=False):
@@ -276,7 +255,17 @@ class Positioner(StatusMixIn):
         await self.reset()
 
         await self.get_firmware()
-        await self.update_status()
+
+        if self.fps.pollers.status.running:
+            result = await self.wait_for_status(
+                maskbits.PositionerStatus.SYSTEM_INITIALIZATION,
+                delay=0.1, timeout=2)
+        else:
+            result = await self.update_status()
+
+        if not result:
+            log.error(f'positioner {self.positioner_id}: failed to refresh status.')
+            return False
 
         # Exists if we are in bootloader mode.
         if self.is_bootloader():
@@ -292,9 +281,6 @@ class Positioner(StatusMixIn):
             log.error(f'positioner {self.positioner_id}: not initialised. '
                       'Set the position manually.')
             return False
-
-        # Start pollers
-        await self.start_pollers()
 
         result = await self.fps.send_command('STOP_TRAJECTORY',
                                              positioner_id=self.positioner_id)
@@ -336,8 +322,9 @@ class Positioner(StatusMixIn):
 
         log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
 
-        result = await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED,
-                                            timeout=300)
+        result = await self.wait_for_status(
+            maskbits.PositionerStatus.DATUM_INITIALIZED,
+            timeout=config['positioner']['initialise_datums_timeout'])
 
         if not result:
             log.error(f'positioner {self.positioner_id}: timeout waiting for '
@@ -363,17 +350,14 @@ class Positioner(StatusMixIn):
 
         return self.firmware.split('.')[1] == '80'
 
-    async def set_position(self, alpha, beta, start_pollers=True):
+    async def set_position(self, alpha, beta):
         """Sets the internal position of the motors."""
-
-        done_callback = self.start_pollers if start_pollers else None
 
         set_position_command = self.fps.send_command(
             CommandID.SET_ACTUAL_POSITION,
             positioner_id=self.positioner_id,
             alpha=float(alpha),
-            beta=float(beta),
-            done_callback=done_callback)
+            beta=float(beta))
 
         await set_position_command
 
@@ -462,7 +446,7 @@ class Positioner(StatusMixIn):
             log.error(f'positioner {self.positioner_id}: not initialised.')
             return False
 
-        if not self.position_poller.running or not self.status_poller.running:
+        if not self.fps or not self.fps.pollers.running:
             log.error(f'positioner {self.positioner_id}: some pollers are not running. '
                       'Try initialising the positioner.')
             return False
@@ -523,13 +507,12 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: '
                      f'the move will take {move_time:.2f} seconds')
 
-            await self.position_poller.set_delay(0.5)
-
             await asyncio.sleep(move_time)
 
             # Blocks until we're sure both arms at at the position.
             result = await self.wait_for_status(
-                maskbits.PositionerStatus.DISPLACEMENT_COMPLETED, timeout=3)
+                maskbits.PositionerStatus.DISPLACEMENT_COMPLETED,
+                delay=0.1, timeout=3)
 
             if result is False:
                 self._store_move_qa(record, success=False,
@@ -541,9 +524,6 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: position reached.')
 
             self._store_move_qa(record, success=True)
-
-            # Restore position delay
-            await self.position_poller.set_delay()
 
         return True
 

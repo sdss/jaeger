@@ -32,14 +32,14 @@ profiles:
 
 fps:
     default_layout: filled_hex
+    status_poller_delay: 1
+    position_poller_delay: 1
     wago: true
     qa: false
 
 positioner:
     motor_speed: 3000
-    status_poller_delay: 1
-    position_poller_delay: 1
-    initialise_datums_timeout: 60
+    initialise_datums_timeout: 300
     uid_bits: 6  # Number of bits available for the Message UID.
     trajectory_data_n_points: 3  # How many points from the trajectory
                                  # are we putting in each SEND_TRAJECTORY_DATA command.

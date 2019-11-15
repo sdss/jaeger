@@ -182,8 +182,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     log.info('restarting the pollers.')
     await fps.start_pollers()
 
-    for pos_id in trajectories:
-        await fps.positioners[pos_id].position_poller.set_delay(0.5)
+    await fps.pollers.position.set_delay(0.5)
 
     # Start trajectories
     await fps.send_command('START_TRAJECTORY', positioner_id=0, timeout=1,
@@ -196,7 +195,9 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
     # Wait until all positioners have completed.
     wait_status = [fps.positioners[pos_id].wait_for_status(
-        PosStatus.DISPLACEMENT_COMPLETED, timeout=remaining_time + 3)
+        PosStatus.DISPLACEMENT_COMPLETED,
+        timeout=remaining_time + 3,
+        delay=0.1)
         for pos_id in trajectories]
     results = await asyncio.gather(*wait_status, loop=fps.loop)
 
@@ -207,8 +208,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     log.info('all positioners have reached their final positions.')
 
     # Restore default polling time
-    for pos_id in trajectories:
-        await fps.positioners[pos_id].position_poller.set_delay()
+    await fps.pollers.set_delay()
 
     return True
 

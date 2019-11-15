@@ -6,8 +6,8 @@
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import asyncio
 import os
+import asyncio
 import pathlib
 import warnings
 
@@ -18,7 +18,7 @@ from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
 from jaeger.positioner import Positioner
-from jaeger.utils import bytes_to_int, get_qa_database
+from jaeger.utils import Poller, PollerList, bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
 
 
@@ -267,6 +267,15 @@ class FPS(BaseFPS):
 
         super().__init__(layout=layout)
 
+        self.pollers = PollerList([
+            Poller('status', self._poll_status,
+                   delay=config['fps']['status_poller_delay'],
+                   loop=self.loop),
+            Poller('position', self._poll_position,
+                   delay=config['fps']['position_poller_delay'],
+                   loop=self.loop)
+        ])
+
     async def _get_positioner_bus_map(self):
         """Creates the positioner-to-bus map.
 
@@ -287,6 +296,60 @@ class FPS(BaseFPS):
         for reply in id_cmd.replies:
             self.positioner_to_bus[reply.positioner_id] = (reply.message.interface,
                                                            reply.message.bus)
+
+    async def _poll_status(self):
+        """Polls for status by broadcasting to all positioners."""
+
+        command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
+                                    n_positioners=len(self.positioners),
+                                    timeout=1)
+        await command
+
+        if command.status.failed:
+            log.warning(f'failed broadcasting {CommandID.GET_STATUS.name!r} during polling.')
+            return
+
+        update_status_coros = []
+        for reply in command.replies:
+            positioner_id = reply.positioner_id
+            positioner = self.positioners[positioner_id]
+
+            status_int = int(bytes_to_int(reply.data))
+            update_status_coros.append(positioner.update_status(status_int))
+
+        await asyncio.gather(*update_status_coros)
+
+        return
+
+    async def _poll_position(self):
+        """Polls positions."""
+
+        positioner_ids = [pid for pid in self.positioners if self[pid].initialised]
+        commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
+                                        positioners=positioner_ids)
+
+        try:
+            commands = await commands_all
+        except Exception as ee:
+            log.error(f'failed polling positions: {ee}')
+            return
+
+        update_position_commands = []
+        for command in commands:
+
+            pid = command.positioner_id
+
+            if command.status.failed and self[pid].initialised:
+                log.warning(f'({CommandID.GET_ACTUAL_POSITION.name}, '
+                            f'{command.positioner_id}): failed during polling.')
+                continue
+
+            position = command.get_positions()
+            update_position_commands.append(self[pid].update_position(position))
+
+        await asyncio.gather(*update_position_commands)
+
+        return
 
     def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
@@ -328,7 +391,16 @@ class FPS(BaseFPS):
         kwargs : dict
             Extra arguments to be passed to the command.
 
+        Returns
+        -------
+        command : `.Command`
+            The command sent to the bus. The command needs to be awaited
+            before it is considered done.
+
         """
+
+        if positioner_id == 0:
+            broadcast = True
 
         if not isinstance(command, Command):
             command_flag = CommandID(command)
@@ -560,6 +632,9 @@ class FPS(BaseFPS):
             log.error('some positioners failed to initialise.')
             return False
 
+        # Start the pollers
+        self.pollers.start()
+
         return True
 
     async def update_status(self, positioners=None, timeout=1):
@@ -581,36 +656,6 @@ class FPS(BaseFPS):
         await asyncio.gather(
             *[self.positioners[pid].update_status(timeout=timeout)
               for pid in positioners], loop=self.loop)
-
-    async def start_pollers(self, poller='all'):
-        """Starts the pollers for all valid positioners.
-
-        Parameters
-        ----------
-        poller : str
-            Either ``'position'`` or ``'status'`` to start the position or
-            status pollers, or ``'all'`` to start both.
-
-        """
-
-        await asyncio.gather(*[positioner.start_pollers(poller=poller)
-                               for positioner in self.positioners.values()
-                               if positioner.initialised])
-
-    async def stop_pollers(self, poller='all'):
-        """Stops the pollers for all valid positioners.
-
-        Parameters
-        ----------
-        poller : str
-            Either ``'position'`` or ``'status'`` to start the position or
-            status pollers, or ``'all'`` to start both.
-
-        """
-
-        await asyncio.gather(*[positioner.stop_pollers(poller=poller)
-                               for positioner in self.positioners.values()
-                               if positioner.initialised])
 
     async def abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
@@ -649,7 +694,7 @@ class FPS(BaseFPS):
         cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_id=0)
         return asyncio.create_task(cmd)
 
-    async def send_to_all(self, command, positioners=None, data=None):
+    async def send_to_all(self, command, positioners=None, data=None, **kwargs):
         """Sends a command to multiple positioners and awaits completion.
 
         Parameters
@@ -665,6 +710,8 @@ class FPS(BaseFPS):
             is a list with a single value, the same payload is sent to all
             the positioners. Otherwise the list length must match the number
             of positioners.
+        kwargs : dict
+            Keyword argument to pass to the command.
 
         Returns
         -------
@@ -676,11 +723,11 @@ class FPS(BaseFPS):
         positioners = positioners or list(self.positioners.keys())
 
         if data is None or len(data) == 1:
-            commands = [self.send_command(command, positioner_id=positioner_id)
+            commands = [self.send_command(command, positioner_id=positioner_id, **kwargs)
                         for positioner_id in positioners]
         else:
             commands = [self.send_command(command, positioner_id=positioner_id,
-                                          data=data[ii])
+                                          data=data[ii], **kwargs)
                         for ii, positioner_id in enumerate(positioners)]
 
         results = await asyncio.gather(*commands, return_exceptions=True)
@@ -696,7 +743,7 @@ class FPS(BaseFPS):
 
         log.info('stopping all pollers.')
 
-        await self.stop_pollers()
+        await self.pollers.stop()
 
         await asyncio.sleep(1)
 
