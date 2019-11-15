@@ -430,7 +430,10 @@ class CANnetInterface(JaegerCAN):
 
         # We use call_soon later to be sure the event loop is running when we start
         # the poller. This prevents problems when using the library in IPython.
-        self.device_status_poller = Poller(self._get_device_status, delay=5, loop=self.loop)
+        self.device_status_poller = Poller('cannet_device',
+                                           self._get_device_status,
+                                           delay=5,
+                                           loop=self.loop)
         self.loop.call_soon(self.device_status_poller.start)
 
     def _process_reply(self, msg):
