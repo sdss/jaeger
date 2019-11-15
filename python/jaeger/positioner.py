@@ -407,7 +407,7 @@ class Positioner(StatusMixIn):
 
     async def goto(self, alpha=None, beta=None,
                    alpha_speed=None, beta_speed=None,
-                   relative=False):
+                   relative=False, force=False):
         """Moves positioner to a given position.
 
         Parameters
@@ -423,6 +423,8 @@ class Positioner(StatusMixIn):
         relative : bool
             Whether the movement is absolute or relative to the current
             position.
+        force : bool
+            Allows to set position and speed limits outside the normal range.
 
         Returns
         -------
@@ -441,6 +443,14 @@ class Positioner(StatusMixIn):
             >>> await goto(alpha_speed=1000)
 
         """
+
+        MIN_SPEED = 0
+        MAX_SPEED = 5000
+
+        ALPHA_MIN_POSITION = 0
+        ALPHA_MAX_POSITION = 360
+        BETA_MIN_POSITION = 0
+        BETA_MAX_POSITION = 360
 
         if not self.initialised:
             log.error(f'positioner {self.positioner_id}: not initialised.')
@@ -463,6 +473,16 @@ class Positioner(StatusMixIn):
                           'the speed for both arms needs to be provided.')
                 return False
 
+            if (alpha_speed < MIN_SPEED or alpha_speed > MAX_SPEED or
+                    beta_speed < MIN_SPEED or beta_speed > MAX_SPEED):
+                if force:
+                    log.warning(f'positioner {self.positioner_id}: '
+                                'the speed provided is outside the limits '
+                                'but force=True.')
+                else:
+                    log.error(f'positioner {self.positioner_id}: speed out of limits.')
+                    return False
+
             log.info(f'positioner {self.positioner_id}: setting speed '
                      f'({float(alpha_speed):.2f}, {float(beta_speed):.2f})')
 
@@ -477,6 +497,16 @@ class Positioner(StatusMixIn):
                 log.error(f'positioner {self.positioner_id}:'
                           'the position for both arms needs to be provided.')
                 return False
+
+            if (alpha < ALPHA_MIN_POSITION or alpha > ALPHA_MAX_POSITION or
+                    beta < BETA_MIN_POSITION or beta > BETA_MAX_POSITION):
+                if force:
+                    log.warning(f'positioner {self.positioner_id}: '
+                                'the position provided is outside the limits '
+                                'but force=True.')
+                else:
+                    log.error(f'positioner {self.positioner_id}: position out of limits.')
+                    return
 
             log.info(f'positioner {self.positioner_id}: goto position '
                      f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
