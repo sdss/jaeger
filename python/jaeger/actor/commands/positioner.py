@@ -33,8 +33,18 @@ def check_positioners(positioner_ids, command, fps):
 @click.argument('alpha', type=click.FloatRange(0., 360.))
 @click.argument('beta', type=click.FloatRange(0., 360.))
 @click.option('--speed', type=click.FloatRange(0., 2000.), nargs=2)
-async def goto(command, fps, positioner_id, alpha, beta, speed=None):
+@click.option('-a', '--all', is_flag=True, default=False,
+              help='applies to all valid positioners.')
+@click.option('-f', '--force', is_flag=True, default=False,
+              help='forces a move to happen.')
+async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
     """Sends positioners to a given (alpha, beta) position."""
+
+    if all:
+        if not force:
+            return command.failed('need to specify --force to move '
+                                  'all positioners at once.')
+        positioner_id = [pid for pid in fps.positioners if fps[pid].initialised]
 
     if not check_positioners(positioner_id, command, fps):
         return
