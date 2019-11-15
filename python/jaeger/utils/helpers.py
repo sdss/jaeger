@@ -146,6 +146,8 @@ class Poller(object):
 
     Parameters
     ----------
+    name : str
+        The name of the poller.
     callback : function or coroutine
         A function or coroutine to call periodically.
     delay : float
@@ -155,8 +157,9 @@ class Poller(object):
 
     """
 
-    def __init__(self, callback, delay=1, loop=None):
+    def __init__(self, name, callback, delay=1, loop=None):
 
+        self.name = name
         self.callback = callback
 
         self._orig_delay = delay
