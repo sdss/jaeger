@@ -665,6 +665,8 @@ class FPS(BaseFPS):
             is a list with a single value, the same payload is sent to all
             the positioners. Otherwise the list length must match the number
             of positioners.
+        kwargs : dict
+            Keyword argument to pass to the command.
 
         Returns
         -------
@@ -676,11 +678,11 @@ class FPS(BaseFPS):
         positioners = positioners or list(self.positioners.keys())
 
         if data is None or len(data) == 1:
-            commands = [self.send_command(command, positioner_id=positioner_id)
+            commands = [self.send_command(command, positioner_id=positioner_id, **kwargs)
                         for positioner_id in positioners]
         else:
             commands = [self.send_command(command, positioner_id=positioner_id,
-                                          data=data[ii])
+                                          data=data[ii], **kwargs)
                         for ii, positioner_id in enumerate(positioners)]
 
         results = await asyncio.gather(*commands, return_exceptions=True)
