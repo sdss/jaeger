@@ -7,6 +7,7 @@ Changelog
 * :feature:`46` Implement a QA database for moves.
 * :feature:`13` Abort trajectory and lock the FPS if either a collided status is detected in a positioner or if command 18 is received from the CAN network.
 * Add `.SetCurrent` command to actor.
+* Fix bug due to use of unsigned integers when passing a negative position.
 
 * :release:`0.3.0 <2019-11-13>`
 * Change file layout to include a positioner ID.

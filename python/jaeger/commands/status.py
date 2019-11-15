@@ -66,7 +66,7 @@ class GetActualPosition(Command):
 
         data = self.replies[0].data
 
-        beta = bytes_to_int(data[4:])
-        alpha = bytes_to_int(data[0:4])
+        beta = bytes_to_int(data[4:], dtype='i4')
+        alpha = bytes_to_int(data[0:4], dtype='i4')
 
         return numpy.array(motor_steps_to_angle(alpha, beta))
