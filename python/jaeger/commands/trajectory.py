@@ -172,7 +172,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
     if failed:
         log.info('restarting the pollers.')
-        await fps.start_pollers()
+        fps.pollers.start()
         return False
 
     # Prepare to start the trajectories. Make position polling faster and
@@ -180,7 +180,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     log.info(f'expected time to complete trajectory: {max_time:.2f} seconds.')
 
     log.info('restarting the pollers.')
-    await fps.start_pollers()
+    fps.pollers.start()
 
     await fps.pollers.position.set_delay(0.5)
 
