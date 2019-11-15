@@ -6,11 +6,14 @@
 # @Filename: commands.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import asyncio
 import pathlib
 
 import click
 import clu
 import numpy
+
+from jaeger.commands import SetCurrent
 
 from . import jaeger_parser
 
@@ -102,6 +105,34 @@ async def status(ctx, command, fps, positioner_id, full):
         await clu.Command('wago status', parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
+
+
+@jaeger_parser.command()
+@click.argument('positioner-id', type=int, nargs=-1, required=False)
+@click.argument('alpha', type=click.FloatRange(0., 100.))
+@click.argument('beta', type=click.FloatRange(0., 100.))
+@click.option('-a', '--all', is_flag=True, default=False,
+              help='applies to all connected positioners.')
+@click.pass_context
+async def current(ctx, command, fps, positioner_id, alpha, beta, all):
+    """Reports the position and status bit of a list of positioners."""
+
+    if all:
+        positioner_id = list(fps.positioners.keys())
+
+    if len(positioner_id) == 0:
+        command.failed('no positioners provided.')
+        return
+
+    if not check_positioners(positioner_id, command, fps):
+        return
+
+    commands = [fps.send_command(SetCurrent(positioner_id=pid,
+                                            alpha=alpha, beta=beta))
+                for pid in positioner_id]
+    await asyncio.gather(*commands)
+
+    command.done(text='current changed.')
 
 
 @jaeger_parser.command()
