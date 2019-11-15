@@ -118,7 +118,7 @@ async def current(ctx, command, fps, positioner_id, alpha, beta, all):
     """Reports the position and status bit of a list of positioners."""
 
     if all:
-        positioner_id = list(fps.positioners.keys())
+        positioner_id = [pid for pid in fps.positioners if fps[pid].initialised]
 
     if len(positioner_id) == 0:
         command.failed('no positioners provided.')
