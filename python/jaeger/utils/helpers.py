@@ -193,6 +193,10 @@ class Poller(object):
             The delay between calls to the callback. If `None`, restores the
             original delay."""
 
+        # Only change delay if the difference is significant.
+        if delay and abs(self.delay - delay) < 1e-6:
+            return
+
         await self.stop()
         self.start(delay)
 
