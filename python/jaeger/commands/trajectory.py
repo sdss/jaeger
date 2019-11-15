@@ -78,7 +78,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
                       'by kaiju. This will end up in tears.', JaegerUserWarning)
 
     log.info('stopping the pollers before sending the trajectory.')
-    await fps.stop_pollers()
+    await fps.pollers.stop()
 
     await asyncio.sleep(1)
     await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
