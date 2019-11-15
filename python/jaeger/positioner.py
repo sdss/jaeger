@@ -336,8 +336,9 @@ class Positioner(StatusMixIn):
 
         log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
 
-        result = await self.wait_for_status(maskbits.PositionerStatus.DATUM_INITIALIZED,
-                                            timeout=300)
+        result = await self.wait_for_status(
+            maskbits.PositionerStatus.DATUM_INITIALIZED,
+            timeout=config['positioner']['initialise_datums_timeout'])
 
         if not result:
             log.error(f'positioner {self.positioner_id}: timeout waiting for '
