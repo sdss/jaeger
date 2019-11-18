@@ -459,7 +459,7 @@ class FPS(BaseFPS):
         unknwon_positioners = []
 
         # Start by initialising the WAGO.
-        if self.wago:
+        if self.wago and not self.wago.connected:
 
             try:
                 await self.wago.connect()
