@@ -240,7 +240,11 @@ class GetFirmwareVersion(commands.Command):
         if positioner_id is None:
             return [format_version(reply) for reply in self.replies]
         else:
-            return format_version(self.get_reply_for_positioner(positioner_id))
+            reply = self.get_reply_for_positioner(positioner_id)
+            if reply:
+                return format_version(reply)
+            else:
+                return None
 
 
 class StartFirmwareUpgrade(commands.Command):
