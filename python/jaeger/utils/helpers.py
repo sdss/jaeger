@@ -266,6 +266,9 @@ class Poller(object):
             The delay between calls to the callback. If `None`, restores the
             original delay."""
 
+        if not self.running:
+            raise RuntimeError('poller not running.')
+
         # Only change delay if the difference is significant.
         if delay and abs(self.delay - delay) < 1e-6:
             return
@@ -302,6 +305,23 @@ class Poller(object):
 
         with suppress(asyncio.CancelledError):
             await self._task
+
+    async def call_now(self):
+        """Calls the callback immediately."""
+
+        restart = False
+        delay = self.delay
+        if self.running:
+            await self.stop()
+            restart = True
+
+        if asyncio.iscoroutinefunction(self.callback):
+            await self.loop.create_task(self.callback())
+        else:
+            self.callback()
+
+        if restart:
+            self.start(delay=delay)
 
     @property
     def running(self):
