@@ -81,7 +81,12 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     await fps.pollers.stop()
 
     await asyncio.sleep(1)
-    await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
+
+    try:
+        await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
+    except KeyError as ee:
+        log.error(f'some positioners in the trajectory are not connected: {ee}')
+        return False
 
     n_points = {}
     max_time = 0.0
