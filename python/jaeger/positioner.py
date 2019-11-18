@@ -100,20 +100,16 @@ class Positioner(StatusMixIn):
 
         if position is None:
 
-            if self.fps and self.fps.pollers.position.running:
-                raise RuntimeError('position poller is running. '
-                                   'Cannot manually call update_position.')
-
             command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
                                             positioner_id=self.positioner_id,
                                             timeout=timeout,
-                                            silent_on_conflict=True)
+                                            silent_on_conflict=True,
+                                            override=True)
 
             await command
 
             if command.status.failed:
-                log.error(f'positioner {self.positioner_id}: '
-                          'failed updating position')
+                log.error(f'positioner {self.positioner_id}: failed updating position')
                 self.alpha = self.beta = None
                 return
 
@@ -132,18 +128,12 @@ class Positioner(StatusMixIn):
     async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""
 
-        if self.is_bootloader() is None:
-            raise ValueError('firmware is not known. Cannot update status.')
-        elif self.is_bootloader() is False:
+        if not self.is_bootloader():
             self.flags = maskbits.PositionerStatus
         else:
             self.flags = maskbits.BootloaderStatus
 
         if not status:
-
-            if self.fps and self.fps.pollers.status.running:
-                raise RuntimeError('status poller is running. '
-                                   'Cannot manually call update_status.')
 
             command = self.fps.send_command(CommandID.GET_STATUS,
                                             positioner_id=self.positioner_id,
@@ -151,6 +141,7 @@ class Positioner(StatusMixIn):
                                             silent_on_conflict=True)
 
             await command
+
             if command.status.failed:
                 log.error(f'positioner {self.positioner_id}: '
                           f'{CommandID.GET_STATUS.name!r} failed to complete.')

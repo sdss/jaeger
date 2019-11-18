@@ -392,6 +392,8 @@ class Command(StatusMixIn, asyncio.Future):
             if self.positioner_id != 0 and self.status == CommandStatus.TIMEDOUT:
                 level = logging.WARNING if not silent else logging.DEBUG
                 self._log('this command timed out and it is not a broadcast.', level=level)
+            elif self.status == CommandStatus.CANCELLED:
+                self._log('command has been cancelled.', logging.DEBUG)
             elif self.status.failed:
                 level = logging.ERROR if not silent else logging.DEBUG
                 self._log(f'command finished with status {self.status.name!r}', level=level)

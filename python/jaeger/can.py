@@ -242,9 +242,11 @@ class JaegerCAN(object):
                 # If we sent the command with override=True, finds the running
                 # command and cancels it.
                 if cmd._override:
-                    can_log.warning(log_header + 'another instance is already '
-                                    'running but the new command overrides it. '
-                                    'Cancelling previous command.')
+
+                    if cmd._silent_on_conflict:
+                        can_log.warning(log_header + 'another instance is already '
+                                        'running but the new command overrides it. '
+                                        'Cancelling previous command.')
 
                     found = False
                     for pos_id in [0, cmd.positioner_id]:
