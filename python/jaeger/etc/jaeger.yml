@@ -32,8 +32,8 @@ profiles:
 
 fps:
     default_layout: filled_hex
-    status_poller_delay: 1
-    position_poller_delay: 1
+    status_poller_delay: 5
+    position_poller_delay: 5
     wago: true
     qa: false
 
