@@ -289,7 +289,7 @@ class FPS(BaseFPS):
 
         self._is_multibus = True
 
-        id_cmd = self.send_command(CommandID.GET_ID)
+        id_cmd = self.send_command(CommandID.GET_ID, timeout=0.5)
         await id_cmd
 
         # Parse the replies
@@ -532,7 +532,7 @@ class FPS(BaseFPS):
                                                n_positioners=n_expected_positioners)
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
-                                                 timeout=2,
+                                                 timeout=0.5,
                                                  n_positioners=n_expected_positioners)
 
         await asyncio.gather(get_status_command, get_firmware_command)
