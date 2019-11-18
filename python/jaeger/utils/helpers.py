@@ -191,6 +191,14 @@ class PollerList(list):
 
         return list.__getitem__(self, name)
 
+    def __getitem__(self, item):
+        """Gets the poller by name."""
+
+        if isinstance(item, str):
+            return self.__getattr__(item)
+
+        return list.__getitem__(self, item)
+
     async def set_delay(self, delay=None):
         """Sets the delay for all the pollers.
 
