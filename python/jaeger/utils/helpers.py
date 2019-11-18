@@ -73,7 +73,7 @@ class StatusMixIn(object):
     def __init__(self, maskbit_flags, initial_status=None,
                  callback_func=None, call_now=False):
 
-        self.flags = maskbit_flags
+        self._flags = maskbit_flags
         self.callbacks = []
         self._status = initial_status
         self.watcher = None
@@ -118,6 +118,19 @@ class StatusMixIn(object):
             self.do_callbacks()
             if self.watcher is not None:
                 self.watcher.set()
+
+    @property
+    def flags(self):
+        """Gets the flags associated to this status."""
+
+        return self._flags
+
+    @flags.setter
+    def flags(self, value):
+        """Sets the flags associated to this status."""
+
+        self._flags = value
+        self._status = None
 
     async def wait_for_status(self, value, loop=None):
         """Awaits until the status matches ``value``."""
