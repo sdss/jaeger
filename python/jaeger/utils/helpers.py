@@ -164,6 +164,12 @@ class PollerList(list):
 
         list.__init__(self, pollers)
 
+    @property
+    def names(self):
+        """List the poller names."""
+
+        return [poller.name for poller in self]
+
     def append(self, poller):
         """Adds a poller."""
 
@@ -300,10 +306,11 @@ class Poller(object):
 
         """
 
-        if self.running:
-            raise RuntimeError('poller is already running.')
-
         self.delay = delay or self._orig_delay
+
+        if self.running:
+            return
+
         self._task = self.loop.create_task(self.poller())
 
         return self
