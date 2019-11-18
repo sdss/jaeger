@@ -268,10 +268,10 @@ class FPS(BaseFPS):
         super().__init__(layout=layout)
 
         self.pollers = PollerList([
-            Poller('status', self._poll_status,
+            Poller('status', self.update_status,
                    delay=config['fps']['status_poller_delay'],
                    loop=self.loop),
-            Poller('position', self._poll_position,
+            Poller('position', self.update_position,
                    delay=config['fps']['position_poller_delay'],
                    loop=self.loop)
         ])
@@ -296,60 +296,6 @@ class FPS(BaseFPS):
         for reply in id_cmd.replies:
             self.positioner_to_bus[reply.positioner_id] = (reply.message.interface,
                                                            reply.message.bus)
-
-    async def _poll_status(self):
-        """Polls for status by broadcasting to all positioners."""
-
-        command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
-                                    n_positioners=len(self.positioners),
-                                    timeout=1)
-        await command
-
-        if command.status.failed:
-            log.warning(f'failed broadcasting {CommandID.GET_STATUS.name!r} during polling.')
-            return
-
-        update_status_coros = []
-        for reply in command.replies:
-            positioner_id = reply.positioner_id
-            positioner = self.positioners[positioner_id]
-
-            status_int = int(bytes_to_int(reply.data))
-            update_status_coros.append(positioner.update_status(status_int))
-
-        await asyncio.gather(*update_status_coros)
-
-        return
-
-    async def _poll_position(self):
-        """Polls positions."""
-
-        positioner_ids = [pid for pid in self.positioners if self[pid].initialised]
-        commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
-                                        positioners=positioner_ids)
-
-        try:
-            commands = await commands_all
-        except Exception as ee:
-            log.error(f'failed polling positions: {ee}')
-            return
-
-        update_position_commands = []
-        for command in commands:
-
-            pid = command.positioner_id
-
-            if command.status.failed and self[pid].initialised:
-                log.warning(f'({CommandID.GET_ACTUAL_POSITION.name}, '
-                            f'{command.positioner_id}): failed during polling.')
-                continue
-
-            position = command.get_positions()
-            update_position_commands.append(self[pid].update_position(position))
-
-        await asyncio.gather(*update_position_commands)
-
-        return
 
     def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
@@ -431,6 +377,8 @@ class FPS(BaseFPS):
         # will be sent.
         if not broadcast:
             self.set_interface(command, bus=bus, interface=interface)
+            if command.status == command.status.FAILED:
+                return command
 
         self.can.command_queue.put_nowait(command)
         log.debug(f'{command_name, positioner_id}: added command to CAN processing queue.')
@@ -447,6 +395,11 @@ class FPS(BaseFPS):
         if bus or interface:
             command._interface = interface
             command._bus = bus
+            return
+
+        if command.positioner_id not in self.positioner_to_bus:
+            log.error(f'positioner {command.positioner_id} has no assigned bus.')
+            command.finish_command(command.status.FAILED)
             return
 
         interface, bus = self.positioner_to_bus[command.positioner_id]
@@ -521,35 +474,31 @@ class FPS(BaseFPS):
         for positioner in self.positioners.values():
             await positioner.reset()
 
+        # Stop poller in case they are running
+        await self.pollers.stop()
+
         if len(self.positioners) > 0:
             n_expected_positioners = len(self.positioners)
         else:
             n_expected_positioners = None
 
-        get_status_command = self.send_command(CommandID.GET_STATUS,
-                                               positioner_id=0,
-                                               timeout=2,
-                                               n_positioners=n_expected_positioners)
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
                                                  timeout=0.5,
                                                  n_positioners=n_expected_positioners)
 
-        await asyncio.gather(get_status_command, get_firmware_command)
+        await get_firmware_command
 
-        if get_status_command.status.failed or get_firmware_command.status.failed:
-            log.error('failed retrieving status or firmware version.')
+        if get_firmware_command.status.failed:
+            log.error('failed retrieving firmware version.')
             return False
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it. Checks how many positioner
         # did not reply.
-        for status_reply in get_status_command.replies:
+        for reply in get_firmware_command.replies:
 
-            positioner_id = status_reply.positioner_id
-            command_id = status_reply.command_id
-            command_name = command_id.name
-            response_code = status_reply.response_code
+            positioner_id = reply.positioner_id
 
             if positioner_id not in self.positioners:
                 if allow_unknown:
@@ -561,39 +510,9 @@ class FPS(BaseFPS):
                     return False
 
             positioner = self.positioners[positioner_id]
+            positioner.firmware = get_firmware_command.get_firmware(positioner_id)
 
-            try:
-                positioner.firmware = get_firmware_command.get_firmware(positioner_id)
-            except ValueError:
-                warnings.warn(
-                    f'({get_firmware_command.command_id.name}, {positioner_id}): '
-                    'did not receive a reply. Skipping positioner.',
-                    JaegerUserWarning)
-                continue
-
-            status_int = int(bytes_to_int(status_reply.data))
-
-            if positioner.is_bootloader():
-                status = maskbits.BootloaderStatus(status_int)
-                # Need to change the default maskbit flag and initial value
-                # to BootloaderStatus and BootloaderStatus.UNKNOWN
-                positioner.flags = maskbits.BootloaderStatus
-                positioner.status = maskbits.BootloaderStatus.UNKNOWN
-            else:
-                status = maskbits.PositionerStatus(status_int)
-
-            if positioner_id in self.positioners:
-                if response_code == maskbits.ResponseCode.COMMAND_ACCEPTED:
-                    positioner.status = status
-                else:
-                    warnings.warn(f'({command_name}, {positioner_id}): responded '
-                                  f' with response code {response_code.name!r}',
-                                  JaegerUserWarning)
-            else:
-                warnings.warn(f'({command_name}, {positioner_id}): replied but '
-                              f'if not in the layout. Skipping it.',
-                              JaegerUserWarning)
-                continue
+        await self.update_status(timeout=0.5)
 
         if len(unknwon_positioners) > 0:
             warnings.warn(f'found {len(unknwon_positioners)} unknown positioners '
@@ -637,7 +556,7 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_status(self, positioners=None, timeout=1):
+    async def update_status(self, positioner_id=None, timeout=1):
         """Update statuses for all positioners.
 
         Parameters
@@ -650,12 +569,97 @@ class FPS(BaseFPS):
 
         """
 
-        if positioners is None:
-            positioners = list(self.positioners.keys())
+        if positioner_id:
+            n_positioners = len(positioner_id)
+        else:
+            n_positioners = None
 
-        await asyncio.gather(
-            *[self.positioners[pid].update_status(timeout=timeout)
-              for pid in positioners], loop=self.loop)
+        command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
+                                    n_positioners=n_positioners,
+                                    timeout=timeout)
+        await command
+
+        if command.status.failed:
+            log.warning(f'failed broadcasting {CommandID.GET_STATUS.name!r} '
+                        'during update status.')
+            return
+
+        update_status_coros = []
+        for reply in command.replies:
+
+            pid = reply.positioner_id
+            if pid not in self.positioners:
+                continue
+
+            positioner = self.positioners[pid]
+
+            status_int = int(bytes_to_int(reply.data))
+            update_status_coros.append(positioner.update_status(status_int))
+
+        await asyncio.gather(*update_status_coros)
+
+        return
+
+    async def update_position(self, positioner_id=None):
+        """Updates positions."""
+
+        if not positioner_id:
+            positioner_id = [pid for pid in self.positioners
+                             if self[pid].initialised and
+                             not self[pid].is_bootloader()]
+            if not positioner_id:
+                return
+
+        commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
+                                        positioners=positioner_id)
+
+        try:
+            commands = await commands_all
+        except Exception as ee:
+            log.error(f'failed polling positions: {ee}')
+            return
+
+        update_position_commands = []
+        for command in commands:
+
+            pid = command.positioner_id
+
+            if command.status.failed and self[pid].initialised:
+                log.warning(f'({CommandID.GET_ACTUAL_POSITION.name}, '
+                            f'{command.positioner_id}): '
+                            'failed during update position.')
+                continue
+
+            position = command.get_positions()
+            update_position_commands.append(self[pid].update_position(position))
+
+        await asyncio.gather(*update_position_commands)
+
+        return
+
+    async def update_firmware_version(self, positioner_id=None):
+        """Updates the firmware version of connected positioners."""
+
+        if positioner_id:
+            n_positioners = len(positioner_id)
+        else:
+            n_positioners = None
+
+        get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
+                                                 positioner_id=0,
+                                                 timeout=2,
+                                                 n_positioners=n_positioners)
+
+        await get_firmware_command
+
+        if get_firmware_command.status.failed:
+            log.error('failed retrieving firmware version.')
+            return False
+
+        for reply in get_firmware_command.replies:
+            positioner_id = reply.positioner_id
+            positioner = self.positioners[positioner_id]
+            positioner.firmware = get_firmware_command.get_firmware(positioner_id)
 
     async def abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
