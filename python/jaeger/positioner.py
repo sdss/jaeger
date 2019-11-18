@@ -247,13 +247,7 @@ class Positioner(StatusMixIn):
 
         await self.get_firmware()
 
-        if self.fps.pollers.status.running:
-            result = await self.wait_for_status(
-                maskbits.PositionerStatus.SYSTEM_INITIALIZATION,
-                delay=0.1, timeout=2)
-        else:
-            result = await self.update_status()
-
+        result = await self.update_status()
         if not result:
             log.error(f'positioner {self.positioner_id}: failed to refresh status.')
             return False
@@ -528,6 +522,8 @@ class Positioner(StatusMixIn):
             log.info(f'positioner {self.positioner_id}: '
                      f'the move will take {move_time:.2f} seconds')
 
+            # Poll a bit faster during the move.
+            await self.fps.pollers.position.set_delay(1)
             await asyncio.sleep(move_time)
 
             # Blocks until we're sure both arms at at the position.
@@ -540,6 +536,7 @@ class Positioner(StatusMixIn):
                                     fail_reason='Failed to reach position')
                 log.error(f'positioner {self.positioner_id}: '
                           'failed to reach commanded position.')
+                await self.fps.pollers.position.set_delay()
                 return False
 
             log.info(f'positioner {self.positioner_id}: position reached.')
