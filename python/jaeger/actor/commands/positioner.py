@@ -114,7 +114,8 @@ async def status(ctx, command, fps, positioner_id, full):
                                    beta_pos,
                                    int(positioner.status),
                                    positioner.initialised,
-                                   positioner.is_bootloader() or False])
+                                   positioner.is_bootloader() or False,
+                                   positioner.firmware or '?'])
 
     if full:
         await clu.Command('wago status', parent=command).parse()
