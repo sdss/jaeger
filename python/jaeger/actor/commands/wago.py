@@ -20,7 +20,7 @@ def wago(command, fps):
     """Manages the WAGO PLCs."""
 
     wago = fps.wago
-    if wago is None or not wago.connected:
+    if not wago or not wago.connected:
         command.failed(text='WAGO not connected.')
         raise click.Abort()
 
