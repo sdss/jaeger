@@ -18,12 +18,17 @@ from jaeger.commands import SetCurrent
 from . import jaeger_parser
 
 
-def check_positioners(positioner_ids, command, fps):
+def check_positioners(positioner_ids, command, fps, initialised=False):
     """Checks if some of the positioners are not connected."""
 
     if any([pid not in fps.positioners for pid in positioner_ids]):
         command.failed('some positioners are not connected.')
         return False
+
+    if initialised:
+        if any([not fps[pid].initialised for pid in positioner_ids]):
+            command.failed('some positioners are not initialised.')
+            return False
 
     return True
 
@@ -44,9 +49,9 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
         if not force:
             return command.failed('need to specify --force to move '
                                   'all positioners at once.')
-        positioner_id = [pid for pid in fps.positioners if fps[pid].initialised]
+        positioner_id = list(fps.positioners.keys())
 
-    if not check_positioners(positioner_id, command, fps):
+    if not check_positioners(positioner_id, command, fps, initialised=True):
         return
 
     speed = speed or [None, None]
