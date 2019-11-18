@@ -73,7 +73,7 @@ class StatusMixIn(object):
     def __init__(self, maskbit_flags, initial_status=None,
                  callback_func=None, call_now=False):
 
-        self.flags = maskbit_flags
+        self._flags = maskbit_flags
         self.callbacks = []
         self._status = initial_status
         self.watcher = None
@@ -119,6 +119,19 @@ class StatusMixIn(object):
             if self.watcher is not None:
                 self.watcher.set()
 
+    @property
+    def flags(self):
+        """Gets the flags associated to this status."""
+
+        return self._flags
+
+    @flags.setter
+    def flags(self, value):
+        """Sets the flags associated to this status."""
+
+        self._flags = value
+        self._status = None
+
     async def wait_for_status(self, value, loop=None):
         """Awaits until the status matches ``value``."""
 
@@ -151,6 +164,12 @@ class PollerList(list):
 
         list.__init__(self, pollers)
 
+    @property
+    def names(self):
+        """List the poller names."""
+
+        return [poller.name for poller in self]
+
     def append(self, poller):
         """Adds a poller."""
 
@@ -171,6 +190,14 @@ class PollerList(list):
                 return poller
 
         return list.__getitem__(self, name)
+
+    def __getitem__(self, item):
+        """Gets the poller by name."""
+
+        if isinstance(item, str):
+            return self.__getattr__(item)
+
+        return list.__getitem__(self, item)
 
     async def set_delay(self, delay=None):
         """Sets the delay for all the pollers.
@@ -287,10 +314,11 @@ class Poller(object):
 
         """
 
-        if self.running:
-            raise RuntimeError('poller is already running.')
-
         self.delay = delay or self._orig_delay
+
+        if self.running:
+            return
+
         self._task = self.loop.create_task(self.poller())
 
         return self

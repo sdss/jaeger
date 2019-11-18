@@ -49,7 +49,7 @@ def _process_replies(cmds):
 
 
 async def load_firmware(fps, firmware_file, positioners=None, force=False,
-                        show_progressbar=False):
+                        show_progressbar=False, progress_callback=None):
     """Convenience function to run through the steps of loading a new firmware.
 
     This function is a coroutine and not intendend for direct use. Use the
@@ -69,6 +69,11 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
         responding or are not in bootloader mode.
     show_progressbar : bool
         Whether to show a progress bar.
+    progress_callback : bool
+        A function to call as data gets transferred to the positioners. The
+        callback is called with ``(current_chunk, n_chuck)`` where
+        ``current_chunk`` is the number of the data chunk being sent and
+        ``n_chunk`` is the total number of chunks in the data package.
 
     """
 
@@ -180,10 +185,15 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
             if show_progressbar:
                 bar.update(ii)
 
+            if progress_callback:
+                progress_callback(ii, n_chunks)
+
     log.info('firmware upgrade complete.')
 
     total_time = time.time() - start_time
     log.info(f'upgrading firmware took {total_time:.2f}')
+
+    return True
 
 
 class GetFirmwareVersion(commands.Command):

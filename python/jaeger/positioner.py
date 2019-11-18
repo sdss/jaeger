@@ -128,11 +128,6 @@ class Positioner(StatusMixIn):
     async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""
 
-        if not self.is_bootloader():
-            self.flags = maskbits.PositionerStatus
-        else:
-            self.flags = maskbits.BootloaderStatus
-
         if not status:
 
             command = self.fps.send_command(CommandID.GET_STATUS,
@@ -156,7 +151,13 @@ class Positioner(StatusMixIn):
                 self.status = self.flags.UNKNOWN
                 return False
 
+        if not self.is_bootloader():
+            self.flags = maskbits.PositionerStatus
+        else:
+            self.flags = maskbits.BootloaderStatus
+
         self.status = self.flags(status)
+
         log.debug(f'positioner {self.positioner_id}: '
                   f'status={self.status.name} ({self.status.value})')
 
@@ -245,7 +246,7 @@ class Positioner(StatusMixIn):
         # Resets all.
         await self.reset()
 
-        await self.get_firmware()
+        await self.update_firmware_version()
 
         result = await self.update_status()
         if not result:
@@ -318,7 +319,7 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def get_firmware(self):
+    async def update_firmware_version(self):
         """Updates the firmware version."""
 
         command = self.fps.send_command(CommandID.GET_FIRMWARE_VERSION,
