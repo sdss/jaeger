@@ -177,7 +177,7 @@ class JaegerCAN(object):
 
             # Now lock the FPS.
             if self.fps:
-                self.loop.create_task(self.fps.lock(abort_trajectories=False))
+                self.loop.create_task(self.fps.lock(abort_trajectories=True))
 
         if command_id == 0:
             can_log.warning('invalid command with command_id=0, '
