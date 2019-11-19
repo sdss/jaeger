@@ -72,7 +72,7 @@ class Positioner(StatusMixIn):
     @property
     def moving(self):
         """Returns `True` if the positioner is moving."""
-        return False
+
         if (self.status.DISPLACEMENT_COMPLETED not in self.status or
                 self.status.RECEIVING_TRAJECTORY in self.status):
             return True
