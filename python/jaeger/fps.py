@@ -267,6 +267,7 @@ class FPS(BaseFPS):
 
         super().__init__(layout=layout)
 
+        #: Position and status pollers
         self.pollers = PollerList([
             Poller('status', self.update_status,
                    delay=config['fps']['status_poller_delay'],
