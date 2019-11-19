@@ -189,6 +189,8 @@ class Command(StatusMixIn, asyncio.Future):
     timeout = 5
     #: Whether it's safe to execute this command when the FPS is locked.
     safe = False
+    #: Whether this command produces a positioner move.
+    move_command = False
 
     def __init__(self, positioner_id, loop=None, timeout=None,
                  done_callback=None, n_positioners=None, data=None):
