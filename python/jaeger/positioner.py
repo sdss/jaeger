@@ -206,10 +206,7 @@ class Positioner(StatusMixIn):
             The status to wait for. Can be a list in which case it will wait
             until all the statuses in the list have been reached.
         delay : float
-            If set, modifies the status poller to poll each ``delay`` seconds.
-            Note that this will affect the polling of all positioners.
-            The original status polling delay is restored at the end of the
-            command.
+            Time, in seconds, to wait between position updates.
         timeout : float
             How many seconds to wait for the status to reach the desired value
             before aborting.
@@ -226,16 +223,9 @@ class Positioner(StatusMixIn):
             log.error('this coroutine cannot be scheduled in bootloader mode.')
             return False
 
-        if not self.fps or not self.fps.pollers.status.running:
-            log.error('no FPS associated with this positioner or poller '
-                      'is not running. wait_for_status needs a running '
-                      'status poller.')
+        if not self.fps:
+            log.error('no FPS associated with this positioner.')
             return False
-
-        if delay:
-            await self.fps.pollers.status.set_delay(delay)
-        else:
-            delay = self.fps.pollers.status.delay
 
         if not isinstance(status, (list, tuple)):
             status = [status]
@@ -243,6 +233,7 @@ class Positioner(StatusMixIn):
         async def status_waiter(wait_for_status):
 
             while True:
+                await self.update_status()
                 # Check all statuses in the list
                 all_reached = True
                 for ss in wait_for_status:
@@ -260,10 +251,8 @@ class Positioner(StatusMixIn):
         try:
             await asyncio.wait_for(status_waiter(wait_for_status), timeout)
         except asyncio.TimeoutError:
-            await self.fps.pollers.status.set_delay()
             return False
 
-        await self.fps.pollers.status.set_delay()
         return True
 
     async def initialise(self, initialise_datums=False):
