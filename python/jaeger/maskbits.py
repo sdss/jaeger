@@ -132,7 +132,7 @@ class BootloaderStatus(Maskbit):
     UNKNOWN = 0x40000000
 
 
-class ResponseCode(enum.IntFlag):
+class ResponseCode(enum.Flag):
     """Maskbit for the status of the bootloader."""
 
     COMMAND_ACCEPTED = 0
