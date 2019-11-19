@@ -5,6 +5,8 @@ Changelog
 =========
 
 * Update `.PositionerStatus` maskbits.
+* Significant clean-up of how pollers are used.
+* `~jaeger.commands.send_trajectory` now raises exceptions on error.
 
 * :release:`0.4.0 <2019-11-19>`
 * :feature:`46` Implement a QA database for moves.
