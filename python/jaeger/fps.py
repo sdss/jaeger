@@ -16,7 +16,7 @@ import astropy.table
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
@@ -708,7 +708,11 @@ class FPS(BaseFPS):
 
         """
 
-        return await send_trajectory(self, *args, **kwargs)
+        try:
+            return await send_trajectory(self, *args, **kwargs)
+        except TrajectoryError as ee:
+            log.error(f'sending trajectory failed with error: {ee}')
+            return False
 
     def abort(self):
         """Aborts trajectories and stops positioners."""
