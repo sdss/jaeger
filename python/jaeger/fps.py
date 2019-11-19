@@ -590,13 +590,15 @@ class FPS(BaseFPS):
 
         command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
                                     n_positioners=n_positioners,
-                                    timeout=timeout)
+                                    timeout=timeout,
+                                    override=True,
+                                    silent_on_conflict=True)
         await command
 
         if command.status.failed:
             log.warning(f'failed broadcasting {CommandID.GET_STATUS.name!r} '
                         'during update status.')
-            return
+            return False
 
         update_status_coros = []
         for reply in command.replies:
@@ -612,7 +614,7 @@ class FPS(BaseFPS):
 
         await asyncio.gather(*update_status_coros)
 
-        return
+        return True
 
     async def update_position(self, positioner_id=None):
         """Updates positions."""
@@ -622,7 +624,7 @@ class FPS(BaseFPS):
                              if self[pid].initialised and
                              not self[pid].is_bootloader()]
             if not positioner_id:
-                return
+                return True
 
         commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
                                         positioners=positioner_id)
@@ -631,7 +633,7 @@ class FPS(BaseFPS):
             commands = await commands_all
         except Exception as ee:
             log.error(f'failed polling positions: {ee}')
-            return
+            return False
 
         update_position_commands = []
         for command in commands:
@@ -649,7 +651,7 @@ class FPS(BaseFPS):
 
         await asyncio.gather(*update_position_commands)
 
-        return
+        return True
 
     async def update_firmware_version(self, positioner_id=None):
         """Updates the firmware version of connected positioners."""
@@ -674,6 +676,8 @@ class FPS(BaseFPS):
             positioner_id = reply.positioner_id
             positioner = self.positioners[positioner_id]
             positioner.firmware = get_firmware_command.get_firmware(positioner_id)
+
+        return True
 
     async def abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
