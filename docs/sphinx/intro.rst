@@ -121,8 +121,6 @@ And it can be commanded by doing ::
 
     >>> await fps.send_trajectory('my_trajectory.yaml')
 
-Unless `~.FPS.send_trajectory` is called with ``kaiju_check=False`` (DANGER! Do not do that unless you are sure of what you are doing), jaeger will check with kaiju_ to confirm that the trajectory is safe to execute.
-
 .. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
 
 .. _kaiju: https://github.com/csayres/kaiju

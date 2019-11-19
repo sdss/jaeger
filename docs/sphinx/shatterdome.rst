@@ -78,14 +78,14 @@ The mapping between positioners and buses is done in the :ref:`FPS class <fps>`.
 The `.FPS` class
 ----------------
 
-The `.FPS` class is the main entry point to monitor and command the focal plane system and usually it will be the first thing you instantiate. It contains a `CAN bus <can-bus>`_, a `dictionary <.FPS.positioners>` of all the positioners included in the layout (a layout is a list of the positioners that compose the FPS, with their associated ``positioner_id`` and central position; it can be stored as a file or in a database) and high level methods to perform operations that affect multiple positioners (e.g., `send a trajectory <send-trajectory>`_).
+The `.FPS` class is the main entry point to monitor and command the focal plane system and usually it will be the first thing you instantiate. It contains a `CAN bus <can-bus>`_, a `dictionary <.BaseFPS.positioners>` of all the positioners included in the layout (a layout is a list of the positioners that compose the FPS, with their associated ``positioner_id`` and central position; it can be stored as a file or in a database), and high level methods to perform operations that affect multiple positioners (e.g., `send a trajectory <send-trajectory>`_).
 
 To instantiate with the default options, simply do ::
 
     >>> from jaeger import FPS
     >>> fps = FPS()
 
-This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` profile and will use the default layout stored in the configuration file under ``config['fps']['default_layout']`` to add instances of `.Positioner` to `.FPS.positioners`.
+This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` profile and will use the default layout stored in the configuration file under ``config['fps']['default_layout']`` to add instances of `.Positioner` to `.BaseFPS.positioners`.
 
 Initialisation
 ^^^^^^^^^^^^^^
@@ -136,8 +136,6 @@ And it can be commanded by doing ::
 
     >>> await fps.send_trajectory('my_trajectory.yaml')
 
-Unless `~.FPS.send_trajectory` is called with ``kaiju_check=False`` (DANGER! Do not do that unless you are sure of what you are doing), jaeger will check with kaiju_ to confirm that the trajectory is safe to execute.
-
 .. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
 
 Aborting all trajectories
@@ -163,10 +161,9 @@ Initialisation
 
 When a `.Positioner` is instantiated it contains no information about its position (angle of the alpha and beta arms) and its status is set to `~.maskbits.PositionerStatus.UNKNOWN`. By calling and awaiting `.Positioner.initialise`, the following steps are executed:
 
+- Updates the firmware version.
 - The status is updated by calling `.Positioner.update_status`.
-- If the `~.maskbits.PositionerStatus.DATUM_INITIALIZED` flag is not in the status, issues a `~.commands.InitialiseDatums` command and waits until it completes and the bit has been set. This will move the positioner to its home position.
-- If the `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED` bit is not found, it issues `~.commands.StopTrajectory` and waits until the positioner has stopped and the bit is set.
-- Starts the `position and status pollers <position-pollers>`_.
+- Stops all possible trajectories remaining in the buffer for that positioner.
 - Sets the alpha and beta arm speeds to the default value (stored in the configuration file as ``motor_speed``).
 
 After this sequence, the positioner is ready to be commanded.
@@ -178,7 +175,7 @@ Position and status pollers
 
 The status of the positioner, given as a `maskbit <maskbits>`_ `~.maskbits.PositionerStatus` (or `.maskbits.BootloaderStatus` if the positioner is in `bootloader <bootloader-mode>`_ mode) can be accessed via the ``status`` attribute and updated by calling the `~.Positioner.update_status` coroutine. Similarly, the current position of the positioner is stored in the ``alpha`` and ``beta`` attributes, in degrees, and updated via `~.Positioner.update_position`.
 
-As we initialise the positioner, two `~.utils.helpers.Poller` instances are created: `~.Positioner.status_poller` and `~.Positioner.position_poller`. These tasks simply call `~.Positioner.update_status`. and `~.Positioner.update_position` every second and update the corresponding attribute. The delay between polls can be set via the `~.utils.helpers.Poller.set_delay` method.
+As we initialise the FPS, two `~.utils.helpers.Poller` instances are created as part of the `.PollerList` `.FPS.pollers` to track the position and status of each positioner. These tasks simply call `~.FPS.update_status`. and `~.FPS.update_position` every few seconds and update the corresponding attributes in the positioners. The delay between polls can be set via the `~.utils.helpers.Poller.set_delay` method.
 
 .. _positioner-goto:
 
@@ -187,10 +184,10 @@ Sending a positioner to a position
 
 The `.Positioner.goto` coroutine allows to easily send the positioner to a position or set the speed of either arm ::
 
-    await positioner.goto(alpha=30, beta=90, alpha_speed=1000, beta_speed=1200)
+    await positioner.goto(alpha=30, beta=90, speed=(1000, 1200))
 
     # Only set speed
-    await positioner.goto(alpha_speed=500, beta_speed=500)
+    await positioner.set_speed(500, 500)
 
     # Only go to position using the speed we just set
     await positioner.goto(alpha=100, beta=154)
@@ -205,11 +202,10 @@ In many cases it's convenient to asynchronously block the execution of a corouti
     # Wait until DISPLACEMENT_COMPLETED appears
     await positioner.wait_for_status(PositionerStatus.DISPLACEMENT_COMPLETED)
 
-    # Wait untils SYSTEM_INITIALIZED and DATUM_INITIALIZED are set. Time-out in 3 seconds if that doesn't happen.
-    await positioner.wait_for_status([PositionerStatus.SYSTEM_INITIALIZED, PositionerStatus.DATUM_INITIALIZED], timeout=3)
+    # Wait untils SYSTEM_INITIALIZED and DATUM_ALPHA_INITIALIZED are set. Time-out in 3 seconds if that doesn't happen.
+    await positioner.wait_for_status([PositionerStatus.SYSTEM_INITIALIZED, PositionerStatus.DATUM_ALPHA_INITIALIZED], timeout=3)
 
-While `~.Positioner.wait_for_status` is running the interval at which `~.Positioner.status_poller` updates the status is increased (to 0.1 seconds by default, but this can be set when calling the coroutine) and the default value is restored when the status is reached or the time-out happens.
-
+Note that `~.Positioner.wait_for_status` is independent of the status poller. While `~.Positioner.wait_for_status` is running, a `.GET_STATUS` command will be issue wach ``delay`` seconds, in addition to the normal polling.
 
 Commands
 --------
@@ -271,7 +267,7 @@ The ``timeout`` can be set to `None`, in which case the command will never time 
 
         print('Starting monitoring')
 
-        if all(asyncio.gather(*[positioner.wait_for_status(PositionerStatus.DATUM_INITIALIZED) for positioner in positioners])):
+        if all(asyncio.gather(*[positioner.wait_for_status(PositionerStatus.DATUM_ALPHA_INITIALIZED) for positioner in positioners])):
             status_cmd.finish_command(status=CommandStatus.DONE)
         else:
             status_cmd.finish_command(status=CommandStatus.FAILED)
