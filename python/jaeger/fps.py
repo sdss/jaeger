@@ -550,7 +550,7 @@ class FPS(BaseFPS):
 
         if self.locked:
             log.info('FPS is locked. Trying to unlock it.')
-            if not self.unlock():
+            if not await self.unlock():
                 log.error('FPS cannot be unlocked. Initialisation failed.')
                 return False
             else:
