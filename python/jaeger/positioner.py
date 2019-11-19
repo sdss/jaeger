@@ -276,8 +276,6 @@ class Positioner(StatusMixIn):
                           'trajectories during initialisation.', JaegerUserWarning)
             return False
 
-        result = await self.fps.send_command('TRAJECTORY_TRANSMISSION_ABORT',
-                                             positioner_id=self.positioner_id)
         if not result:
             log.error(f'positioner {self.positioner_id}: failed aborting '
                       'trajectory transmission during initialisation.')
