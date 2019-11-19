@@ -167,6 +167,9 @@ async def send_trajectory(fps, trajectories):
     # output expected time.
     log.info(f'expected time to complete trajectory: {max_time:.2f} seconds.')
 
+    for positioner_id in list(trajectories.keys()):
+        fps[positioner_id].move_time = max_time
+
     # Start trajectories
     command = await fps.send_command('START_TRAJECTORY', positioner_id=0, timeout=1,
                                      n_positioners=len(trajectories))
