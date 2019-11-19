@@ -373,7 +373,7 @@ class FPS(BaseFPS):
 
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
-            return False
+            return command
 
         command._override = override
         command._silent_on_conflict = silent_on_conflict
