@@ -83,7 +83,7 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     await asyncio.sleep(1)
 
     try:
-        await fps.update_status(positioners=list(trajectories.keys()), timeout=1.)
+        await fps.update_status(positioner_id=list(trajectories.keys()), timeout=1.)
     except KeyError as ee:
         log.error(f'some positioners in the trajectory are not connected: {ee}')
         return False
@@ -97,7 +97,8 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         positioner = fps.positioners[pos_id]
         status = positioner.status
 
-        if (PosStatus.DATUM_INITIALIZED not in status or
+        if (PosStatus.DATUM_ALPHA_INITIALIZED not in status or
+                PosStatus.DATUM_BETA_INITIALIZED not in status or
                 PosStatus.DISPLACEMENT_COMPLETED not in status):
             log.error(f'positioner_id={pos_id} is not ready to receive a trajectory.')
             return False
