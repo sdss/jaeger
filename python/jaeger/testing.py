@@ -71,10 +71,9 @@ class VirtualFPS(jaeger.BaseFPS):
     def initialise(self, positions=None):
         """Sets the initial states of the positioners."""
 
-        initial_status = (PositionerStatus.SYSTEM_INITIALIZATION |
+        initial_status = (PositionerStatus.SYSTEM_INITIALIZED |
                           PositionerStatus.DATUM_ALPHA_INITIALIZED |
                           PositionerStatus.DATUM_BETA_INITIALIZED |
-                          PositionerStatus.DATUM_INITIALIZED |
                           PositionerStatus.POSITION_RESTORED)
 
         for positioner in self.positioners.values():

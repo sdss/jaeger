@@ -89,7 +89,7 @@ The replies to the command are stored in the ``replies`` attribute: ::
     >>> reply.data
     bytearray(b"\'\xc0\x00\x01")
     >>> status_cmd.get_positioner_status()
-    [<PositionerStatus.DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZATION: 666894337>]
+    [<PositionerStatus.DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZED: 666894337>]
 
 
 Moving positioners and sending trajectories
@@ -101,7 +101,7 @@ To move positioner 8 to :math:`\alpha=85,\,\beta=30` at a speed of 1500 RPM, you
 
     >>> positioner = fps.positioners[8]
     >>> positioner
-    <Positioner (id=8, status='DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZATION', initialised=False)>
+    <Positioner (id=8, status='DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZED', initialised=False)>
     >>> await positioner.goto(alpha=85, beta=30, speed_alpha=1500, speed_beta=1500)
 
 The command will asynchronously block until the position has been reached and the status is again `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.

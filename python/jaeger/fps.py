@@ -217,7 +217,7 @@ class FPS(BaseFPS):
         >>> fps = FPS(can_profile='default')
         >>> await fps.initialise()
         >>> fps.positioners[4].status
-        <Positioner (id=4, status='SYSTEM_INITIALIZATION|
+        <Positioner (id=4, status='SYSTEM_INITIALIZED|
         DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|
         BETA_DISPLACEMENT_COMPLETED')>
 

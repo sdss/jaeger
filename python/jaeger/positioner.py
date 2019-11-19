@@ -81,8 +81,9 @@ class Positioner(StatusMixIn):
 
         PositionerStatus = maskbits.PositionerStatus
 
-        if (PositionerStatus.SYSTEM_INITIALIZATION not in self.status or
-                PositionerStatus.DATUM_INITIALIZED not in self.status):
+        if (PositionerStatus.SYSTEM_INITIALIZED not in self.status or
+                PositionerStatus.DATUM_ALPHA_INITIALIZED not in self.status or
+                PositionerStatus.DATUM_BETA_INITIALIZED not in self.status):
             return False
 
         return True
@@ -309,7 +310,8 @@ class Positioner(StatusMixIn):
         log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
 
         result = await self.wait_for_status(
-            maskbits.PositionerStatus.DATUM_INITIALIZED,
+            [maskbits.PositionerStatus.DATUM_ALPHA_INITIALIZED,
+             maskbits.PositionerStatus.DATUM_BETA_INITIALIZED],
             timeout=config['positioner']['initialise_datums_timeout'])
 
         if not result:

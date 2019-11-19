@@ -205,8 +205,8 @@ In many cases it's convenient to asynchronously block the execution of a corouti
     # Wait until DISPLACEMENT_COMPLETED appears
     await positioner.wait_for_status(PositionerStatus.DISPLACEMENT_COMPLETED)
 
-    # Wait untils SYSTEM_INITIALIZATION and DATUM_INITIALIZED are set. Time-out in 3 seconds if that doesn't happen.
-    await positioner.wait_for_status([PositionerStatus.SYSTEM_INITIALIZATION, PositionerStatus.DATUM_INITIALIZED], timeout=3)
+    # Wait untils SYSTEM_INITIALIZED and DATUM_INITIALIZED are set. Time-out in 3 seconds if that doesn't happen.
+    await positioner.wait_for_status([PositionerStatus.SYSTEM_INITIALIZED, PositionerStatus.DATUM_INITIALIZED], timeout=3)
 
 While `~.Positioner.wait_for_status` is running the interval at which `~.Positioner.status_poller` updates the status is increased (to 0.1 seconds by default, but this can be set when calling the coroutine) and the default value is restored when the status is reached or the time-out happens.
 

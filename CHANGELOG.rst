@@ -4,6 +4,8 @@
 Changelog
 =========
 
+* Update `.PositionerStatus` maskbits.
+
 * :release:`0.4.0 <2019-11-19>`
 * :feature:`46` Implement a QA database for moves.
 * :feature:`13` Abort trajectory and lock the FPS if either a collided status is detected in a positioner or if command 18 is received from the CAN network.

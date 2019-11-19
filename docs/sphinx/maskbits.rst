@@ -22,10 +22,10 @@ To create a new enumeration from an integer ::
 
 Enumerations can be combined using bitwise operations ::
 
-    >>> status = PositionerStatus.DATUM_INITIALIZED | PositionerStatus.SYSTEM_INITIALIZATION
-    <PositionerStatus.DATUM_INITIALIZED|SYSTEM_INITIALIZATION: 536870913>
+    >>> status = PositionerStatus.DATUM_INITIALIZED | PositionerStatus.SYSTEM_INITIALIZED
+    <PositionerStatus.DATUM_INITIALIZED|SYSTEM_INITIALIZED: 536870913>
     >>> status.active_bits
-    [<PositionerStatus.SYSTEM_INITIALIZATION: 1>,
+    [<PositionerStatus.SYSTEM_INITIALIZED: 1>,
      <PositionerStatus.DATUM_INITIALIZED: 536870912>]
     >>> status & PositionerStatus.ALPHA_DISPLACEMENT_COMPLETED
     <PositionerStatus.0: 0>

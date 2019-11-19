@@ -248,7 +248,7 @@ async def home(ctx, positioner_id):
         positioners = [fps.positioners[positioner_id]]
 
     valid_positioners = [positioner for positioner in positioners
-                         if PositionerStatus.SYSTEM_INITIALIZATION in positioner.status]
+                         if PositionerStatus.SYSTEM_INITIALIZED in positioner.status]
 
     if len(valid_positioners) < len(positioners):
         warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
