@@ -753,18 +753,6 @@ version = "2019.3"
 
 [[package]]
 category = "main"
-description = "A Sphinx extension for changelog manipulation"
-name = "releases"
-optional = true
-python-versions = "*"
-version = "1.6.1"
-
-[package.dependencies]
-semantic-version = "<3.0"
-sphinx = ">=1.3,<1.8"
-
-[[package]]
-category = "main"
 description = "Python HTTP for Humans."
 name = "requests"
 optional = false
@@ -830,8 +818,8 @@ category = "main"
 description = "A library implementing the 'SemVer' scheme."
 name = "semantic-version"
 optional = true
-python-versions = "*"
-version = "2.6.0"
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+version = "2.8.0"
 
 [[package]]
 category = "main"
@@ -854,8 +842,8 @@ category = "main"
 description = "Python documentation generator"
 name = "sphinx"
 optional = true
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.7.9"
+python-versions = ">=3.5"
+version = "2.1.2"
 
 [package.dependencies]
 Jinja2 = ">=2.3"
@@ -863,18 +851,22 @@ Pygments = ">=2.0"
 alabaster = ">=0.7,<0.8"
 babel = ">=1.3,<2.0 || >2.0"
 colorama = ">=0.3.5"
-docutils = ">=0.11"
+docutils = ">=0.12"
 imagesize = "*"
 packaging = "*"
-requests = ">=2.0.0"
+requests = ">=2.5.0"
 setuptools = "*"
-six = ">=1.5"
 snowballstemmer = ">=1.1"
-sphinxcontrib-websupport = "*"
+sphinxcontrib-applehelp = "*"
+sphinxcontrib-devhelp = "*"
+sphinxcontrib-htmlhelp = "*"
+sphinxcontrib-jsmath = "*"
+sphinxcontrib-qthelp = "*"
+sphinxcontrib-serializinghtml = "*"
 
 [package.extras]
-test = ["mock", "pytest", "pytest-cov", "html5lib", "flake8 (>=3.5.0)", "flake8-import-order", "enum34", "mypy", "typed-ast"]
-websupport = ["sqlalchemy (>=0.9)", "whoosh (>=2.0)"]
+docs = ["sphinxcontrib-websupport"]
+test = ["pytest", "pytest-cov", "html5lib", "flake8 (>=3.5.0)", "flake8-import-order", "mypy (>=0.590)", "docutils-stubs"]
 
 [[package]]
 category = "main"
@@ -890,6 +882,72 @@ sphinx = ">=1.5,<2.2"
 
 [[package]]
 category = "main"
+description = ""
+name = "sphinxcontrib-applehelp"
+optional = true
+python-versions = "*"
+version = "1.0.1"
+
+[package.extras]
+test = ["pytest", "flake8", "mypy"]
+
+[[package]]
+category = "main"
+description = ""
+name = "sphinxcontrib-devhelp"
+optional = true
+python-versions = "*"
+version = "1.0.1"
+
+[package.extras]
+test = ["pytest", "flake8", "mypy"]
+
+[[package]]
+category = "main"
+description = ""
+name = "sphinxcontrib-htmlhelp"
+optional = true
+python-versions = "*"
+version = "1.0.2"
+
+[package.extras]
+test = ["pytest", "flake8", "mypy", "html5lib"]
+
+[[package]]
+category = "main"
+description = "A sphinx extension which renders display math in HTML via JavaScript"
+name = "sphinxcontrib-jsmath"
+optional = true
+python-versions = ">=3.5"
+version = "1.0.1"
+
+[package.extras]
+test = ["pytest", "flake8", "mypy"]
+
+[[package]]
+category = "main"
+description = ""
+name = "sphinxcontrib-qthelp"
+optional = true
+python-versions = "*"
+version = "1.0.2"
+
+[package.extras]
+test = ["pytest", "flake8", "mypy"]
+
+[[package]]
+category = "main"
+description = ""
+name = "sphinxcontrib-serializinghtml"
+optional = true
+python-versions = "*"
+version = "1.1.3"
+
+[package.extras]
+test = ["pytest", "flake8", "mypy"]
+
+[[package]]
+category = "main"
 description = "Make Sphinx better at documenting Python functions and methods"
 name = "sphinxcontrib-trio"
 optional = true
@@ -898,17 +956,6 @@ version = "1.1.0"
 
 [package.dependencies]
 sphinx = ">=1.7"
-
-[[package]]
-category = "main"
-description = "Sphinx API for Web Apps"
-name = "sphinxcontrib-websupport"
-optional = true
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.1.2"
-
-[package.extras]
-test = ["pytest", "mock"]
 
 [[package]]
 category = "dev"
@@ -1021,10 +1068,10 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pathlib2", "contextlib2", "unittest2"]
 
 [extras]
-docs = ["Sphinx", "releases", "sphinxcontrib-trio", "sphinx-click", "semantic-version"]
+docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click", "semantic-version"]
 
 [metadata]
-content-hash = "a028fbd5c524f66a9d7860d53a4b59bec03b1f61ca005e687c0a667d193950f9"
+content-hash = "97ae91a01e751a55617e5f0e69d2c4af9b497228b0ea1aa98f5812b9ae027212"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1441,10 +1488,6 @@ pytz = [
     {file = "pytz-2019.3-py2.py3-none-any.whl", hash = "sha256:1c557d7d0e871de1f5ccd5833f60fb2550652da6be2693c1e02300743d21500d"},
     {file = "pytz-2019.3.tar.gz", hash = "sha256:b02c06db6cf09c12dd25137e563b31700d3b80fcc4ad23abb7a315f2789819be"},
 ]
-releases = [
-    {file = "releases-1.6.1-py2.py3-none-any.whl", hash = "sha256:16cc20a59bd00854a8c6070b5b5eb410b093cd59c69bc8feb0cbaadd4ae8bc23"},
-    {file = "releases-1.6.1.tar.gz", hash = "sha256:7a1b3163ab062d41dc4e61d8f51df055756d146f1fb6e18ee5cf55d91c9cda54"},
-]
 requests = [
     {file = "requests-2.22.0-py2.py3-none-any.whl", hash = "sha256:9cf5292fcd0f598c671cfc1e0d7d1a7f13bb8085e9a590f48c010551dc6c4b31"},
     {file = "requests-2.22.0.tar.gz", hash = "sha256:11e007a8a2aa0323f5a921e9e6a2d7e4e67d9877e85773fba9ba6419025cbeb4"},
@@ -1476,8 +1519,8 @@ sdss-clu = [
     {file = "sdss-clu-0.1.7.tar.gz", hash = "sha256:979efe78c81411f7836450f1cbfc708e726d5cc1b906ee0691e32dbaaf6eb9f8"},
 ]
 semantic-version = [
-    {file = "semantic_version-2.6.0-py3-none-any.whl", hash = "sha256:2d06ab7372034bcb8b54f2205370f4aa0643c133b7e6dbd129c5200b83ab394b"},
-    {file = "semantic_version-2.6.0.tar.gz", hash = "sha256:2a4328680073e9b243667b201119772aefc5fc63ae32398d6afafff07c4f54c0"},
+    {file = "semantic_version-2.8.0-py2.py3-none-any.whl", hash = "sha256:35f8b1f37e8a1d0b6e476b3b55546d0de572bb345b4ff8e82faddb799d614888"},
+    {file = "semantic_version-2.8.0.tar.gz", hash = "sha256:2e28e4d2e2b2a0a102ad7fe5c6912700a35681c94c4b4f628b317853d1ebd179"},
 ]
 six = [
     {file = "six-1.13.0-py2.py3-none-any.whl", hash = "sha256:1f1b7d42e254082a9db6279deae68afb421ceba6158efa6131de7b3003ee93fd"},
@@ -1488,20 +1531,40 @@ snowballstemmer = [
     {file = "snowballstemmer-2.0.0.tar.gz", hash = "sha256:df3bac3df4c2c01363f3dd2cfa78cce2840a79b9f1c2d2de9ce8d31683992f52"},
 ]
 sphinx = [
-    {file = "Sphinx-1.7.9-py2.py3-none-any.whl", hash = "sha256:a602513f385f1d5785ff1ca420d9c7eb1a1b63381733b2f0ea8188a391314a86"},
-    {file = "Sphinx-1.7.9.tar.gz", hash = "sha256:217a7705adcb573da5bbe1e0f5cab4fa0bd89fd9342c9159121746f593c2d5a4"},
+    {file = "Sphinx-2.1.2-py3-none-any.whl", hash = "sha256:22538e1bbe62b407cf5a8aabe1bb15848aa66bb79559f42f5202bbce6b757a69"},
+    {file = "Sphinx-2.1.2.tar.gz", hash = "sha256:f9a79e746b87921cabc3baa375199c6076d1270cee53915dbd24fdbeaaacc427"},
 ]
 sphinx-click = [
     {file = "sphinx-click-2.3.0.tar.gz", hash = "sha256:877d4e080f6ded85d566127c7256de8afae6ab4fdc7ef301f7cc906a8177e3e8"},
     {file = "sphinx_click-2.3.0-py2.py3-none-any.whl", hash = "sha256:7be243c3f621b6a45e5ff8f644408ed1f7fd88004388b36c77a242e8f0386c4d"},
 ]
+sphinxcontrib-applehelp = [
+    {file = "sphinxcontrib-applehelp-1.0.1.tar.gz", hash = "sha256:edaa0ab2b2bc74403149cb0209d6775c96de797dfd5b5e2a71981309efab3897"},
+    {file = "sphinxcontrib_applehelp-1.0.1-py2.py3-none-any.whl", hash = "sha256:fb8dee85af95e5c30c91f10e7eb3c8967308518e0f7488a2828ef7bc191d0d5d"},
+]
+sphinxcontrib-devhelp = [
+    {file = "sphinxcontrib-devhelp-1.0.1.tar.gz", hash = "sha256:6c64b077937330a9128a4da74586e8c2130262f014689b4b89e2d08ee7294a34"},
+    {file = "sphinxcontrib_devhelp-1.0.1-py2.py3-none-any.whl", hash = "sha256:9512ecb00a2b0821a146736b39f7aeb90759834b07e81e8cc23a9c70bacb9981"},
+]
+sphinxcontrib-htmlhelp = [
+    {file = "sphinxcontrib-htmlhelp-1.0.2.tar.gz", hash = "sha256:4670f99f8951bd78cd4ad2ab962f798f5618b17675c35c5ac3b2132a14ea8422"},
+    {file = "sphinxcontrib_htmlhelp-1.0.2-py2.py3-none-any.whl", hash = "sha256:d4fd39a65a625c9df86d7fa8a2d9f3cd8299a3a4b15db63b50aac9e161d8eff7"},
+]
+sphinxcontrib-jsmath = [
+    {file = "sphinxcontrib-jsmath-1.0.1.tar.gz", hash = "sha256:a9925e4a4587247ed2191a22df5f6970656cb8ca2bd6284309578f2153e0c4b8"},
+    {file = "sphinxcontrib_jsmath-1.0.1-py2.py3-none-any.whl", hash = "sha256:2ec2eaebfb78f3f2078e73666b1415417a116cc848b72e5172e596c871103178"},
+]
+sphinxcontrib-qthelp = [
+    {file = "sphinxcontrib-qthelp-1.0.2.tar.gz", hash = "sha256:79465ce11ae5694ff165becda529a600c754f4bc459778778c7017374d4d406f"},
+    {file = "sphinxcontrib_qthelp-1.0.2-py2.py3-none-any.whl", hash = "sha256:513049b93031beb1f57d4daea74068a4feb77aa5630f856fcff2e50de14e9a20"},
+]
+sphinxcontrib-serializinghtml = [
+    {file = "sphinxcontrib-serializinghtml-1.1.3.tar.gz", hash = "sha256:c0efb33f8052c04fd7a26c0a07f1678e8512e0faec19f4aa8f2473a8b81d5227"},
+    {file = "sphinxcontrib_serializinghtml-1.1.3-py2.py3-none-any.whl", hash = "sha256:db6615af393650bf1151a6cd39120c29abaf93cc60db8c48eb2dddbfdc3a9768"},
+]
 sphinxcontrib-trio = [
     {file = "sphinxcontrib-trio-1.1.0.tar.gz", hash = "sha256:d90f46d239ba0556e53d9a110989f98c9eb2cea76ab47937a1f39b62f63fe654"},
     {file = "sphinxcontrib_trio-1.1.0-py3-none-any.whl", hash = "sha256:39196d15b8c9a9947be2e593518f404bc0da6020ae69007b9f8ce49b4ba3d49b"},
-]
-sphinxcontrib-websupport = [
-    {file = "sphinxcontrib-websupport-1.1.2.tar.gz", hash = "sha256:1501befb0fdf1d1c29a800fdbf4ef5dc5369377300ddbdd16d2cd40e54c6eefc"},
-    {file = "sphinxcontrib_websupport-1.1.2-py2.py3-none-any.whl", hash = "sha256:e02f717baf02d0b6c3dd62cf81232ffca4c9d5c331e03766982e3ff9f1d2bc3f"},
 ]
 stevedore = [
     {file = "stevedore-1.31.0-py2.py3-none-any.whl", hash = "sha256:01d9f4beecf0fbd070ddb18e5efb10567801ba7ef3ddab0074f54e3cd4e91730"},
