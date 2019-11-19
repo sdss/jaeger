@@ -437,8 +437,10 @@ class FPS(BaseFPS):
         if abort_trajectories:
             await self.abort_trajectory()
 
-    def unlock(self, force=False):
+    async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        await self.update_status(timeout=0.1)
 
         for positioner in self.positioners.values():
             if positioner.collision:
