@@ -453,6 +453,12 @@ class FPS(BaseFPS):
 
         return True
 
+    @property
+    def moving(self):
+        """Returns `True` if any of the positioners is moving."""
+
+        return any([pos.moving for pos in self.positioners.values()])
+
     async def initialise(self, allow_unknown=True):
         """Initialises all positioners with status and firmware version.
 
