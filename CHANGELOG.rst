@@ -4,11 +4,15 @@
 Changelog
 =========
 
+* :release:`0.4.0 <2019-11-19>`
 * :feature:`46` Implement a QA database for moves.
 * :feature:`13` Abort trajectory and lock the FPS if either a collided status is detected in a positioner or if command 18 is received from the CAN network.
 * Add `.SetCurrent` command to actor.
 * Fix bug due to use of unsigned integers when passing a negative position.
 * :feature:`49` Positioner status and position polling is now done from the FPS instead of from each positioner.
+* :feature:`54` Add firmware upgrade command to actor.
+* :bug:`53` Fix issues dealing with positioners that in the layout but not connected.
+* :feature:`52` Add limits to `~.Positioner.goto`.
 
 * :release:`0.3.0 <2019-11-13>`
 * Change file layout to include a positioner ID.
