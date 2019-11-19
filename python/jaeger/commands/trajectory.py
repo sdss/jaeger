@@ -24,7 +24,7 @@ __ALL__ = ['send_trajectory', 'SendNewTrajectory', 'SendTrajectoryData',
            'StartTrajectory', 'StopTrajectory']
 
 
-async def send_trajectory(fps, trajectories, kaiju_check=True):
+async def send_trajectory(fps, trajectories):
     """Sends a set of trajectories to the positioners.
 
     .. danger:: This method can cause the positioners to collide if it is
@@ -41,8 +41,6 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
-    kaiju_check : `bool`
-        Whether to check the trajectories with kaiju before sending it.
 
     Examples
     --------
