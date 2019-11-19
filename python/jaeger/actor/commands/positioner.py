@@ -37,7 +37,7 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
 @click.argument('alpha', type=click.FloatRange(0., 360.))
 @click.argument('beta', type=click.FloatRange(0., 360.))
-@click.option('--speed', type=click.FloatRange(0., 2000.), nargs=2)
+@click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2)
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all valid positioners.')
 @click.option('-f', '--force', is_flag=True, default=False,
@@ -54,13 +54,13 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
     if not check_positioners(positioner_id, command, fps, initialised=True):
         return
 
-    speed = speed or [None, None]
+    if fps.moving:
+        command.failed('FPS is moving. Cannot send goto.')
+        return
 
     tasks = []
     for pid in positioner_id:
-        tasks.append(fps.positioners[pid].goto(alpha, beta,
-                                               alpha_speed=speed[0],
-                                               beta_speed=speed[1]))
+        tasks.append(fps.positioners[pid].goto(alpha, beta, speed=speed))
 
     result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
 
@@ -69,6 +69,38 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
         command.set_status(clu.CommandStatus.FAILED, text=error_message)
     else:
         command.set_status(clu.CommandStatus.DONE, text='Position reached')
+
+
+@jaeger_parser.command()
+@click.argument('POSITIONER-ID', type=int, nargs=-1)
+@click.argument('alpha', type=click.FloatRange(50., 5000.))
+@click.argument('beta', type=click.FloatRange(50., 5000.))
+@click.option('-a', '--all', is_flag=True, default=False,
+              help='applies to all valid positioners.')
+async def speed(command, fps, positioner_id, alpha, beta, all):
+    """Sets the ``(alpha, beta)`` speed in RPM on the output."""
+
+    if all:
+        positioner_id = list(fps.positioners.keys())
+
+    if not check_positioners(positioner_id, command, fps, initialised=True):
+        return
+
+    if fps.moving:
+        command.failed('FPS is moving. Cannot send set_speed.')
+        return
+
+    tasks = []
+    for pid in positioner_id:
+        tasks.append(fps.positioners[pid].set_speed(alpha, beta))
+
+    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
+
+    if not result[0]:
+        error_message = result[1] or 'set speed command failed'
+        command.set_status(clu.CommandStatus.FAILED, text=error_message)
+    else:
+        command.set_status(clu.CommandStatus.DONE, text='Set speed done')
 
 
 @jaeger_parser.command()
@@ -104,6 +136,8 @@ async def status(ctx, command, fps, positioner_id, full):
 
     if not check_positioners(positioner_id, command, fps):
         return
+
+    command.info(locked=fps.locked)
 
     for pid in positioner_ids:
         positioner = fps[pid]
@@ -143,6 +177,10 @@ async def current(ctx, command, fps, positioner_id, alpha, beta, all):
     if not check_positioners(positioner_id, command, fps):
         return
 
+    if fps.moving:
+        command.failed('FPS is moving. Cannot send set current.')
+        return
+
     commands = [fps.send_command(SetCurrent(positioner_id=pid,
                                             alpha=alpha, beta=beta))
                 for pid in positioner_id]
@@ -152,9 +190,40 @@ async def current(ctx, command, fps, positioner_id, alpha, beta, all):
 
 
 @jaeger_parser.command()
+async def stop(command, fps):
+    """Stops the positioners and clear flags."""
+
+    await fps.abort_trajectory()
+    await fps.update_status(timeout=0.1)
+    await fps.update_position()
+
+    command.set_status(clu.CommandStatus.DONE, text='Trajectory aborted')
+
+
+@jaeger_parser.command()
+async def unlock(command, fps):
+    """Unlocks the FPS."""
+
+    if not fps.locked:
+        command.done('FPS is not locked')
+        return
+
+    result = await fps.unlock()
+
+    if result:
+        command.done('FPS unlocked')
+    else:
+        command.failed('failed to unlock FPS')
+
+
+@jaeger_parser.command()
 @click.argument('path', type=str)
 async def trajectory(command, fps, path):
     """Sends a trajectory from a file."""
+
+    if fps.moving:
+        command.failed('FPS is moving. Cannot send trajectory.')
+        return
 
     path = pathlib.Path(path).expanduser()
     if not path.exists():
