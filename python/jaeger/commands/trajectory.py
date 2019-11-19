@@ -66,6 +66,9 @@ async def send_trajectory(fps, trajectories):
     if fps.locked:
         raise FPSLockedError('FPS is locked. Cannot send trajectories.')
 
+    if fps.moving:
+        raise TrajectoryError('the FPS is moving. Cannot send new trajectory.')
+
     PosStatus = maskbits.PositionerStatus
 
     if isinstance(trajectories, (str, pathlib.Path)):
