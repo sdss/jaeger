@@ -374,9 +374,9 @@ class Positioner(StatusMixIn):
         Parameters
         ----------
         alpha : float
-            The speed of the alpha arm, in RPM on the output.
+            The speed of the alpha arm, in RPM on the input.
         beta : float
-            The speed of the beta arm, in RPM on the output.
+            The speed of the beta arm, in RPM on the input.
         force : bool
             Allows to set speed limits outside the normal range.
 
@@ -433,7 +433,7 @@ class Positioner(StatusMixIn):
         beta : float
             The position where to move the beta arm, in degrees.
         speed : tuple
-            The speed of the ``(alpha, beta)`` arms, in RPM on the output.
+            The speed of the ``(alpha, beta)`` arms, in RPM on the input.
         relative : bool
             Whether the movement is absolute or relative to the current
             position.

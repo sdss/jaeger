@@ -78,7 +78,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all valid positioners.')
 async def speed(command, fps, positioner_id, alpha, beta, all):
-    """Sets the ``(alpha, beta)`` speed in RPM on the output."""
+    """Sets the ``(alpha, beta)`` speed in RPM on the input."""
 
     if all:
         positioner_id = list(fps.positioners.keys())
