@@ -49,6 +49,8 @@ class Positioner(StatusMixIn):
         self.speed = [None, None]
         self.firmware = None
 
+        self._move_time = None
+
         super().__init__(maskbit_flags=maskbits.PositionerStatus,
                          initial_status=maskbits.PositionerStatus.UNKNOWN)
 
@@ -66,6 +68,31 @@ class Positioner(StatusMixIn):
             return False
 
         return self.status.collision
+
+    @property
+    def moving(self):
+        """Returns `True` if the positioner is moving."""
+        return False
+        if (self.status.DISPLACEMENT_COMPLETED not in self.status or
+                self.status.RECEIVING_TRAJECTORY in self.status):
+            return True
+
+        return False
+
+    @property
+    def move_time(self):
+        """Returns the move time."""
+
+        if not self.moving:
+            self._move_time = None
+
+        return self._move_time
+
+    @move_time.setter
+    def move_time(self, value):
+        """Sets the move time."""
+
+        self._move_time = value
 
     @property
     def initialised(self):
