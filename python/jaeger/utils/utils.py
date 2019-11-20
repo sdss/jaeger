@@ -8,13 +8,14 @@
 
 import numpy
 
+from jaeger import config
 from jaeger.commands import MOTOR_STEPS
 from jaeger.maskbits import ResponseCode
 
 
 __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
            'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory',
-           'motor_steps_to_angle']
+           'motor_steps_to_angle', 'get_goto_move_time']
 
 
 def get_dtype_str(dtype, byteorder='little'):
@@ -332,3 +333,24 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
         beta[:, 1] = -beta[:, 1] + beta[0, 1]
 
     return {'alpha': alpha.tolist(), 'beta': beta.tolist()}
+
+
+def get_goto_move_time(move, speed=None):
+    r"""Returns the time need for a given move, in seconds.
+
+    The move time is calculated as :math:`\dfrac{60 \alpha r}{360 v}` where
+    :math:`\alpha` is the angle, :math:`r` is the reduction ratio, and
+    :math:`v` is the speed in the input in RPM.
+
+    Parameters
+    ----------
+    move : float
+        The move, in degrees.
+    speed : float
+        The speed of the motor for the move, in RPM on the input.
+
+    """
+
+    speed = speed or config['positioner']['motor_speed']
+
+    return move * config['positioner']['reduction_ratio'] / (6. * speed)
