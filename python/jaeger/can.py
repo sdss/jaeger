@@ -232,7 +232,7 @@ class JaegerCAN(object):
             data_hex = binascii.hexlify(message.data).decode()
             can_log.debug(log_header + 'sending message with '
                           f'arbitration_id={message.arbitration_id}, '
-                          f'UID={message.uid} '
+                          f'UID={message.uid}, '
                           f'and data={data_hex!r} to '
                           f'interface {iface_idx}, '
                           f'bus={0 if not bus else bus!r}.')
