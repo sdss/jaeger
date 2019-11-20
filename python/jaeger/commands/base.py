@@ -58,7 +58,7 @@ class Message(can.Message):
         self.uid = uid
 
         uid_bits = config['positioner']['uid_bits']
-        max_uid = 2**uid_bits - 1
+        max_uid = 2**uid_bits
         assert self.uid < max_uid, f'UID must be <= {max_uid}.'
 
         if extended_id:
