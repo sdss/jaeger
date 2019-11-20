@@ -38,14 +38,10 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
 @click.argument('alpha', type=click.FloatRange(0., 360.))
 @click.argument('beta', type=click.FloatRange(0., 360.))
-<<<<<<< HEAD
 @click.option('-r', '--relative', is_flag=True,
               help='whether this is a relative move')
 @click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2,
               help='the speed of both alpha and beta arms, in RPS on the input.')
-=======
-@click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2)
->>>>>>> docs-update
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all valid positioners.')
 @click.option('-f', '--force', is_flag=True, default=False,
@@ -105,11 +101,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all valid positioners.')
 async def speed(command, fps, positioner_id, alpha, beta, all):
-<<<<<<< HEAD
     """Sets the ``(alpha, beta)`` speed in RPM on the input."""
-=======
-    """Sets the ``(alpha, beta)`` speed in RPM on the output."""
->>>>>>> docs-update
 
     if all:
         positioner_id = list(fps.positioners.keys())
