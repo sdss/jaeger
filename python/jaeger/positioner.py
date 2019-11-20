@@ -73,8 +73,7 @@ class Positioner(StatusMixIn):
     def moving(self):
         """Returns `True` if the positioner is moving."""
 
-        if (self.status.DISPLACEMENT_COMPLETED not in self.status or
-                self.status.RECEIVING_TRAJECTORY in self.status):
+        if self.status.DISPLACEMENT_COMPLETED not in self.status:
             return True
 
         return False
@@ -165,7 +164,7 @@ class Positioner(StatusMixIn):
 
             await command
 
-            if command.status.failed:
+            if command.status.failed or command.status.timed_out:
                 log.error(f'positioner {self.positioner_id}: '
                           f'{CommandID.GET_STATUS.name!r} failed to complete.')
                 return False

@@ -6,9 +6,10 @@
 # @Filename: base.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import uuid
 import asyncio
-import binascii
 import logging
+import binascii
 
 import can
 
@@ -17,10 +18,15 @@ from jaeger import can_log, config, log
 from jaeger.core import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
+
 from . import CommandID
 
 
 __ALL__ = ['Message', 'Command']
+
+
+# A pool of UIDs that can be assigned to each command for a given command_id.
+UID_POOL = {}
 
 
 class Message(can.Message):
@@ -216,9 +222,15 @@ class Command(StatusMixIn, asyncio.Future):
         # the command will be marked done after receiving this many replies.
         self.n_messages = None
 
+        # Generate a UUID for this command.
+        self.command_uid = uuid.uuid4()
+
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
-        self.uids = None
+        self.message_uids = []
+
+        if self.command_id not in UID_POOL:
+            UID_POOL[self.command_id] = set(range(config['positioner']['uid_bits']))
 
         if n_positioners is not None:
             assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
@@ -261,7 +273,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         positioner_id = positioner_id or self.positioner_id
 
-        msg = f'{command_name, positioner_id}: ' + msg
+        msg = f'({command_name}, {positioner_id}, {self.command_uid!s}): ' + msg
 
         for ll in logs:
             ll.log(level, msg)
@@ -281,7 +293,7 @@ class Command(StatusMixIn, asyncio.Future):
     def _check_replies(self):
         """Checks if the UIDs of the replies match the messages."""
 
-        uids = sorted(self.uids)
+        uids = sorted(self.message_uids)
         replies_uids = sorted([reply.uid for reply in self.replies])
         n_messages = self.n_messages
 
@@ -314,14 +326,18 @@ class Command(StatusMixIn, asyncio.Future):
     def process_reply(self, reply_message):
         """Watches the reply queue."""
 
+        reply = Reply(reply_message, command=self)
         command_name = self.command_id.name
 
-        if self.status != CommandStatus.RUNNING:
+        # Return the UID to the pool
+        UID_POOL[self.command_id].add(reply.uid)
+
+        if self.status == CommandStatus.TIMEDOUT:
+            return
+        elif self.status != CommandStatus.RUNNING:
             log.error(f'{command_name, self.positioner_id}: '
                       'received a reply but command is not running')
             return
-
-        reply = Reply(reply_message, command=self)
 
         if self.positioner_id != 0:
             assert reply.positioner_id == self.positioner_id, \
@@ -333,6 +349,7 @@ class Command(StatusMixIn, asyncio.Future):
         data_hex = binascii.hexlify(reply.data).decode()
         self._log(f'positioner {reply.positioner_id} replied with '
                   f'id={reply.message.arbitration_id}, '
+                  f'UID={reply.uid}, '
                   f'code={reply.response_code.name!r}, '
                   f'data={data_hex!r}')
 
@@ -400,6 +417,10 @@ class Command(StatusMixIn, asyncio.Future):
                 level = logging.ERROR if not silent else logging.DEBUG
                 self._log(f'command finished with status {self.status.name!r}', level=level)
 
+            # For good measure we return all the UIDs
+            for uid in self.message_uids:
+                UID_POOL[self.command_id].add(uid)
+
             self._log(f'finished command with status {self.status.name!r}')
 
     def status_callback(self):
@@ -438,20 +459,26 @@ class Command(StatusMixIn, asyncio.Future):
 
         messages = []
 
-        uid_bits = config['positioner']['uid_bits']
-        max_uid = 2**uid_bits - 1
-
-        use_uids = True
-        if len(messages) > max_uid:
-            self._log('command has more messages than available UIDs. Not assigning UIDs.',
-                      level=logging.WARNING)
-            use_uids = False
-
         for ii, data_chunk in enumerate(data):
+
+            try:
+
+                uid = UID_POOL[self.command_id].pop()
+
+            except KeyError:
+
+                # Before failing, put back the UIDs of the other messages
+                for message in messages:
+                    UID_POOL[self.command_id].add(message.uid)
+
+                raise jaeger.JaegerError(
+                    f'{self.command_id.name}, {self.positioner_id}: '
+                    'no UIDs left in the pool.')
+
             messages.append(
                 Message(self,
                         positioner_id=self.positioner_id,
-                        uid=ii if use_uids else 0,
+                        uid=uid,
                         data=data_chunk))
 
         return messages
@@ -466,7 +493,7 @@ class Command(StatusMixIn, asyncio.Future):
         messages = self._generate_messages_internal(data=data)
 
         self.n_messages = len(messages)
-        self.uids = [message.uid for message in messages]
+        self.message_uids = [message.uid for message in messages]
 
         return messages
 

@@ -66,7 +66,7 @@ class CommandStatus(Maskbit):
     def timed_out(self):
         """Returns True if the command timed out."""
 
-        return True if self.TIMEDOUT else False
+        return True if self.TIMEDOUT in self else False
 
 
 class PositionerStatus(Maskbit):

@@ -148,9 +148,8 @@ class JaegerCAN(object):
         self.command_queue = asyncio.Queue()
         self._command_queue_task = self.loop.create_task(self._process_queue())
 
-        #: dict: Commands currently running ordered by ``positioner_id``
-        #: (or zero forbroadcast).
-        self.running_commands = collections.defaultdict(dict)
+        #: list: Currently running commands.
+        self.running_commands = []
 
     def _start_notifier(self):
         """Starts the listener and notifiers."""
@@ -163,12 +162,13 @@ class JaegerCAN(object):
     def _process_reply(self, msg):
         """Processes replies from the bus."""
 
-        positioner_id, command_id, __, __ = jaeger.utils.parse_identifier(msg.arbitration_id)
+        positioner_id, command_id, reply_uid, __ = \
+            jaeger.utils.parse_identifier(msg.arbitration_id)
 
         if command_id == CommandID.COLLISION_DETECTED:
 
-            log.error('a collision was detected. Sending STOP_TRAJECTORIES '
-                      'and locking the FPS.')
+            log.error(f'a collision was detected in positioner {positioner_id}. '
+                      'Sending STOP_TRAJECTORIES and locking the FPS.')
 
             # Manually send the stop trajectory to be sure it has
             # priority over other messages.
@@ -178,6 +178,7 @@ class JaegerCAN(object):
             # Now lock the FPS.
             if self.fps:
                 self.loop.create_task(self.fps.lock(abort_trajectories=True))
+                return
 
         if command_id == 0:
             can_log.warning('invalid command with command_id=0, '
@@ -186,22 +187,30 @@ class JaegerCAN(object):
             return
 
         command_id_flag = CommandID(command_id)
+        self.running_commands = [rcmd for rcmd in self.running_commands if not rcmd.status.is_done]
 
-        r_cmd = self.is_command_running(positioner_id, command_id)
-        if not r_cmd:
-            can_log.debug(f'({command_id_flag.name!r}, {positioner_id}): '
-                          'ignoring reply for non-running command.')
-            return
+        found = False
+        for r_cmd in self.running_commands:
+            if r_cmd.command_id == command_id and reply_uid in r_cmd.message_uids:
+                found = True
+                break
 
-        can_log.debug(f'({command_id_flag.name!r}, {positioner_id}): queuing reply.')
-
-        r_cmd.reply_queue.put_nowait(msg)
+        if found:
+            can_log.debug(f'({command_id_flag.name}, '
+                          f'{positioner_id}): '
+                          f'queuing reply UID={reply_uid} '
+                          f'to command {r_cmd.command_uid}.')
+            r_cmd.reply_queue.put_nowait(msg)
+        else:
+            can_log.error(f'({command_id_flag.name!r}, {positioner_id}): '
+                          f'cannot find running command for reply UID={reply_uid}.')
 
     def send_to_interface(self, message, interfaces=None, bus=None):
         """Sends the message to the appropriate interface and bus."""
 
-        log_header = (f'({message.command.command_id.name!r}, '
-                      f'{message.command.positioner_id}): ')
+        log_header = (f'({message.command.command_id.name}, '
+                      f'{message.command.positioner_id} '
+                      f'{message.command.command_uid!s}): ')
 
         if len(self.interfaces) == 1 and not self.multibus:
             self.interfaces[0].send(message)
@@ -218,7 +227,8 @@ class JaegerCAN(object):
             iface_idx = self.interfaces.index(iface)
             data_hex = binascii.hexlify(message.data).decode()
             can_log.debug(log_header + 'sending message with '
-                          f'arbitration_id={message.arbitration_id} '
+                          f'arbitration_id={message.arbitration_id}, '
+                          f'UID={message.uid} '
                           f'and data={data_hex!r} to '
                           f'interface {iface_idx}, '
                           f'bus={0 if not bus else bus!r}.')
@@ -235,56 +245,26 @@ class JaegerCAN(object):
 
             cmd = await self.command_queue.get()
 
-            log_header = f'({cmd.command_id.name!r}, {cmd.positioner_id}): '
-
-            if not self._can_queue_command(cmd):
-
-                # If we sent the command with override=True, finds the running
-                # command and cancels it.
-                if cmd._override:
-
-                    if cmd._silent_on_conflict:
-                        can_log.warning(log_header + 'another instance is already '
-                                        'running but the new command overrides it. '
-                                        'Cancelling previous command.')
-
-                    found = False
-                    for pos_id in [0, cmd.positioner_id]:
-                        if not found:
-                            for other_cmd in self.running_commands[pos_id]:
-                                if other_cmd.command_id == cmd.command_id:
-                                    found = True
-                                    break
-
-                    if not found:
-                        can_log.error(log_header + 'cannot find the running command '
-                                      'but _can_queue_command returned '
-                                      'False. This must be a bug.')
-                        continue
-
-                    other_cmd.finish_command(CommandStatus.CANCELLED)
-                    self.running_commands[other_cmd.positioner_id].pop(other_cmd)
-
-                else:
-
-                    if cmd._silent_on_conflict is False:
-                        can_log.warning(log_header + 'another instance is already '
-                                        'running. Requeuing and trying later.')
-
-                    # Requeue command but wait a bit.
-                    self.loop.call_later(0.1, self.command_queue.put_nowait, cmd)
-                    continue
+            log_header = f'({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}): '
 
             if cmd.status != CommandStatus.READY:
                 can_log.error(log_header + 'command is not ready')
+                cmd.cancel()
                 continue
 
             can_log.debug(log_header + 'sending messages to CAN bus.')
 
             cmd.status = CommandStatus.RUNNING
-            self.running_commands[cmd.positioner_id][cmd.command_id] = cmd
 
-            for message in cmd.get_messages():
+            try:
+                messages = cmd.get_messages()
+            except jaeger.JaegerError as ee:
+                can_log.error(f'found error while getting messages: {ee}')
+                continue
+
+            self.running_commands.append(cmd)
+
+            for message in messages:
 
                 # Get the interface and bus to which to send the message
                 interfaces = getattr(cmd, '_interface', None)
@@ -293,6 +273,7 @@ class JaegerCAN(object):
                 if cmd.status.failed:
                     can_log.debug(log_header + 'not sending more messages ' +
                                   'since this command has failed.')
+                    self.running_commands.remove(cmd)
                     break
 
                 self.send_to_interface(message, interfaces=interfaces, bus=bus)
@@ -346,31 +327,6 @@ class JaegerCAN(object):
         pprint.pprint(config['interfaces'])
 
         return config['interfaces'].keys()
-
-    def is_command_running(self, positioner_id, command_id):
-        """Checks running commands with ``command_id`` and ``positioner_id``.
-
-        If the command is running, returns its instance.
-
-        """
-
-        r_coms = self.running_commands
-
-        for pos_id in [0, positioner_id]:
-            if pos_id in r_coms and command_id in r_coms[pos_id]:
-                cmd = r_coms[pos_id][command_id]
-                if cmd.status.is_done or cmd.command_id != command_id:
-                    r_coms[pos_id].pop(command_id)
-                else:
-                    return cmd
-
-        return False
-
-    def _can_queue_command(self, command):
-        """Checks whether we can queue the command."""
-
-        return not self.is_command_running(command.positioner_id,
-                                           command.command_id)
 
 
 CANNET_ERRORS = {
