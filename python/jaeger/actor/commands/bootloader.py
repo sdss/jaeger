@@ -28,16 +28,20 @@ def bootloader():
 
 @bootloader.command()
 @click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
-async def upgrade(command, fps, firmware_file):
+@click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
+async def upgrade(command, fps, firmware_file, positioners):
     """Upgrades the firmware for all positioners connected."""
 
     global last_reported
     last_reported = 0
 
+    if positioners is not None:
+        positioner_id = [int(positioner.strip()) for positioner in positioners.split(',')]
+    else:
+        positioner_id = fps.positioner_to_bus.keys()
+
     command.debug('stopping pollers')
     await fps.pollers.stop()
-
-    positioner_id = fps.positioner_to_bus.keys()
 
     await fps.update_firmware_version(positioner_id=positioner_id)
     await fps.update_status(positioner_id=positioner_id)
