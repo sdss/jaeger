@@ -21,6 +21,7 @@ class InitialiseDatums(Command):
 
     command_id = CommandID.INITIALIZE_DATUMS
     broadcastable = False
+    move_command = True
 
 
 class GotoAbsolutePosition(Command):
@@ -28,6 +29,7 @@ class GotoAbsolutePosition(Command):
 
     command_id = CommandID.GO_TO_ABSOLUTE_POSITION
     broadcastable = False
+    move_command = True
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
@@ -64,6 +66,7 @@ class GotoRelativePosition(GotoAbsolutePosition):
 
     command_id = CommandID.GO_TO_RELATIVE_POSITION
     broadcastable = False
+    move_command = True
 
 
 class SetActualPosition(Command):
@@ -72,6 +75,8 @@ class SetActualPosition(Command):
     command_id = CommandID.SET_ACTUAL_POSITION
     broadcastable = False
     safe = True
+    move_command = True     # Technically not a move command but we don't
+                            # want to issue it during a move.
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
@@ -90,6 +95,7 @@ class SetSpeed(Command):
     command_id = CommandID.SET_SPEED
     broadcastable = False
     safe = True
+    move_command = True
 
     def __init__(self, alpha=0, beta=0, **kwargs):
 
@@ -106,6 +112,8 @@ class SetCurrent(Command):
 
     command_id = CommandID.SET_CURRENT
     broadcastable = False
+    safe = True
+    move_command = True
 
     def __init__(self, alpha=0, beta=0, **kwargs):
 

@@ -294,7 +294,7 @@ class Poller(object):
             original delay."""
 
         if not self.running:
-            raise RuntimeError('poller not running.')
+            return
 
         # Only change delay if the difference is significant.
         if delay and abs(self.delay - delay) < 1e-6:

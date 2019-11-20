@@ -5,7 +5,7 @@
 #
 # @Author: Brian Cherinka
 # @Date:   2017-12-05 12:01:21
-# @Last modified by: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Last modified by: José Sánchez-Gallego
 # @Last Modified time: 2017-12-05 12:19:32
 
 
@@ -56,8 +56,14 @@ class JaegerMissingDependency(JaegerError):
     pass
 
 
+class TrajectoryError(JaegerError):
+    """A trajectory error."""
+    pass
+
+
 class JaegerWarning(Warning):
     """Base warning for Jaeger."""
+    pass
 
 
 class JaegerUserWarning(UserWarning, JaegerWarning):

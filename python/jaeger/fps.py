@@ -6,8 +6,8 @@
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import os
 import asyncio
+import os
 import pathlib
 import warnings
 
@@ -16,7 +16,7 @@ import astropy.table
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
@@ -365,9 +365,15 @@ class FPS(BaseFPS):
                 raise FPSLockedError('solve the problem and unlock the FPS '
                                      'before sending commands.')
 
+        elif self.moving and command.move_command:
+            command.cancel(silent=True)
+            log.error('cannot send move command while the FPS is moving. '
+                      'Use FPS.abort_trajectory() to stop the FPS.')
+            return command
+
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
-            return False
+            return command
 
         command._override = override
         command._silent_on_conflict = silent_on_conflict
@@ -431,8 +437,10 @@ class FPS(BaseFPS):
         if abort_trajectories:
             await self.abort_trajectory()
 
-    def unlock(self, force=False):
+    async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        await self.update_status(timeout=0.1)
 
         for positioner in self.positioners.values():
             if positioner.collision:
@@ -444,6 +452,12 @@ class FPS(BaseFPS):
         self._locked = False
 
         return True
+
+    @property
+    def moving(self):
+        """Returns `True` if any of the positioners is moving."""
+
+        return any([pos.moving for pos in self.positioners.values()])
 
     async def initialise(self, allow_unknown=True):
         """Initialises all positioners with status and firmware version.
@@ -536,7 +550,7 @@ class FPS(BaseFPS):
 
         if self.locked:
             log.info('FPS is locked. Trying to unlock it.')
-            if not self.unlock():
+            if not await self.unlock():
                 log.error('FPS cannot be unlocked. Initialisation failed.')
                 return False
             else:
@@ -576,13 +590,15 @@ class FPS(BaseFPS):
 
         command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
                                     n_positioners=n_positioners,
-                                    timeout=timeout)
+                                    timeout=timeout,
+                                    override=True,
+                                    silent_on_conflict=True)
         await command
 
         if command.status.failed:
             log.warning(f'failed broadcasting {CommandID.GET_STATUS.name!r} '
                         'during update status.')
-            return
+            return False
 
         update_status_coros = []
         for reply in command.replies:
@@ -598,7 +614,7 @@ class FPS(BaseFPS):
 
         await asyncio.gather(*update_status_coros)
 
-        return
+        return True
 
     async def update_position(self, positioner_id=None):
         """Updates positions."""
@@ -608,7 +624,7 @@ class FPS(BaseFPS):
                              if self[pid].initialised and
                              not self[pid].is_bootloader()]
             if not positioner_id:
-                return
+                return True
 
         commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
                                         positioners=positioner_id)
@@ -617,7 +633,7 @@ class FPS(BaseFPS):
             commands = await commands_all
         except Exception as ee:
             log.error(f'failed polling positions: {ee}')
-            return
+            return False
 
         update_position_commands = []
         for command in commands:
@@ -635,7 +651,7 @@ class FPS(BaseFPS):
 
         await asyncio.gather(*update_position_commands)
 
-        return
+        return True
 
     async def update_firmware_version(self, positioner_id=None):
         """Updates the firmware version of connected positioners."""
@@ -660,6 +676,8 @@ class FPS(BaseFPS):
             positioner_id = reply.positioner_id
             positioner = self.positioners[positioner_id]
             positioner.firmware = get_firmware_command.get_firmware(positioner_id)
+
+        return True
 
     async def abort_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
@@ -690,7 +708,11 @@ class FPS(BaseFPS):
 
         """
 
-        return await send_trajectory(self, *args, **kwargs)
+        try:
+            return await send_trajectory(self, *args, **kwargs)
+        except TrajectoryError as ee:
+            log.error(f'sending trajectory failed with error: {ee}')
+            return False
 
     def abort(self):
         """Aborts trajectories and stops positioners."""

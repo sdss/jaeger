@@ -79,7 +79,10 @@ from .trajectory import *
 _tmp_command_list = []
 
 for item in vars().copy().values():
-    if hasattr(item, '__bases__') and Command in item.__bases__:
+    if not hasattr(item, '__bases__'):
+        continue
+    bases = item.__bases__
+    if  Command in bases or any([issubclass(base, Command) for base in bases]):
         _tmp_command_list.append((item.command_id, item))
 
 COMMAND_LIST = dict(sorted(_tmp_command_list))

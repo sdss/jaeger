@@ -66,7 +66,7 @@ class CommandStatus(Maskbit):
     def timed_out(self):
         """Returns True if the command timed out."""
 
-        return True if self.TIMEDOUT else False
+        return True if self.TIMEDOUT in self else False
 
 
 class PositionerStatus(Maskbit):
@@ -132,7 +132,7 @@ class BootloaderStatus(Maskbit):
     UNKNOWN = 0x40000000
 
 
-class ResponseCode(enum.IntFlag):
+class ResponseCode(enum.Flag):
     """Maskbit for the status of the bootloader."""
 
     COMMAND_ACCEPTED = 0

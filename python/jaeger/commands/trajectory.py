@@ -8,14 +8,13 @@
 
 import asyncio
 import pathlib
-import warnings
 
 import numpy
 from ruamel.yaml import YAML
 
 from jaeger import config, log, maskbits
 from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
-from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning
+from jaeger.core.exceptions import FPSLockedError, TrajectoryError
 from jaeger.utils import int_to_bytes
 
 
@@ -24,11 +23,11 @@ __ALL__ = ['send_trajectory', 'SendNewTrajectory', 'SendTrajectoryData',
            'StartTrajectory', 'StopTrajectory']
 
 
-async def send_trajectory(fps, trajectories, kaiju_check=True):
+async def send_trajectory(fps, trajectories):
     """Sends a set of trajectories to the positioners.
 
-    .. danger:: This method can cause the positioners to collide if it is
-        commanded with ``kaiju_check=False``.
+    This is a low-level function that raises errors when a problem is
+    encountered. Most users should use `.FPS.send_trajectory` instead.
 
     Parameters
     ----------
@@ -41,8 +40,13 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
-    kaiju_check : `bool`
-        Whether to check the trajectories with kaiju before sending it.
+
+    Raises
+    ------
+    TrajectoryError
+        If encounters a problem sending the trajectory.
+    FPSLockedError
+        If the FPS is locked.
 
     Examples
     --------
@@ -57,8 +61,13 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
     """
 
+    log.info('starting trajectory ...')
+
     if fps.locked:
         raise FPSLockedError('FPS is locked. Cannot send trajectories.')
+
+    if fps.moving:
+        raise TrajectoryError('the FPS is moving. Cannot send new trajectory.')
 
     PosStatus = maskbits.PositionerStatus
 
@@ -68,25 +77,10 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     elif isinstance(trajectories, dict):
         pass
     else:
-        raise ValueError('invalid trajectory data.')
+        raise TrajectoryError('invalid trajectory data.')
 
-    if kaiju_check:
-        # TODO: implement call to kaiju
-        pass
-    else:
-        warnings.warn('about to send a trajectory that has not been checked '
-                      'by kaiju. This will end up in tears.', JaegerUserWarning)
-
-    log.info('stopping the pollers before sending the trajectory.')
-    await fps.pollers.stop()
-
-    await asyncio.sleep(1)
-
-    try:
-        await fps.update_status(positioner_id=list(trajectories.keys()), timeout=1.)
-    except KeyError as ee:
-        log.error(f'some positioners in the trajectory are not connected: {ee}')
-        return False
+    if not await fps.update_status(positioner_id=list(trajectories.keys()), timeout=1.):
+        raise TrajectoryError(f'some positioners did not respond.')
 
     n_points = {}
     max_time = 0.0
@@ -100,8 +94,8 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
         if (PosStatus.DATUM_ALPHA_INITIALIZED not in status or
                 PosStatus.DATUM_BETA_INITIALIZED not in status or
                 PosStatus.DISPLACEMENT_COMPLETED not in status):
-            log.error(f'positioner_id={pos_id} is not ready to receive a trajectory.')
-            return False
+            raise TrajectoryError(f'positioner_id={pos_id} is not '
+                                  'ready to receive a trajectory.')
 
         traj_pos = trajectories[pos_id]
 
@@ -154,45 +148,37 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
 
             for cmd in data_cmds:
                 if cmd.status.failed:
-                    log.error('at least one SEND_TRAJECTORY_COMMAND failed. Aborting.')
-                    return False
+                    raise TrajectoryError('at least one SEND_TRAJECTORY_COMMAND failed.')
 
     # Finalise the trajectories
     end_traj_cmds = await fps.send_to_all('TRAJECTORY_DATA_END',
                                           positioners=list(trajectories.keys()))
 
-    failed = False
     for cmd in end_traj_cmds:
 
         if cmd.status.failed:
-            await fps.abort_trajectory(trajectories.keys())
-            failed = True
-            break
+            raise TrajectoryError('TRAJECTORY_DATA_END failed.')
 
         if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
-            log.error(f'positioner_id={cmd.positioner_id} got an '
-                      f'INVALID_TRAJECTORY reply. Aborting trajectory.')
-            await fps.abort_trajectory(trajectories.keys())
-            failed = True
-            break
-
-    if failed:
-        log.info('restarting the pollers.')
-        fps.pollers.start()
-        return False
+            raise TrajectoryError(f'positioner_id={cmd.positioner_id} got an '
+                                  f'INVALID_TRAJECTORY reply.')
 
     # Prepare to start the trajectories. Make position polling faster and
     # output expected time.
     log.info(f'expected time to complete trajectory: {max_time:.2f} seconds.')
 
-    log.info('restarting the pollers.')
-    fps.pollers.start()
-
-    await fps.pollers.position.set_delay(0.5)
+    for positioner_id in list(trajectories.keys()):
+        fps[positioner_id].move_time = max_time
 
     # Start trajectories
-    await fps.send_command('START_TRAJECTORY', positioner_id=0, timeout=1,
-                           n_positioners=len(trajectories))
+    command = await fps.send_command('START_TRAJECTORY', positioner_id=0, timeout=1,
+                                     n_positioners=len(trajectories))
+
+    if command.status.failed:
+        await fps.abort_trajectory()
+        raise TrajectoryError('START_TRAJECTORY failed')
+
+    await fps.pollers.set_delay(1)
 
     # Wait approximate time before starting to poll for status
     await asyncio.sleep(0.95 * max_time, loop=fps.loop)
@@ -208,8 +194,8 @@ async def send_trajectory(fps, trajectories, kaiju_check=True):
     results = await asyncio.gather(*wait_status, loop=fps.loop)
 
     if not all(results):
-        log.error('some positioners did not complete the move.')
-        return False
+        await fps.pollers.set_delay()
+        raise TrajectoryError('some positioners did not complete the move.')
 
     log.info('all positioners have reached their final positions.')
 
@@ -224,6 +210,7 @@ class SendNewTrajectory(Command):
 
     command_id = CommandID.SEND_NEW_TRAJECTORY
     broadcastable = False
+    move_command = True
 
     def __init__(self, n_alpha, n_beta, **kwargs):
 
@@ -257,6 +244,7 @@ class SendTrajectoryData(Command):
 
     command_id = CommandID.SEND_TRAJECTORY_DATA
     broadcastable = False
+    move_command = True
 
     def __init__(self, positions, **kwargs):
 
@@ -281,6 +269,7 @@ class TrajectoryDataEnd(Command):
 
     command_id = CommandID.TRAJECTORY_DATA_END
     broadcastable = False
+    move_command = True
 
 
 class TrajectoryTransmissionAbort(Command):
@@ -288,6 +277,7 @@ class TrajectoryTransmissionAbort(Command):
 
     command_id = CommandID.TRAJECTORY_TRANSMISSION_ABORT
     broadcastable = False
+    move_command = True
 
 
 class StartTrajectory(Command):
@@ -295,6 +285,7 @@ class StartTrajectory(Command):
 
     command_id = CommandID.START_TRAJECTORY
     broadcastable = True
+    move_command = True
 
 
 class StopTrajectory(Command):
