@@ -69,8 +69,6 @@ async def send_trajectory(fps, trajectories):
     if fps.moving:
         raise TrajectoryError('the FPS is moving. Cannot send new trajectory.')
 
-    PosStatus = maskbits.PositionerStatus
-
     if isinstance(trajectories, (str, pathlib.Path)):
         yaml = YAML(typ='safe')
         trajectories = yaml.load(open(trajectories))
@@ -91,9 +89,9 @@ async def send_trajectory(fps, trajectories):
         positioner = fps.positioners[pos_id]
         status = positioner.status
 
-        if (PosStatus.DATUM_ALPHA_INITIALIZED not in status or
-                PosStatus.DATUM_BETA_INITIALIZED not in status or
-                PosStatus.DISPLACEMENT_COMPLETED not in status):
+        if (positioner.flags.DATUM_ALPHA_INITIALIZED not in status or
+                positioner.flags.DATUM_BETA_INITIALIZED not in status or
+                positioner.flags.DISPLACEMENT_COMPLETED not in status):
             raise TrajectoryError(f'positioner_id={pos_id} is not '
                                   'ready to receive a trajectory.')
 
@@ -187,9 +185,8 @@ async def send_trajectory(fps, trajectories):
 
     # Wait until all positioners have completed.
     wait_status = [fps.positioners[pos_id].wait_for_status(
-        PosStatus.DISPLACEMENT_COMPLETED,
-        timeout=remaining_time + 3,
-        delay=0.1)
+        fps.positioners[pos_id].flags.DISPLACEMENT_COMPLETED,
+        timeout=remaining_time + 3, delay=0.1)
         for pos_id in trajectories]
     results = await asyncio.gather(*wait_status, loop=fps.loop)
 

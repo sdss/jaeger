@@ -17,7 +17,6 @@ import numpy
 from jaeger import config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
-from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
 
 
@@ -248,14 +247,14 @@ async def home(ctx, positioner_id):
         positioners = [fps.positioners[positioner_id]]
 
     valid_positioners = [positioner for positioner in positioners
-                         if PositionerStatus.SYSTEM_INITIALIZED in positioner.status]
+                         if positioner.status.initialised]
 
     if len(valid_positioners) < len(positioners):
         warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
                       'have not been initialised and will not be homed.')
 
-    await asyncio.gather(*[
-        fps.send_command('INITIALIZE_DATUMS', positioner_id=pos.positioner_id)
-        for pos in valid_positioners])
+    await asyncio.gather(*[fps.send_command('INITIALIZE_DATUMS',
+                                            positioner_id=pos.positioner_id)
+                           for pos in valid_positioners])
 
     return

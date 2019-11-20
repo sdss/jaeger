@@ -9,6 +9,7 @@
 import asyncio
 import datetime
 import warnings
+from distutils.version import StrictVersion
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
@@ -17,8 +18,6 @@ from jaeger.utils import StatusMixIn, bytes_to_int
 
 
 __ALL__ = ['Positioner', 'VirtualPositioner']
-
-_pos_conf = config['positioner']
 
 
 class Positioner(StatusMixIn):
@@ -51,8 +50,8 @@ class Positioner(StatusMixIn):
 
         self._move_time = None
 
-        super().__init__(maskbit_flags=maskbits.PositionerStatus,
-                         initial_status=maskbits.PositionerStatus.UNKNOWN)
+        super().__init__(maskbit_flags=maskbits.PositionerStatusV4_1,
+                         initial_status=maskbits.PositionerStatusV4_1.UNKNOWN)
 
     @property
     def position(self):
@@ -105,11 +104,9 @@ class Positioner(StatusMixIn):
                 return True
             return False
 
-        PositionerStatus = maskbits.PositionerStatus
-
-        if (PositionerStatus.SYSTEM_INITIALIZED not in self.status or
-                PositionerStatus.DATUM_ALPHA_INITIALIZED not in self.status or
-                PositionerStatus.DATUM_BETA_INITIALIZED not in self.status):
+        if (not self.status.initialised or
+                self.flags.DATUM_ALPHA_INITIALIZED not in self.status or
+                self.flags.DATUM_BETA_INITIALIZED not in self.status):
             return False
 
         return True
@@ -119,7 +116,7 @@ class Positioner(StatusMixIn):
 
         self.alpha = None
         self.beta = None
-        self.status = maskbits.PositionerStatus.UNKNOWN
+        self.status = self.flags.UNKNOWN
         self.firmware = None
 
     async def update_position(self, position=None, timeout=1):
@@ -179,7 +176,7 @@ class Positioner(StatusMixIn):
                 return False
 
         if not self.is_bootloader():
-            self.flags = maskbits.PositionerStatus
+            self.flags = self.get_position_flags()
         else:
             self.flags = maskbits.BootloaderStatus
 
@@ -245,7 +242,7 @@ class Positioner(StatusMixIn):
 
                 await asyncio.sleep(delay)
 
-        wait_for_status = [maskbits.PositionerStatus(ss) for ss in status]
+        wait_for_status = [self.flags(ss) for ss in status]
 
         try:
             await asyncio.wait_for(status_waiter(wait_for_status), timeout)
@@ -297,8 +294,8 @@ class Positioner(StatusMixIn):
             return False
 
         # Sets the default speed
-        if not await self.set_speed(alpha=_pos_conf['motor_speed'],
-                                    beta=_pos_conf['motor_speed']):
+        if not await self.set_speed(alpha=config['positioner']['motor_speed'],
+                                    beta=config['positioner']['motor_speed']):
             return False
 
         log.debug(f'positioner {self.positioner_id}: initialisation complete.')
@@ -318,13 +315,13 @@ class Positioner(StatusMixIn):
             log.error(f'positioner {self.positioner_id}: failed reinitialising datums.')
             return False
 
-        self.status = maskbits.PositionerStatus.UNKNOWN
+        self.status = self.flags.UNKNOWN
 
         log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
 
         result = await self.wait_for_status(
-            [maskbits.PositionerStatus.DATUM_ALPHA_INITIALIZED,
-             maskbits.PositionerStatus.DATUM_BETA_INITIALIZED],
+            [self.flags.DATUM_ALPHA_INITIALIZED,
+             self.flags.DATUM_BETA_INITIALIZED],
             timeout=config['positioner']['initialise_datums_timeout'])
 
         if not result:
@@ -342,6 +339,15 @@ class Positioner(StatusMixIn):
         await command
 
         self.firmware = command.get_firmware()
+        self.flags = self.get_position_flags()
+
+    def get_position_flags(self):
+        """Returns the correct position maskbits from the firmware version."""
+
+        if StrictVersion(self.firmware) < StrictVersion('04.01.00'):
+            return maskbits.PositionerStatusV4_0
+        else:
+            return maskbits.PositionerStatusV4_1
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
@@ -529,8 +535,7 @@ class Positioner(StatusMixIn):
 
         # Blocks until we're sure both arms at at the position.
         result = await self.wait_for_status(
-            maskbits.PositionerStatus.DISPLACEMENT_COMPLETED,
-            delay=0.1, timeout=3)
+            self.flags.DISPLACEMENT_COMPLETED, delay=0.1, timeout=3)
 
         if result is False:
             self._store_move_qa(record, success=False,

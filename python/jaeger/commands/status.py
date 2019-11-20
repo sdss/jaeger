@@ -9,7 +9,6 @@
 import numpy
 
 from jaeger.commands import Command, CommandID
-from jaeger.maskbits import PositionerStatus
 from jaeger.utils import bytes_to_int, motor_steps_to_angle
 
 
@@ -38,10 +37,9 @@ class GetStatus(Command):
     safe = True
 
     def get_positioner_status(self):
-        """Returns the `~.maskbit.PositionerStatus` flag for each reply."""
+        """Returns the positioner status flag for each reply."""
 
-        return [PositionerStatus(bytes_to_int(reply.data))
-                for reply in self.replies]
+        return [bytes_to_int(reply.data) for reply in self.replies]
 
 
 class GetActualPosition(Command):

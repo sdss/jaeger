@@ -535,14 +535,14 @@ class FPS(BaseFPS):
                           'They have been added to the layout.', JaegerUserWarning)
 
         n_did_not_reply = len([pos for pos in self.positioners
-                               if self[pos].status == maskbits.PositionerStatus.UNKNOWN])
+                               if self[pos].status == self[pos].flags.UNKNOWN])
 
         if n_did_not_reply > 0:
             warnings.warn(f'{n_did_not_reply} positioners did not respond to '
                           f'{CommandID.GET_STATUS.name!r}', JaegerUserWarning)
 
         n_non_initialised = len([pos for pos in self.positioners
-                                 if (self[pos].status != maskbits.PositionerStatus.UNKNOWN and
+                                 if (self[pos].status != self[pos].flags.UNKNOWN and
                                      not self[pos].initialised)])
 
         if n_non_initialised > 0:
@@ -559,7 +559,7 @@ class FPS(BaseFPS):
 
         initialise_cmds = [positioner.initialise()
                            for positioner in self.positioners.values()
-                           if positioner.status != maskbits.PositionerStatus.UNKNOWN]
+                           if positioner.status != positioner.flags.UNKNOWN]
         results = await asyncio.gather(*initialise_cmds)
 
         if False in results:

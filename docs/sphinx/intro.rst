@@ -88,8 +88,8 @@ The replies to the command are stored in the ``replies`` attribute: ::
     <Reply (command_id='GET_STATUS', positioner_id=4, response_code='COMMAND_ACCEPTED')>
     >>> reply.data
     bytearray(b"\'\xc0\x00\x01")
-    >>> status_cmd.get_positioner_status()
-    [<PositionerStatus.DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZED: 666894337>]
+    >>> PositionerStatusV4_1(status_cmd.get_positioner_status())
+    [<PositionerStatusV4_1.DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZED: 666894337>]
 
 
 Moving positioners and sending trajectories

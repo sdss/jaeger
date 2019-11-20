@@ -69,8 +69,8 @@ class CommandStatus(Maskbit):
         return True if self.TIMEDOUT in self else False
 
 
-class PositionerStatus(Maskbit):
-    """Maskbits for positioner status."""
+class PositionerStatusV4_1(Maskbit):
+    """Maskbits for positioner status (firmware >=04.01.00)."""
 
     SYSTEM_INITIALIZED = 0x0000000000000001
     CONFIG_CHANGED = 0x0000000000000002
@@ -115,8 +115,39 @@ class PositionerStatus(Maskbit):
     def collision(self):
         """Returns `True` if the positioner is collided."""
 
-        return True if (PositionerStatus.COLLISION_ALPHA & self or
-                        PositionerStatus.COLLISION_BETA & self) else False
+        return True if (PositionerStatusV4_1.COLLISION_ALPHA & self or
+                        PositionerStatusV4_1.COLLISION_BETA & self) else False
+
+    @property
+    def initialised(self):
+        """Returns `True` if the positioner is initialised."""
+
+        return True if PositionerStatusV4_1.SYSTEM_INITIALIZED & self else False
+
+
+class PositionerStatusV4_0(Maskbit):
+    """Maskbits for positioner status (firmware <=04.00.04)."""
+
+    SYSTEM_INITIALIZATION = 0x00000001
+    RECEIVING_TRAJECTORY = 0x00000100
+    TRAJECTORY_ALPHA_RECEIVED = 0x00000200
+    TRAJECTORY_BETA_RECEIVED = 0x00000400
+    DATUM_INITIALIZATION = 0x00200000
+    DATUM_ALPHA_INITIALIZED = 0x00400000
+    DATUM_BETA_INITIALIZED = 0x00800000
+    DISPLACEMENT_COMPLETED = 0x01000000
+    ALPHA_DISPLACEMENT_COMPLETED = 0x02000000
+    BETA_DISPLACEMENT_COMPLETED = 0x04000000
+    DATUM_INITIALIZED = 0x20000000
+    ESTIMATED_POSITION = 0x40000000
+    POSITION_RESTORED = 0x80000000
+    UNKNOWN = 0x100000000
+
+    @property
+    def initialised(self):
+        """Returns `True` if the positioner is initialised."""
+
+        return True if PositionerStatusV4_0.SYSTEM_INITIALIZATION & self else False
 
 
 class BootloaderStatus(Maskbit):
