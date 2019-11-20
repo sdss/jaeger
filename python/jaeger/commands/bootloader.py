@@ -145,7 +145,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
 
     await asyncio.gather(*cmds)
 
-    if any(cmd.failed for cmd in cmds):
+    if any(cmd.status.failed for cmd in cmds):
         log.error('firmware upgrade failed.')
         return False
 
@@ -179,7 +179,7 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
 
             await asyncio.gather(*cmds)
 
-            if any(cmd.failed for cmd in cmds):
+            if any(cmd.status.failed for cmd in cmds):
                 log.error('firmware upgrade failed.')
                 return False
 
