@@ -83,7 +83,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
         tasks.append(fps.positioners[pid].goto(alpha, beta, speed=speed, relative=relative))
 
-    command.info(move_time=max_time)
+    command.info(move_time=round(max_time, 2))
 
     result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
 
