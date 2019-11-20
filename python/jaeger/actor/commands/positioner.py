@@ -38,12 +38,15 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
 @click.argument('alpha', type=click.FloatRange(0., 360.))
 @click.argument('beta', type=click.FloatRange(0., 360.))
-@click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2)
+@click.option('-r', '--relative', is_flag=True,
+              help='whether this is a relative move')
+@click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2,
+              help='the speed of both alpha and beta arms, in RPS on the input.')
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all valid positioners.')
 @click.option('-f', '--force', is_flag=True, default=False,
               help='forces a move to happen.')
-async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
+async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, relative):
     """Sends positioners to a given (alpha, beta) position."""
 
     if all:
@@ -67,8 +70,8 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
 
         # Manually calculate the max move time we'll encounter.
         p_alpha, p_beta = fps[pid].position
-        delta_alpha = abs(p_alpha - alpha)
-        delta_beta = abs(p_beta - beta)
+        delta_alpha = abs(p_alpha - alpha) if not relative else alpha
+        delta_beta = abs(p_beta - beta) if not relative else beta
 
         time_alpha = get_goto_move_time(delta_alpha, speed=speed[0] or fps[pid].speed[0])
         time_beta = get_goto_move_time(delta_beta, speed=speed[1] or fps[pid].speed[1])
@@ -78,7 +81,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
         if time_beta > max_time:
             max_time = time_beta
 
-        tasks.append(fps.positioners[pid].goto(alpha, beta, speed=speed))
+        tasks.append(fps.positioners[pid].goto(alpha, beta, speed=speed, relative=relative))
 
     command.info(move_time=max_time)
 
