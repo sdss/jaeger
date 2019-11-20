@@ -7,6 +7,9 @@ Changelog
 * Update `.PositionerStatus` maskbits.
 * Significant clean-up of how pollers are used.
 * `~jaeger.commands.send_trajectory` now raises exceptions on error.
+* :feature:`57` Added `.FPS.moving` and `.Positioner.moving` attributes to determine whether it is save to move the FPS.
+* :feature:`56` Move time for go to moves is calculated and reported.
+* Very significant rewrite of how messages and replies are matched. Now there is a pool of unique identifiers. Each message gets assigned a UID from the pool corresponding to its ``command_id`` and ``positioner_id``. When a reply is received, it is matched based on ``command_id``, ``positioner_id``, and ``UID``. At that point the UID is returned to the pool. Broadcast messages always receive the reserved ``UID=0``. This means that two broadcast of the same command should not be running at the same time or replies could be misassigned.
 
 * :release:`0.4.0 <2019-11-19>`
 * :feature:`46` Implement a QA database for moves.
