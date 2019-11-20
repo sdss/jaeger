@@ -6,10 +6,10 @@
 # @Filename: base.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import uuid
 import asyncio
-import logging
 import binascii
+import collections
+import logging
 
 import can
 
@@ -26,7 +26,13 @@ __ALL__ = ['Message', 'Command']
 
 
 # A pool of UIDs that can be assigned to each command for a given command_id.
-UID_POOL = {}
+# The format of the pool is UID_POOL[command_id][positioner_id] so that each
+# positioner has uid_bits (64) messages for each command id. UID=0 is always
+# reserved for broadcasts.
+UID_POOL = collections.defaultdict(dict)
+
+# Starting value for command UID.
+COMMAND_UID = 0
 
 
 class Message(can.Message):
@@ -201,6 +207,8 @@ class Command(StatusMixIn, asyncio.Future):
     def __init__(self, positioner_id, loop=None, timeout=None,
                  done_callback=None, n_positioners=None, data=None):
 
+        global COMMAND_UID
+
         assert self.broadcastable is not None, 'broadcastable not set'
         assert self.command_id is not None, 'command_id not set'
 
@@ -223,14 +231,16 @@ class Command(StatusMixIn, asyncio.Future):
         self.n_messages = None
 
         # Generate a UUID for this command.
-        self.command_uid = uuid.uuid4()
+        self.command_uid = COMMAND_UID
+        COMMAND_UID += 1
 
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
         self.message_uids = []
 
-        if self.command_id not in UID_POOL:
-            UID_POOL[self.command_id] = set(range(2**config['positioner']['uid_bits']))
+        if self.positioner_id != 0 and self.positioner_id not in UID_POOL[self.command_id]:
+            UID_POOL[self.command_id][self.positioner_id] = \
+                set(range(2**config['positioner']['uid_bits']))
 
         if n_positioners is not None:
             assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
@@ -330,7 +340,8 @@ class Command(StatusMixIn, asyncio.Future):
         command_name = self.command_id.name
 
         # Return the UID to the pool
-        UID_POOL[self.command_id].add(reply.uid)
+        if self.positioner_id != 0:
+            UID_POOL[self.command_id][self.positioner_id].add(reply.uid)
 
         if self.status == CommandStatus.TIMEDOUT:
             return
@@ -418,8 +429,9 @@ class Command(StatusMixIn, asyncio.Future):
                 self._log(f'command finished with status {self.status.name!r}', level=level)
 
             # For good measure we return all the UIDs
-            for uid in self.message_uids:
-                UID_POOL[self.command_id].add(uid)
+            if self.positioner_id != 0:
+                for uid in self.message_uids:
+                    UID_POOL[self.command_id][self.positioner_id].add(uid)
 
             self._log(f'finished command with status {self.status.name!r}')
 
@@ -463,13 +475,17 @@ class Command(StatusMixIn, asyncio.Future):
 
             try:
 
-                uid = UID_POOL[self.command_id].pop()
+                if self.positioner_id != 0:
+                    uid = UID_POOL[self.command_id][self.positioner_id].pop()
+                else:
+                    uid = 0
 
             except KeyError:
 
                 # Before failing, put back the UIDs of the other messages
-                for message in messages:
-                    UID_POOL[self.command_id].add(message.uid)
+                if self.positioner_id != 0:
+                    for message in messages:
+                        UID_POOL[self.command_id][self.positioner_id].add(message.uid)
 
                 raise jaeger.JaegerError(
                     f'{self.command_id.name}, {self.positioner_id}: '

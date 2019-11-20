@@ -187,13 +187,17 @@ class JaegerCAN(object):
             return
 
         command_id_flag = CommandID(command_id)
-        self.running_commands = [rcmd for rcmd in self.running_commands if not rcmd.status.is_done]
+        self.running_commands = [rcmd for rcmd in self.running_commands
+                                 if not rcmd.status.is_done]
 
         found = False
         for r_cmd in self.running_commands:
-            if r_cmd.command_id == command_id and reply_uid in r_cmd.message_uids:
-                found = True
-                break
+            if r_cmd.command_id == command_id:
+                if ((reply_uid == 0 and r_cmd.positioner_id == 0) or
+                        (reply_uid in r_cmd.message_uids and
+                         positioner_id == r_cmd.positioner_id)):
+                    found = True
+                    break
 
         if found:
             can_log.debug(f'({command_id_flag.name}, '
