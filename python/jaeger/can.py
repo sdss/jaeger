@@ -11,6 +11,7 @@ import binascii
 import collections
 import pprint
 import re
+import time
 
 import can
 import can.interfaces.slcan
@@ -187,8 +188,17 @@ class JaegerCAN(object):
             return
 
         command_id_flag = CommandID(command_id)
-        self.running_commands = [rcmd for rcmd in self.running_commands
-                                 if not rcmd.status.is_done]
+
+        # Remove done running command. Leave the failed and cancelled ones in
+        # the list for 60 seconds to be able to catch delayed replies. We
+        # also sort them so that the most recent commands are found first.
+        # This is important for timed out broadcast still in the list while
+        # another instance of the same command is running. We want replies to
+        # be sent to the running command first.
+        self.running_commands = sorted(
+            [rcmd for rcmd in self.running_commands
+             if not rcmd.status == rcmd.status.DONE and (time.time() - rcmd.start_time) < 60],
+            key=lambda cmd: cmd.start_time, reverse=True)
 
         found = False
         for r_cmd in self.running_commands:
@@ -206,7 +216,7 @@ class JaegerCAN(object):
                           f'to command {r_cmd.command_uid}.')
             r_cmd.reply_queue.put_nowait(msg)
         else:
-            can_log.error(f'({command_id_flag.name!r}, {positioner_id}): '
+            can_log.debug(f'({command_id_flag.name!r}, {positioner_id}): '
                           f'cannot find running command for reply UID={reply_uid}.')
 
     def send_to_interface(self, message, interfaces=None, bus=None):

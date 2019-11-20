@@ -10,6 +10,7 @@ import asyncio
 import binascii
 import collections
 import logging
+import time
 
 import can
 
@@ -233,6 +234,9 @@ class Command(StatusMixIn, asyncio.Future):
         # Generate a UUID for this command.
         self.command_uid = COMMAND_UID
         COMMAND_UID += 1
+
+        # Starting time
+        self.start_time = time.time()
 
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
