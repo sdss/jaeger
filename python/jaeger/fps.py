@@ -366,11 +366,11 @@ class FPS(BaseFPS):
                 raise FPSLockedError('solve the problem and unlock the FPS '
                                      'before sending commands.')
 
-        elif self.moving and command.move_command:
-            command.cancel(silent=True)
-            log.error('cannot send move command while the FPS is moving. '
-                      'Use FPS.abort_trajectory() to stop the FPS.')
-            return command
+        # elif self.moving and command.move_command:
+        #     command.cancel(silent=True)
+        #     log.error('cannot send move command while the FPS is moving. '
+        #               'Use FPS.abort_trajectory() to stop the FPS.')
+        #     return command
 
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
