@@ -244,7 +244,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         if self.positioner_id != 0 and self.positioner_id not in UID_POOL[self.command_id]:
             UID_POOL[self.command_id][self.positioner_id] = \
-                set(range(2**config['positioner']['uid_bits']))
+                set(range(1, 2**config['positioner']['uid_bits']))
 
         if n_positioners is not None:
             assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
