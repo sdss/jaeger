@@ -14,6 +14,7 @@ import clu
 import numpy
 
 from jaeger.commands import SetCurrent
+from jaeger.utils import get_goto_move_time
 
 from . import jaeger_parser
 
@@ -58,9 +59,28 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force):
         command.failed('FPS is moving. Cannot send goto.')
         return
 
+    speed = speed or [None, None]
+    max_time = 0.0
+
     tasks = []
     for pid in positioner_id:
+
+        # Manually calculate the max move time we'll encounter.
+        p_alpha, p_beta = fps[pid].position
+        delta_alpha = abs(p_alpha - alpha)
+        delta_beta = abs(p_beta - beta)
+
+        time_alpha = get_goto_move_time(delta_alpha, speed=speed[0] or fps[pid].speed[0])
+        time_beta = get_goto_move_time(delta_beta, speed=speed[1] or fps[pid].speed[1])
+
+        if time_alpha > max_time:
+            max_time = time_alpha
+        if time_beta > max_time:
+            max_time = time_beta
+
         tasks.append(fps.positioners[pid].goto(alpha, beta, speed=speed))
+
+    command.info(move_time=max_time)
 
     result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
 
