@@ -477,7 +477,7 @@ class Positioner(StatusMixIn):
 
         # Set the speed
         original_speed = self.speed[:]
-        if speed and not await self.set_speed(*speed, force=force):
+        if speed and all(speed) and not await self.set_speed(*speed, force=force):
             return False
 
         # Go to position
