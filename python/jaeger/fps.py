@@ -13,7 +13,7 @@ import warnings
 
 import astropy.table
 
-from jaeger import config, log, maskbits
+from jaeger import config, log
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
@@ -31,7 +31,7 @@ except ImportError:
 __ALL__ = ['BaseFPS', 'FPS']
 
 
-class BaseFPS(object):
+class BaseFPS(dict):
     """A class describing the Focal Plane System.
 
     This class includes methods to read the layout and construct positioner
@@ -58,19 +58,23 @@ class BaseFPS(object):
 
         self.layout = layout or config['fps']['default_layout']
 
-        #: A list of `~jaeger.positioner.Positioner` instances associated with
-        #: this `.FPS` instance.
-        self.positioners = {}
+        dict.__init__(self, {})
 
         self._positioner_class = positioner_class
 
         # Loads the positioners from the layout
         self._load_layout(self.layout)
 
-    def __getitem__(self, id):
-        """Returns the positioner that correspond to ``id``."""
+    @property
+    def positioners(self):
+        """Dictionary of positioner associated with this FPS.
 
-        return self.positioners[id]
+        This is just a wrapper around the `.BaseFPS` instance which is a
+        dictionary itself. May be deprecated in the future.
+
+        """
+
+        return self
 
     def _load_layout(self, layout):
         """Loads positioner information from a layout file or DB.
