@@ -138,6 +138,8 @@ class PositionerStatusV4_0(Maskbit):
     DISPLACEMENT_COMPLETED = 0x01000000
     ALPHA_DISPLACEMENT_COMPLETED = 0x02000000
     BETA_DISPLACEMENT_COMPLETED = 0x04000000
+    ALPHA_COLLISION = 0x08000000
+    BETA_COLLISION = 0x10000000
     DATUM_INITIALIZED = 0x20000000
     ESTIMATED_POSITION = 0x40000000
     POSITION_RESTORED = 0x80000000
@@ -148,6 +150,13 @@ class PositionerStatusV4_0(Maskbit):
         """Returns `True` if the positioner is initialised."""
 
         return True if PositionerStatusV4_0.SYSTEM_INITIALIZATION & self else False
+
+    @property
+    def collision(self):
+        """Returns `True` if the positioner is collided."""
+
+        return True if (PositionerStatusV4_0.ALPHA_COLLISION & self or
+                        PositionerStatusV4_0.BETA_COLLISION & self) else False
 
 
 class BootloaderStatus(Maskbit):
