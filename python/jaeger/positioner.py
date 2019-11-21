@@ -193,7 +193,7 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def wait_for_status(self, status, delay=None, timeout=None):
+    async def wait_for_status(self, status, delay=1, timeout=None):
         """Polls the status until it reaches a certain value.
 
         Parameters
