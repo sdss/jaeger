@@ -13,7 +13,7 @@ import clu
 from clu import command_parser as jaeger_parser
 from clu.misc.logger import ActorHandler
 
-from jaeger import log
+from jaeger import __version__, log
 
 
 __all__ = ['JaegerActor']
@@ -43,6 +43,9 @@ class JaegerActor(clu.LegacyActor):
     @classmethod
     def from_config(cls, config, fps):
         """Creates an actor instance from a configuration file or dict."""
+
+        # Always use jaeger version for the actor
+        config.update({'version': __version__})
 
         return super().from_config(config, fps)
 
