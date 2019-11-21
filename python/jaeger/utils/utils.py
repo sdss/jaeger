@@ -336,11 +336,13 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
 
 
 def get_goto_move_time(move, speed=None):
-    r"""Returns the time need for a given move, in seconds.
+    r"""Returns the approximate time need for a given move, in seconds.
 
     The move time is calculated as :math:`\dfrac{60 \alpha r}{360 v}` where
     :math:`\alpha` is the angle, :math:`r` is the reduction ratio, and
-    :math:`v` is the speed in the input in RPM.
+    :math:`v` is the speed in the input in RPM. It adds 0.25s due to
+    deceleration; this value is not exact but it's a good approximation for
+    most situations.
 
     Parameters
     ----------
@@ -353,4 +355,4 @@ def get_goto_move_time(move, speed=None):
 
     speed = speed or config['positioner']['motor_speed']
 
-    return move * config['positioner']['reduction_ratio'] / (6. * speed)
+    return move * config['positioner']['reduction_ratio'] / (6. * speed) + 0.25
