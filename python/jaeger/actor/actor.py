@@ -33,7 +33,7 @@ class JaegerActor(clu.LegacyActor):
         super().__init__(*args, parser=jaeger_parser, **kwargs)
 
         # Add ActorHandler to log
-        self.actor_handler = ActorHandler(self)
+        self.actor_handler = ActorHandler(self, code_mapping={logging.INFO: 'd'})
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.INFO)
 

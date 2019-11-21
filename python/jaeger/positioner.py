@@ -499,7 +499,8 @@ class Positioner(StatusMixIn):
             await _restore(original_speed)
             return False
 
-        log.info(f'positioner {self.positioner_id}: goto position '
+        log.info(f'positioner {self.positioner_id}: goto '
+                 f'{"relative" if relative else "absolute"} position '
                  f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
 
         # Stores the QA information in the DB before the move
