@@ -4,7 +4,7 @@
 Changelog
 =========
 
-* Update `.PositionerStatus` maskbits.
+* Support versions ``04.00.XX`` and ``04.01.XX`` of Tendo with `.PositionerStatusV4_0` and `.PositionerStatusV4_1` maskbits.
 * Significant clean-up of how pollers are used.
 * `~jaeger.commands.send_trajectory` now raises exceptions on error.
 * :feature:`57` Added `.FPS.moving` and `.Positioner.moving` attributes to determine whether it is save to move the FPS.
