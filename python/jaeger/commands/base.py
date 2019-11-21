@@ -350,7 +350,7 @@ class Command(StatusMixIn, asyncio.Future):
         if self.status == CommandStatus.TIMEDOUT:
             return
         elif self.status != CommandStatus.RUNNING:
-            log.error(f'{command_name, self.positioner_id}: '
+            log.error(f'{command_name, self.positioner_id, self.command_uid}: '
                       'received a reply but command is not running')
             return
 
