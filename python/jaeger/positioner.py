@@ -530,6 +530,10 @@ class Positioner(StatusMixIn):
         await self.update_status()
 
         if not self.moving:
+            log.info(f'positioner {self.positioner_id}: position reached (did not move).')
+            return True
+
+        if not self.moving:
             log.error(f'positioner {self.positioner_id}: positioner is '
                       'not moving when it should.')
             return False
