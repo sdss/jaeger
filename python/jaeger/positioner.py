@@ -474,10 +474,10 @@ class Positioner(StatusMixIn):
             if original_speed != self.speed:
                 await self.set_speed(*original_speed)
 
-        ALPHA_MIN_POSITION = 0
         ALPHA_MAX_POSITION = 360
-        BETA_MIN_POSITION = 0
         BETA_MAX_POSITION = 360
+        ALPHA_MIN_POSITION = -ALPHA_MAX_POSITION if relative else 0
+        BETA_MIN_POSITION = -BETA_MAX_POSITION if relative else 0
 
         if not self.initialised:
             log.error(f'positioner {self.positioner_id}: not initialised.')

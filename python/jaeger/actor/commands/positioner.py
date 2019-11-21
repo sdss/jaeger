@@ -36,8 +36,8 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 
 @jaeger_parser.command()
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
-@click.argument('alpha', type=click.FloatRange(0., 360.))
-@click.argument('beta', type=click.FloatRange(0., 360.))
+@click.argument('alpha', type=click.FloatRange(-360., 360.))
+@click.argument('beta', type=click.FloatRange(-360., 360.))
 @click.option('-r', '--relative', is_flag=True,
               help='whether this is a relative move')
 @click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2,
@@ -54,6 +54,10 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
             return command.failed('need to specify --force to move '
                                   'all positioners at once.')
         positioner_id = list(fps.positioners.keys())
+
+    if not relative:
+        if alpha < 0 or beta < 0:
+            return command.failed('negative angles only allowed in relative mode.')
 
     if not check_positioners(positioner_id, command, fps, initialised=True):
         return
