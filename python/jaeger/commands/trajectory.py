@@ -173,7 +173,7 @@ async def send_trajectory(fps, trajectories):
                                      n_positioners=len(trajectories))
 
     if command.status.failed:
-        await fps.abort_trajectory()
+        await fps.stop_trajectory()
         raise TrajectoryError('START_TRAJECTORY failed')
 
     await fps.pollers.set_delay(1)

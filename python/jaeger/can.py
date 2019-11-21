@@ -187,7 +187,7 @@ class JaegerCAN(object):
 
             # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                self.loop.create_task(self.fps.lock(abort_trajectories=False))
+                self.loop.create_task(self.fps.lock(stop_trajectories=False))
                 return
 
         if command_id == 0:

@@ -426,21 +426,21 @@ class FPS(BaseFPS):
 
         return self._locked
 
-    async def lock(self, abort_trajectories=True):
+    async def lock(self, stop_trajectories=True):
         """Locks the `.FPS` and prevents commands to be sent.
 
         Parameters
         ----------
-        abort_trajectories : bool
-            Whether to abort trajectories when locking.
+        stop_trajectories : bool
+            Whether to stop trajectories when locking.
 
         """
 
         warnings.warn('locking FPS.', JaegerUserWarning)
         self._locked = True
 
-        if abort_trajectories:
-            await self.abort_trajectory()
+        if stop_trajectories:
+            await self.stop_trajectory()
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
@@ -691,7 +691,7 @@ class FPS(BaseFPS):
 
         return True
 
-    async def abort_trajectory(self, positioners=None, timeout=1):
+    async def stop_trajectory(self, positioners=None, timeout=1):
         """Sends ``STOP_TRAJECTORY`` to all positioners.
 
         Parameters
