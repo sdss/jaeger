@@ -259,7 +259,12 @@ class Positioner(StatusMixIn):
         # Resets all.
         await self.reset()
 
-        await self.update_firmware_version()
+        try:
+            await self.update_firmware_version()
+        except Exception as ee:
+            log.error(f'positioner {self.positioner_id}: failed to update '
+                      f'firmware version: {ee}.')
+            return False
 
         result = await self.update_status()
         if not result:
@@ -343,6 +348,8 @@ class Positioner(StatusMixIn):
 
     def get_position_flags(self):
         """Returns the correct position maskbits from the firmware version."""
+
+        assert self.firmware, 'firmware is not set.'
 
         if StrictVersion(self.firmware) < StrictVersion('04.01.00'):
             return maskbits.PositionerStatusV4_0
