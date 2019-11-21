@@ -94,7 +94,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
     command.info(move_time=round(max_time, 2))
 
-    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
+    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.stop_trajectory)
 
     if not result[0]:
         error_message = result[1] or 'goto command failed'
@@ -126,7 +126,7 @@ async def speed(command, fps, positioner_id, alpha, beta, all):
     for pid in positioner_id:
         tasks.append(fps.positioners[pid].set_speed(alpha, beta))
 
-    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.abort_trajectory)
+    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.stop_trajectory)
 
     if not result[0]:
         error_message = result[1] or 'set speed command failed'
@@ -225,7 +225,7 @@ async def current(ctx, command, fps, positioner_id, alpha, beta, all):
 async def stop(command, fps):
     """Stops the positioners and clear flags."""
 
-    await fps.abort_trajectory()
+    await fps.stop_trajectory()
     await fps.update_status(timeout=0.1)
     await fps.update_position()
 

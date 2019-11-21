@@ -210,6 +210,9 @@ class FPS(BaseFPS):
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
+    engineering_mode : bool
+        If `True`, disables most safety checks to enable debugging. This may
+        result in hardware damage so it must not be used lightly.
 
     Examples
     --------
@@ -228,7 +231,13 @@ class FPS(BaseFPS):
     """
 
     def __init__(self, can=None, layout=None, can_profile=None,
-                 wago=None, qa=None, loop=None):
+                 wago=None, qa=None, loop=None, engineering_mode=False):
+
+        self.engineering_mode = engineering_mode
+
+        if engineering_mode:
+            warnings.warn('Engineering mode enable. Just don\'t break anything.',
+                          JaegerUserWarning)
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -362,7 +371,7 @@ class FPS(BaseFPS):
 
         command_name = command.name
 
-        if self.locked:
+        if self.locked and not self.engineering_mode:
             if command.safe or safe:
                 log.debug(f'FPS is locked but {command_name} is safe.')
             else:
@@ -370,11 +379,11 @@ class FPS(BaseFPS):
                 raise FPSLockedError('solve the problem and unlock the FPS '
                                      'before sending commands.')
 
-        # elif self.moving and command.move_command:
-        #     command.cancel(silent=True)
-        #     log.error('cannot send move command while the FPS is moving. '
-        #               'Use FPS.abort_trajectory() to stop the FPS.')
-        #     return command
+        elif self.moving and command.move_command and not self.engineering_mode:
+            command.cancel(silent=True)
+            log.error('cannot send move command while the FPS is moving. '
+                      'Use FPS.stop_trajectory() to stop the FPS.')
+            return command
 
         if command.status.is_done:
             log.error(f'{command_name, positioner_id}: trying to send a done command.')
@@ -448,7 +457,7 @@ class FPS(BaseFPS):
         await self.update_status(timeout=0.1)
 
         for positioner in self.positioners.values():
-            if positioner.collision:
+            if positioner.collision and not self.engineering_mode:
                 self._locked = True
                 log.error('cannot unlock the FPS until all '
                           'the collisions have been cleared.')
@@ -510,8 +519,13 @@ class FPS(BaseFPS):
         await get_firmware_command
 
         if get_firmware_command.status.failed:
-            log.error('failed retrieving firmware version.')
-            return False
+            if not self.engineering_mode:
+                log.error('failed retrieving firmware version. '
+                          'Cannot initialise FPS.')
+                return False
+            else:
+                warnings.warn('failed retrieving firmware version. '
+                              'Continuing because engineering mode.', JaegerUserWarning)
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it. Checks how many positioner
@@ -566,6 +580,7 @@ class FPS(BaseFPS):
             else:
                 log.info('FPS unlocked successfully.')
 
+        # This may not be techincally necessary but it's just a few messages ...
         initialise_cmds = [positioner.initialise()
                            for positioner in self.positioners.values()
                            if positioner.status != positioner.flags.UNKNOWN]
@@ -573,6 +588,9 @@ class FPS(BaseFPS):
 
         if False in results:
             log.error('some positioners failed to initialise.')
+            if self.engineering_mode:
+                warnings.warn('continuing because engineering mode ...',
+                              JaegerUserWarning)
 
         # Start the pollers
         self.pollers.start()
@@ -662,7 +680,7 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_firmware_version(self, positioner_id=None):
+    async def update_firmware_version(self, positioner_id=None, timeout=2):
         """Updates the firmware version of connected positioners."""
 
         if positioner_id:
@@ -672,7 +690,7 @@ class FPS(BaseFPS):
 
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
-                                                 timeout=2,
+                                                 timeout=timeout,
                                                  n_positioners=n_positioners)
 
         await get_firmware_command
