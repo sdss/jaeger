@@ -73,6 +73,14 @@ class CANNetBus(BusABC):
 
         super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
 
+        # Try to receive a byte. If this fails it's probably because the
+        # device is already being used by a different instance. We catch
+        # this exception in JaegerCAN and deal with it.
+        try:
+            self.recv(1)
+        except ConnectionResetError:
+            raise
+
     def write(self, string):
 
         self._socket.send(string.encode() + self.LINE_TERMINATOR)

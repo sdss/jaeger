@@ -140,6 +140,9 @@ class JaegerCAN(object):
                      f'channel={channel!r}, args={args}, kwargs={kwargs}.')
             try:
                 self.interfaces.append(InterfaceClass(channel, *args, **kwargs))
+            except ConnectionResetError:
+                log.error(f'connection to {interface_name}:{channel} failed. '
+                          'Possibly another instance is connected to the device.')
             except Exception as ee:
                 raise ConnectionRefusedError(
                     f'connection to {interface_name}:{channel} failed: {ee}.')
