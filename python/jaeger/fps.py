@@ -527,6 +527,10 @@ class FPS(BaseFPS):
             positioner = self.positioners[positioner_id]
             positioner.firmware = get_firmware_command.get_firmware(positioner_id)
 
+        if len(set([pos.firmware for pos in self.values()])) > 1:
+            warnings.warn('positioners with different firmware versions found.',
+                          JaegerUserWarning)
+
         await self.update_status(timeout=0.5)
 
         if len(unknwon_positioners) > 0:
