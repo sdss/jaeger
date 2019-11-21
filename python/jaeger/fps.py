@@ -613,7 +613,7 @@ class FPS(BaseFPS):
         for reply in command.replies:
 
             pid = reply.positioner_id
-            if pid not in self.positioners:
+            if pid not in self.positioners or (positioner_id and pid not in positioner_id):
                 continue
 
             positioner = self.positioners[pid]
@@ -682,9 +682,12 @@ class FPS(BaseFPS):
             return False
 
         for reply in get_firmware_command.replies:
-            positioner_id = reply.positioner_id
-            positioner = self.positioners[positioner_id]
-            positioner.firmware = get_firmware_command.get_firmware(positioner_id)
+            pid = reply.positioner_id
+            if pid not in self.positioners or (positioner_id and pid not in positioner_id):
+                continue
+
+            positioner = self.positioners[pid]
+            positioner.firmware = get_firmware_command.get_firmware(pid)
 
         return True
 
