@@ -12,7 +12,7 @@ description = "Wrapper for the aiormq for asyncio and humans."
 name = "aio-pika"
 optional = false
 python-versions = ">3.5.*, <4"
-version = "6.4.0"
+version = "6.4.1"
 
 [package.dependencies]
 aiormq = ">=3.2.0,<4"
@@ -1082,8 +1082,8 @@ aenum = [
     {file = "aenum-2.2.3.tar.gz", hash = "sha256:a4334cabf47c167d44ab5a6198837b80deec5d5bad1b5cf70c966c3a330260e8"},
 ]
 aio-pika = [
-    {file = "aio-pika-6.4.0.tar.gz", hash = "sha256:03edc79ea9c27625b3eff07dd237def8261ff2c64e9b5c49c7b99bad52358cb4"},
-    {file = "aio_pika-6.4.0-py3-none-any.whl", hash = "sha256:379fd77edd60294d4e3bbc4951aa2ae283e03941eb5164608f7b76b36c0c32b9"},
+    {file = "aio-pika-6.4.1.tar.gz", hash = "sha256:fa32e33b4b7d0804dcf439ae6ff24d2f0a83d1ba280ee9f555e647d71d394ff5"},
+    {file = "aio_pika-6.4.1-py3-none-any.whl", hash = "sha256:a5837277e53755078db3a9e8c45bbca605c8ba9ecba7a02d74a7a1779f444723"},
 ]
 aiormq = [
     {file = "aiormq-3.2.0-py3-none-any.whl", hash = "sha256:9210f3389200aee7d8067f6435f4a9eff2d3a30b88beb5eaae406ccc11c0fc01"},
