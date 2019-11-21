@@ -462,7 +462,8 @@ class FPS(BaseFPS):
     def moving(self):
         """Returns `True` if any of the positioners is moving."""
 
-        return any([pos.moving for pos in self.positioners.values()])
+        return any([pos.moving for pos in self.values()
+                    if pos.status != pos.flags.UNKNOWN])
 
     async def initialise(self, allow_unknown=True):
         """Initialises all positioners with status and firmware version.
@@ -572,7 +573,6 @@ class FPS(BaseFPS):
 
         if False in results:
             log.error('some positioners failed to initialise.')
-            return False
 
         # Start the pollers
         self.pollers.start()
