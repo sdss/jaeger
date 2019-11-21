@@ -709,27 +709,29 @@ class FPS(BaseFPS):
 
         return True
 
-    async def stop_trajectory(self, positioners=None, timeout=1):
-        """Sends ``STOP_TRAJECTORY`` to all positioners.
+    async def stop_trajectory(self, positioners=None, clear_flags=True, timeout=2):
+        """Stops all the positioners.
 
         Parameters
         ----------
-        positioners : `list`
+        positioners : list
             The list of positioners to abort. If `None`, abort all positioners.
+        clear_flags : bool
+            If `True`, in addition to sending ``TRAJECTORY_TRANSMISSION_ABORT``
+            sends ``STOP_TRAJECTORY`` which clears all the collision and
+            warning flags.
         timeout : float
             How long to wait before timing out the command.
 
         """
 
-        if positioners is None:
-            await self.send_command('STOP_TRAJECTORY', positioner_id=0,
-                                    timeout=timeout)
-            return
+        await self.send_to_all('TRAJECTORY_TRANSMISSION_ABORT', positioners=positioners)
 
-        await asyncio.gather(
-            *[self.send_command('STOP_TRAJECTORY', positioner_id=pid,
-                                timeout=timeout)
-              for pid in positioners], loop=self.loop)
+        if clear_flags:
+            if positioners is None:
+                await self.send_command('STOP_TRAJECTORY', positioner_id=0, timeout=timeout)
+            else:
+                await self.send_to_all('STOP_TRAJECTORY', positioners=positioners)
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.

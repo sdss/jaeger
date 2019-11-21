@@ -275,6 +275,7 @@ class TrajectoryTransmissionAbort(Command):
     command_id = CommandID.TRAJECTORY_TRANSMISSION_ABORT
     broadcastable = False
     move_command = True
+    safe = True
 
 
 class StartTrajectory(Command):
@@ -290,3 +291,4 @@ class StopTrajectory(Command):
 
     command_id = CommandID.STOP_TRAJECTORY
     broadcastable = True
+    safe = True
