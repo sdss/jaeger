@@ -595,7 +595,7 @@ class FPS(BaseFPS):
         if positioner_id:
             n_positioners = len(positioner_id)
         else:
-            n_positioners = None
+            n_positioners = len(self)  # This is the max number that should reply.
 
         command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
                                     n_positioners=n_positioners,
