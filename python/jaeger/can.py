@@ -172,13 +172,19 @@ class JaegerCAN(object):
                       'Sending STOP_TRAJECTORIES and locking the FPS.')
 
             # Manually send the stop trajectory to be sure it has
-            # priority over other messages.
+            # priority over other messages. No need to do it if the FPS
+            # has been locked, which means that we have already stopped
+            # trajectories.
+
+            if self.fps and self.fps.locked:
+                return
+
             stop_trajectory_command = StopTrajectory(positioner_id=0)
             self.send_to_interface(stop_trajectory_command.get_messages()[0])
 
-            # Now lock the FPS.
+            # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                self.loop.create_task(self.fps.lock(abort_trajectories=True))
+                self.loop.create_task(self.fps.lock(abort_trajectories=False))
                 return
 
         if command_id == 0:
