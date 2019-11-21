@@ -70,6 +70,11 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
         # Manually calculate the max move time we'll encounter.
         p_alpha, p_beta = fps[pid].position
+
+        if p_alpha is None or p_beta is None:
+            command.failed('some positioners do not know their positions.')
+            return False
+
         delta_alpha = abs(p_alpha - alpha) if not relative else alpha
         delta_beta = abs(p_beta - beta) if not relative else beta
 
