@@ -638,11 +638,11 @@ class FPS(BaseFPS):
         commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
                                         positioners=positioner_id)
 
-        # try:
-        commands = await commands_all
-        # except Exception as ee:
-        #     log.error(f'failed polling positions: {ee}')
-        #     return False
+        try:
+            commands = await commands_all
+        except Exception as ee:
+            log.error(f'failed polling positions: {ee}')
+            return False
 
         update_position_commands = []
         for command in commands:
