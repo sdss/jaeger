@@ -49,7 +49,7 @@ class CANNetBus(BusABC):
 
     LINE_TERMINATOR = b'\n'
 
-    def __init__(self, channel, port=None, bitrate=None, buses=[1], timeout=2, **kwargs):
+    def __init__(self, channel, port=None, bitrate=None, buses=[1], timeout=5, **kwargs):
 
         if not channel:  # if None or empty
             raise TypeError('Must specify a TCP address.')
