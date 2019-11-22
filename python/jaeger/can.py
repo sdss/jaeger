@@ -144,13 +144,16 @@ class JaegerCAN(object):
             except ConnectionResetError:
                 log.error(f'connection to {interface_name}:{channel} failed. '
                           'Possibly another instance is connected to the device.')
-            except (socket.timeout, ConnectionRefusedError):
+            except (socket.timeout, ConnectionRefusedError, OSError):
                 log.error(f'connection to {interface_name}:{channel} failed. '
                           'The device is not responding.')
             except Exception as ee:
                 raise ee.__class__(
                     f'connection to {interface_name}:{channel} failed: {ee}.')
-        print(self.interfaces)
+
+        if len(self.interfaces) == 0:
+            raise jaeger.JaegerError('cannot connect to any interface.')
+
         self._start_notifier()
 
         self.command_queue = asyncio.Queue()
