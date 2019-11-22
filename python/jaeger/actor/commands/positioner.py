@@ -13,7 +13,8 @@ import click
 import clu
 import numpy
 
-from jaeger.commands import SetCurrent
+from jaeger.commands import SetCurrent, Trajectory
+from jaeger.core.exceptions import TrajectoryError
 from jaeger.utils import get_goto_move_time
 
 from . import jaeger_parser
@@ -259,13 +260,33 @@ async def trajectory(command, fps, path):
     """Sends a trajectory from a file."""
 
     if fps.moving:
-        command.failed('FPS is moving. Cannot send trajectory.')
-        return
+        return command.failed('FPS is moving. Cannot send trajectory.')
+
+    if fps.locked:
+        return command.failed('FPS is locked. Cannot send trajectory.')
 
     path = pathlib.Path(path).expanduser()
     if not path.exists():
         raise click.BadParameter(f'path {path!s} does not exist.')
 
-    await fps.send_trajectory(str(path))
+    try:
 
-    command.set_status(clu.CommandStatus.DONE, text='Trajectory completed')
+        trajectory = Trajectory(fps, path)
+
+        command.debug('sending trajectory ...')
+        await trajectory.send()
+        if trajectory.failed:
+            return command.failed('failed sending trajectory with unknown error.')
+
+        command.debug(f'trajectory sent in {trajectory.data_send_time:.2f} seconds.')
+        command.info(text=f'move will take {trajectory.move_time:.2f} seconds',
+                     move_time=f'{trajectory.move_time:.2f}')
+
+        await trajectory.start()
+        if trajectory.failed:
+            return command.failed('failed starting trajectory with unknown error.')
+
+        return command.done('trajectory completed.')
+
+    except TrajectoryError as ee:
+        return command.failed(str(ee))

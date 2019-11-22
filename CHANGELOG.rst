@@ -4,6 +4,8 @@
 Changelog
 =========
 
+* :feature:`62` Add a new `.Trajectory` class as a low-level method to send trajectories.
+
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.
 * Unless ``immediate=True`` is passed to `.Poller.set_delay`, waits for the current task to finish.
