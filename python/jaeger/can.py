@@ -275,7 +275,8 @@ class JaegerCAN(object):
             log_header = f'({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}): '
 
             if cmd.status != CommandStatus.READY:
-                can_log.error(log_header + 'command is not ready')
+                can_log.error(f'{log_header} command is not ready '
+                              f'(status={cmd.status.name!r})')
                 cmd.cancel()
                 continue
 
