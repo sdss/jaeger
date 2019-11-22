@@ -150,7 +150,7 @@ async def send_trajectory(fps, trajectories):
             await asyncio.gather(*data_cmds)
 
             for cmd in data_cmds:
-                if cmd.status.failed:
+                if cmd.status.failed or cmd.status.timed_out:
                     raise TrajectoryError('at least one SEND_TRAJECTORY_COMMAND failed.')
 
     # Finalise the trajectories
