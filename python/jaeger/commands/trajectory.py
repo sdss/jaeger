@@ -107,6 +107,8 @@ async def send_trajectory(fps, trajectories):
         if max_time_pos > max_time:
             max_time = max_time_pos
 
+    log.debug('sending trajectory data.')
+
     # Starts trajectory
     new_traj_cmds = [fps.send_command('SEND_NEW_TRAJECTORY',
                                       positioner_id=pos_id,
@@ -160,6 +162,8 @@ async def send_trajectory(fps, trajectories):
         if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
             raise TrajectoryError(f'positioner_id={cmd.positioner_id} got an '
                                   f'INVALID_TRAJECTORY reply.')
+
+    log.debug('trajectory successfully sent.')
 
     # Prepare to start the trajectories. Make position polling faster and
     # output expected time.
