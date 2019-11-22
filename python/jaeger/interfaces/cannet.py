@@ -25,6 +25,8 @@ class CANNetBus(BusABC):
     buses : list
         The buses to open in the device. Messages that do not specify a
         bus will be sent to all the open buses.
+    timeout : float
+        Timeout for connection.
 
     """
 
@@ -47,7 +49,7 @@ class CANNetBus(BusABC):
 
     LINE_TERMINATOR = b'\n'
 
-    def __init__(self, channel, port=None, bitrate=None, buses=[1], **kwargs):
+    def __init__(self, channel, port=None, bitrate=None, buses=[1], timeout=2, **kwargs):
 
         if not channel:  # if None or empty
             raise TypeError('Must specify a TCP address.')
@@ -60,7 +62,9 @@ class CANNetBus(BusABC):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverAddress = (channel, port)
 
+        self._socket.settimeout(timeout)
         self._socket.connect(self._serverAddress)
+        self._socket.settimeout(None)
 
         self._buffer = bytearray()
 
