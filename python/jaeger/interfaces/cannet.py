@@ -62,9 +62,9 @@ class CANNetBus(BusABC):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._serverAddress = (channel, port)
 
-        self._socket.settimeout(timeout)
+        # self._socket.settimeout(timeout)
         self._socket.connect(self._serverAddress)
-        self._socket.settimeout(None)
+        # self._socket.settimeout(None)
 
         self._buffer = bytearray()
 
