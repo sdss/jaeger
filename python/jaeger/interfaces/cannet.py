@@ -64,6 +64,7 @@ class CANNetBus(BusABC):
 
         self._socket.settimeout(timeout)
         self._socket.connect(self._serverAddress)
+        self._socket.recv(1)  # Test seeing if the connection is really alive.
         self._socket.settimeout(None)
 
         self._buffer = bytearray()
@@ -76,14 +77,6 @@ class CANNetBus(BusABC):
         self.channel_info = f'CAN@net channel={channel!r}, buses={self.buses!r}'
 
         super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
-
-        # Try to receive a byte. If this fails it's probably because the
-        # device is already being used by a different instance. We catch
-        # this exception in JaegerCAN and deal with it.
-        try:
-            self.recv(1)
-        except ConnectionResetError:
-            raise
 
     def write(self, string):
 
