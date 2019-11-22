@@ -11,6 +11,7 @@
 from ..actor import jaeger_parser
 
 from .bootloader import *
+from .debug import *
 from .positioner import *
 from .pollers import *
 from .wago import *
