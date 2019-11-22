@@ -95,7 +95,7 @@ class SetSpeed(Command):
     command_id = CommandID.SET_SPEED
     broadcastable = False
     safe = True
-    move_command = True
+    move_command = False
 
     def __init__(self, alpha=0, beta=0, **kwargs):
 
