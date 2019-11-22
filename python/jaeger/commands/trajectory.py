@@ -8,6 +8,7 @@
 
 import asyncio
 import pathlib
+import time
 
 import numpy
 from ruamel.yaml import YAML
@@ -118,6 +119,8 @@ async def send_trajectory(fps, trajectories):
 
     await asyncio.gather(*new_traj_cmds)
 
+    start_trajectory_send_time = time.time()
+
     # How many points from the trajectory are we putting in each command.
     n_chunk = config['positioner']['trajectory_data_n_points']
 
@@ -163,7 +166,8 @@ async def send_trajectory(fps, trajectories):
             raise TrajectoryError(f'positioner_id={cmd.positioner_id} got an '
                                   f'INVALID_TRAJECTORY reply.')
 
-    log.debug('trajectory successfully sent.')
+    traj_send_time = time.time() - start_trajectory_send_time
+    log.info(f'trajectory successfully sent in {traj_send_time:1f} seconds.')
 
     # Prepare to start the trajectories. Make position polling faster and
     # output expected time.

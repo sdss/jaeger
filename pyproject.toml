@@ -71,13 +71,13 @@ jaeger = "jaeger.cli:jaeger"
 line_length = 79
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
-known_first_party = "jaeger"
-multi_line_output = 0
+# known_first_party = "jaeger"
+# multi_line_output = 0
 balanced_wrapping = true
 include_trailing_comma = false
 length_sort_stdlib = false
 lines_after_imports = 2
-# use_parentheses = true
+use_parentheses = true
 
 [tool.flake8]
 ignore = [
