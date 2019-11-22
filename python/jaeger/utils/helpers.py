@@ -315,7 +315,7 @@ class Poller(object):
             await self.stop()
             self.start(delay)
         else:
-            self.delay = delay
+            self.delay = delay or self._orig_delay
 
     def start(self, delay=None):
         """Starts the poller.
