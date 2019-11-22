@@ -371,7 +371,7 @@ class FPS(BaseFPS):
 
         command_name = command.name
 
-        if self.locked and not self.engineering_mode:
+        if not self.engineering_mode and self.locked:
             if command.safe or safe:
                 log.debug(f'FPS is locked but {command_name} is safe.')
             else:
@@ -379,7 +379,7 @@ class FPS(BaseFPS):
                 raise FPSLockedError('solve the problem and unlock the FPS '
                                      'before sending commands.')
 
-        elif self.moving and command.move_command and not self.engineering_mode:
+        elif not self.engineering_mode and command.move_command and self.moving:
             command.cancel(silent=True)
             log.error('cannot send move command while the FPS is moving. '
                       'Use FPS.stop_trajectory() to stop the FPS.')
