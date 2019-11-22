@@ -64,7 +64,7 @@ class CANNetBus(BusABC):
 
         self._socket.settimeout(timeout)
         self._socket.connect(self._serverAddress)
-        self._socket.recv(1)  # Test seeing if the connection is really alive.
+        self._socket.send('a'.encode())  # Test seeing if the connection is really alive.
         self._socket.settimeout(None)
 
         self._buffer = bytearray()
