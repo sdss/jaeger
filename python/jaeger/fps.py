@@ -673,8 +673,12 @@ class FPS(BaseFPS):
                             'failed during update position.')
                 continue
 
-            position = command.get_positions()
-            update_position_commands.append(self[pid].update_position(position))
+            try:
+                position = command.get_positions()
+                update_position_commands.append(self[pid].update_position(position))
+            except ValueError as ee:
+                log.error(f'failed updating position for positioner {pid}: {ee}')
+                return False
 
         await asyncio.gather(*update_position_commands)
 
