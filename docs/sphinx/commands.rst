@@ -77,6 +77,8 @@ Bootloader commands
 Trajectory commands
 -------------------
 
+.. autoclass:: jaeger.commands.Trajectory
+
 .. autofunction:: jaeger.commands.send_trajectory
 
 .. autoclass:: jaeger.commands.SendNewTrajectory
