@@ -349,7 +349,9 @@ class Command(StatusMixIn, asyncio.Future):
 
         if self.status == CommandStatus.TIMEDOUT:
             return
-        elif self.status != CommandStatus.RUNNING:
+        elif self.status not in [CommandStatus.RUNNING, CommandStatus.CANCELLED]:
+            # We add CANCELLED because when a command is cancelled replies can arrive
+            # later. That's ok and not an error.
             log.error(f'{command_name, self.positioner_id, self.command_uid}: '
                       'received a reply but command is not running')
             return
