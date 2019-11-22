@@ -176,7 +176,7 @@ async def send_trajectory(fps, trajectories):
         await fps.stop_trajectory()
         raise TrajectoryError('START_TRAJECTORY failed')
 
-    await fps.pollers.set_delay(0.1)
+    await fps.pollers.set_delay(1)
 
     # Wait approximate time before starting to poll for status
     await asyncio.sleep(0.95 * max_time, loop=fps.loop)
@@ -186,7 +186,7 @@ async def send_trajectory(fps, trajectories):
     # Wait until all positioners have completed.
     wait_status = [fps.positioners[pos_id].wait_for_status(
         fps.positioners[pos_id].flags.DISPLACEMENT_COMPLETED,
-        timeout=remaining_time + 3, delay=0.001)
+        timeout=remaining_time + 3, delay=0.1)
         for pos_id in trajectories]
     results = await asyncio.gather(*wait_status, loop=fps.loop)
 
