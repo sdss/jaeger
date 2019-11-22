@@ -199,16 +199,22 @@ class PollerList(list):
 
         return list.__getitem__(self, item)
 
-    async def set_delay(self, delay=None):
+    async def set_delay(self, delay=None, immediate=False):
         """Sets the delay for all the pollers.
 
         Parameters
         ----------
         delay : float
             The delay between calls to the callback. If `None`, restores the
-            original delay."""
+            original delay.
+        immediate : bool
+            If `True`, stops the currently running tasks and sets the
+            new delay. Otherwise waits for the current tasks to complete.
 
-        delay_coros = [poller.set_delay(delay=delay) for poller in self]
+        """
+
+        delay_coros = [poller.set_delay(delay=delay, immediate=immediate)
+                       for poller in self]
         await asyncio.gather(*delay_coros)
 
     def start(self, delay=None):
@@ -284,24 +290,32 @@ class Poller(object):
 
             await self._sleep_task
 
-    async def set_delay(self, delay=None):
+    async def set_delay(self, delay=None, immediate=False):
         """Sets the delay for polling.
 
         Parameters
         ----------
         delay : float
             The delay between calls to the callback. If `None`, restores the
-            original delay."""
+            original delay.
+        immediate : bool
+            If `True`, stops the currently running task and sets the
+            new delay. Otherwise waits for the current task to complete.
 
-        if not self.running:
-            return
+        """
 
         # Only change delay if the difference is significant.
         if delay and abs(self.delay - delay) < 1e-6:
             return
 
-        await self.stop()
-        self.start(delay)
+        if not self.running:
+            return
+
+        if immediate:
+            await self.stop()
+            self.start(delay)
+        else:
+            self.delay = delay
 
     def start(self, delay=None):
         """Starts the poller.
