@@ -506,6 +506,9 @@ class FPS(BaseFPS):
         # Stop poller in case they are running
         await self.pollers.stop()
 
+        # Start by stopping the FPS
+        await self.stop_trajectory()
+
         if len(self.positioners) > 0:
             n_expected_positioners = len(self.positioners)
         else:
