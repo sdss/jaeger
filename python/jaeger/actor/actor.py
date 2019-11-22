@@ -30,6 +30,8 @@ class JaegerActor(clu.LegacyActor):
         # command (the first argument is always the actor command).
         self.parser_args = [fps]
 
+        wago_delay = kwargs.pop('wago_delay', None)
+
         super().__init__(*args, parser=jaeger_parser, **kwargs)
 
         # Add ActorHandler to log
@@ -37,8 +39,8 @@ class JaegerActor(clu.LegacyActor):
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.INFO)
 
-        # if fps.wago and fps.wago.connected:
-        #     self.timer_commands.add_command('wago status', delay=60)
+        if fps.wago and fps.wago.connected and wago_delay:
+            self.timer_commands.add_command('wago status', delay=wago_delay)
 
     @classmethod
     def from_config(cls, config, fps):

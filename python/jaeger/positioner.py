@@ -254,6 +254,8 @@ class Positioner(StatusMixIn):
     async def initialise(self, initialise_datums=False):
         """Initialises the datum and starts the position watcher."""
 
+        eng_mode = True if self.fps and self.fps.engineering_mode else False
+
         log.debug(f'positioner {self.positioner_id}: initialising')
 
         # Resets all.
@@ -264,12 +266,14 @@ class Positioner(StatusMixIn):
         except Exception as ee:
             log.error(f'positioner {self.positioner_id}: failed to update '
                       f'firmware version: {ee}.')
-            return False
+            if not eng_mode:
+                return False
 
         result = await self.update_status()
         if not result:
             log.error(f'positioner {self.positioner_id}: failed to refresh status.')
-            return False
+            if not eng_mode:
+                return False
 
         # Exists if we are in bootloader mode.
         if self.is_bootloader():
@@ -284,23 +288,12 @@ class Positioner(StatusMixIn):
         if not self.initialised:
             log.error(f'positioner {self.positioner_id}: not initialised. '
                       'Set the position manually.')
-            return False
-
-        result = await self.fps.send_command('STOP_TRAJECTORY',
-                                             positioner_id=self.positioner_id)
-        if not result:
-            warnings.warn(f'positioner {self.positioner_id}: failed stopping '
-                          'trajectories during initialisation.', JaegerUserWarning)
-            return False
-
-        if not result:
-            log.error(f'positioner {self.positioner_id}: failed aborting '
-                      'trajectory transmission during initialisation.')
-            return False
+            if not eng_mode:
+                return False
 
         # Sets the default speed
         if not await self.set_speed(alpha=config['positioner']['motor_speed'],
-                                    beta=config['positioner']['motor_speed']):
+                                    beta=config['positioner']['motor_speed']) and not eng_mode:
             return False
 
         log.debug(f'positioner {self.positioner_id}: initialisation complete.')
@@ -376,6 +369,7 @@ class Positioner(StatusMixIn):
         await set_position_command
 
         if set_position_command.status.failed:
+            log.error(f'positioner {self.positioner_id}: failed setting position.')
             return False
 
         return set_position_command
@@ -470,6 +464,8 @@ class Positioner(StatusMixIn):
 
         """
 
+        eng_mode = True if self.fps and self.fps.engineering_mode else False
+
         async def _restore(original_speed):
             if original_speed != self.speed:
                 await self.set_speed(*original_speed)
@@ -496,8 +492,9 @@ class Positioner(StatusMixIn):
         if (alpha < ALPHA_MIN_POSITION or alpha > ALPHA_MAX_POSITION or
                 beta < BETA_MIN_POSITION or beta > BETA_MAX_POSITION) and not force:
             log.error(f'positioner {self.positioner_id}: position out of limits.')
-            await _restore(original_speed)
-            return False
+            if not eng_mode:
+                await _restore(original_speed)
+                return False
 
         log.info(f'positioner {self.positioner_id}: goto '
                  f'{"relative" if relative else "absolute"} position '
@@ -536,7 +533,8 @@ class Positioner(StatusMixIn):
         if not self.moving:
             log.error(f'positioner {self.positioner_id}: positioner is '
                       'not moving when it should.')
-            return False
+            if not eng_mode:
+                return False
 
         self.move_time = max([alpha_time, beta_time])
 

@@ -173,7 +173,7 @@ async def send_trajectory(fps, trajectories):
                                      n_positioners=len(trajectories))
 
     if command.status.failed:
-        await fps.abort_trajectory()
+        await fps.stop_trajectory()
         raise TrajectoryError('START_TRAJECTORY failed')
 
     await fps.pollers.set_delay(1)
@@ -275,6 +275,7 @@ class TrajectoryTransmissionAbort(Command):
     command_id = CommandID.TRAJECTORY_TRANSMISSION_ABORT
     broadcastable = False
     move_command = True
+    safe = True
 
 
 class StartTrajectory(Command):
@@ -290,3 +291,4 @@ class StopTrajectory(Command):
 
     command_id = CommandID.STOP_TRAJECTORY
     broadcastable = True
+    safe = True

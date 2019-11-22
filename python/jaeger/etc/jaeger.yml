@@ -10,6 +10,7 @@ actor:
     tron:
         host: 127.0.0.1
         port: 6093
+    wago_delay: 60
     log_dir: /data/logs/actors/jaeger
 
 profiles:

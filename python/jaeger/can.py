@@ -11,6 +11,7 @@ import binascii
 import collections
 import pprint
 import re
+import socket
 import time
 
 import can
@@ -143,6 +144,9 @@ class JaegerCAN(object):
             except ConnectionResetError:
                 log.error(f'connection to {interface_name}:{channel} failed. '
                           'Possibly another instance is connected to the device.')
+            except socket.timeout:
+                log.error(f'connection to {interface_name}:{channel} failed. '
+                          'The device is not responding.')
             except Exception as ee:
                 raise ConnectionRefusedError(
                     f'connection to {interface_name}:{channel} failed: {ee}.')
@@ -187,7 +191,7 @@ class JaegerCAN(object):
 
             # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                self.loop.create_task(self.fps.lock(abort_trajectories=False))
+                self.loop.create_task(self.fps.lock(stop_trajectories=False))
                 return
 
         if command_id == 0:

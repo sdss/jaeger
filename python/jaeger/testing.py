@@ -15,7 +15,7 @@ import numpy
 import jaeger
 import jaeger.commands
 from jaeger.commands import Message
-from jaeger.maskbits import PositionerStatusV4_0 as PositionerStatus
+from jaeger.maskbits import PositionerStatusV4_1 as PositionerStatus
 from jaeger.positioner import VirtualPositioner
 from jaeger.utils import int_to_bytes, motor_steps_to_angle, parse_identifier
 

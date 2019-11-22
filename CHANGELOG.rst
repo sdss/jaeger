@@ -3,6 +3,7 @@
 =========
 Changelog
 =========
+* :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.
 
 * :release:`0.4.1 <2019-11-21>`
 * Support versions ``04.00.XX`` and ``04.01.XX`` of Tendo with `.PositionerStatusV4_0` and `.PositionerStatusV4_1` maskbits.
