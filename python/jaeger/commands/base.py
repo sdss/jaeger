@@ -236,7 +236,7 @@ class Command(StatusMixIn, asyncio.Future):
         COMMAND_UID += 1
 
         # Starting time
-        self.start_time = time.time()
+        self.start_time = None
 
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
@@ -349,7 +349,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         if self.status == CommandStatus.TIMEDOUT:
             return
-        elif self.status not in [CommandStatus.RUNNING, CommandStatus.CANCELLED]:
+        elif (self.status not in [CommandStatus.RUNNING,
+                                  CommandStatus.CANCELLED] and self.timeout > 0):
             # We add CANCELLED because when a command is cancelled replies can arrive
             # later. That's ok and not an error.
             log.error(f'{command_name, self.positioner_id, self.command_uid}: '
@@ -452,10 +453,11 @@ class Command(StatusMixIn, asyncio.Future):
         self._log(f'status changed to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING:
+            self.start_time = time.time()
             if self.timeout is None or self.timeout < 0:
                 pass
             elif self.timeout == 0:
-                self.finish_command(CommandStatus.DONE)
+                self.finish_command(CommandStatus.TIMEDOUT)
             else:
                 self._timeout_handle = self.loop.call_later(
                     self.timeout, self.finish_command, CommandStatus.TIMEDOUT)
