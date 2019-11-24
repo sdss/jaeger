@@ -250,7 +250,7 @@ class Command(StatusMixIn, asyncio.Future):
             assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
         self.n_positioners = n_positioners
 
-        self.timeout = timeout or self.timeout
+        self.timeout = timeout if timeout is not None else self.timeout
 
         # What interface and bus this command should be sent to. Only relevant
         # for multibus interfaces. To be filled by the FPS class when queueing
