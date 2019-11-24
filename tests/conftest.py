@@ -69,7 +69,7 @@ async def vfps(event_loop, tmp_path):
 
 
 @pytest.fixture()
-async def positioners(test_config, notifier, event_loop):
+async def vpositioners(test_config, notifier, event_loop):
     """Yields positioners."""
 
     vpositioners = []

@@ -16,7 +16,7 @@ from jaeger.testing import VirtualFPS
 
 # Need to mark all tests with positioners to make sure they are created,
 # and with asyncio to allow execution of coroutines.
-pytestmark = [pytest.mark.usefixtures('positioners'), pytest.mark.asyncio]
+pytestmark = [pytest.mark.usefixtures('vpositioners'), pytest.mark.asyncio]
 
 
 async def test_vfps(vfps):
@@ -24,18 +24,18 @@ async def test_vfps(vfps):
     assert isinstance(vfps, VirtualFPS)
 
 
-async def test_get_id(vfps, positioners):
+async def test_get_id(vfps, vpositioners):
 
-    command = await vfps.send_command('GET_ID', n_positioners=len(positioners))
-    assert len(command.replies) == len(positioners)
+    command = await vfps.send_command('GET_ID', n_positioners=len(vpositioners))
+    assert len(command.replies) == len(vpositioners)
 
 
-async def test_initialise(vfps, positioners):
+async def test_initialise(vfps, vpositioners):
 
     await vfps.initialise()
     await asyncio.sleep(0.1)  # Give some time for the poller to set position.
 
-    assert len(vfps) == len(positioners)
+    assert len(vfps) == len(vpositioners)
 
     positioner1 = vfps[1]
 
