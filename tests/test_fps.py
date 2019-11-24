@@ -7,6 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import time
 
 import pytest
 
@@ -85,3 +86,8 @@ async def test_pollers_delay(vfps, vpositioners):
     assert PositionerStatusV4_1.HALL_ALPHA_DISABLE in vpositioners[0].status
 
     await vfps.pollers.stop()
+
+
+async def test_shutdown(vfps):
+
+    await vfps.shutdown()
