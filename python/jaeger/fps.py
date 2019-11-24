@@ -622,6 +622,7 @@ class FPS(BaseFPS):
             n_positioners = len(self) if len(self) > 0 else None
 
         await self.update_firmware_version(timeout=timeout)
+
         command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
                                     n_positioners=n_positioners,
                                     timeout=timeout,

@@ -152,6 +152,9 @@ class Positioner(StatusMixIn):
     async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""
 
+        # Need to update the firmware to make sure we get the right flags.
+        await self.update_firmware_version()
+
         if not status:
 
             command = self.fps.send_command(CommandID.GET_STATUS,
