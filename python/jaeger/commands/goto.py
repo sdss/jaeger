@@ -40,6 +40,15 @@ class GotoAbsolutePosition(Command):
 
         super().__init__(**kwargs)
 
+    @staticmethod
+    def decode(data):
+        """Decodes message data into alpha and beta moves."""
+
+        alpha_steps = bytes_to_int(data[0:4], dtype='i4')
+        beta_steps = bytes_to_int(data[4:8], dtype='i4')
+
+        return motor_steps_to_angle(alpha_steps, beta_steps)
+
     def get_move_time(self):
         """Returns the time needed to move to the commanded position.
 

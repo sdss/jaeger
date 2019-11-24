@@ -16,7 +16,7 @@ from can.listener import AsyncBufferedReader
 
 import jaeger
 from jaeger import utils
-from jaeger.commands import CommandID
+from jaeger.commands import TIME_STEP, CommandID
 from jaeger.maskbits import BootloaderStatus
 from jaeger.maskbits import PositionerStatusV4_1 as PS
 from jaeger.maskbits import ResponseCode
@@ -134,14 +134,17 @@ class VirtualPositioner(StatusMixIn):
             if command_id == CommandID.GET_ID:
                 self.reply(command_id, uid)
 
-            elif command_id == CommandID.GET_STATUS:
-                data_status = utils.int_to_bytes(self.status)
-                self.reply(command_id, uid, data=data_status)
-
             elif command_id == CommandID.GET_FIRMWARE_VERSION:
                 data_firmware = command.encode(self.firmware)
                 self.reply(command_id, uid, data=data_firmware)
 
+            elif command_id == CommandID.GET_STATUS:
+                data_status = utils.int_to_bytes(self.status)
+                self.reply(command_id, uid, data=data_status)
+
+            elif command_id in [CommandID.GO_TO_ABSOLUTE_POSITION,
+                                CommandID.GO_TO_RELATIVE_POSITION]:
+                self.loop.create_task(self.process_goto(msg))
             elif command_id == CommandID.GET_ACTUAL_POSITION:
                 data_position = command.encode(*self.position)
                 self.reply(command_id, uid, data=data_position)
@@ -220,6 +223,54 @@ class VirtualPositioner(StatusMixIn):
                 self.reply(command_id, uid)
         else:
             self.reply(command_id, uid)
+
+    async def process_goto(self, message):
+        """Process an absolute or relative goto command."""
+
+        __, command_id, uid, __ = utils.parse_identifier(message.arbitration_id)
+        command_id = CommandID(command_id)
+        command = command_id.get_command()
+
+        data = message.data
+        alpha_move, beta_move = command.decode(data)
+
+        if command_id == CommandID.GO_TO_RELATIVE_POSITION:
+            alpha_move += self.position[0]
+            beta_move += self.position[0]
+
+        target_alpha = self.position[0] + alpha_move
+        target_beta = self.position[1] + beta_move
+
+        if target_alpha < 0 or target_beta < 0 or target_alpha > 360 or target_beta > 360:
+            self.reply(command_id, uid, ResponseCode.VALUE_OUT_OF_RANGE)
+            return
+
+        if alpha_move == 0.:
+            alpha_move_time = 0.
+        else:
+            alpha_move_time = int(utils.get_goto_move_time(alpha_move,
+                                                           self.speed[0]) / TIME_STEP)
+
+        if beta_move == 0.:
+            beta_move_time = 0.0
+        else:
+            beta_move_time = int(utils.get_goto_move_time(beta_move,
+                                                          self.speed[1]) / TIME_STEP)
+
+        self.reply(command_id, uid, ResponseCode.COMMAND_ACCEPTED,
+                   data=[utils.int_to_bytes(alpha_move_time, 'i4') +
+                         utils.int_to_bytes(beta_move_time, 'i4')])
+
+        self.status ^= (PS.DISPLACEMENT_COMPLETED |
+                        PS.DISPLACEMENT_COMPLETED_ALPHA |
+                        PS.DISPLACEMENT_COMPLETED_BETA)
+        self.status |= (PS.TRAJECTORY_ALPHA_RECEIVED | PS.TRAJECTORY_BETA_RECEIVED)
+
+        await asyncio.sleep(max(alpha_move * TIME_STEP, beta_move_time * TIME_STEP))
+
+        self.status |= (PS.DISPLACEMENT_COMPLETED |
+                        PS.DISPLACEMENT_COMPLETED_ALPHA |
+                        PS.DISPLACEMENT_COMPLETED_BETA)
 
     def reset(self):
         """Resets the positioner."""

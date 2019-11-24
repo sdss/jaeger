@@ -7,6 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import logging
 
 import pytest
 
@@ -30,3 +31,28 @@ async def test_get_position(vfps, vpositioners):
     await vfps[1].update_position()
 
     assert vfps[1].position == (180., 180.)
+
+
+async def test_goto(vfps, event_loop):
+
+    await vfps.initialise()
+
+    assert await vfps[1].goto(1, 1)
+
+
+async def test_goto_no_move(vfps, event_loop, caplog):
+
+    caplog.set_level(logging.INFO)
+
+    await vfps.initialise()
+
+    assert await vfps[1].goto(0, 0)
+
+    assert 'did not move' in caplog.records[-1].message
+
+
+async def test_goto_relative(vfps, event_loop):
+
+    await vfps.initialise()
+
+    assert await vfps[1].goto(1, 1, relative=True)
