@@ -22,16 +22,6 @@ class Maskbit(enum.IntFlag):
 
         return [bit for bit in self.__class__ if bit.value & self.value]
 
-    @property
-    def name(self):
-        """The name of the bit or bits active."""
-
-        names = []
-        for bit in self.active_bits:
-            names.append(super(Maskbit, bit).name)
-
-        return '|'.join(names)
-
 
 class CommandStatus(Maskbit):
     """Maskbits for command status."""
