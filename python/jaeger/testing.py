@@ -7,6 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import zlib
 from contextlib import suppress
 
 from can import Message
@@ -91,6 +92,10 @@ class VirtualPositioner(StatusMixIn):
 
         self.firmware = self._initial_firmware
 
+        self._crc32 = 0
+        self._firmware_size = 0
+        self._firmware_received = b''
+
         self.channel = channel or jaeger.config['profiles']['virtual']['channel']
         self.interface = VirtualBus(self.channel)
 
@@ -122,6 +127,10 @@ class VirtualPositioner(StatusMixIn):
             command_id = CommandID(command_id)
             command = command_id.get_command()
 
+            if positioner_id == 0 and not command.broadcastable:
+                self.reply(command_id, uid, response_code=ResponseCode.INVALID_BROADCAST_COMMAND)
+                continue
+
             if command_id == CommandID.GET_ID:
                 self.reply(command_id, uid)
 
@@ -140,6 +149,33 @@ class VirtualPositioner(StatusMixIn):
             elif command_id == CommandID.SET_SPEED:
                 data_speed = command.encode(*self.speed)
                 self.reply(command_id, uid, data=data_speed)
+
+            elif command_id == CommandID.START_FIRMWARE_UPGRADE:
+                if not self.is_bootloader():
+                    self.reply(command_id, uid, response_code=ResponseCode.INVALID_COMMAND)
+                    continue
+
+                try:
+                    data = msg.data
+                    firmware_size = utils.bytes_to_int(data[0:4], 'u4')
+                    crc32 = utils.bytes_to_int(data[4:9], 'u4')
+                except Exception:
+                    self.reply(command_id, uid, response_code=ResponseCode.INVALID_COMMAND)
+                    continue
+
+                self._firmware_size = firmware_size
+                self._crc32 = crc32
+                self._firmware_received = b''
+
+                self.reply(command_id, uid)
+
+            elif command_id == CommandID.SEND_FIRMWARE_DATA:
+                self.process_firmware_data(uid, msg.data)
+
+            else:
+                # Should be a valid command or CommandID(command_id) would
+                # have failed. Just return OK.
+                self.reply(command_id, uid)
 
     def reply(self, command_id, uid, response_code=None, data=None):
 
@@ -161,6 +197,30 @@ class VirtualPositioner(StatusMixIn):
                               data=data_chunk)
             self.notifier.bus.send(message)
 
+    def process_firmware_data(self, uid, data):
+        """Processes ``SEND_FIRMWARE_DATA`` commands."""
+
+        command_id = CommandID.SEND_FIRMWARE_DATA
+
+        if len(data) > 8:
+            self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+            return
+
+        self._firmware_received += data
+
+        fw_size = len(self._firmware_received)
+
+        if fw_size > self._firmware_size:
+            self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+        elif fw_size == self._firmware_size:
+            if not zlib.crc32(self._firmware_received) == self._crc32:
+                self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+            else:
+                self.firmware = self._firmware_received.decode('utf-8')[-8:]
+                self.reply(command_id, uid)
+        else:
+            self.reply(command_id, uid)
+
     def reset(self):
         """Resets the positioner."""
 
@@ -168,17 +228,26 @@ class VirtualPositioner(StatusMixIn):
         self.status = self._initial_status
         self.firmware = self._initial_firmware
 
+    def is_bootloader(self):
+        """Returns `True` if the positioner is in bootloader mode."""
+
+        return self.firmware.split('.')[1] == '80'
+
     def set_bootloader(self, bootloader=True):
         """Sets the positioner in bootloader mode."""
 
+        firmware_chunks = self.firmware.split('.')
+
         if bootloader:
-            self.firmware = '10.80.12'
-            self.flag = BootloaderStatus
+            firmware_chunks[1] = '80'
+            self.flags = BootloaderStatus
             self.status = BootloaderStatus.BOOTLOADER_INIT
         else:
-            self.firmware = self._initial_firmware
-            self.flag = PS
+            firmware_chunks[1] = '11'
+            self.flags = PS
             self.status = self._initial_status
+
+        self.firmware = '.'.join(firmware_chunks)
 
     async def shutdown(self):
         """Stops the command queue."""
