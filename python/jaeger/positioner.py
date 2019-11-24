@@ -45,7 +45,7 @@ class Positioner(StatusMixIn):
 
         self.alpha = None
         self.beta = None
-        self.speed = [None, None]
+        self.speed = (None, None)
         self.firmware = None
 
         self._move_time = None
@@ -176,7 +176,7 @@ class Positioner(StatusMixIn):
                 return False
 
         if not self.is_bootloader():
-            self.flags = self.get_position_flags()
+            self.flags = self.get_positioner_flags()
         else:
             self.flags = maskbits.BootloaderStatus
 
@@ -337,12 +337,15 @@ class Positioner(StatusMixIn):
         await command
 
         self.firmware = command.get_firmware()
-        self.flags = self.get_position_flags()
+        self.flags = self.get_positioner_flags()
 
-    def get_position_flags(self):
+    def get_positioner_flags(self):
         """Returns the correct position maskbits from the firmware version."""
 
         assert self.firmware, 'firmware is not set.'
+
+        if self.is_bootloader():
+            return maskbits.BootloaderStatus
 
         if StrictVersion(self.firmware) < StrictVersion('04.01.00'):
             return maskbits.PositionerStatusV4_0
@@ -408,7 +411,7 @@ class Positioner(StatusMixIn):
         if speed_command.status.failed:
             return False
 
-        self.speed = [alpha, beta]
+        self.speed = (alpha, beta)
 
         return speed_command
 
@@ -618,9 +621,3 @@ class Positioner(StatusMixIn):
         status_names = '|'.join([status.name for status in self.status.active_bits])
         return (f'<Positioner (id={self.positioner_id}, '
                 f'status={status_names!r}, initialised={self.initialised})>')
-
-
-class VirtualPositioner(Positioner):
-    """Alias for `.Positioner` to be used by the `~jaeger.tests.VirtualFPS`."""
-
-    pass

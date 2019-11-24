@@ -26,9 +26,9 @@ profiles:
         channel: /dev/tty.usbserial-LW3HTDSY
         ttyBaudrate: 1000000
         bitrate: 1000000
-    test:
+    virtual:
         interface: virtual
-        channel: test
+        channel: test1
 
 fps:
     default_layout: filled_hex

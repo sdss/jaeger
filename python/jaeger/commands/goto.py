@@ -106,6 +106,14 @@ class SetSpeed(Command):
 
         super().__init__(**kwargs)
 
+    @staticmethod
+    def encode(alpha, beta):
+        """Encodes the alpha and beta speed as bytes."""
+
+        data_speed = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
+
+        return data_speed
+
 
 class SetCurrent(Command):
     """Sets the current of the alpha and beta motors."""
