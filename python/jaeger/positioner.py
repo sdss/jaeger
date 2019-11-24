@@ -11,6 +11,8 @@ import datetime
 import warnings
 from distutils.version import StrictVersion
 
+import numpy.testing
+
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
 from jaeger.core.exceptions import JaegerUserWarning
@@ -533,14 +535,24 @@ class Positioner(StatusMixIn):
         await self.update_status()
 
         if not self.moving:
-            log.info(f'positioner {self.positioner_id}: position reached (did not move).')
-            return True
 
-        if not self.moving:
-            log.error(f'positioner {self.positioner_id}: positioner is '
-                      'not moving when it should.')
-            if not eng_mode:
-                return False
+            if not relative:
+                goto_position = (alpha, beta)
+            else:
+                goto_position = (alpha + self.position[0], beta + self.position[1])
+
+            try:
+
+                numpy.testing.assert_allclose(self.position, goto_position, atol=0.001)
+                log.info(f'positioner {self.positioner_id}: position reached (did not move).')
+                return True
+
+            except AssertionError:
+
+                log.error(f'positioner {self.positioner_id}: positioner is '
+                          'not moving when it should.')
+                if not eng_mode:
+                    return False
 
         self.move_time = max([alpha_time, beta_time])
 
