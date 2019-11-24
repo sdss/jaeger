@@ -145,6 +145,7 @@ class VirtualPositioner(StatusMixIn):
             elif command_id in [CommandID.GO_TO_ABSOLUTE_POSITION,
                                 CommandID.GO_TO_RELATIVE_POSITION]:
                 self.loop.create_task(self.process_goto(msg))
+
             elif command_id == CommandID.GET_ACTUAL_POSITION:
                 data_position = command.encode(*self.position)
                 self.reply(command_id, uid, data=data_position)
