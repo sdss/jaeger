@@ -746,7 +746,7 @@ class FPS(BaseFPS):
 
         return True
 
-    async def stop_trajectory(self, positioners=None, clear_flags=True, timeout=2):
+    async def stop_trajectory(self, positioners=None, clear_flags=True, timeout=0):
         """Stops all the positioners.
 
         Parameters
@@ -758,7 +758,8 @@ class FPS(BaseFPS):
             sends ``STOP_TRAJECTORY`` which clears all the collision and
             warning flags.
         timeout : float
-            How long to wait before timing out the command.
+            How long to wait before timing out the command. By default, just
+            sends the command and does not wait for replies.
 
         """
 
@@ -768,7 +769,7 @@ class FPS(BaseFPS):
             if positioners is None:
                 await self.send_command('STOP_TRAJECTORY', positioner_id=0, timeout=timeout)
             else:
-                await self.send_to_all('STOP_TRAJECTORY', positioners=positioners)
+                await self.send_to_all('STOP_TRAJECTORY', positioners=positioners, timeout=timeout)
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.
