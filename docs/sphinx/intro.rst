@@ -121,7 +121,5 @@ And it can be commanded by doing ::
 
     >>> await fps.send_trajectory('my_trajectory.yaml')
 
-.. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
-
 .. _kaiju: https://github.com/csayres/kaiju
 .. _python-can: https://github.com/hardbyte/python-can
