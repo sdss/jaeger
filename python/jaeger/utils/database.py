@@ -77,7 +77,7 @@ def get_qa_database(path, create=True):
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname, exist_ok=True)
 
-    db.init(path)
+    db.init(str(path))
     db.connect()
     db.create_tables([Positioner, Goto])
 

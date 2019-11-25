@@ -600,12 +600,12 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_status(self, positioner_id=None, timeout=1):
+    async def update_status(self, positioner_ids=None, timeout=1):
         """Update statuses for all positioners.
 
         Parameters
         ----------
-        positioners : `list`
+        positioner_ids : list
             The list of positioners to update. If `None`, update all
             positioners.
         timeout : float
@@ -613,10 +613,15 @@ class FPS(BaseFPS):
 
         """
 
-        if positioner_id:
-            n_positioners = len(positioner_id)
+        assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
+
+        if positioner_ids:
+            n_positioners = len(positioner_ids)
         else:
-            n_positioners = len(self)  # This is the max number that should reply.
+            # This is the max number that should reply.
+            n_positioners = len(self) if len(self) > 0 else None
+
+        await self.update_firmware_version(timeout=timeout)
 
         command = self.send_command(CommandID.GET_STATUS, positioner_id=0,
                                     n_positioners=n_positioners,
@@ -634,7 +639,7 @@ class FPS(BaseFPS):
         for reply in command.replies:
 
             pid = reply.positioner_id
-            if pid not in self.positioners or (positioner_id and pid not in positioner_id):
+            if pid not in self.positioners or (positioner_ids and pid not in positioner_ids):
                 continue
 
             positioner = self.positioners[pid]
@@ -646,10 +651,22 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_position(self, positioner_id=None):
-        """Updates positions."""
+    async def update_position(self, positioner_ids=None, timeout=1):
+        """Updates positions.
 
-        if not positioner_id:
+        Parameters
+        ----------
+        positioner_ids : list
+            The list of positioners to update. If `None`, update all
+            positioners.
+        timeout : float
+            How long to wait before timing out the command.
+
+        """
+
+        assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
+
+        if not positioner_ids:
             positioner_id = [pid for pid in self.positioners
                              if self[pid].initialised and
                              not self[pid].is_bootloader()]
@@ -657,7 +674,8 @@ class FPS(BaseFPS):
                 return True
 
         commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
-                                        positioners=positioner_id)
+                                        positioners=positioner_id,
+                                        timeout=timeout)
 
         try:
             commands = await commands_all
@@ -687,18 +705,31 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_firmware_version(self, positioner_id=None, timeout=2):
-        """Updates the firmware version of connected positioners."""
+    async def update_firmware_version(self, positioner_ids=None, timeout=2, **kwargs):
+        """Updates the firmware version of connected positioners.
 
-        if positioner_id:
-            n_positioners = len(positioner_id)
+        Parameters
+        ----------
+        positioner_ids : list
+            The list of positioners to update. If `None`, update all
+            positioners.
+        timeout : float
+            How long to wait before timing out the command.
+
+        """
+
+        assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
+
+        if positioner_ids:
+            n_positioners = len(positioner_ids)
         else:
             n_positioners = None
 
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
                                                  timeout=timeout,
-                                                 n_positioners=n_positioners)
+                                                 n_positioners=n_positioners,
+                                                 **kwargs)
 
         await get_firmware_command
 
@@ -708,7 +739,7 @@ class FPS(BaseFPS):
 
         for reply in get_firmware_command.replies:
             pid = reply.positioner_id
-            if pid not in self.positioners or (positioner_id and pid not in positioner_id):
+            if pid not in self.positioners or (positioner_ids and pid not in positioner_ids):
                 continue
 
             positioner = self.positioners[pid]
@@ -716,7 +747,7 @@ class FPS(BaseFPS):
 
         return True
 
-    async def stop_trajectory(self, positioners=None, clear_flags=True, timeout=2):
+    async def stop_trajectory(self, positioners=None, clear_flags=True, timeout=0):
         """Stops all the positioners.
 
         Parameters
@@ -728,7 +759,8 @@ class FPS(BaseFPS):
             sends ``STOP_TRAJECTORY`` which clears all the collision and
             warning flags.
         timeout : float
-            How long to wait before timing out the command.
+            How long to wait before timing out the command. By default, just
+            sends the command and does not wait for replies.
 
         """
 
@@ -738,7 +770,7 @@ class FPS(BaseFPS):
             if positioners is None:
                 await self.send_command('STOP_TRAJECTORY', positioner_id=0, timeout=timeout)
             else:
-                await self.send_to_all('STOP_TRAJECTORY', positioners=positioners)
+                await self.send_to_all('STOP_TRAJECTORY', positioners=positioners, timeout=timeout)
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.

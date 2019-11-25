@@ -23,6 +23,7 @@ notifications:
 branches:
   - master
   - develop
+  - testing
 
 before_install:
   - pip install --pre poetry==1.0.0b3

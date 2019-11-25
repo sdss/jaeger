@@ -164,7 +164,7 @@ class Trajectory(object):
 
         await self.abort_trajectory()
 
-        if not await self.fps.update_status(positioner_id=list(self.trajectories.keys()),
+        if not await self.fps.update_status(positioner_ids=list(self.trajectories.keys()),
                                             timeout=1.):
             self.failed = True
             raise TrajectoryError(f'some positioners did not respond.')

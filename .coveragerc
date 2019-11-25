@@ -3,3 +3,9 @@ branch = true
 include = python/jaeger/*
 omit =
     */core/*.py
+    */cli.py
+    */__init__.py
+    */cannet.py
+    */wago.py
+    */wago/*
+    */actor/*

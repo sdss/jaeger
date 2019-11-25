@@ -236,7 +236,7 @@ class Command(StatusMixIn, asyncio.Future):
         COMMAND_UID += 1
 
         # Starting time
-        self.start_time = time.time()
+        self.start_time = None
 
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
@@ -250,7 +250,7 @@ class Command(StatusMixIn, asyncio.Future):
             assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
         self.n_positioners = n_positioners
 
-        self.timeout = timeout or self.timeout
+        self.timeout = timeout if timeout is not None else self.timeout
 
         # What interface and bus this command should be sent to. Only relevant
         # for multibus interfaces. To be filled by the FPS class when queueing
@@ -349,7 +349,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         if self.status == CommandStatus.TIMEDOUT:
             return
-        elif self.status not in [CommandStatus.RUNNING, CommandStatus.CANCELLED]:
+        elif (self.status not in [CommandStatus.RUNNING,
+                                  CommandStatus.CANCELLED] and self.timeout > 0):
             # We add CANCELLED because when a command is cancelled replies can arrive
             # later. That's ok and not an error.
             log.error(f'{command_name, self.positioner_id, self.command_uid}: '
@@ -452,10 +453,11 @@ class Command(StatusMixIn, asyncio.Future):
         self._log(f'status changed to {self.status.name}')
 
         if self.status == CommandStatus.RUNNING:
+            self.start_time = time.time()
             if self.timeout is None or self.timeout < 0:
                 pass
             elif self.timeout == 0:
-                self.finish_command(CommandStatus.DONE)
+                self.finish_command(CommandStatus.TIMEDOUT)
             else:
                 self._timeout_handle = self.loop.call_later(
                     self.timeout, self.finish_command, CommandStatus.TIMEDOUT)

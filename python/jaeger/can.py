@@ -232,7 +232,7 @@ class JaegerCAN(object):
                           f'to command {r_cmd.command_uid}.')
             r_cmd.reply_queue.put_nowait(msg)
         else:
-            can_log.debug(f'({command_id_flag.name!r}, {positioner_id}): '
+            can_log.debug(f'({command_id_flag.name}, {positioner_id}): '
                           f'cannot find running command for reply UID={reply_uid}.')
 
     def send_to_interface(self, message, interfaces=None, bus=None):
@@ -243,6 +243,11 @@ class JaegerCAN(object):
                       f'{message.command.command_uid!s}): ')
 
         if len(self.interfaces) == 1 and not self.multibus:
+            data_hex = binascii.hexlify(message.data).decode()
+            can_log.debug(log_header + 'sending message with '
+                          f'arbitration_id={message.arbitration_id}, '
+                          f'UID={message.uid}, '
+                          f'and data={data_hex!r} to interface.')
             self.interfaces[0].send(message)
             return
 

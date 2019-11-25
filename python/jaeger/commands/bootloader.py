@@ -248,6 +248,18 @@ class GetFirmwareVersion(commands.Command):
             else:
                 return None
 
+    @staticmethod
+    def encode(firmware):
+        """Returns the bytearray encoding the firmware version."""
+
+        chunks = firmware.split('.')[::-1]
+
+        data = b''
+        for chunk in chunks:
+            data += int_to_bytes(int(chunk), 'u1')
+
+        return data
+
 
 class StartFirmwareUpgrade(commands.Command):
 

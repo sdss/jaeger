@@ -7,23 +7,26 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import zlib
+from contextlib import suppress
 
-import can
-import can.interfaces.virtual
-import numpy
+from can import Message
+from can.interfaces.virtual import VirtualBus
+from can.listener import AsyncBufferedReader
 
 import jaeger
-import jaeger.commands
-from jaeger.commands import Message
-from jaeger.maskbits import PositionerStatusV4_1 as PositionerStatus
-from jaeger.positioner import VirtualPositioner
-from jaeger.utils import int_to_bytes, motor_steps_to_angle, parse_identifier
+from jaeger import utils
+from jaeger.commands import TIME_STEP, CommandID
+from jaeger.maskbits import BootloaderStatus
+from jaeger.maskbits import PositionerStatusV4_1 as PS
+from jaeger.maskbits import ResponseCode
+from jaeger.utils.helpers import StatusMixIn
 
 
-__ALL__ = ['VirtualFPS']
+__ALL__ = ['VirtualFPS', 'VirtualPositioner']
 
 
-class VirtualFPS(jaeger.BaseFPS):
+class VirtualFPS(jaeger.FPS):
     """A mock Focal Plane System for testing and development.
 
     This class listens to the
@@ -33,150 +36,276 @@ class VirtualFPS(jaeger.BaseFPS):
 
     Parameters
     ----------
-    channel : str
-        The channel of the virtual bus to listen to.
     layout : str
         The layout describing the position of the robots on the focal plane.
         If `None`, the default layout will be used. Can be either a layout name
         to be recovered from the database, or a file path to the layout
         configuration.
-    positions : dict
-        A dictionary of positioner ID and ``(alpha, beta)`` initial positions.
-        Omitted positioner will be initialised folded at ``(0, 180)`` degrees.
-    loop
-        The event loop, or the current event loop will be used.
+    qa : bool or path
+        A path to the database used to store QA information. If `True`, uses
+        the value from ``config.files.qa_database``. If `False`, does not do
+        any QA recording.
+    loop : event loop or `None`
+        The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
+        get a valid loop.
+    engineering_mode : bool
+        If `True`, disables most safety checks to enable debugging. This may
+        result in hardware damage so it must not be used lightly.
 
     """
 
-    def __init__(self, channel, layout=None, positions=None, loop=None):
+    def __init__(self, layout=None, qa=False, loop=None, engineering_mode=False):
 
-        #: The virtual bus.
-        self.bus = can.interfaces.virtual.VirtualBus(channel)
+        super().__init__(can_profile='virtual', layout=layout,
+                         wago=False, qa=qa)
 
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
 
-        #: A `.JaegerReaderCallback` instance that calls a callback when
-        #: a new message is received from the bus.
-        self.listener = can.listener.AsyncBufferedReader(loop=self.loop)
+class VirtualPositioner(StatusMixIn):
+    """A virtual positioner that listen to CAN commands.
 
-        #: A `~.can.Notifier` instance that processes messages from
-        #: the bus asynchronously.
-        self.notifier = can.Notifier(self.bus, [self.listener], loop=self.loop)
+    An object of `.VirtualPositioner` represents a real positioner firmware.
+    It knows it's own state at any time and replies
 
-        super().__init__(layout=layout, positioner_class=VirtualPositioner)
+    """
 
-        self.initialise(positions)
-        self.listener_process_task = asyncio.create_task(self.process_queue())
+    _initial_status = (PS.SYSTEM_INITIALIZED |
+                       PS.DISPLACEMENT_COMPLETED |
+                       PS.DISPLACEMENT_COMPLETED_ALPHA |
+                       PS.DISPLACEMENT_COMPLETED_BETA |
+                       PS.POSITION_RESTORED |
+                       PS.DATUM_ALPHA_INITIALIZED |
+                       PS.DATUM_BETA_INITIALIZED |
+                       PS.MOTOR_ALPHA_CALIBRATED |
+                       PS.MOTOR_BETA_CALIBRATED)
 
-    def initialise(self, positions=None):
-        """Sets the initial states of the positioners."""
+    _initial_firmware = '10.11.12'
 
-        initial_status = (PositionerStatus.SYSTEM_INITIALIZED |
-                          PositionerStatus.DATUM_ALPHA_INITIALIZED |
-                          PositionerStatus.DATUM_BETA_INITIALIZED |
-                          PositionerStatus.POSITION_RESTORED)
+    def __init__(self, positioner_id, centre=None, position=(0.0, 0.0),
+                 speed=None, channel=None, loop=None, notifier=None):
 
-        for positioner in self.positioners.values():
-            positioner.firmware = '99.99.99'
-            positioner.status = initial_status
+        self.positioner_id = positioner_id
+        self.centre = centre or (None, None)
 
-        self.set_positions(positions)
+        self.position = position
+        self.speed = speed or (jaeger.config['positioner']['motor_speed'],
+                               jaeger.config['positioner']['motor_speed'])
 
-    def set_positions(self, positions=None):
-        """Sets the alpha/beta positions of robots.
+        self.firmware = self._initial_firmware
 
-        Parameters
-        ----------
-        positions : dict
-            A dictionary of positioner ID and ``(alpha, beta)`` initial
-            positions. Omitted positioner will be initialised folded at
-            ``(0, 180)`` degrees.
+        self._crc32 = 0
+        self._firmware_size = 0
+        self._firmware_received = b''
 
-        """
+        self.channel = channel or jaeger.config['profiles']['virtual']['channel']
+        self.interface = VirtualBus(self.channel)
 
-        for positioner_id in self.positioners:
+        self.loop = loop or asyncio.get_event_loop()
 
-            if positions and positioner_id in positions:
-                alpha, beta = positions[positioner_id]
-            else:
-                alpha, beta = 0, 180
+        self.notifier = notifier
+        self.listener = AsyncBufferedReader(loop=self.loop)
+        self._listener_task = None
 
-            self.positioners[positioner_id].alpha = alpha
-            self.positioners[positioner_id].beta = beta
+        if self.notifier:
+            self.notifier.add_listener(self.listener)
+            self._listener_task = self.loop.create_task(self.process_message())
 
-    async def process_queue(self):
-        """Processes the listener queue."""
+        StatusMixIn.__init__(self, PS, initial_status=self._initial_status)
+
+    async def process_message(self):
+        """Processes incoming commands from the bus."""
 
         while True:
-            message = await self.listener.get_message()
-            asyncio.create_task(self.process_message(message))
 
-    async def process_message(self, message):
-        """Processes a message from the virtual bus."""
+            msg = await self.listener.get_message()
 
-        pid, cid, uid, __ = parse_identifier(message.arbitration_id)
+            arbitration_id = msg.arbitration_id
+            positioner_id, command_id, uid, __ = utils.parse_identifier(arbitration_id)
 
-        positioner_ids = [pid] if pid != 0 else list(self.positioners)
+            if positioner_id not in [0, self.positioner_id]:
+                continue
 
-        CommandID = jaeger.CommandID
-        command = CommandID(cid).get_command()
+            command_id = CommandID(command_id)
+            command = command_id.get_command()
 
-        for pid in positioner_ids:
+            if positioner_id == 0 and not command.broadcastable:
+                self.reply(command_id, uid, response_code=ResponseCode.INVALID_BROADCAST_COMMAND)
+                continue
 
-            if cid == CommandID.GET_STATUS:
-                data, response_code = self.get_status(pid)
-            elif cid == CommandID.GET_FIRMWARE_VERSION:
-                data, response_code = self.get_firmware_version(pid)
-            elif cid == CommandID.GET_ACTUAL_POSITION:
-                data, response_code = self.get_actual_position(pid)
+            if command_id == CommandID.GET_ID:
+                self.reply(command_id, uid)
+
+            elif command_id == CommandID.GET_FIRMWARE_VERSION:
+                data_firmware = command.encode(self.firmware)
+                self.reply(command_id, uid, data=data_firmware)
+
+            elif command_id == CommandID.GET_STATUS:
+                data_status = utils.int_to_bytes(self.status)
+                self.reply(command_id, uid, data=data_status)
+
+            elif command_id in [CommandID.GO_TO_ABSOLUTE_POSITION,
+                                CommandID.GO_TO_RELATIVE_POSITION]:
+                self.loop.create_task(self.process_goto(msg))
+
+            elif command_id == CommandID.GET_ACTUAL_POSITION:
+                data_position = command.encode(*self.position)
+                self.reply(command_id, uid, data=data_position)
+
+            elif command_id == CommandID.SET_SPEED:
+                data_speed = command.encode(*self.speed)
+                self.reply(command_id, uid, data=data_speed)
+
+            elif command_id == CommandID.START_FIRMWARE_UPGRADE:
+                if not self.is_bootloader():
+                    self.reply(command_id, uid, response_code=ResponseCode.INVALID_COMMAND)
+                    continue
+
+                try:
+                    data = msg.data
+                    firmware_size = utils.bytes_to_int(data[0:4], 'u4')
+                    crc32 = utils.bytes_to_int(data[4:9], 'u4')
+                except Exception:
+                    self.reply(command_id, uid, response_code=ResponseCode.INVALID_COMMAND)
+                    continue
+
+                self._firmware_size = firmware_size
+                self._crc32 = crc32
+                self._firmware_received = b''
+
+                self.reply(command_id, uid)
+
+            elif command_id == CommandID.SEND_FIRMWARE_DATA:
+                self.process_firmware_data(uid, msg.data)
+
             else:
-                data = []
-                response_code = 0
+                # Should be a valid command or CommandID(command_id) would
+                # have failed. Just return OK.
+                self.reply(command_id, uid)
 
-            message = Message(command, positioner_id=pid, uid=uid,
-                              response_code=response_code, data=data)
+    def reply(self, command_id, uid, response_code=None, data=None):
 
-            self.bus.send(message)
+        response_code = response_code or ResponseCode.COMMAND_ACCEPTED
 
-        return
+        if isinstance(data, (bytearray, bytes)):
+            data = [data]
+        elif not data:
+            data = [None]
 
-    def get_status(self, positioner_id):
-        """Replies to GET_STATUS."""
+        reply_id = utils.get_identifier(self.positioner_id,
+                                        command_id,
+                                        uid=uid,
+                                        response_code=response_code)
 
-        status = self.positioners[positioner_id].status
-        data = int_to_bytes(status)
-        response_code = 0
+        for data_chunk in data:
+            message = Message(arbitration_id=reply_id,
+                              extended_id=True,
+                              data=data_chunk)
+            self.notifier.bus.send(message)
 
-        return data, response_code
+    def process_firmware_data(self, uid, data):
+        """Processes ``SEND_FIRMWARE_DATA`` commands."""
 
-    def get_firmware_version(self, positioner_id):
-        """Replies to GET_FIRMWARE_VERSION."""
+        command_id = CommandID.SEND_FIRMWARE_DATA
 
-        firmware = self.positioners[positioner_id].firmware
-        if firmware is None:
-            firmware = '00.00.00'
+        if len(data) > 8:
+            self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+            return
 
-        data = bytearray()
-        for chunk in firmware.split('.'):
-            data += int_to_bytes(int(chunk), dtype=numpy.uint8)
+        self._firmware_received += data
 
-        response_code = 0
+        fw_size = len(self._firmware_received)
 
-        return data, response_code
+        if fw_size > self._firmware_size:
+            self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+        elif fw_size == self._firmware_size:
+            if not zlib.crc32(self._firmware_received) == self._crc32:
+                self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+            else:
+                self.firmware = self._firmware_received.decode('utf-8')[-8:]
+                self.reply(command_id, uid)
+        else:
+            self.reply(command_id, uid)
 
-    def get_actual_position(self, positioner_id):
-        """Replies to GET_ACTUAL_POSITION."""
+    async def process_goto(self, message):
+        """Process an absolute or relative goto command."""
 
-        alpha = self.positioners[positioner_id].alpha
-        beta = self.positioners[positioner_id].beta
+        __, command_id, uid, __ = utils.parse_identifier(message.arbitration_id)
+        command_id = CommandID(command_id)
+        command = command_id.get_command()
 
-        if alpha is None or beta is None:
-            raise ValueError('GET_ACTUAL_POSITION: alpha or beta are None '
-                             f'for positoner {positioner_id}')
+        data = message.data
+        alpha_move, beta_move = command.decode(data)
 
-        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
-        data = int_to_bytes(alpha_steps) + int_to_bytes(beta_steps)
+        if command_id == CommandID.GO_TO_RELATIVE_POSITION:
+            alpha_move += self.position[0]
+            beta_move += self.position[0]
 
-        response_code = 0
+        target_alpha = self.position[0] + alpha_move
+        target_beta = self.position[1] + beta_move
 
-        return data, response_code
+        if target_alpha < 0 or target_beta < 0 or target_alpha > 360 or target_beta > 360:
+            self.reply(command_id, uid, ResponseCode.VALUE_OUT_OF_RANGE)
+            return
+
+        if alpha_move == 0.:
+            alpha_move_time = 0.
+        else:
+            alpha_move_time = int(utils.get_goto_move_time(alpha_move,
+                                                           self.speed[0]) / TIME_STEP)
+
+        if beta_move == 0.:
+            beta_move_time = 0.0
+        else:
+            beta_move_time = int(utils.get_goto_move_time(beta_move,
+                                                          self.speed[1]) / TIME_STEP)
+
+        self.reply(command_id, uid, ResponseCode.COMMAND_ACCEPTED,
+                   data=[utils.int_to_bytes(alpha_move_time, 'i4') +
+                         utils.int_to_bytes(beta_move_time, 'i4')])
+
+        self.status ^= (PS.DISPLACEMENT_COMPLETED |
+                        PS.DISPLACEMENT_COMPLETED_ALPHA |
+                        PS.DISPLACEMENT_COMPLETED_BETA)
+        self.status |= (PS.TRAJECTORY_ALPHA_RECEIVED | PS.TRAJECTORY_BETA_RECEIVED)
+
+        await asyncio.sleep(max(alpha_move * TIME_STEP, beta_move_time * TIME_STEP))
+
+        self.status |= (PS.DISPLACEMENT_COMPLETED |
+                        PS.DISPLACEMENT_COMPLETED_ALPHA |
+                        PS.DISPLACEMENT_COMPLETED_BETA)
+
+    def reset(self):
+        """Resets the positioner."""
+
+        self.position = (0.0, 0.0)
+        self.status = self._initial_status
+        self.firmware = self._initial_firmware
+
+    def is_bootloader(self):
+        """Returns `True` if the positioner is in bootloader mode."""
+
+        return self.firmware.split('.')[1] == '80'
+
+    def set_bootloader(self, bootloader=True):
+        """Sets the positioner in bootloader mode."""
+
+        firmware_chunks = self.firmware.split('.')
+
+        if bootloader:
+            firmware_chunks[1] = '80'
+            self.flags = BootloaderStatus
+            self.status = BootloaderStatus.BOOTLOADER_INIT
+        else:
+            firmware_chunks[1] = '11'
+            self.flags = PS
+            self.status = self._initial_status
+
+        self.firmware = '.'.join(firmware_chunks)
+
+    async def shutdown(self):
+        """Stops the command queue."""
+
+        if self._listener_task:
+            self._listener_task.cancel()
+
+            with suppress(asyncio.CancelledError):
+                await self._listener_task
