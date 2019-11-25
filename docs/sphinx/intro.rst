@@ -11,8 +11,8 @@ Introduction to jaeger
 - Interfaces with kaiju_ to provide anticollision path planning for trajectories.
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
-- Stores last known positions and provide a system to recover from unexpected errors.
-- Implements the Field View Camera control and feedback loop.
+- Interfaces with the modbus WAGO PLC controllers.
+- Records QA metrology.
 - Provides a TCP/IP interface to send commands and output keywords using the SDSS-standard formatting.
 
 The code for jaeger is developed in `GitHub <https://github.com/sdss/jaeger>`__ and can be installed using `sdss_install <https://github.com/sdss/sdss_install>`__ or by running ::
