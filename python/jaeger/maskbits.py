@@ -16,6 +16,14 @@ __ALL__ = ['Maskbit', 'PositionerStatus', 'CommandStatus' 'ResponseCode',
 class Maskbit(enum.IntFlag):
     """A maskbit enumeration. Intended for subclassing."""
 
+    __version__ = None
+
+    @property
+    def version(self):
+        """The version of the flags."""
+
+        return self.__version__
+
     @property
     def active_bits(self):
         """Returns a list of flags that match the value."""
@@ -61,6 +69,8 @@ class CommandStatus(Maskbit):
 
 class PositionerStatusV4_1(Maskbit):
     """Maskbits for positioner status (firmware >=04.01.00)."""
+
+    __version__ = '4.1'
 
     SYSTEM_INITIALIZED = 0x0000000000000001
     CONFIG_CHANGED = 0x0000000000000002
@@ -118,6 +128,8 @@ class PositionerStatusV4_1(Maskbit):
 class PositionerStatusV4_0(Maskbit):
     """Maskbits for positioner status (firmware <=04.00.04)."""
 
+    __version__ = '4.0'
+
     SYSTEM_INITIALIZATION = 0x00000001
     RECEIVING_TRAJECTORY = 0x00000100
     TRAJECTORY_ALPHA_RECEIVED = 0x00000200
@@ -147,6 +159,10 @@ class PositionerStatusV4_0(Maskbit):
 
         return True if (PositionerStatusV4_0.ALPHA_COLLISION & self or
                         PositionerStatusV4_0.BETA_COLLISION & self) else False
+
+
+#: Alias for the default positioner status flags.
+PositionerStatus = PositionerStatusV4_1
 
 
 class BootloaderStatus(Maskbit):

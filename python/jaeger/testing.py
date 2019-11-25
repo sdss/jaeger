@@ -17,9 +17,7 @@ from can.listener import AsyncBufferedReader
 import jaeger
 from jaeger import utils
 from jaeger.commands import TIME_STEP, CommandID
-from jaeger.maskbits import BootloaderStatus
-from jaeger.maskbits import PositionerStatusV4_1 as PS
-from jaeger.maskbits import ResponseCode
+from jaeger.maskbits import BootloaderStatus, PositionerStatus, ResponseCode
 from jaeger.utils.helpers import StatusMixIn
 
 
@@ -68,15 +66,15 @@ class VirtualPositioner(StatusMixIn):
 
     """
 
-    _initial_status = (PS.SYSTEM_INITIALIZED |
-                       PS.DISPLACEMENT_COMPLETED |
-                       PS.DISPLACEMENT_COMPLETED_ALPHA |
-                       PS.DISPLACEMENT_COMPLETED_BETA |
-                       PS.POSITION_RESTORED |
-                       PS.DATUM_ALPHA_INITIALIZED |
-                       PS.DATUM_BETA_INITIALIZED |
-                       PS.MOTOR_ALPHA_CALIBRATED |
-                       PS.MOTOR_BETA_CALIBRATED)
+    _initial_status = (PositionerStatus.SYSTEM_INITIALIZED |
+                       PositionerStatus.DISPLACEMENT_COMPLETED |
+                       PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
+                       PositionerStatus.DISPLACEMENT_COMPLETED_BETA |
+                       PositionerStatus.POSITION_RESTORED |
+                       PositionerStatus.DATUM_ALPHA_INITIALIZED |
+                       PositionerStatus.DATUM_BETA_INITIALIZED |
+                       PositionerStatus.MOTOR_ALPHA_CALIBRATED |
+                       PositionerStatus.MOTOR_BETA_CALIBRATED)
 
     _initial_firmware = '10.11.12'
 
@@ -109,7 +107,7 @@ class VirtualPositioner(StatusMixIn):
             self.notifier.add_listener(self.listener)
             self._listener_task = self.loop.create_task(self.process_message())
 
-        StatusMixIn.__init__(self, PS, initial_status=self._initial_status)
+        StatusMixIn.__init__(self, PositionerStatus, initial_status=self._initial_status)
 
     async def process_message(self):
         """Processes incoming commands from the bus."""
@@ -262,16 +260,17 @@ class VirtualPositioner(StatusMixIn):
                    data=[utils.int_to_bytes(alpha_move_time, 'i4') +
                          utils.int_to_bytes(beta_move_time, 'i4')])
 
-        self.status ^= (PS.DISPLACEMENT_COMPLETED |
-                        PS.DISPLACEMENT_COMPLETED_ALPHA |
-                        PS.DISPLACEMENT_COMPLETED_BETA)
-        self.status |= (PS.TRAJECTORY_ALPHA_RECEIVED | PS.TRAJECTORY_BETA_RECEIVED)
+        self.status ^= (PositionerStatus.DISPLACEMENT_COMPLETED |
+                        PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
+                        PositionerStatus.DISPLACEMENT_COMPLETED_BETA)
+        self.status |= (PositionerStatus.TRAJECTORY_ALPHA_RECEIVED |
+                        PositionerStatus.TRAJECTORY_BETA_RECEIVED)
 
         await asyncio.sleep(max(alpha_move * TIME_STEP, beta_move_time * TIME_STEP))
 
-        self.status |= (PS.DISPLACEMENT_COMPLETED |
-                        PS.DISPLACEMENT_COMPLETED_ALPHA |
-                        PS.DISPLACEMENT_COMPLETED_BETA)
+        self.status |= (PositionerStatus.DISPLACEMENT_COMPLETED |
+                        PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
+                        PositionerStatus.DISPLACEMENT_COMPLETED_BETA)
 
     def reset(self):
         """Resets the positioner."""
@@ -296,7 +295,7 @@ class VirtualPositioner(StatusMixIn):
             self.status = BootloaderStatus.BOOTLOADER_INIT
         else:
             firmware_chunks[1] = '11'
-            self.flags = PS
+            self.flags = PositionerStatus
             self.status = self._initial_status
 
         self.firmware = '.'.join(firmware_chunks)

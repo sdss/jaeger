@@ -52,8 +52,8 @@ class Positioner(StatusMixIn):
 
         self._move_time = None
 
-        super().__init__(maskbit_flags=maskbits.PositionerStatusV4_1,
-                         initial_status=maskbits.PositionerStatusV4_1.UNKNOWN)
+        super().__init__(maskbit_flags=maskbits.PositionerStatus,
+                         initial_status=maskbits.PositionerStatus.UNKNOWN)
 
     @property
     def position(self):
@@ -355,7 +355,7 @@ class Positioner(StatusMixIn):
         if StrictVersion(self.firmware) < StrictVersion('04.01.00'):
             return maskbits.PositionerStatusV4_0
         else:
-            return maskbits.PositionerStatusV4_1
+            return maskbits.PositionerStatus
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""

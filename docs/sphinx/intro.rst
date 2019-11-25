@@ -70,7 +70,7 @@ Since its 7.0 version, IPython provides `experimental support for asyncio <https
 Scheduling commands
 -------------------
 
-To schedule a command you must use the `.FPS.send_command` method, which returns a `.Command` instance. Note that the command does *not* get executed until it is awaited ::
+To schedule a command you must use the `.FPS.send_command` method, which returns a `.Command` instance. Note that the command does *not* get executed until `~.FPS.send_command` is awaited ::
 
     >>> fps = FPS()
     >>> cmd = fps.send_command('GO_TO_ABSOLUTE_POSITION', positioner_id=4, alpha=100, beta=30)
@@ -78,7 +78,7 @@ To schedule a command you must use the `.FPS.send_command` method, which returns
     <Command GO_TO_ABSOLUTE_POSITION (positioner_id=4, status='READY')>
     >>> await cmd
 
-The replies to the command are stored in the ``replies`` attribute: ::
+The replies to the command are stored in the `~.Command.replies` attribute: ::
 
     >>> status_cmd = GetStatus(positioner_id=4)
     >>> fps.send_command(status_cmd)

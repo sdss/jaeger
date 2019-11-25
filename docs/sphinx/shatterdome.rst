@@ -136,8 +136,6 @@ And it can be commanded by doing ::
 
     >>> await fps.send_trajectory('my_trajectory.yaml')
 
-.. warning:: The kaiju check feature is not yet available and all trajectories are currently sent without any anti-collision check.
-
 Aborting all trajectories
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -152,14 +150,14 @@ Note that the `~.FPS.abort` method creates and returns a `~asyncio.Task` and wil
 `.Positioner`, status, and position
 -----------------------------------
 
-The `.Positioner` class stores information about a single positioner, its `status <.maskbits.PositionerStatus>` and position, and provides high level methods to command the positioner. `.Positioner` objects need to be linked to a `.FPS` instance and are usually created when the `.FPS` class is instantiated.
+The `.Positioner` class stores information about a single positioner, its `status <.maskbits.PositionerStatusV4_1>` and position, and provides high level methods to command the positioner. `.Positioner` objects need to be linked to a `.FPS` instance and are usually created when the `.FPS` class is instantiated.
 
 .. _positioner-initialise:
 
 Initialisation
 ^^^^^^^^^^^^^^
 
-When a `.Positioner` is instantiated it contains no information about its position (angle of the alpha and beta arms) and its status is set to `~.maskbits.PositionerStatus.UNKNOWN`. By calling and awaiting `.Positioner.initialise`, the following steps are executed:
+When a `.Positioner` is instantiated it contains no information about its position (angle of the alpha and beta arms) and its status is set to `~.maskbits.PositionerStatusV4_1.UNKNOWN`. By calling and awaiting `.Positioner.initialise`, the following steps are executed:
 
 - Updates the firmware version.
 - The status is updated by calling `.Positioner.update_status`.
@@ -173,7 +171,7 @@ After this sequence, the positioner is ready to be commanded.
 Position and status pollers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The status of the positioner, given as a `maskbit <maskbits>`_ `~.maskbits.PositionerStatus` (or `.maskbits.BootloaderStatus` if the positioner is in `bootloader <bootloader-mode>`_ mode) can be accessed via the ``status`` attribute and updated by calling the `~.Positioner.update_status` coroutine. Similarly, the current position of the positioner is stored in the ``alpha`` and ``beta`` attributes, in degrees, and updated via `~.Positioner.update_position`.
+The status of the positioner, given as a `maskbit <maskbits>`_ `~.maskbits.PositionerStatusV4_1` (or `.maskbits.BootloaderStatus` if the positioner is in `bootloader <bootloader-mode>`_ mode) can be accessed via the ``status`` attribute and updated by calling the `~.Positioner.update_status` coroutine. Similarly, the current position of the positioner is stored in the ``alpha`` and ``beta`` attributes, in degrees, and updated via `~.Positioner.update_position`.
 
 As we initialise the FPS, two `~.utils.helpers.Poller` instances are created as part of the `.PollerList` `.FPS.pollers` to track the position and status of each positioner. These tasks simply call `~.FPS.update_status`. and `~.FPS.update_position` every few seconds and update the corresponding attributes in the positioners. The delay between polls can be set via the `~.utils.helpers.Poller.set_delay` method.
 
@@ -192,7 +190,7 @@ The `.Positioner.goto` coroutine allows to easily send the positioner to a posit
     # Only go to position using the speed we just set
     await positioner.goto(alpha=100, beta=154)
 
-Awaiting `.Positioner.goto` blocks until the positioner has arrived to the desired position and `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED` is set.
+Awaiting `.Positioner.goto` blocks until the positioner has arrived to the desired position and `~.maskbits.PositionerStatusV4_1.DISPLACEMENT_COMPLETED` is set.
 
 Waiting for a status
 ^^^^^^^^^^^^^^^^^^^^
@@ -200,10 +198,10 @@ Waiting for a status
 In many cases it's convenient to asynchronously block the execution of a coroutine while we wait until certain bits appear in the status. To do that one can use `~.Positioner.wait_for_status` ::
 
     # Wait until DISPLACEMENT_COMPLETED appears
-    await positioner.wait_for_status(PositionerStatus.DISPLACEMENT_COMPLETED)
+    await positioner.wait_for_status(PositionerStatusV4_1.DISPLACEMENT_COMPLETED)
 
     # Wait untils SYSTEM_INITIALIZED and DATUM_ALPHA_INITIALIZED are set. Time-out in 3 seconds if that doesn't happen.
-    await positioner.wait_for_status([PositionerStatus.SYSTEM_INITIALIZED, PositionerStatus.DATUM_ALPHA_INITIALIZED], timeout=3)
+    await positioner.wait_for_status([PositionerStatusV4_1.SYSTEM_INITIALIZED, PositionerStatusV4_1.DATUM_ALPHA_INITIALIZED], timeout=3)
 
 Note that `~.Positioner.wait_for_status` is independent of the status poller. While `~.Positioner.wait_for_status` is running, a `.GET_STATUS` command will be issue wach ``delay`` seconds, in addition to the normal polling.
 
@@ -260,14 +258,14 @@ The ``timeout`` can be set to `None`, in which case the command will never time 
     import asyncio
 
     from jaeger import FPS
-    from jaeger.maskbits import CommandStatus, PositionerStatus
+    from jaeger.maskbits import CommandStatus, PositionerStatusV4_1
 
 
     async def check_status(status_cmd, positioners):
 
         print('Starting monitoring')
 
-        if all(asyncio.gather(*[positioner.wait_for_status(PositionerStatus.DATUM_ALPHA_INITIALIZED) for positioner in positioners])):
+        if all(asyncio.gather(*[positioner.wait_for_status(PositionerStatusV4_1.DATUM_ALPHA_INITIALIZED) for positioner in positioners])):
             status_cmd.finish_command(status=CommandStatus.DONE)
         else:
             status_cmd.finish_command(status=CommandStatus.FAILED)

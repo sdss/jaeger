@@ -11,7 +11,7 @@ import asyncio
 import pytest
 
 import jaeger
-from jaeger.maskbits import PositionerStatusV4_1
+from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
 
 
@@ -76,13 +76,13 @@ async def test_pollers_delay(vfps, vpositioners):
     await vfps.initialise()
     await vfps.pollers.set_delay(0.01, immediate=True)
 
-    vpositioners[0].status |= PositionerStatusV4_1.HALL_ALPHA_DISABLE
+    vpositioners[0].status |= PositionerStatus.HALL_ALPHA_DISABLE
     vpositioners[0].position = (180., 180.)
 
     await asyncio.sleep(0.1)
 
     assert vfps[1].position == (180., 180.)
-    assert PositionerStatusV4_1.HALL_ALPHA_DISABLE in vpositioners[0].status
+    assert PositionerStatus.HALL_ALPHA_DISABLE in vpositioners[0].status
 
     await vfps.pollers.stop()
 
