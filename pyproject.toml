@@ -35,14 +35,14 @@ sdss-clu = "^0.1.5"
 pyserial = "^3.4"
 pymodbus = "^2.3.0"
 peewee = "^3.11.2"
-setuptools = "^41.6.0"
+setuptools = "^42.0.0"
 toml = "^0.10.0"
 
 # Docs extras. Need to be added to dependencies and not to dev-dependencies because otherwise
 # they won't be installed on pip install .[docs]
 # See https://github.com/sdispater/poetry/pull/606#issuecomment-437943927
 # Need to do poetry install -E docs to actually install everything.
-Sphinx = {version = "^2.0", optional = true}
+Sphinx = {version = "^2.1", optional = true}
 # releases = {version="^1.6.1", optional = true}
 sphinxcontrib-trio = {version = "1.1.0", optional = true}
 sphinx-click = {version = "2.3.0", optional = true}

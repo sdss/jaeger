@@ -1087,7 +1087,7 @@ testing = ["pathlib2", "contextlib2", "unittest2"]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click", "semantic-version"]
 
 [metadata]
-content-hash = "1ca481411d0551f7015dbfede14d02609ef2ede38eb84ae0e3f377d1b9338f42"
+content-hash = "7008af9fb3628ea3d33aedde82bcce23460e0db41fe9e1fdf2cbc10c4c2cc454"
 python-versions = "^3.7"
 
 [metadata.files]
