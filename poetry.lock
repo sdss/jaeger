@@ -498,7 +498,7 @@ description = "a little orm"
 name = "peewee"
 optional = false
 python-versions = "*"
-version = "3.11.2"
+version = "3.12.0"
 
 [[package]]
 category = "dev"
@@ -638,7 +638,7 @@ description = "Persistent/Functional/Immutable data structures"
 name = "pyrsistent"
 optional = false
 python-versions = "*"
-version = "0.15.5"
+version = "0.15.6"
 
 [package.dependencies]
 six = "*"
@@ -1411,7 +1411,7 @@ pbr = [
     {file = "pbr-5.4.3.tar.gz", hash = "sha256:2c8e420cd4ed4cec4e7999ee47409e876af575d4c35a45840d59e8b5f3155ab8"},
 ]
 peewee = [
-    {file = "peewee-3.11.2.tar.gz", hash = "sha256:f3f5c80c51b632d031f60454accadd84f166453a471bff63093ca674973f2a4e"},
+    {file = "peewee-3.12.0.tar.gz", hash = "sha256:8298c603d822e1b9023a981e0e771236f5d4975ca9386e15c5d5ec44e5a9b257"},
 ]
 pexpect = [
     {file = "pexpect-4.7.0-py2.py3-none-any.whl", hash = "sha256:2094eefdfcf37a1fdbfb9aa090862c1a4878e5c7e0e7e7088bdb511c558e5cd1"},
@@ -1463,7 +1463,7 @@ pyparsing = [
     {file = "pyparsing-2.4.5.tar.gz", hash = "sha256:4ca62001be367f01bd3e92ecbb79070272a9d4964dce6a48a82ff0b8bc7e683a"},
 ]
 pyrsistent = [
-    {file = "pyrsistent-0.15.5.tar.gz", hash = "sha256:eb6545dbeb1aa69ab1fb4809bfbf5a8705e44d92ef8fc7c2361682a47c46c778"},
+    {file = "pyrsistent-0.15.6.tar.gz", hash = "sha256:f3b280d030afb652f79d67c5586157c5c1355c9a58dfc7940566e28d28f3df1b"},
 ]
 pyserial = [
     {file = "pyserial-3.4-py2.py3-none-any.whl", hash = "sha256:e0770fadba80c31013896c7e6ef703f72e7834965954a78e71a3049488d4d7d8"},
