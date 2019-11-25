@@ -104,7 +104,7 @@ To move positioner 8 to :math:`\alpha=85,\,\beta=30` at a speed of 1500 RPM, you
     <Positioner (id=8, status='DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZED', initialised=False)>
     >>> await positioner.goto(alpha=85, beta=30, speed_alpha=1500, speed_beta=1500)
 
-The command will asynchronously block until the position has been reached and the status is again `~.maskbits.PositionerStatus.DISPLACEMENT_COMPLETED`.
+The command will asynchronously block until the position has been reached and the status is again `~jaeger.maskbits.PositionerStatusV4_1.DISPLACEMENT_COMPLETED`.
 
 Trajectories can be sent either through a `YAML <http://yaml.org>`__ file or a dictionary. In both cases the trajectory must include, for each positioner, a list of positions and times for the ``'alpha'`` arm in the format :math:`\rm [(\alpha_1, t_1), (\alpha_2, t_2), ...]`, and a similar dictionary for ``'beta'``. An example of YAML file with a valid trajectory for positioners 1 and 4 is
 
