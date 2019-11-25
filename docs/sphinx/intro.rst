@@ -23,7 +23,7 @@ To check out the development version do ::
 
     git clone git://github.com/sdss/jaeger.git
 
-jaeger is developed as an `asyncio <https://docs.python.org/3/library/asyncio.html>`__ library and a certain familiarity with asynchronous programming. The actor functionality (TCP/IP connection, command parser, inter-actor communication) is built on top of `CLU <https://github.com/sdss/clu>`__.
+jaeger is developed as an `asyncio <https://docs.python.org/3/library/asyncio.html>`__ library and a certain familiarity with asynchronous programming is required. The actor functionality (TCP/IP connection, command parser, inter-actor communication) is built on top of `CLU <https://github.com/sdss/clu>`__.
 
 
 .. _intro-simple:
