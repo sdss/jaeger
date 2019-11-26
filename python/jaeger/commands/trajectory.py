@@ -287,7 +287,7 @@ class Trajectory(object):
             log.error(f'failed setting poller delay: {ee}.')
 
         # Wait approximate time before starting to poll for status
-        await asyncio.sleep(0.95 * self.move_time, loop=self.fps.loop)
+        await asyncio.sleep(0.95 * self.move_time)
 
         remaining_time = self.move_time - 0.95 * self.move_time
 
@@ -296,7 +296,7 @@ class Trajectory(object):
             self.fps.positioners[pos_id].flags.DISPLACEMENT_COMPLETED,
             timeout=remaining_time + 3, delay=0.1)
             for pos_id in self.trajectories]
-        results = await asyncio.gather(*wait_status, loop=self.fps.loop)
+        results = await asyncio.gather(*wait_status)
 
         if not all(results):
             if use_pollers:
