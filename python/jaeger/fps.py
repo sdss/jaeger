@@ -303,7 +303,8 @@ class FPS(BaseFPS):
 
         self._is_multibus = True
 
-        id_cmd = self.send_command(CommandID.GET_ID, timeout=0.5)
+        id_cmd = self.send_command(CommandID.GET_ID,
+                                   timeout=config['fps']['initialise_timeouts'])
         await id_cmd
 
         # Parse the replies
@@ -499,7 +500,7 @@ class FPS(BaseFPS):
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
 
-        # Resets all positioner
+        # Resets all positioners
         for positioner in self.positioners.values():
             await positioner.reset()
 
@@ -516,7 +517,7 @@ class FPS(BaseFPS):
 
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
-                                                 timeout=0.5,
+                                                 timeout=config['fps']['initialise_timeouts'],
                                                  n_positioners=n_expected_positioners)
 
         await get_firmware_command
@@ -553,7 +554,7 @@ class FPS(BaseFPS):
             warnings.warn('positioners with different firmware versions found.',
                           JaegerUserWarning)
 
-        await self.update_status(timeout=0.5)
+        await self.update_status(timeout=config['fps']['initialise_timeouts'])
 
         if len(unknwon_positioners) > 0:
             warnings.warn(f'found {len(unknwon_positioners)} unknown positioners '
@@ -679,18 +680,15 @@ class FPS(BaseFPS):
                                         positioners=positioner_id,
                                         timeout=timeout)
 
-        try:
-            commands = await commands_all
-        except Exception as ee:
-            log.error(f'failed polling positions: {ee}')
-            return False
+        commands = await commands_all
 
         update_position_commands = []
         for command in commands:
 
             pid = command.positioner_id
 
-            if command.status.failed and self[pid].initialised:
+            if (not isinstance(command, Command) or
+                    (command.status.failed and self[pid].initialised)):
                 log.warning(f'({CommandID.GET_ACTUAL_POSITION.name}, '
                             f'{command.positioner_id}): '
                             'failed during update position.')

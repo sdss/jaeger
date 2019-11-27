@@ -32,6 +32,7 @@ profiles:
 
 fps:
     default_layout: filled_hex
+    initialise_timeouts: 0.5
     status_poller_delay: 5
     position_poller_delay: 5
     wago: true
