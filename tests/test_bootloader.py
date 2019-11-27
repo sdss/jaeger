@@ -24,7 +24,7 @@ async def test_bootloader(vfps, vpositioners):
     for vpositioner in vpositioners:
         vpositioner.set_bootloader()
 
-    await vfps.update_firmware_version()
+    await vfps.update_status()
 
     for positioner in vfps.values():
         assert positioner.is_bootloader()
