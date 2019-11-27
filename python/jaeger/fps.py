@@ -617,9 +617,9 @@ class FPS(BaseFPS):
 
         assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
 
-        if positioner_ids is None:
+        if positioner_ids:
             n_positioners = len(positioner_ids)
-        else:
+        elif positioner_ids is None:
             # This is the max number that should reply.
             n_positioners = len(self) if len(self) > 0 else None
 
@@ -724,9 +724,9 @@ class FPS(BaseFPS):
 
         assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
 
-        if positioner_ids is None:
+        if positioner_ids:
             n_positioners = len(positioner_ids)
-        else:
+        elif positioner_ids is None:
             n_positioners = len(self) if len(self) > 0 else None
 
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
