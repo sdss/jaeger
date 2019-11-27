@@ -11,7 +11,7 @@ matrix:
       dist: xenial
       sudo: true
       after_success:
-        - poetry run coveralls
+        - poetry run codecov
     - python: 3.8
       dist: xenial
       sudo: true
