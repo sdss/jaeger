@@ -188,7 +188,7 @@ class Positioner(StatusMixIn):
         self.status = self.flags(status)
 
         log.debug(f'positioner {self.positioner_id}: '
-                  f'status={self.status.name} ({self.status.value})')
+                  f'status={self.status!s} ({self.status.value})')
 
         # Checks if the positioner is collided. If so, locks the FPS.
         if not self.is_bootloader() and self.collision and not self.fps.locked:
@@ -633,6 +633,5 @@ class Positioner(StatusMixIn):
         return record
 
     def __repr__(self):
-        status_names = '|'.join([status.name for status in self.status.active_bits])
         return (f'<Positioner (id={self.positioner_id}, '
-                f'status={status_names!r}, initialised={self.initialised})>')
+                f'status={self.status!s}, initialised={self.initialised})>')

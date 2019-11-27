@@ -420,7 +420,7 @@ class Command(StatusMixIn, asyncio.Future):
 
             if is_done and self._done_callback:
                 if asyncio.iscoroutinefunction(self._done_callback):
-                    # I don't love this because this task is unawaited but ...
+                    # I don't love this because this task is not awaited but ...
                     asyncio.create_task(self._done_callback())
                     pass
                 else:

@@ -195,7 +195,7 @@ class VirtualPositioner(StatusMixIn):
 
         for data_chunk in data:
             message = Message(arbitration_id=reply_id,
-                              extended_id=True,
+                              is_extended_id=True,
                               data=data_chunk)
             self.notifier.bus.send(message)
 
