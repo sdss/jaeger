@@ -386,7 +386,7 @@ class FPS(BaseFPS):
             return command
 
         if command.status.is_done:
-            log.error(f'{command_name, positioner_id}: trying to send a done command.')
+            log.error(f'({command_name}, {positioner_id}): trying to send a done command.')
             return command
 
         command._override = override
@@ -401,7 +401,7 @@ class FPS(BaseFPS):
                 return command
 
         self.can.command_queue.put_nowait(command)
-        log.debug(f'{command_name, positioner_id}: added command to CAN processing queue.')
+        log.debug(f'({command_name}, {positioner_id}): added command to CAN processing queue.')
 
         return command
 
