@@ -607,7 +607,9 @@ class FPS(BaseFPS):
         ----------
         positioner_ids : list
             The list of positioners to update. If `None`, update all
-            positioners.
+            positioners. ``positioner_ids=False`` ignores currently
+            connected positioners and times out to receive all possible
+            replies.
         timeout : float
             How long to wait before timing out the command.
 
@@ -615,7 +617,7 @@ class FPS(BaseFPS):
 
         assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
 
-        if positioner_ids:
+        if positioner_ids is None:
             n_positioners = len(positioner_ids)
         else:
             # This is the max number that should reply.
@@ -705,14 +707,16 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_firmware_version(self, positioner_ids=None, timeout=2, **kwargs):
+    async def update_firmware_version(self, positioner_ids=None, timeout=2):
         """Updates the firmware version of connected positioners.
 
         Parameters
         ----------
         positioner_ids : list
             The list of positioners to update. If `None`, update all
-            positioners.
+            positioners. ``positioner_ids=False`` ignores currently
+            connected positioners and times out to receive all possible
+            replies.
         timeout : float
             How long to wait before timing out the command.
 
@@ -720,16 +724,15 @@ class FPS(BaseFPS):
 
         assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
 
-        if positioner_ids:
+        if positioner_ids is None:
             n_positioners = len(positioner_ids)
         else:
-            n_positioners = None
+            n_positioners = len(self) if len(self) > 0 else None
 
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
                                                  positioner_id=0,
                                                  timeout=timeout,
-                                                 n_positioners=n_positioners,
-                                                 **kwargs)
+                                                 n_positioners=n_positioners)
 
         await get_firmware_command
 
