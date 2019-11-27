@@ -2,7 +2,7 @@
 jaeger's documentation
 =======================
 
-This is the Sphinx documentation for the SDSS Python product jaeger. The current version is |jaeger_version|.
+This is the Sphinx documentation for the SDSS Python product jaeger. This documentation is for version is |jaeger_version|.
 
 Contents
 --------
