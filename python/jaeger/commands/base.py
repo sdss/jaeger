@@ -79,7 +79,7 @@ class Message(can.Message):
         can.Message.__init__(self,
                              data=data,
                              arbitration_id=arbitration_id,
-                             extended_id=extended_id)
+                             is_extended_id=extended_id)
 
 
 class Reply(object):
