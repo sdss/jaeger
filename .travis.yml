@@ -27,7 +27,7 @@ branches:
 
 before_install:
   - pip install --pre poetry==1.0.0b8
-  - poetry export -f requirements.txt --dev | poetry run -- pip install -r /dev/stdin
+  - poetry run -- pip install -r < poetry export -f requirements.txt --dev
 
 install:
   - poetry install
