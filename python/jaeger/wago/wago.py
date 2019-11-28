@@ -250,6 +250,9 @@ class WAGO(object):
 
         """
 
+        if name in self.modules:
+            raise ValueError(f'module {name} is already present.')
+
         self.modules[name] = Module(self, name=name, **params)
 
     def get_plc(self, name):
