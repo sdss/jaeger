@@ -9,3 +9,11 @@ omit =
     */wago.py
     */wago/*
     */actor/*
+    testing.py
+
+[report]
+exclude_lines =
+    class AsyncioExecutor
+    def convert_kaiju_trajectory
+    def _process_replies\(cmds\)
+    class CANnetInterface
