@@ -20,6 +20,8 @@ Contents
 
   testing
 
+  config
+
   api
   commands
 
