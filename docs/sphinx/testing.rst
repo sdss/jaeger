@@ -4,9 +4,7 @@
 Testing with jaeger
 ===================
 
-API
----
-
 .. automodule:: jaeger.testing
    :members:
    :show-inheritance:
+   :private-members:

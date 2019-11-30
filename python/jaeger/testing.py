@@ -41,7 +41,7 @@ class VirtualFPS(jaeger.FPS):
         configuration.
     qa : bool or path
         A path to the database used to store QA information. If `True`, uses
-        the value from ``config.files.qa_database``. If `False`, does not do
+        the value from ``config['files']['qa_database']``. If `False`, does not do
         any QA recording.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
@@ -54,18 +54,43 @@ class VirtualFPS(jaeger.FPS):
 
     def __init__(self, layout=None, qa=False, loop=None, engineering_mode=False):
 
-        super().__init__(can_profile='virtual', layout=layout,
-                         wago=False, qa=qa)
+        super().__init__(can_profile='virtual', layout=layout, wago=False, qa=qa)
 
 
 class VirtualPositioner(StatusMixIn):
     """A virtual positioner that listen to CAN commands.
 
     An object of `.VirtualPositioner` represents a real positioner firmware.
-    It knows it's own state at any time and replies
+    It knows it's own state at any time and replies.
+
+    Parameters
+    ----------
+
+    positioner_id : int
+        The ID of the positioner.
+    centre : tuple
+        A tuple of two floats indicating where on the focal plane the
+        positioner is located.
+    position : tuple
+        A tuple of two floats indicating the angles of the alpha and beta arms.
+    speed : tuple
+        A tuple of two float indicating the RPM on the input for alpha and
+        beta.
+    channel : str
+        The channel on which to listen to the virtual CAN bus. Defaults to
+        ``jaeger.config['profiles']['virtual']['channel']``.
+    loop
+        The event loop.
+    notifier : ~can.Notifier
+        The `python-can <https://python-can.readthedocs.io/en/stable/>`_
+        `~can.Notifier` instance that informs of new messages in the bus.
+    firmware : str
+        The firmware version, as a string with the format `AB.CD.EF`.
 
     """
 
+    #: The initial status of the positioner. Represents a positioner that
+    #: is not moving and is fully calibrated.
     _initial_status = (PositionerStatus.SYSTEM_INITIALIZED |
                        PositionerStatus.DISPLACEMENT_COMPLETED |
                        PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
