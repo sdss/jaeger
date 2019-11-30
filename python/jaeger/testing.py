@@ -76,10 +76,9 @@ class VirtualPositioner(StatusMixIn):
                        PositionerStatus.MOTOR_ALPHA_CALIBRATED |
                        PositionerStatus.MOTOR_BETA_CALIBRATED)
 
-    _initial_firmware = '10.11.12'
-
     def __init__(self, positioner_id, centre=None, position=(0.0, 0.0),
-                 speed=None, channel=None, loop=None, notifier=None):
+                 speed=None, channel=None, loop=None, notifier=None,
+                 firmware='10.11.12'):
 
         self.positioner_id = positioner_id
         self.centre = centre or (None, None)
@@ -88,8 +87,10 @@ class VirtualPositioner(StatusMixIn):
         self.speed = speed or (jaeger.config['positioner']['motor_speed'],
                                jaeger.config['positioner']['motor_speed'])
 
-        self.firmware = self._initial_firmware
+        self.firmware = firmware
+        self._initial_firmware = firmware
 
+        # To be used for a firmware upgrade.
         self._crc32 = 0
         self._firmware_size = 0
         self._firmware_received = b''
@@ -294,7 +295,7 @@ class VirtualPositioner(StatusMixIn):
             self.flags = BootloaderStatus
             self.status = BootloaderStatus.BOOTLOADER_INIT
         else:
-            firmware_chunks[1] = '11'
+            firmware_chunks[1] = self._initial_firmware.split('.')[1]
             self.flags = PositionerStatus
             self.status = self._initial_status
 
