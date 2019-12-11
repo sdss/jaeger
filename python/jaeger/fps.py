@@ -596,6 +596,8 @@ class FPS(BaseFPS):
                 warnings.warn('continuing because engineering mode ...',
                               JaegerUserWarning)
 
+        await self.update_position()
+
         # Start the pollers
         self.pollers.start()
 
