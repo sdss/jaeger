@@ -54,8 +54,9 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 
     # If profile is test we start a VirtualFPS first so that it can respond
     # to the FPS class.
-    if profile == 'test':
-        VirtualFPS('test', layout=layout)
+    if profile in ['test', 'virtual']:
+        profile = 'virtual'
+        VirtualFPS(layout=layout)
 
     ctx.obj = {}
     ctx.obj['can_profile'] = profile
