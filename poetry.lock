@@ -970,7 +970,7 @@ description = "Small tools for SDSS products"
 name = "sdsstools"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.1.2"
+version = "0.1.3"
 
 [package.dependencies]
 pygments = ">=2.5.2,<3.0.0"
@@ -1872,8 +1872,8 @@ sdss-clu = [
     {file = "sdss_clu-0.1.10-py3-none-any.whl", hash = "sha256:9c4e803da15a948bf14b2fa6c3b55aa8f33200ff4300ee42a48e0f0cb0a258ab"},
 ]
 sdsstools = [
-    {file = "sdsstools-0.1.2-py3-none-any.whl", hash = "sha256:8e621511293333d45bb46abdfa06ad45ed22b478d8cceda2010a9e7d2b15d62a"},
-    {file = "sdsstools-0.1.2.tar.gz", hash = "sha256:b3e29025d224d93433c9d0fbc36a415c1cef79c9b214c527324b4d8c9d1373f2"},
+    {file = "sdsstools-0.1.3-py3-none-any.whl", hash = "sha256:d79b7641a6a02787b3237c78f34580e960cc788cbc6f34a0d1e464ab450d462e"},
+    {file = "sdsstools-0.1.3.tar.gz", hash = "sha256:60577f6c9bf3fc47cb74d730b1a93d4cec203c78b3b39d7973a0cdbae935b24d"},
 ]
 secretstorage = [
     {file = "SecretStorage-3.1.2-py3-none-any.whl", hash = "sha256:b5ec909dde94d4ae2fa26af7c089036997030f0cf0a5cb372b4cccabd81c143b"},
