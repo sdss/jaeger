@@ -12,7 +12,7 @@ import os
 
 import pytest
 from can import Bus, Notifier
-from ruamel.yaml import YAML
+from sdsstools import read_yaml_file
 
 import jaeger
 from jaeger.testing import VirtualFPS, VirtualPositioner
@@ -37,8 +37,7 @@ def event_loop(request):
 def test_config():
     """Yield the test configuration as a dictionary."""
 
-    yaml = YAML()
-    yield yaml.load(open(TEST_CONFIG_FILE))
+    yield read_yaml_file(TEST_CONFIG_FILE)
 
 
 @pytest.fixture()

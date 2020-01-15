@@ -15,7 +15,7 @@ import numpy.testing
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
-from jaeger.core.exceptions import JaegerUserWarning
+from jaeger.exceptions import JaegerUserWarning
 from jaeger.utils import StatusMixIn, bytes_to_int
 
 

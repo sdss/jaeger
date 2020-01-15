@@ -16,7 +16,7 @@ import can
 
 import jaeger.utils
 from jaeger import can_log, config, log
-from jaeger.core import exceptions
+from jaeger import exceptions
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import AsyncQueue, StatusMixIn
 

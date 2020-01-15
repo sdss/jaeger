@@ -6,8 +6,8 @@
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import asyncio
 import os
+import asyncio
 import pathlib
 import warnings
 
@@ -16,7 +16,8 @@ import astropy.table
 from jaeger import config, log
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.core.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
+from jaeger.exceptions import (FPSLockedError, JaegerUserWarning,
+                               TrajectoryError)
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int, get_qa_database
 from jaeger.wago import WAGO

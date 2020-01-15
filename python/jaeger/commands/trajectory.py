@@ -11,11 +11,11 @@ import pathlib
 import time
 
 import numpy
-from ruamel.yaml import YAML
+from sdsstools import read_yaml_file
 
 from jaeger import config, log, maskbits
 from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
-from jaeger.core.exceptions import FPSLockedError, TrajectoryError
+from jaeger.exceptions import FPSLockedError, TrajectoryError
 from jaeger.utils import int_to_bytes
 
 
@@ -137,8 +137,7 @@ class Trajectory(object):
             raise TrajectoryError('the FPS is moving. Cannot send new trajectory.')
 
         if isinstance(self.trajectories, (str, pathlib.Path)):
-            yaml = YAML(typ='safe')
-            self.trajectories = yaml.load(open(self.trajectories))
+            self.trajectories = read_yaml_file(self.trajectories)
         elif isinstance(self.trajectories, dict):
             pass
         else:

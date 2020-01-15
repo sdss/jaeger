@@ -17,7 +17,7 @@ import zlib
 import numpy
 
 from jaeger import commands, log
-from jaeger.core.exceptions import JaegerError, JaegerUserWarning
+from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.maskbits import BootloaderStatus, ResponseCode
 from jaeger.utils import int_to_bytes
 

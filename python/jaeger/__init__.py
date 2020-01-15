@@ -6,29 +6,15 @@
 import os
 import warnings
 
-from .core import get_config, get_logger
-
-import pkg_resources
-
-
-try:
-    __version__ = pkg_resources.get_distribution('jaeger').version
-except pkg_resources.DistributionNotFound:
-    try:
-        import toml
-        poetry_config = toml.load(open(os.path.join(os.path.dirname(__file__),
-                                                    '../../pyproject.toml')))
-        __version__ = poetry_config['tool']['poetry']['version']
-    except Exception:
-        warnings.warn('cannot find jaeger version. Using 0.0.0.', UserWarning)
-        __version__ = '0.0.0'
+from sdsstools import get_package_version, get_config, get_logger
 
 
 NAME = 'jaeger'
 
+__version__ = get_package_version(path='./', package_name=NAME)
+
 
 config = get_config(NAME, allow_user=True)
-
 
 log = get_logger('jaeger')
 
@@ -44,7 +30,7 @@ can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
 
 
 from .can import *
-from .core.exceptions import *
+from .exceptions import *
 from .fps import *
 from .maskbits import *
 from .positioner import *

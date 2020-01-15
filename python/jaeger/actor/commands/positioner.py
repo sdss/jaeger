@@ -14,7 +14,7 @@ import clu
 import numpy
 
 from jaeger.commands import SetCurrent, Trajectory
-from jaeger.core.exceptions import TrajectoryError
+from jaeger.exceptions import TrajectoryError
 from jaeger.utils import get_goto_move_time
 
 from . import jaeger_parser
