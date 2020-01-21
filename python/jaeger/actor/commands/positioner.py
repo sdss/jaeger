@@ -24,12 +24,12 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
     """Checks if some of the positioners are not connected."""
 
     if any([pid not in fps.positioners for pid in positioner_ids]):
-        command.failed('some positioners are not connected.')
+        command.fail('some positioners are not connected.')
         return False
 
     if initialised:
         if any([not fps[pid].initialised for pid in positioner_ids]):
-            command.failed('some positioners are not initialised.')
+            command.fail('some positioners are not initialised.')
             return False
 
     return True
@@ -52,20 +52,19 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
     if all:
         if not force:
-            return command.failed('need to specify --force to move '
-                                  'all positioners at once.')
+            return command.fail('need to specify --force to move '
+                                'all positioners at once.')
         positioner_id = list(fps.positioners.keys())
 
     if not relative:
         if alpha < 0 or beta < 0:
-            return command.failed('negative angles only allowed in relative mode.')
+            return command.fail('negative angles only allowed in relative mode.')
 
     if not check_positioners(positioner_id, command, fps, initialised=True):
         return
 
     if fps.moving:
-        command.failed('FPS is moving. Cannot send goto.')
-        return
+        return command.fail('FPS is moving. Cannot send goto.')
 
     speed = speed or [None, None]
     max_time = 0.0
@@ -77,8 +76,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
         p_alpha, p_beta = fps[pid].position
 
         if p_alpha is None or p_beta is None:
-            command.failed('some positioners do not know their positions.')
-            return False
+            return command.fail('some positioners do not know their positions.')
 
         delta_alpha = abs(p_alpha - alpha) if not relative else alpha
         delta_beta = abs(p_beta - beta) if not relative else beta
@@ -120,8 +118,7 @@ async def speed(command, fps, positioner_id, alpha, beta, all):
         return
 
     if fps.moving:
-        command.failed('FPS is moving. Cannot send set_speed.')
-        return
+        return command.fail('FPS is moving. Cannot send set_speed.')
 
     tasks = []
     for pid in positioner_id:
@@ -209,22 +206,20 @@ async def current(ctx, command, fps, positioner_id, alpha, beta, all):
         positioner_id = [pid for pid in fps.positioners if fps[pid].initialised]
 
     if len(positioner_id) == 0:
-        command.failed('no positioners provided.')
-        return
+        return command.fail('no positioners provided.')
 
     if not check_positioners(positioner_id, command, fps):
         return
 
     if fps.moving:
-        command.failed('FPS is moving. Cannot send set current.')
-        return
+        return command.fail('FPS is moving. Cannot send set current.')
 
     commands = [fps.send_command(SetCurrent(positioner_id=pid,
                                             alpha=alpha, beta=beta))
                 for pid in positioner_id]
     await asyncio.gather(*commands)
 
-    command.done(text='current changed.')
+    return command.finish(text='current changed.')
 
 
 @jaeger_parser.command()
@@ -243,15 +238,15 @@ async def unlock(command, fps):
     """Unlocks the FPS."""
 
     if not fps.locked:
-        command.done('FPS is not locked')
+        return command.finish('FPS is not locked')
         return
 
     result = await fps.unlock()
 
     if result:
-        command.done('FPS unlocked')
+        return command.finish('FPS unlocked')
     else:
-        command.failed('failed to unlock FPS')
+        return command.fail('failed to unlock FPS')
 
 
 @jaeger_parser.command()
@@ -260,10 +255,10 @@ async def trajectory(command, fps, path):
     """Sends a trajectory from a file."""
 
     if fps.moving:
-        return command.failed('FPS is moving. Cannot send trajectory.')
+        return command.fail('FPS is moving. Cannot send trajectory.')
 
     if fps.locked:
-        return command.failed('FPS is locked. Cannot send trajectory.')
+        return command.fail('FPS is locked. Cannot send trajectory.')
 
     path = pathlib.Path(path).expanduser()
     if not path.exists():
@@ -276,7 +271,7 @@ async def trajectory(command, fps, path):
         command.debug('sending trajectory ...')
         await trajectory.send()
         if trajectory.failed:
-            return command.failed('failed sending trajectory with unknown error.')
+            return command.fail('failed sending trajectory with unknown error.')
 
         command.debug(f'trajectory sent in {trajectory.data_send_time:.2f} seconds.')
         command.info(text=f'move will take {trajectory.move_time:.2f} seconds',
@@ -284,9 +279,9 @@ async def trajectory(command, fps, path):
 
         await trajectory.start()
         if trajectory.failed:
-            return command.failed('failed starting trajectory with unknown error.')
+            return command.fail('failed starting trajectory with unknown error.')
 
-        return command.done('trajectory completed.')
+        return command.finish('trajectory completed.')
 
     except TrajectoryError as ee:
-        return command.failed(str(ee))
+        return command.fail(str(ee))

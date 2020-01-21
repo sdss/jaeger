@@ -26,7 +26,7 @@ async def list(command, fps):
     for name in fps.pollers.names:
         poller_status.append(name + ('*' if fps.pollers[name].running else ''))
 
-    command.done(text=','.join(poller_status))
+    command.finish(text=','.join(poller_status))
 
 
 @pollers.command()
@@ -41,7 +41,7 @@ async def stop(command, fps, poller):
             command.fail('poller not found.')
         await fps.pollers[poller].stop()
 
-    command.done('pollers stopped')
+    command.finish('pollers stopped')
 
 
 @pollers.command()
@@ -56,4 +56,4 @@ async def start(command, fps, poller):
             command.fail('poller not found.')
         fps.pollers[poller].start()
 
-    command.done('pollers started')
+    command.finish('pollers started')

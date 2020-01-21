@@ -7,9 +7,8 @@ actor:
     status:
         port: 19991
         delay: 5
-    tron:
-        host: 127.0.0.1
-        port: 6093
+    tron_host: 127.0.0.1
+    tron_port: 6093
     wago_delay: 60
     log_dir: /data/logs/actors/jaeger
 

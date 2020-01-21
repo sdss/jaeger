@@ -21,7 +21,7 @@ def wago(command, fps):
 
     wago = fps.wago
     if not wago or not wago.connected:
-        command.failed(text='WAGO not connected.')
+        return command.fail(text='WAGO not connected.')
         raise click.Abort()
 
     return
@@ -37,7 +37,7 @@ async def status(command, fps):
         measured = await wago.read_category(category)
         command.write('i', message=measured)
 
-    command.done()
+    return command.finish()
 
 
 @wago.command()
@@ -58,11 +58,10 @@ async def switch(command, fps, plc, on, cycle):
     try:
         plc_obj = wago.get_plc(plc)
     except ValueError:
-        command.failed(text=f'cannot find PLC {plc!r}.')
-        return
+        return command.fail(text=f'cannot find PLC {plc!r}.')
 
     if plc_obj.module.mode != 'output':
-        command.failed(text=f'PLC {plc_obj.name!r} is not writeable')
+        return command.fail(text=f'PLC {plc_obj.name!r} is not writeable')
 
     if on is None:  # The --on/--off was not passed
         current_status = await plc_obj.read(convert=True)
@@ -71,9 +70,8 @@ async def switch(command, fps, plc, on, cycle):
         elif current_status == 'off':
             on = True
         else:
-            command.failed(text=f'the current status of PLC {plc_obj.name} '
-                                'is not on or off.')
-            return
+            return command.fail(text=f'the current status of PLC {plc_obj.name} '
+                                     'is not on or off.')
 
     try:
         if on is True:
@@ -81,8 +79,7 @@ async def switch(command, fps, plc, on, cycle):
         elif on is False:
             await wago.turn_off(plc_obj.name)
     except Exception:
-        command.failed(text=f'failed to set status of PLC {plc_obj.name}.')
-        return
+        return command.fail(text=f'failed to set status of PLC {plc_obj.name}.')
 
     if cycle:
         command.write('d', text='waiting 1 second before powering up.')
@@ -90,10 +87,8 @@ async def switch(command, fps, plc, on, cycle):
         try:
             await wago.turn_on(plc_obj.name)
         except Exception:
-            command.failed(text=f'failed to power PLC {plc_obj.name} back on.')
-            return
+            return command.fail(text=f'failed to power PLC {plc_obj.name} back on.')
 
     status = await plc_obj.read(convert=True)
-    command.done(text=f'PLC {plc_obj.name!r} is now {status!r}.')
 
-    return
+    return command.finish(text=f'PLC {plc_obj.name!r} is now {status!r}.')

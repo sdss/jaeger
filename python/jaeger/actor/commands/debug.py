@@ -27,6 +27,6 @@ def debug(ctx, command, fps, danger):
         command.info('you are not in engineering mode.')
 
     if ctx.invoked_subcommand is None:
-        return command.done()
+        return command.finish()
 
     return

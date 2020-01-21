@@ -69,8 +69,7 @@ async def upgrade(command, fps, firmware_file, positioners):
         result = False
 
     if not result:
-        command.failed('firmware upgrade failed.')
-        return
+        return command.fail('firmware upgrade failed.')
 
     command.info('firmware loaded. Waiting 10 seconds to exit bootloader mode.')
 
@@ -82,6 +81,6 @@ async def upgrade(command, fps, firmware_file, positioners):
     # Check that we really are in normal mode
     for positioner in fps.positioners.values():
         if positioner.is_bootloader():
-            command.failed('some positioner are still in bootloader mode.')
+            return command.fail('some positioner are still in bootloader mode.')
 
-    command.done('firmware load complete.')
+    return command.finish('firmware load complete.')

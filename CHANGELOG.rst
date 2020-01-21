@@ -5,8 +5,9 @@ Changelog
 =========
 
 * :feature:`62` Add a new `.Trajectory` class as a low-level method to send trajectories.
-* :support:`67` Improve initialisation time by making sure all commands after the initial ``GET_FIRMWARE_VERSION`` know how many positioners are connected and don't timeout.
-* :support:`68` Use ``sdsstools`` instead of core utilities. Some cleanup of the packaging files.
+* :support:`67` Improve initialisation time by making sure all commands after the initial ``GET_FIRMWARE_VERSION`` know how many positioners are connected and don't time out.
+* :support:`68` Use ``sdsstools`` instead of core utilities. Some clean-up of the packaging files.
+* Adapt to using CLU>=0.2.0.
 
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.

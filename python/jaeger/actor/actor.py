@@ -34,6 +34,8 @@ class JaegerActor(clu.LegacyActor):
 
         super().__init__(*args, parser=jaeger_parser, **kwargs)
 
+        self.version = __version__
+
         # Add ActorHandler to log
         self.actor_handler = ActorHandler(self, code_mapping={logging.INFO: 'd'})
         log.addHandler(self.actor_handler)
@@ -41,15 +43,6 @@ class JaegerActor(clu.LegacyActor):
 
         if fps.wago and fps.wago.connected and wago_delay:
             self.timer_commands.add_command('wago status', delay=wago_delay)
-
-    @classmethod
-    def from_config(cls, config, fps):
-        """Creates an actor instance from a configuration file or dict."""
-
-        # Always use jaeger version for the actor
-        config.update({'version': __version__})
-
-        return super().from_config(config, fps)
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
