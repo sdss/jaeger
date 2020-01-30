@@ -95,14 +95,6 @@ exclude_lines = [
     "class CANnetInterface"
 ]
 
-[tool.flake8]
-ignore = [
-    "H101",
-    "N",
-    "W504",
-]
-max-line-length = 99
-
 [build-system]
 build-backend = "poetry.masonry.api"
 requires = ["poetry>=1.0.0"]
