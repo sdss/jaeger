@@ -6,7 +6,8 @@
 import os
 import warnings
 
-from sdsstools import get_package_version, get_config, get_logger
+from sdsstools import (get_package_version, get_config, get_logger,
+                       merge_config, read_yaml_file)
 
 
 NAME = 'jaeger'
@@ -14,16 +15,29 @@ NAME = 'jaeger'
 __version__ = get_package_version(path='./', package_name=NAME)
 
 
-config = get_config(NAME, allow_user=True)
-
 log = get_logger('jaeger')
+can_log = get_logger('jaeger_can', capture_warnings=False)
+
+
+config = get_config(NAME, allow_user=False)
+
+sdsscore_path = os.path.expandvars('$SDSSCORE_DIR/configuration/actors/jaeger.yaml')
+user_path = os.path.expanduser('~/.config/jaeger/jaeger.yml')
+
+if os.path.exists(sdsscore_path):
+    config = merge_config(read_yaml_file(sdsscore_path), config)
+    log.info(f'using configuration from {sdsscore_path}')
+elif os.path.exists(user_path):
+    config = merge_config(read_yaml_file(user_path), config)
+    log.info(f'using configuration from {user_path}')
+else:
+    log.warning('cannot find SDSSCORE or user configuration. Using default values.')
+
 
 if 'files' in config and 'log_dir' in config['files']:
     log_dir = config['files']['log_dir']
 else:
     log_dir = '~/.jaeger'
-
-can_log = get_logger('jaeger_can', capture_warnings=False)
 
 log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
 can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
