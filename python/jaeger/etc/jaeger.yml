@@ -16,7 +16,7 @@ profiles:
     default: cannet
     cannet:
         interface: cannet
-        channels: [192.168.0.10]
+        channels: [10.1.10.11, 10.1.10.12, 10.1.10.13, 10.1.10.14, 10.1.10.15, 10.1.10.16]
         port: 19228
         buses: [1, 2, 3, 4]
         bitrate: 1000000
@@ -50,7 +50,7 @@ files:
     qa_database: /data/fps/positioners.sqlite
 
 WAGO:
-    address: 192.168.1.11
+    address: 10.1.10.1
     DO_delay: 1  # Seconds to wait when writing digital output relays
     modules:
         RTD:
