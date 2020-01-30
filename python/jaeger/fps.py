@@ -129,7 +129,8 @@ class BaseFPS(dict):
         else:
 
             n_pos = 0
-            warnings.warn('no layout was provided. Loading an empty FPS.',
+            warnings.warn(f'cannot retrieve layout {layout!r} from the database. '
+                          'targetdb may be down. Loading an empty FPS.',
                           JaegerUserWarning)
 
         log.debug(f'{self._class_name}: loaded positions for {n_pos} positioners.')
