@@ -63,7 +63,6 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
     ctx.obj['layout'] = layout
 
     fps = FPS(**ctx.obj, wago=wago, qa=qa, engineering_mode=danger)
-    await fps.initialise()
     ctx.obj['fps'] = fps
 
     # If we call jaeger without a subcommand and with the actor flag,
@@ -81,11 +80,12 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
         if no_tron:
             actor_config.pop('tron', None)
 
-        actor = await JaegerActor.from_config(actor_config, fps).start()
-        await actor.start_status_server(config['actor']['status']['port'],
-                                        delay=config['actor']['status']['delay'])
+        with fps:
+            actor = await JaegerActor.from_config(actor_config, fps).start()
+            await actor.start_status_server(config['actor']['status']['port'],
+                                            delay=config['actor']['status']['delay'])
 
-        await actor.run_forever()
+            await actor.run_forever()
 
 
 @jaeger.command(name='upgrade-firmware')

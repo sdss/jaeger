@@ -844,8 +844,10 @@ class FPS(BaseFPS):
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
 
-        log.info('stopping all pollers.')
+        log.info('stopping positioners')
+        await self.stop_trajectory()
 
+        log.info('stopping all pollers.')
         await self.pollers.stop()
 
         await asyncio.sleep(1)
@@ -859,3 +861,10 @@ class FPS(BaseFPS):
         await asyncio.gather(*tasks, return_exceptions=True)
 
         self.loop.stop()
+
+    async def __aenter__(self):
+        await self.initialise()
+        return self
+
+    async def __aexit__(self, *excinfo):
+        await self.shutdown()
