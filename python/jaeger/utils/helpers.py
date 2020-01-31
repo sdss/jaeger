@@ -281,11 +281,14 @@ class Poller(object):
 
         while True:
 
-            if asyncio.iscoroutinefunction(self.callback):
-                await self.loop.create_task(self.callback())
-            else:
-                self.callback()
-
+            try:
+                if asyncio.iscoroutinefunction(self.callback):
+                    await self.callback()
+                else:
+                    self.callback()
+            except Exception as ee:
+                self.loop.call_exception_handler({'message': 'failed running callback',
+                                                  'exception': ee})
             self._sleep_task = self.loop.create_task(asyncio.sleep(self.delay))
 
             await self._sleep_task
