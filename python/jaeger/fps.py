@@ -242,6 +242,7 @@ class FPS(BaseFPS):
                           JaegerUserWarning)
 
         self.loop = loop or asyncio.get_event_loop()
+        self.loop.set_exception_handler(log.asyncio_exception_handler)
 
         #: dict: The mapping between positioners and buses.
         self.positioner_to_bus = {}
