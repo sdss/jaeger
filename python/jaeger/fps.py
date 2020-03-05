@@ -6,14 +6,14 @@
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import os
 import asyncio
+import os
 import pathlib
 import warnings
 
 import astropy.table
 
-from jaeger import config, log
+from jaeger import config, log, sdsscore_path, user_path
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.exceptions import (FPSLockedError, JaegerUserWarning,
@@ -234,6 +234,13 @@ class FPS(BaseFPS):
 
     def __init__(self, can=None, layout=None, can_profile=None,
                  wago=None, qa=None, loop=None, engineering_mode=False):
+
+        if os.path.exists(sdsscore_path):
+            log.info(f'using configuration from {sdsscore_path}')
+        elif os.path.exists(user_path):
+            log.info(f'using configuration from {user_path}')
+        else:
+            log.warning('cannot find SDSSCORE or user configuration. Using default values.')
 
         self.engineering_mode = engineering_mode
 

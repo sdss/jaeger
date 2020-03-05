@@ -26,12 +26,8 @@ user_path = os.path.expanduser('~/.config/jaeger/jaeger.yml')
 
 if os.path.exists(sdsscore_path):
     config = merge_config(read_yaml_file(sdsscore_path), config)
-    log.info(f'using configuration from {sdsscore_path}')
 elif os.path.exists(user_path):
     config = merge_config(read_yaml_file(user_path), config)
-    log.info(f'using configuration from {user_path}')
-else:
-    log.warning('cannot find SDSSCORE or user configuration. Using default values.')
 
 
 if 'files' in config and 'log_dir' in config['files']:
