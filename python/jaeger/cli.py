@@ -110,7 +110,7 @@ async def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
 @click.argument('positioner_id', metavar='POSITIONER', type=int)
 @click.argument('alpha', metavar='ALPHA', type=float)
 @click.argument('beta', metavar='BETA', type=float)
-@click.option('--speed', type=(float, float), default=(1000, 1000),
+@click.option('--speed', type=(float, float), default=(None, None),
               help='The speed for the alpha and beta motors.',
               show_default=True)
 @click.pass_context
@@ -124,8 +124,9 @@ async def goto(ctx, positioner_id, alpha, beta, speed=None):
     if beta < 0 or beta >= 360:
         raise click.UsageError('beta must be in the range [0, 360)')
 
-    if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
-        raise click.UsageError('speed must be in the range [0, 3000)')
+    if speed[0] or speed[1]:
+        if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
+            raise click.UsageError('speed must be in the range [0, 3000)')
 
     fps = ctx.obj['fps']
 
@@ -136,8 +137,7 @@ async def goto(ctx, positioner_id, alpha, beta, speed=None):
         return
 
     result = await positioner.goto(alpha=alpha, beta=beta,
-                                   alpha_speed=speed[0],
-                                   beta_speed=speed[1])
+                                   speed=(speed[0], speed[1]))
 
     if result is False:
         return
