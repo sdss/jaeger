@@ -325,7 +325,7 @@ class FPS(BaseFPS):
     def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
                      silent_on_conflict=False, override=False,
-                     safe=False, **kwargs):
+                     safe=False, synchronous=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -359,6 +359,10 @@ class FPS(BaseFPS):
             Otherwise the command is queued until the first one finishes.
         safe : bool
             Whether the command is safe to send to a locked `.FPS`.
+        synchronous : bool
+            If `True`, the command is sent to the CAN network immediately,
+            skipping the command queue. No tracking is done for this command.
+            It should only be used for shutdown commands.
         kwargs : dict
             Extra arguments to be passed to the command.
 
@@ -411,8 +415,14 @@ class FPS(BaseFPS):
             if command.status == command.status.FAILED:
                 return command
 
-        self.can.command_queue.put_nowait(command)
-        log.debug(f'({command_name}, {positioner_id}): added command to CAN processing queue.')
+        if not synchronous:
+            self.can.command_queue.put_nowait(command)
+            log.debug(f'({command_name}, {positioner_id}): '
+                      'added command to CAN processing queue.')
+        else:
+            self.can._send_messages(command)
+            log.debug(f'({command_name}, {positioner_id}): '
+                      'sent command to CAN synchronously.')
 
         return command
 
@@ -862,7 +872,8 @@ class FPS(BaseFPS):
         log.info('cancelling all pending tasks and shutting down.')
 
         tasks = [task for task in asyncio.all_tasks(loop=self.loop)
-                 if task is not asyncio.current_task(loop=self.loop)]
+                 if task is not asyncio.current_task(loop=self.loop) and
+                 task.name != 'shutdown']
         list(map(lambda task: task.cancel(), tasks))
 
         await asyncio.gather(*tasks, return_exceptions=True)
