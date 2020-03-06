@@ -8,6 +8,8 @@
 
 import asyncio
 import logging
+import signal
+import sys
 import warnings
 from functools import wraps
 
@@ -21,12 +23,29 @@ from jaeger.testing import VirtualFPS
 
 
 fps = None
+
+
+def shutdown(loop, sign):
+    """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
+
+    if fps:
+        fps.send_command('STOP_TRAJECTORY', positioner_id=0, synchronous=True)
+        log.error(f'stopping positioners and cancelling due to {sign.name}')
+        sys.exit(0)
+    else:
+        log.error(f'cannot shutdown FPS before {sign.name}')
+        sys.exit(1)
+
+
 def cli_coro(f):
     """Decorator function that allows defining coroutines with click."""
 
     @wraps(f)
     def wrapper(*args, **kwargs):
         loop = asyncio.get_event_loop()
+        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+        for ss in signals:
+            loop.add_signal_handler(ss, shutdown, loop, ss)
         return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
