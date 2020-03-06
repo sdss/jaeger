@@ -872,8 +872,7 @@ class FPS(BaseFPS):
         log.info('cancelling all pending tasks and shutting down.')
 
         tasks = [task for task in asyncio.all_tasks(loop=self.loop)
-                 if task is not asyncio.current_task(loop=self.loop) and
-                 task.name != 'shutdown']
+                 if task is not asyncio.current_task(loop=self.loop)]
         list(map(lambda task: task.cancel(), tasks))
 
         await asyncio.gather(*tasks, return_exceptions=True)
