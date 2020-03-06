@@ -20,6 +20,7 @@ from jaeger.fps import FPS
 from jaeger.testing import VirtualFPS
 
 
+fps = None
 def cli_coro(f):
     """Decorator function that allows defining coroutines with click."""
 
@@ -54,6 +55,8 @@ class FPSWrapper(object):
 
     async def __aenter__(self):
 
+        global fps
+
         # If profile is test we start a VirtualFPS first so that it can respond
         # to the FPS class.
         if self.profile == 'virtual':
@@ -61,6 +64,8 @@ class FPSWrapper(object):
         else:
             self.fps = FPS(can_profile=self.profile, layout=self.layout,
                            wago=self.wago, qa=self.qa, engineering_mode=self.danger)
+
+        fps = self.fps
 
         await self.fps.initialise()
         return self.fps
