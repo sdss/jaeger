@@ -8,16 +8,33 @@
 
 import asyncio
 import logging
+import signal
+import sys
 import warnings
 from functools import wraps
 
 import click
 import numpy
 
-from jaeger import config, log
+from jaeger import log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.fps import FPS
 from jaeger.testing import VirtualFPS
+
+
+fps = None
+
+
+def shutdown(loop, sign):
+    """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
+
+    if fps:
+        fps.send_command('STOP_TRAJECTORY', positioner_id=0, synchronous=True)
+        log.error(f'stopping positioners and cancelling due to {sign.name}')
+        sys.exit(0)
+    else:
+        log.error(f'cannot shutdown FPS before {sign.name}')
+        sys.exit(1)
 
 
 def cli_coro(f):
@@ -26,9 +43,57 @@ def cli_coro(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         loop = asyncio.get_event_loop()
+        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+        for ss in signals:
+            loop.add_signal_handler(ss, shutdown, loop, ss)
         return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
+
+
+class FPSWrapper(object):
+    """A helper to store FPS initialisation parameters."""
+
+    def __init__(self, verbose, profile, layout, wago=None, qa=None, danger=None):
+
+        self.verbose = verbose
+
+        self.profile = profile
+        if self.profile in ['test', 'virtual']:
+            self.profile = 'virtual'
+
+        self.layout = layout
+        self.wago = wago
+        self.qa = qa
+        self.danger = danger
+
+        self.fps = None
+
+        if self.verbose:
+            log.set_level(logging.DEBUG)
+
+    async def __aenter__(self):
+
+        global fps
+
+        # If profile is test we start a VirtualFPS first so that it can respond
+        # to the FPS class.
+        if self.profile == 'virtual':
+            self.fps = VirtualFPS(layout=self.layout)
+        else:
+            self.fps = FPS(can_profile=self.profile, layout=self.layout,
+                           wago=self.wago, qa=self.qa, engineering_mode=self.danger)
+
+        fps = self.fps
+
+        await self.fps.initialise()
+        return self.fps
+
+    async def __aexit__(self, *excinfo):
+        await self.fps.shutdown()
+
+
+pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 
 
 @click.group(invoke_without_command=True)
@@ -49,21 +114,7 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 
     """
 
-    if verbose:
-        log.set_level(logging.DEBUG)
-
-    # If profile is test we start a VirtualFPS first so that it can respond
-    # to the FPS class.
-    if profile in ['test', 'virtual']:
-        profile = 'virtual'
-        VirtualFPS(layout=layout)
-
-    ctx.obj = {}
-    ctx.obj['can_profile'] = profile
-    ctx.obj['layout'] = layout
-
-    fps = FPS(**ctx.obj, wago=wago, qa=qa, engineering_mode=danger)
-    ctx.obj['fps'] = fps
+    ctx.obj = FPSWrapper(verbose, profile, layout, wago, qa, danger)
 
     # If we call jaeger without a subcommand and with the actor flag,
     # start the actor.
@@ -71,6 +122,7 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 
         try:
             from jaeger.actor import JaegerActor
+            from jaeger import config
         except ImportError:
             raise ImportError('CLU needs to be installed to run jaeger as an actor.')
 
@@ -80,7 +132,7 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
         if no_tron:
             actor_config.pop('tron', None)
 
-        with fps:
+        async with ctx.obj:
             actor = await JaegerActor.from_config(actor_config, fps).start()
             await actor.start_status_server(config['actor']['status']['port'],
                                             delay=config['actor']['status']['delay'])
@@ -92,30 +144,29 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 @click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
 @click.option('-f', '--force', is_flag=True, help='Forces skipping of invalid positioners')
 @click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
-@click.pass_context
+@pass_fps
 @cli_coro
-async def upgrade_firmware(ctx, firmware_file, force=False, positioners=None):
+async def upgrade_firmware(fps, firmware_file, force=False, positioners=None):
     """Upgrades the firmaware."""
 
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
 
-    fps = ctx.obj['fps']
-
-    await load_firmware(fps, firmware_file, positioners=positioners,
-                        force=force, show_progressbar=True)
+    async with fps:
+        await load_firmware(fps, firmware_file, positioners=positioners,
+                            force=force, show_progressbar=True)
 
 
 @jaeger.command()
 @click.argument('positioner_id', metavar='POSITIONER', type=int)
 @click.argument('alpha', metavar='ALPHA', type=float)
 @click.argument('beta', metavar='BETA', type=float)
-@click.option('--speed', type=(float, float), default=(1000, 1000),
+@click.option('--speed', type=(float, float), default=(None, None),
               help='The speed for the alpha and beta motors.',
               show_default=True)
-@click.pass_context
+@pass_fps
 @cli_coro
-async def goto(ctx, positioner_id, alpha, beta, speed=None):
+async def goto(fps, positioner_id, alpha, beta, speed=None):
     """Moves a robot to a given position."""
 
     if alpha < 0 or alpha >= 360:
@@ -124,32 +175,30 @@ async def goto(ctx, positioner_id, alpha, beta, speed=None):
     if beta < 0 or beta >= 360:
         raise click.UsageError('beta must be in the range [0, 360)')
 
-    if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
-        raise click.UsageError('speed must be in the range [0, 3000)')
+    if speed[0] or speed[1]:
+        if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
+            raise click.UsageError('speed must be in the range [0, 3000)')
 
-    fps = ctx.obj['fps']
+    async with fps as ff:
 
-    positioner = fps.positioners[positioner_id]
-    result = await positioner.initialise()
-    if not result:
-        log.error('positioner is not connected or failed to initialise.')
-        return
+        positioner = ff.positioners[positioner_id]
+        result = await positioner.initialise()
+        if not result:
+            log.error('positioner is not connected or failed to initialise.')
+            return
 
-    result = await positioner.goto(alpha=alpha, beta=beta,
-                                   alpha_speed=speed[0],
-                                   beta_speed=speed[1])
+        await positioner.goto(alpha=alpha, beta=beta, speed=(speed[0], speed[1]))
 
-    if result is False:
-        return
+    return
 
 
 @jaeger.command(name='set-positions')
 @click.argument('positioner_id', metavar='POSITIONER', type=int)
 @click.argument('alpha', metavar='ALPHA', type=float)
 @click.argument('beta', metavar='BETA', type=float)
-@click.pass_context
+@pass_fps
 @cli_coro
-async def set_positions(ctx, positioner_id, alpha, beta):
+async def set_positions(fps, positioner_id, alpha, beta):
     """Sets the position of the alpha and beta arms."""
 
     if alpha < 0 or alpha >= 360:
@@ -158,17 +207,17 @@ async def set_positions(ctx, positioner_id, alpha, beta):
     if beta < 0 or beta >= 360:
         raise click.UsageError('beta must be in the range [0, 360)')
 
-    fps = ctx.obj['fps']
+    async with fps as ff:
 
-    positioner = fps.positioners[positioner_id]
+        positioner = ff.positioners[positioner_id]
 
-    result = await positioner.set_position(alpha, beta)
+        result = await positioner.set_position(alpha, beta)
 
-    if not result:
-        log.error('failed to set positions.')
-        return
+        if not result:
+            log.error('failed to set positions.')
+            return
 
-    log.info(f'positioner {positioner_id} set to {alpha, beta}.')
+        log.info(f'positioner {positioner_id} set to {alpha, beta}.')
 
 
 @jaeger.command()
@@ -184,9 +233,9 @@ async def set_positions(ctx, positioner_id, alpha, beta):
 @click.option('-f', '--skip-errors', is_flag=True,
               help='If an error occurs, ignores it and '
                    'commands another move.')
-@click.pass_context
+@pass_fps
 @cli_coro
-async def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None,
+async def demo(fps, positioner_id, alpha=None, beta=None, speed=None, moves=None,
                skip_errors=False):
     """Moves a robot to random positions."""
 
@@ -199,65 +248,64 @@ async def demo(ctx, positioner_id, alpha=None, beta=None, speed=None, moves=None
     if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
         raise click.UsageError('speed must be in the range [0, 3000)')
 
-    fps = ctx.obj['fps']
+    async with fps as ff:
 
-    positioner = fps.positioners[positioner_id]
-    result = await positioner.initialise()
-    if not result:
-        log.error('positioner is not connected or failed to initialise.')
-        return
-
-    done_moves = 0
-    while True:
-
-        alpha_move = numpy.random.randint(low=alpha[0], high=alpha[1])
-        beta_move = numpy.random.randint(low=beta[0], high=beta[1])
-        alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
-        beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
-
-        warnings.warn(f'running step {done_moves+1}')
-
-        result = await positioner.goto(alpha=alpha_move, beta=beta_move,
-                                       alpha_speed=alpha_speed,
-                                       beta_speed=beta_speed)
-
-        if result is False:
-            if skip_errors is False:
-                return
-            else:
-                warnings.warn('an error happened but ignoring it '
-                              'because skip-error=True')
-                continue
-
-        done_moves += 1
-
-        if moves is not None and done_moves == moves:
+        positioner = ff.positioners[positioner_id]
+        result = await positioner.initialise()
+        if not result:
+            log.error('positioner is not connected or failed to initialise.')
             return
+
+        done_moves = 0
+        while True:
+
+            alpha_move = numpy.random.randint(low=alpha[0], high=alpha[1])
+            beta_move = numpy.random.randint(low=beta[0], high=beta[1])
+            alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
+            beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
+
+            warnings.warn(f'running step {done_moves+1}')
+
+            result = await positioner.goto(alpha=alpha_move, beta=beta_move,
+                                           speed=(alpha_speed, beta_speed))
+
+            if result is False:
+                if skip_errors is False:
+                    return
+                else:
+                    warnings.warn('an error happened but ignoring it '
+                                  'because skip-error=True')
+                    continue
+
+            done_moves += 1
+
+            if moves is not None and done_moves == moves:
+                return
 
 
 @jaeger.command()
 @click.argument('positioner_id', metavar='POSITIONER', type=int, required=False)
-@click.pass_context
+@pass_fps
 @cli_coro
-async def home(ctx, positioner_id):
+async def home(fps, positioner_id):
     """Initialise datums."""
 
-    fps = ctx.obj['fps']
+    async with fps as ff:
 
-    if positioner_id is None:
-        positioners = fps.positioners.values()
-    else:
-        positioners = [fps.positioners[positioner_id]]
+        if positioner_id is None:
+            positioners = ff.positioners.values()
+        else:
+            positioners = [ff.positioners[positioner_id]]
 
-    valid_positioners = [positioner for positioner in positioners
-                         if positioner.status.initialised]
+        valid_positioners = [positioner for positioner in positioners
+                             if positioner.status.initialised]
 
-    if len(valid_positioners) < len(positioners):
-        warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
-                      'have not been initialised and will not be homed.')
+        if len(valid_positioners) < len(positioners):
+            warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
+                          'have not been initialised and will not be homed.')
 
-    await asyncio.gather(*[fps.send_command('INITIALIZE_DATUMS',
-                                            positioner_id=pos.positioner_id)
-                           for pos in valid_positioners])
+        await asyncio.gather(*[ff.send_command('INITIALIZE_DATUMS',
+                                               positioner_id=pos.positioner_id)
+                               for pos in valid_positioners])
 
     return

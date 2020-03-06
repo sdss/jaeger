@@ -389,7 +389,7 @@ class TrajectoryTransmissionAbort(Command):
 
     command_id = CommandID.TRAJECTORY_TRANSMISSION_ABORT
     broadcastable = False
-    move_command = True
+    move_command = False
     safe = True
 
 

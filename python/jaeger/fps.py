@@ -6,14 +6,14 @@
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import os
 import asyncio
+import os
 import pathlib
 import warnings
 
 import astropy.table
 
-from jaeger import config, log
+from jaeger import config, log, sdsscore_path, user_path
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.exceptions import (FPSLockedError, JaegerUserWarning,
@@ -235,6 +235,13 @@ class FPS(BaseFPS):
     def __init__(self, can=None, layout=None, can_profile=None,
                  wago=None, qa=None, loop=None, engineering_mode=False):
 
+        if os.path.exists(sdsscore_path):
+            log.info(f'using configuration from {sdsscore_path}')
+        elif os.path.exists(user_path):
+            log.info(f'using configuration from {user_path}')
+        else:
+            log.warning('cannot find SDSSCORE or user configuration. Using default values.')
+
         self.engineering_mode = engineering_mode
 
         if engineering_mode:
@@ -318,7 +325,7 @@ class FPS(BaseFPS):
     def send_command(self, command, positioner_id=0, data=[],
                      interface=None, bus=None, broadcast=False,
                      silent_on_conflict=False, override=False,
-                     safe=False, **kwargs):
+                     safe=False, synchronous=False, **kwargs):
         """Sends a command to the bus.
 
         Parameters
@@ -352,6 +359,10 @@ class FPS(BaseFPS):
             Otherwise the command is queued until the first one finishes.
         safe : bool
             Whether the command is safe to send to a locked `.FPS`.
+        synchronous : bool
+            If `True`, the command is sent to the CAN network immediately,
+            skipping the command queue. No tracking is done for this command.
+            It should only be used for shutdown commands.
         kwargs : dict
             Extra arguments to be passed to the command.
 
@@ -404,8 +415,14 @@ class FPS(BaseFPS):
             if command.status == command.status.FAILED:
                 return command
 
-        self.can.command_queue.put_nowait(command)
-        log.debug(f'({command_name}, {positioner_id}): added command to CAN processing queue.')
+        if not synchronous:
+            self.can.command_queue.put_nowait(command)
+            log.debug(f'({command_name}, {positioner_id}): '
+                      'added command to CAN processing queue.')
+        else:
+            self.can._send_messages(command)
+            log.debug(f'({command_name}, {positioner_id}): '
+                      'sent command to CAN synchronously.')
 
         return command
 

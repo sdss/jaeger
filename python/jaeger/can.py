@@ -30,6 +30,8 @@ from jaeger.utils import Poller
 __ALL__ = ['JaegerCAN', 'CANnetInterface', 'JaegerReaderCallback', 'INTERFACES']
 
 
+LOG_HEADER = '({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}): '
+
 #: Accepted CAN interfaces and whether they are multibus.
 INTERFACES = {
     'slcan': {
@@ -280,7 +282,7 @@ class JaegerCAN(object):
 
             cmd = await self.command_queue.get()
 
-            log_header = f'({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}): '
+            log_header = LOG_HEADER.format(cmd=cmd)
 
             if cmd.status != CommandStatus.READY:
                 can_log.error(f'{log_header} command is not ready '
@@ -293,26 +295,39 @@ class JaegerCAN(object):
             cmd.status = CommandStatus.RUNNING
 
             try:
-                messages = cmd.get_messages()
+                cmd.get_messages()
             except jaeger.JaegerError as ee:
                 can_log.error(f'found error while getting messages: {ee}')
                 continue
 
             self.running_commands.append(cmd)
 
-            for message in messages:
+            self._send_messages(cmd)
 
-                # Get the interface and bus to which to send the message
-                interfaces = getattr(cmd, '_interface', None)
-                bus = getattr(cmd, '_bus', None)
+    def _send_messages(self, cmd):
+        """Sends messages to the interface.
 
-                if cmd.status.failed:
-                    can_log.debug(log_header + 'not sending more messages ' +
-                                  'since this command has failed.')
-                    self.running_commands.remove(cmd)
-                    break
+        This method exists separate from _process_queue so that it can be used
+        to send command messages to the interface synchronously.
 
-                self.send_to_interface(message, interfaces=interfaces, bus=bus)
+        """
+
+        log_header = LOG_HEADER.format(cmd=cmd)
+        messages = cmd.get_messages()
+
+        for message in messages:
+
+            # Get the interface and bus to which to send the message
+            interfaces = getattr(cmd, '_interface', None)
+            bus = getattr(cmd, '_bus', None)
+
+            if cmd.status.failed:
+                can_log.debug(log_header + 'not sending more messages ' +
+                              'since this command has failed.')
+                self.running_commands.remove(cmd)
+                break
+
+            self.send_to_interface(message, interfaces=interfaces, bus=bus)
 
     @classmethod
     def from_profile(cls, profile=None, **kwargs):
