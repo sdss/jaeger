@@ -10,7 +10,8 @@ Changelog
 * Adapt to using CLU>=0.2.0.
 * Retrieve configuration from ``$SDSSCORE_DIR/configuration/actors/jaeger.yaml`` or from ``~/.config/jaeger/jaeger.yml``.
 * :feature:`51` Set up an asyncio exception handler and make the `.Poller` use it if there is a problem with the callback.
-* :bug:`64` Fixed WAGo disconnects by increasing the timeout of the hardware.
+* :bug:`64` Fixed WAGO disconnects by increasing the timeout of the hardware.
+* :support:`61` Stop the positioners before existing if CLI receives a SIGINT, SIGTERM, or SIGHUP.
 
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.

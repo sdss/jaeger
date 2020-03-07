@@ -116,6 +116,15 @@ Shutting down the FPS
 
     await fps.shutdown()
 
+FPS as a context manager
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+It's possible to use the `.FPS` object as an async context manager. The `.FPS` is initialised when entering the context and shut down on exit ::
+
+    fps = FPS()
+    async with fps:
+        await fps[13].goto(10, 10)
+
 .. _send-trajectory:
 
 Sending trajectories
