@@ -131,6 +131,9 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
         else:
             raise JaegerError(msg)
 
+    log.info('stopping pollers')
+    await fps.pollers.stop()
+
     log.info(f'upgrading firmware on {len(valid_positioners)} positioners.')
 
     start_firmware_payload = int_to_bytes(filesize) + int_to_bytes(crc32)
