@@ -156,6 +156,7 @@ async def upgrade_firmware(obj, firmware_file, force=False, positioners=None):
 
         if fps.wago:
             log.info('power cycling positioners')
+            await fps.pollers.stop()
             await fps.wago.turn_off('24V')
             await asyncio.sleep(5)
             await fps.wago.turn_on('24V')
