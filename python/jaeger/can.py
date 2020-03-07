@@ -30,7 +30,7 @@ from jaeger.utils import Poller
 __ALL__ = ['JaegerCAN', 'CANnetInterface', 'JaegerReaderCallback', 'INTERFACES']
 
 
-LOG_HEADER = '({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}): '
+LOG_HEADER = '({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}):'
 
 #: Accepted CAN interfaces and whether they are multibus.
 INTERFACES = {
@@ -290,7 +290,7 @@ class JaegerCAN(object):
                 cmd.cancel()
                 continue
 
-            can_log.debug(log_header + 'sending messages to CAN bus.')
+            can_log.debug(log_header + ' sending messages to CAN bus.')
 
             cmd.status = CommandStatus.RUNNING
 
@@ -322,7 +322,7 @@ class JaegerCAN(object):
             bus = getattr(cmd, '_bus', None)
 
             if cmd.status.failed:
-                can_log.debug(log_header + 'not sending more messages ' +
+                can_log.debug(log_header + ' not sending more messages ' +
                               'since this command has failed.')
                 self.running_commands.remove(cmd)
                 break
