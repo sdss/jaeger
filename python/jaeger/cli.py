@@ -146,13 +146,22 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 @click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
 @pass_fps
 @cli_coro
-async def upgrade_firmware(fps, firmware_file, force=False, positioners=None):
+async def upgrade_firmware(obj, firmware_file, force=False, positioners=None):
     """Upgrades the firmaware."""
 
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
 
-    async with fps:
+    async with obj as fps:
+
+        if fps.wago:
+            log.info('power cycling positioners')
+            await fps.wago.turn_off('24V')
+            await asyncio.sleep(5)
+            await fps.wago.turn_on('24V')
+            await asyncio.sleep(3)
+            await fps.initialise()
+
         await load_firmware(fps, firmware_file, positioners=positioners,
                             force=force, show_progressbar=True)
 
@@ -166,7 +175,7 @@ async def upgrade_firmware(fps, firmware_file, force=False, positioners=None):
               show_default=True)
 @pass_fps
 @cli_coro
-async def goto(fps, positioner_id, alpha, beta, speed=None):
+async def goto(obj, positioner_id, alpha, beta, speed=None):
     """Moves a robot to a given position."""
 
     if alpha < 0 or alpha >= 360:
@@ -179,9 +188,9 @@ async def goto(fps, positioner_id, alpha, beta, speed=None):
         if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
             raise click.UsageError('speed must be in the range [0, 3000)')
 
-    async with fps as ff:
+    async with obj as fps:
 
-        positioner = ff.positioners[positioner_id]
+        positioner = fps.positioners[positioner_id]
         result = await positioner.initialise()
         if not result:
             log.error('positioner is not connected or failed to initialise.')
@@ -198,7 +207,7 @@ async def goto(fps, positioner_id, alpha, beta, speed=None):
 @click.argument('beta', metavar='BETA', type=float)
 @pass_fps
 @cli_coro
-async def set_positions(fps, positioner_id, alpha, beta):
+async def set_positions(obj, positioner_id, alpha, beta):
     """Sets the position of the alpha and beta arms."""
 
     if alpha < 0 or alpha >= 360:
@@ -207,9 +216,9 @@ async def set_positions(fps, positioner_id, alpha, beta):
     if beta < 0 or beta >= 360:
         raise click.UsageError('beta must be in the range [0, 360)')
 
-    async with fps as ff:
+    async with obj as fps:
 
-        positioner = ff.positioners[positioner_id]
+        positioner = fps.positioners[positioner_id]
 
         result = await positioner.set_position(alpha, beta)
 
@@ -235,7 +244,7 @@ async def set_positions(fps, positioner_id, alpha, beta):
                    'commands another move.')
 @pass_fps
 @cli_coro
-async def demo(fps, positioner_id, alpha=None, beta=None, speed=None, moves=None,
+async def demo(obj, positioner_id, alpha=None, beta=None, speed=None, moves=None,
                skip_errors=False):
     """Moves a robot to random positions."""
 
@@ -248,9 +257,9 @@ async def demo(fps, positioner_id, alpha=None, beta=None, speed=None, moves=None
     if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
         raise click.UsageError('speed must be in the range [0, 3000)')
 
-    async with fps as ff:
+    async with obj as fps:
 
-        positioner = ff.positioners[positioner_id]
+        positioner = fps.positioners[positioner_id]
         result = await positioner.initialise()
         if not result:
             log.error('positioner is not connected or failed to initialise.')
@@ -287,15 +296,15 @@ async def demo(fps, positioner_id, alpha=None, beta=None, speed=None, moves=None
 @click.argument('positioner_id', metavar='POSITIONER', type=int, required=False)
 @pass_fps
 @cli_coro
-async def home(fps, positioner_id):
+async def home(obj, positioner_id):
     """Initialise datums."""
 
-    async with fps as ff:
+    async with obj as fps:
 
         if positioner_id is None:
-            positioners = ff.positioners.values()
+            positioners = fps.positioners.values()
         else:
-            positioners = [ff.positioners[positioner_id]]
+            positioners = [fps.positioners[positioner_id]]
 
         valid_positioners = [positioner for positioner in positioners
                              if positioner.status.initialised]
@@ -304,8 +313,8 @@ async def home(fps, positioner_id):
             warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
                           'have not been initialised and will not be homed.')
 
-        await asyncio.gather(*[ff.send_command('INITIALIZE_DATUMS',
-                                               positioner_id=pos.positioner_id)
+        await asyncio.gather(*[fps.send_command('INITIALIZE_DATUMS',
+                                                positioner_id=pos.positioner_id)
                                for pos in valid_positioners])
 
     return
