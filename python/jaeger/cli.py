@@ -144,9 +144,10 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 @click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
 @click.option('-f', '--force', is_flag=True, help='Forces skipping of invalid positioners')
 @click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
+@click.option('-c', '--cycle', is_flag=True, help='Power cycle positioners before upgrade')
 @pass_fps
 @cli_coro
-async def upgrade_firmware(obj, firmware_file, force=False, positioners=None):
+async def upgrade_firmware(obj, firmware_file, force, positioners, cycle):
     """Upgrades the firmaware."""
 
     if positioners is not None:
@@ -154,7 +155,7 @@ async def upgrade_firmware(obj, firmware_file, force=False, positioners=None):
 
     async with obj as fps:
 
-        if fps.wago:
+        if fps.wago and cycle:
             log.info('power cycling positioners')
             await fps.pollers.stop()
             await fps.wago.turn_off('24V')
