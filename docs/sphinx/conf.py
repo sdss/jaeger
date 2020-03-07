@@ -13,9 +13,6 @@ from pkg_resources import parse_version
 
 from jaeger import __version__
 
-
-sys.path.append(os.path.join(os.path.dirname(__file__), 'releases'))
-
 # import releases  # noqa
 
 
@@ -28,7 +25,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.autosummary',
               'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax',
-              'sphinx.ext.intersphinx', 'sphinxcontrib_trio', 'releases',
+              'sphinx.ext.intersphinx', 'sphinxcontrib_trio', 'sdsstools.releases',
               'sphinx_click.ext']
 
 # Add any paths that contain templates here, relative to this directory.
