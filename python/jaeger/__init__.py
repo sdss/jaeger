@@ -22,7 +22,7 @@ can_log = get_logger('jaeger_can', capture_warnings=False)
 config = get_config(NAME, allow_user=False)
 
 sdsscore_path = os.path.expandvars('$SDSSCORE_DIR/configuration/actors/jaeger.yaml')
-user_path = os.path.expanduser('~/.config/jaeger/jaeger.yml')
+user_path = os.path.expanduser('~/.config/sdss/jaeger.yml')
 
 if os.path.exists(sdsscore_path):
     config = merge_config(read_yaml_file(sdsscore_path), config)

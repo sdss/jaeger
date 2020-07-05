@@ -12,6 +12,7 @@ Changelog
 * :feature:`51` Set up an asyncio exception handler and make the `.Poller` use it if there is a problem with the callback.
 * :bug:`64` Fixed WAGO disconnects by increasing the timeout of the hardware.
 * :support:`61` Stop the positioners before existing if CLI receives a SIGINT, SIGTERM, or SIGHUP.
+* Modify configuration path to ``~/.config/sdss/jaeger.yml`` in line with new standards.
 
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.
