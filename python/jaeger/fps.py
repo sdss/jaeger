@@ -861,8 +861,12 @@ class FPS(BaseFPS):
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
 
-        log.info('stopping positioners')
-        await self.stop_trajectory()
+        bootloader = all([positioner.is_bootloader is True
+                          for positioner in self.fps])
+
+        if not bootloader:
+            log.info('stopping positioners')
+            await self.stop_trajectory()
 
         log.info('stopping all pollers.')
         await self.pollers.stop()
