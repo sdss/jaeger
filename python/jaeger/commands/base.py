@@ -496,7 +496,7 @@ class Command(StatusMixIn, asyncio.Future):
                         UID_POOL[self.command_id][self.positioner_id].add(message.uid)
 
                 raise jaeger.JaegerError(
-                    f'{self.command_id.name}, {self.positioner_id}: '
+                    f'({self.command_id.name}, {self.positioner_id}): '
                     'no UIDs left in the pool.')
 
             messages.append(

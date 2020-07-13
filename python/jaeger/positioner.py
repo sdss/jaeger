@@ -149,7 +149,7 @@ class Positioner(StatusMixIn):
         self.alpha, self.beta = position
 
         log.debug(f'positioner {self.positioner_id}: '
-                  f'(alpha, beta)={self.alpha, self.beta}')
+                  f'(alpha, beta)={self.alpha}, {self.beta}')
 
     async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""

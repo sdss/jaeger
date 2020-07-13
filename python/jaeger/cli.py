@@ -228,7 +228,7 @@ async def set_positions(obj, positioner_id, alpha, beta):
             log.error('failed to set positions.')
             return
 
-        log.info(f'positioner {positioner_id} set to {alpha, beta}.')
+        log.info(f'positioner {positioner_id} set to {(alpha, beta)}.')
 
 
 @jaeger.command()
