@@ -285,9 +285,10 @@ class JaegerCAN(object):
             log_header = LOG_HEADER.format(cmd=cmd)
 
             if cmd.status != CommandStatus.READY:
-                can_log.error(f'{log_header} command is not ready '
-                              f'(status={cmd.status.name!r})')
-                cmd.cancel()
+                if cmd.status != CommandStatus.CANCELLED:
+                    can_log.error(f'{log_header} command is not ready '
+                                  f'(status={cmd.status.name!r})')
+                    cmd.cancel()
                 continue
 
             can_log.debug(log_header + ' sending messages to CAN bus.')
