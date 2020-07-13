@@ -158,11 +158,11 @@ class JaegerCAN(object):
 
         self._start_notifier()
 
-        self.command_queue = asyncio.Queue()
-        self._command_queue_task = self.loop.create_task(self._process_queue())
-
         #: list: Currently running commands.
         self.running_commands = []
+
+        self.command_queue = asyncio.Queue()
+        self._command_queue_task = self.loop.create_task(self._process_queue())
 
     def _start_notifier(self):
         """Starts the listener and notifiers."""
@@ -295,14 +295,11 @@ class JaegerCAN(object):
             cmd.status = CommandStatus.RUNNING
 
             try:
-                cmd.get_messages()
+                self._send_messages(cmd)
+                self.running_commands.append(cmd)
             except jaeger.JaegerError as ee:
                 can_log.error(f'found error while getting messages: {ee}')
                 continue
-
-            self.running_commands.append(cmd)
-
-            self._send_messages(cmd)
 
     def _send_messages(self, cmd):
         """Sends messages to the interface.

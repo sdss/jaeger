@@ -692,14 +692,14 @@ class FPS(BaseFPS):
         assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
 
         if not positioner_ids:
-            positioner_id = [pid for pid in self.positioners
-                             if self[pid].initialised and
-                             not self[pid].is_bootloader()]
-            if not positioner_id:
+            positioner_ids = [pid for pid in self.positioners
+                              if self[pid].initialised and
+                              not self[pid].is_bootloader()]
+            if not positioner_ids:
                 return True
 
         commands_all = self.send_to_all(CommandID.GET_ACTUAL_POSITION,
-                                        positioners=positioner_id,
+                                        positioners=positioner_ids,
                                         timeout=timeout)
 
         commands = await commands_all
@@ -746,7 +746,7 @@ class FPS(BaseFPS):
 
         if positioner_ids:
             n_positioners = len(positioner_ids)
-        elif positioner_ids is None:
+        else:
             n_positioners = len(self) if len(self) > 0 else None
 
         get_firmware_command = self.send_command(CommandID.GET_FIRMWARE_VERSION,
@@ -861,8 +861,12 @@ class FPS(BaseFPS):
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
 
-        log.info('stopping positioners')
-        await self.stop_trajectory()
+        bootloader = all([positioner.is_bootloader is True
+                          for positioner in self.fps])
+
+        if not bootloader:
+            log.info('stopping positioners')
+            await self.stop_trajectory()
 
         log.info('stopping all pollers.')
         await self.pollers.stop()

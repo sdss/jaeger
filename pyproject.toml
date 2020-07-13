@@ -36,7 +36,8 @@ peewee = "^3.11.2"
 Sphinx = {version = "^2.1", optional = true}
 sphinxcontrib-trio = {version = "1.1.0", optional = true}
 sphinx-click = {version = "2.3.0", optional = true}
-sdsstools = "^0.1.2"
+sdsstools = {version = "^0.1.11", extras = ["dev"]}
+sdssdb = "^0.4.5"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.9.0"
@@ -54,7 +55,6 @@ coverage = {version = "5.0", extras = ["toml"]}
 Sphinx = {version = "^2.1"}
 sphinxcontrib-trio = {version = "1.1.0"}
 sphinx-click = {version = "2.3.0"}
-sdsstools = {version = "^0.1.2", extras = ["dev"]}
 
 [tool.poetry.extras]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
@@ -67,7 +67,7 @@ line_length = 79
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "SDSS", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
 known_first_party = ["jaeger"]
-knwon_sdss_party = ["sdsstools"]
+known_sdss_party = ["sdsstools"]
 balanced_wrapping = true
 include_trailing_comma = false
 lines_after_imports = 2
@@ -96,5 +96,5 @@ exclude_lines = [
 ]
 
 [build-system]
-build-backend = "poetry.masonry.api"
-requires = ["poetry>=1.0.0"]
+requires = ["poetry-core>=1.0.0a8"]
+build-backend = "poetry.core.masonry.api"

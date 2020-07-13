@@ -149,13 +149,15 @@ class Positioner(StatusMixIn):
         self.alpha, self.beta = position
 
         log.debug(f'positioner {self.positioner_id}: '
-                  f'(alpha, beta)={self.alpha, self.beta}')
+                  f'(alpha, beta)={self.alpha}, {self.beta}')
 
     async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""
 
         # Need to update the firmware to make sure we get the right flags.
-        await self.update_firmware_version()
+        result = await self.update_firmware_version()
+        if result is False:
+            return False
 
         if not status:
 
@@ -341,8 +343,15 @@ class Positioner(StatusMixIn):
                                         positioner_id=self.positioner_id)
         await command
 
+        if command.status.failed or command.status.timed_out:
+            log.error(f'positioner {self.positioner_id}: '
+                      'failed retrieving firmware version.')
+            return False
+
         self.firmware = command.get_firmware()
         self.flags = self.get_positioner_flags()
+
+        return True
 
     def get_positioner_flags(self):
         """Returns the correct position maskbits from the firmware version."""

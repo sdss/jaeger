@@ -25,7 +25,7 @@ from jaeger.testing import VirtualFPS
 fps = None
 
 
-def shutdown(loop, sign):
+def shutdown(sign):
     """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
 
     if fps:
@@ -45,7 +45,7 @@ def cli_coro(f):
         loop = asyncio.get_event_loop()
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
         for ss in signals:
-            loop.add_signal_handler(ss, shutdown, loop, ss)
+            loop.add_signal_handler(ss, shutdown, ss)
         return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
@@ -228,7 +228,7 @@ async def set_positions(obj, positioner_id, alpha, beta):
             log.error('failed to set positions.')
             return
 
-        log.info(f'positioner {positioner_id} set to {alpha, beta}.')
+        log.info(f'positioner {positioner_id} set to {(alpha, beta)}.')
 
 
 @jaeger.command()
