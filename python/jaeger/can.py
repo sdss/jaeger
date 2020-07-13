@@ -158,11 +158,11 @@ class JaegerCAN(object):
 
         self._start_notifier()
 
-        self.command_queue = asyncio.Queue()
-        self._command_queue_task = self.loop.create_task(self._process_queue())
-
         #: list: Currently running commands.
         self.running_commands = []
+
+        self.command_queue = asyncio.Queue()
+        self._command_queue_task = self.loop.create_task(self._process_queue())
 
     def _start_notifier(self):
         """Starts the listener and notifiers."""
