@@ -23,10 +23,10 @@ from jaeger.utils import Poller, PollerList, bytes_to_int, get_qa_database
 from jaeger.wago import WAGO
 
 
-try:
-    from sdssdb.peewee.sdss5db import targetdb
-except ImportError:
-    targetdb = False
+# try:
+#     from sdssdb.peewee.sdss5db import targetdb
+# except ImportError:
+#     targetdb = False
 
 
 __ALL__ = ['BaseFPS', 'FPS']
@@ -106,25 +106,25 @@ class BaseFPS(dict):
 
             n_pos = len(self.positioners)
 
-        elif targetdb:
+        # elif targetdb and targetdb.database.connected:
 
-            log.info(f'{self._class_name}: reading profile {layout!r} from database.')
+        #     log.info(f'{self._class_name}: reading profile {layout!r} from database.')
 
-            if not targetdb.database.connected:
-                targetdb.database.connect()
-            assert targetdb.database.connected, \
-                f'{self._class_name}: database is not connected.'
+        #     if not targetdb.database.connected:
+        #         targetdb.database.connect()
+        #     assert targetdb.database.connected, \
+        #         f'{self._class_name}: database is not connected.'
 
-            positioners_db = targetdb.Actuator.select().join(
-                targetdb.FPSLayout).switch(targetdb.Actuator).join(
-                    targetdb.ActuatorType).filter(
-                        targetdb.FPSLayout.label == layout,
-                        targetdb.ActuatorType.label == 'Robot')
+        #     positioners_db = targetdb.Actuator.select().join(
+        #         targetdb.FPSLayout).switch(targetdb.Actuator).join(
+        #             targetdb.ActuatorType).filter(
+        #                 targetdb.FPSLayout.label == layout,
+        #                 targetdb.ActuatorType.label == 'Robot')
 
-            for pos in positioners_db:
-                self.add_positioner(pos.id, centre=(pos.xcen, pos.ycen))
+        #     for pos in positioners_db:
+        #         self.add_positioner(pos.id, centre=(pos.xcen, pos.ycen))
 
-            n_pos = positioners_db.count()
+        #     n_pos = positioners_db.count()
 
         else:
 
@@ -527,9 +527,6 @@ class FPS(BaseFPS):
         # Stop poller in case they are running
         await self.pollers.stop()
 
-        # Start by stopping the FPS
-        await self.stop_trajectory()
-
         if len(self.positioners) > 0:
             n_expected_positioners = len(self.positioners)
         else:
@@ -573,6 +570,9 @@ class FPS(BaseFPS):
         if len(set([pos.firmware for pos in self.values()])) > 1:
             warnings.warn('positioners with different firmware versions found.',
                           JaegerUserWarning)
+
+        # Stop positioners that are not in bootloader mode.
+        await self.stop_trajectory()
 
         await self.update_status(timeout=config['fps']['initialise_timeouts'])
 
@@ -787,13 +787,16 @@ class FPS(BaseFPS):
 
         """
 
+        if positioners is None:
+            positioners = [positioner_id for positioner_id in self.keys()
+                           if not self[positioner_id].is_bootloader()]
+            if positioners == []:
+                return
+
         await self.send_to_all('TRAJECTORY_TRANSMISSION_ABORT', positioners=positioners)
 
         if clear_flags:
-            if positioners is None:
-                await self.send_command('STOP_TRAJECTORY', positioner_id=0, timeout=timeout)
-            else:
-                await self.send_to_all('STOP_TRAJECTORY', positioners=positioners, timeout=timeout)
+            await self.send_command('STOP_TRAJECTORY', positioner_id=0, timeout=timeout)
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.
@@ -861,8 +864,8 @@ class FPS(BaseFPS):
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
 
-        bootloader = all([positioner.is_bootloader is True
-                          for positioner in self.fps])
+        bootloader = all([positioner.is_bootloader() is True
+                          for positioner in self.values()])
 
         if not bootloader:
             log.info('stopping positioners')
