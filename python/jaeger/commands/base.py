@@ -353,13 +353,13 @@ class Command(StatusMixIn, asyncio.Future):
                                   CommandStatus.CANCELLED] and self.timeout > 0):
             # We add CANCELLED because when a command is cancelled replies can arrive
             # later. That's ok and not an error.
-            log.error(f'{command_name, self.positioner_id, self.command_uid}: '
+            log.error(f'{(command_name, self.positioner_id, self.command_uid)}: '
                       'received a reply but command is not running')
             return
 
         if self.positioner_id != 0:
             assert reply.positioner_id == self.positioner_id, \
-                (f'({command_name, self.positioner_id}): '
+                (f'{(command_name, self.positioner_id)}: '
                  'received a reply from a different positioner.')
 
         self.replies.append(reply)
