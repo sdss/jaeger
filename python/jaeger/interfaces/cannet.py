@@ -98,7 +98,7 @@ class CANNetBus(BusABC):
 
         if self.bitrate in self._BITRATES:
             self._write_to_buses('CAN {bus} ' + f'INIT STD {self._BITRATES[self.bitrate]}')
-            self._write_to_buses('CAN {bus} ' + f'FILTER CLEAR')
+            self._write_to_buses('CAN {bus} ' + 'FILTER CLEAR')
             self._write_to_buses('CAN {bus} ' + 'FILTER ADD EXT 00000000 00000000')
         else:
             raise ValueError('Invalid bitrate, choose one of ' +
