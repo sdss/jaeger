@@ -38,6 +38,7 @@ Changelog
 * :feature:`54` Add firmware upgrade command to actor.
 * :bug:`53` Fix issues dealing with positioners that in the layout but not connected.
 * :feature:`52` Add limits to `~.Positioner.goto`.
+* :support:`-` Rename ``cli.py`` to ``__main__.py``.
 
 * :release:`0.3.0 <2019-11-13>`
 * Change file layout to include a positioner ID.

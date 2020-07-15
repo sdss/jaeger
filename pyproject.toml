@@ -60,7 +60,7 @@ sphinx-click = {version = "2.3.0"}
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
 
 [tool.poetry.scripts]
-jaeger = "jaeger.cli:jaeger"
+jaeger = "jaeger.__main__:jaeger"
 
 [tool.isort]
 line_length = 79
