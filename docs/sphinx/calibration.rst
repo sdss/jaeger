@@ -12,7 +12,7 @@ The calibration steps can be commanded independently while in normal mode (no bo
 
 - Datums calibration: command `~.StartDatumCalibration`. Wait until `.DISPLACEMENT_COMPLETED`, `.DATUM_ALPHA_CALIBRATED`, and `.DATUM_BETA_CALIBRATED` are set.
 
-- Cogging torque calibration: command `~.StartCoggingCalibration`. Wait until `.COGGING_ALPHA_CALIBRATED` is set. This step can take 20+ minutes.
+- Cogging torque calibration: command `~.StartCoggingCalibration`. Wait until `.COGGING_ALPHA_CALIBRATED` and `.COGGING_BETA_CALIBRATED` are set. This step can take 20+ minutes.
 
 - Save calibration: command `~.SaveInternalCalibration`.
 

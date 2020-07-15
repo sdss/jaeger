@@ -87,7 +87,8 @@ async def calibrate_positioner(fps, positioner_id):
         raise JaegerError('Cogging calibration failed.')
 
     await asyncio.sleep(1)
-    result = await positioner.wait_for_status(PositionerStatus.COGGING_ALPHA_CALIBRATED,
+    result = await positioner.wait_for_status([PositionerStatus.COGGING_ALPHA_CALIBRATED,
+                                               PositionerStatus.COGGING_BETA_CALIBRATED],
                                               timeout=1800)
     if result is False:
         raise JaegerError('Cogging calibration timed out')
