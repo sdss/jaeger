@@ -18,6 +18,7 @@ import numpy
 
 from jaeger import log
 from jaeger.commands.bootloader import load_firmware
+from jaeger.commands.calibration import calibrate_positioner
 from jaeger.fps import FPS
 from jaeger.testing import VirtualFPS
 
@@ -177,6 +178,21 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
 
         await load_firmware(fps, firmware_file, positioners=positioners,
                             force=force, show_progressbar=True)
+
+
+@jaeger.command()
+@click.argument('positioner-id', nargs=1, type=int)
+@pass_fps
+@cli_coro
+async def calibrate(fps_maker, positioner_id):
+    """Runs a full calibration on a positioner."""
+
+    fps_maker.initialise = False
+    fps_maker.danger = True
+
+    async with fps_maker as fps:
+        await fps.initialise(start_pollers=False)
+        await calibrate_positioner(fps, positioner_id)
 
 
 @jaeger.command()
