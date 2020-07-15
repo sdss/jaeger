@@ -15,6 +15,7 @@ Changelog
 * Modify configuration path to ``~/.config/sdss/jaeger.yml`` in line with new standards.
 * :bug:`72` (also :issue:`73`) Fix UIDs not being returned to the pool in some cases, which emptied it after a while.
 * :support:`-` Rename ``cli.py`` to ``__main__.py``.
+* :feature:`76` Implement calibration commands and routines.
 
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.
