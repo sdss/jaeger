@@ -22,14 +22,14 @@ from jaeger.fps import FPS
 from jaeger.testing import VirtualFPS
 
 
-fps = None
+__FPS__ = None
 
 
 def shutdown(sign):
     """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
 
-    if fps:
-        fps.send_command('STOP_TRAJECTORY', positioner_id=0, synchronous=True)
+    if __FPS__:
+        __FPS__.send_command('STOP_TRAJECTORY', positioner_id=0, synchronous=True)
         log.error(f'stopping positioners and cancelling due to {sign.name}')
         sys.exit(0)
     else:
@@ -54,7 +54,8 @@ def cli_coro(f):
 class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
-    def __init__(self, verbose, profile, layout, wago=None, qa=None, danger=None):
+    def __init__(self, verbose, profile, layout, wago=None,
+                 qa=None, danger=None, initialise=True):
 
         self.verbose = verbose
 
@@ -66,6 +67,7 @@ class FPSWrapper(object):
         self.wago = wago
         self.qa = qa
         self.danger = danger
+        self.initialise = initialise
 
         self.fps = None
 
@@ -74,7 +76,7 @@ class FPSWrapper(object):
 
     async def __aenter__(self):
 
-        global fps
+        global __FPS__
 
         # If profile is test we start a VirtualFPS first so that it can respond
         # to the FPS class.
@@ -84,9 +86,11 @@ class FPSWrapper(object):
             self.fps = FPS(can_profile=self.profile, layout=self.layout,
                            wago=self.wago, qa=self.qa, engineering_mode=self.danger)
 
-        fps = self.fps
+        __FPS__ = self.fps
 
-        await self.fps.initialise()
+        if self.initialise:
+            await self.fps.initialise()
+
         return self.fps
 
     async def __aexit__(self, *excinfo):
@@ -133,7 +137,7 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
             actor_config.pop('tron', None)
 
         async with ctx.obj:
-            actor = await JaegerActor.from_config(actor_config, fps).start()
+            actor = await JaegerActor.from_config(actor_config, __FPS__).start()
             await actor.start_status_server(config['actor']['status']['port'],
                                             delay=config['actor']['status']['delay'])
 
@@ -147,17 +151,24 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
 @click.option('-c', '--cycle', is_flag=True, help='Power cycle positioners before upgrade')
 @pass_fps
 @cli_coro
-async def upgrade_firmware(obj, firmware_file, force, positioners, cycle):
+async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
     """Upgrades the firmaware."""
 
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
 
-    async with obj as fps:
+    fps_maker.initialise = False
+
+    async with fps_maker as fps:
 
         if fps.wago and cycle:
+            try:
+                await fps.wago.connect()
+                log.info(f'WAGO connected on host {fps.wago.client.host}')
+            except RuntimeError as ee:
+                log.error(f'failed to initialise WAGO: {ee}')
+                raise
             log.info('power cycling positioners')
-            await fps.pollers.stop()
             await fps.wago.turn_off('24V')
             await asyncio.sleep(5)
             await fps.wago.turn_on('24V')
@@ -177,7 +188,7 @@ async def upgrade_firmware(obj, firmware_file, force, positioners, cycle):
               show_default=True)
 @pass_fps
 @cli_coro
-async def goto(obj, positioner_id, alpha, beta, speed=None):
+async def goto(fps_maker, positioner_id, alpha, beta, speed=None):
     """Moves a robot to a given position."""
 
     if alpha < 0 or alpha >= 360:
@@ -190,7 +201,7 @@ async def goto(obj, positioner_id, alpha, beta, speed=None):
         if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
             raise click.UsageError('speed must be in the range [0, 3000)')
 
-    async with obj as fps:
+    async with fps_maker as fps:
 
         positioner = fps.positioners[positioner_id]
         result = await positioner.initialise()
@@ -209,7 +220,7 @@ async def goto(obj, positioner_id, alpha, beta, speed=None):
 @click.argument('beta', metavar='BETA', type=float)
 @pass_fps
 @cli_coro
-async def set_positions(obj, positioner_id, alpha, beta):
+async def set_positions(fps_maker, positioner_id, alpha, beta):
     """Sets the position of the alpha and beta arms."""
 
     if alpha < 0 or alpha >= 360:
@@ -218,7 +229,7 @@ async def set_positions(obj, positioner_id, alpha, beta):
     if beta < 0 or beta >= 360:
         raise click.UsageError('beta must be in the range [0, 360)')
 
-    async with obj as fps:
+    async with fps_maker as fps:
 
         positioner = fps.positioners[positioner_id]
 
@@ -246,7 +257,7 @@ async def set_positions(obj, positioner_id, alpha, beta):
                    'commands another move.')
 @pass_fps
 @cli_coro
-async def demo(obj, positioner_id, alpha=None, beta=None, speed=None, moves=None,
+async def demo(fps_maker, positioner_id, alpha=None, beta=None, speed=None, moves=None,
                skip_errors=False):
     """Moves a robot to random positions."""
 
@@ -259,7 +270,7 @@ async def demo(obj, positioner_id, alpha=None, beta=None, speed=None, moves=None
     if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
         raise click.UsageError('speed must be in the range [0, 3000)')
 
-    async with obj as fps:
+    async with fps_maker as fps:
 
         positioner = fps.positioners[positioner_id]
         result = await positioner.initialise()
@@ -298,10 +309,10 @@ async def demo(obj, positioner_id, alpha=None, beta=None, speed=None, moves=None
 @click.argument('positioner_id', metavar='POSITIONER', type=int, required=False)
 @pass_fps
 @cli_coro
-async def home(obj, positioner_id):
+async def home(fps_maker, positioner_id):
     """Initialise datums."""
 
-    async with obj as fps:
+    async with fps_maker as fps:
 
         if positioner_id is None:
             positioners = fps.positioners.values()
