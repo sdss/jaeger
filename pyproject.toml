@@ -96,5 +96,5 @@ exclude_lines = [
 ]
 
 [build-system]
-requires = ["poetry_core>=1.0.0a8"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry>=1.0.0"]
+build-backend = "poetry.masonry.api"
