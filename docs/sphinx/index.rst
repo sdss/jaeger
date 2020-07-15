@@ -14,6 +14,8 @@ Contents
 
   shatterdome
 
+  calibration
+
   maskbits
 
   actor

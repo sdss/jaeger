@@ -245,7 +245,7 @@ class FPS(BaseFPS):
         self.engineering_mode = engineering_mode
 
         if engineering_mode:
-            warnings.warn('Engineering mode enable. Just don\'t break anything.',
+            warnings.warn('Engineering mode enable. Please don\'t break anything.',
                           JaegerUserWarning)
 
         self.loop = loop or asyncio.get_event_loop()
@@ -330,7 +330,7 @@ class FPS(BaseFPS):
 
         Parameters
         ----------
-        command : str, int, .CommandID or .Command
+        command : str, int, .CommandID, or .Command
             The ID of the command, either as the integer value, a string,
             or the `.CommandID` flag. Alternatively, the `.Command` to send.
         positioner_id : int
@@ -495,7 +495,7 @@ class FPS(BaseFPS):
         return any([pos.moving for pos in self.values()
                     if pos.status != pos.flags.UNKNOWN])
 
-    async def initialise(self, allow_unknown=True):
+    async def initialise(self, allow_unknown=True, start_pollers=True):
         """Initialises all positioners with status and firmware version.
 
         Parameters
@@ -619,9 +619,10 @@ class FPS(BaseFPS):
         await self.update_position()
 
         # Start the pollers
-        self.pollers.start()
+        if start_pollers:
+            self.pollers.start()
 
-        return True
+        return self
 
     async def update_status(self, positioner_ids=None, timeout=1):
         """Update statuses for all positioners.

@@ -120,8 +120,8 @@ class Trajectory(object):
     the normal process to execute the trajectory is ::
 
         trajectory = Trajectory(fps, points)
-        await trajectory.send()  # Sends the trajectory but does not yet execute it
-        await trajectory.start()   # This starts the trajectory (positioners move)
+        await trajectory.send()    # Sends the trajectory but does not yet execute it.
+        await trajectory.start()   # This starts the trajectory (positioners move).
 
     """
 
@@ -166,7 +166,7 @@ class Trajectory(object):
         if not await self.fps.update_status(positioner_ids=list(self.trajectories.keys()),
                                             timeout=1.):
             self.failed = True
-            raise TrajectoryError(f'some positioners did not respond.')
+            raise TrajectoryError('some positioners did not respond.')
 
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:

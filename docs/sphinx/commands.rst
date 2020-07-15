@@ -104,3 +104,12 @@ Trajectory commands
 .. autoclass:: jaeger.commands.StopTrajectory
     :exclude-members:
     :undoc-members:
+
+
+.. _calibration-commands:
+
+Calibration commands
+--------------------
+
+.. automodule:: jaeger.commands.calibration
+    :member-order: bysource
