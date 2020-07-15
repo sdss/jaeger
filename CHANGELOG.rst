@@ -13,6 +13,7 @@ Changelog
 * :bug:`64` Fixed WAGO disconnects by increasing the timeout of the hardware.
 * :support:`61` Stop the positioners before existing if CLI receives a SIGINT, SIGTERM, or SIGHUP.
 * Modify configuration path to ``~/.config/sdss/jaeger.yml`` in line with new standards.
+* :bug:`72,73` Fix UIDs not being returned to the pool in some cases, which emptied it after a while.
 
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.
