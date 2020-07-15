@@ -166,7 +166,7 @@ class Trajectory(object):
         if not await self.fps.update_status(positioner_ids=list(self.trajectories.keys()),
                                             timeout=1.):
             self.failed = True
-            raise TrajectoryError(f'some positioners did not respond.')
+            raise TrajectoryError('some positioners did not respond.')
 
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:
