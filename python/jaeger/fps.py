@@ -622,7 +622,7 @@ class FPS(BaseFPS):
         if start_pollers:
             self.pollers.start()
 
-        return True
+        return self
 
     async def update_status(self, positioner_ids=None, timeout=1):
         """Update statuses for all positioners.
