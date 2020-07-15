@@ -120,8 +120,8 @@ class Trajectory(object):
     the normal process to execute the trajectory is ::
 
         trajectory = Trajectory(fps, points)
-        await trajectory.send()  # Sends the trajectory but does not yet execute it
-        await trajectory.start()   # This starts the trajectory (positioners move)
+        await trajectory.send()    # Sends the trajectory but does not yet execute it.
+        await trajectory.start()   # This starts the trajectory (positioners move).
 
     """
 
