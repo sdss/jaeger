@@ -113,6 +113,9 @@ class PositionerStatusV4_1(Maskbit):
     POSITION_RESTORED = 0x0000000400000000
     SWITCH_OFF_AFTER_MOVE = 0x0000000800000000
     CALIBRATION_SAVED = 0x0000001000000000
+    PRECISE_MOVE_IN_OPEN_LOOP_ALPHA = 0x0000002000000000
+    PRECISE_MOVE_IN_OPEN_LOOP_BETA = 0x0000004000000000
+    SWITCH_OFF_HALL_AFTER_MOVE = 0x0000008000000000
     UNKNOWN = 0x0000010000000000
 
     @property
@@ -165,7 +168,7 @@ class PositionerStatusV4_0(Maskbit):
                         PositionerStatusV4_0.BETA_COLLISION & self) else False
 
 
-#: Alias for the default positioner status flags.
+#: Alias to the default positioner status flags.
 PositionerStatus = PositionerStatusV4_1
 
 
@@ -183,14 +186,41 @@ class BootloaderStatus(Maskbit):
 
 
 class ResponseCode(enum.IntFlag):
-    """Maskbit for the status of the bootloader."""
+    """Maskbit for the status of the bootloader.
 
-    COMMAND_ACCEPTED = 0
-    VALUE_OUT_OF_RANGE = 1
-    INVALID_TRAJECTORY = 2
-    ALREADY_IN_MOTION = 3
-    NOT_INITIALIZED = 4
-    INVALID_BROADCAST_COMMAND = 10
-    INVALID_BOOTLOADER_COMMAND = 11
-    INVALID_COMMAND = 12
-    UNKNOWN_COMMAND = 13
+    0   All OK
+    1   Received parameter is out of range
+    2   Trajectory not accepted
+    3   Already in motion, cannot accept command
+    4   Datum not initialized
+    5   Incorrect amount of data in packet
+    6   One of the calibration modes is active: MOTOR_CALIBRATION,
+        COGGING_CALIBRATION, DATUM_CALIBRATION, DATUM _INITIALIZATION
+    7   The motors are not calibrated and therefore
+        the hall sensors can't be used
+    8   A collision is detected, the flag has to be first cleared
+        with stop trajectory
+    9   Hall sensors are disabled and can therefore not be used
+    10  Broadcast command not valid
+    11  Command not supported by bootloader
+    12  Invalid command
+    13  Unknown command
+    14  Datum not calibrated
+
+    """
+
+    COMMAND_ACCEPTED = 0,
+    VALUE_OUT_OF_RANGE = 1,
+    INVALID_TRAJECTORY = 2,
+    ALREADY_IN_MOTION = 3,
+    DATUM_NOT_INITIALIZED = 4,
+    INCORRECT_AMOUNT_OF_DATA = 5,
+    CALIBRATION_MODE_ACTIVE = 6,
+    MOTOR_NOT_CALIBRATED = 7,
+    COLLISION_DETECTED = 8,
+    HALL_SENSOR_DISABLED = 9,
+    INVALID_BROADCAST_COMMAND = 10,
+    INVALID_BOOTLOADER_COMMAND = 11,
+    INVALID_COMMAND = 12,
+    UNKNOWN_COMMAND = 13,
+    DATUM_NOT_CALIBRATED = 14
