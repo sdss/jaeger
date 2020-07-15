@@ -13,9 +13,9 @@ from jaeger.maskbits import PositionerStatus
 import asyncio
 
 
-__ALL__ = ['StartDatumCalibration', 'StartMotorCalibration',
-           'StartCoggingCalibration', 'SaveInternalCalibration',
-           'calibration_positioner']
+__ALL__ = ['calibration_positioner', 'StartDatumCalibration',
+           'StartMotorCalibration', 'StartCoggingCalibration',
+           'SaveInternalCalibration']
 
 
 async def calibrate_positioner(fps, positioner_id):
