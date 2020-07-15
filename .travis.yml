@@ -26,7 +26,7 @@ branches:
   - testing
 
 before_install:
-  - pip install --pre poetry
+  - pip install poetry
 
 install:
   - poetry install
