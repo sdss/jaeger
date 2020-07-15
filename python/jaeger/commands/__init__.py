@@ -33,12 +33,16 @@ class CommandID(enum.IntEnum):
     STOP_TRAJECTORY = 15
     COLLISION_DETECTED = 18
     INITIALIZE_DATUMS = 20
+    START_DATUM_CALIBRATION = 23
+    START_MOTOR_CALIBRATION = 26
     GO_TO_ABSOLUTE_POSITION = 30
     GO_TO_RELATIVE_POSITION = 31
     GET_ACTUAL_POSITION = 32
     SET_ACTUAL_POSITION = 33
     SET_SPEED = 40
     SET_CURRENT = 41
+    START_COGGING_CALIBRATION = 47
+    SAVE_INTERNAL_CALIBRATION = 53
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
 
@@ -72,6 +76,7 @@ from .bootloader import *
 from .goto import *
 from .status import *
 from .trajectory import *
+from .calibration import *
 
 
 # Generate a dictionary of commands
