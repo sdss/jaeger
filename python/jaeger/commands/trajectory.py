@@ -24,7 +24,7 @@ __ALL__ = ['send_trajectory', 'SendNewTrajectory', 'SendTrajectoryData',
            'StartTrajectory', 'StopTrajectory']
 
 
-async def send_trajectory(fps, trajectories):
+async def send_trajectory(fps, trajectories, use_sync_line=True):
     """Sends a set of trajectories to the positioners.
 
     This is a low-level function that raises errors when a problem is
@@ -43,6 +43,10 @@ async def send_trajectory(fps, trajectories):
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
+    use_sync_line : bool
+        If `True`, the SYNC line will be used to synchronise the beginning of
+        all trajectories. Otherwise a `.START_TRAJECTORY` command will be sent
+        over the CAN network.
 
     Raises
     ------
@@ -64,7 +68,6 @@ async def send_trajectory(fps, trajectories):
 
     """
 
-    log.info('starting trajectory ...')
     traj = Trajectory(fps, trajectories)
 
     log.debug('sending trajectory data.')
@@ -76,7 +79,8 @@ async def send_trajectory(fps, trajectories):
     log.info(f'trajectory successfully sent in {traj.data_send_time:1f} seconds.')
     log.info(f'expected time to complete trajectory: {traj.move_time:.2f} seconds.')
 
-    result = await traj.start()
+    log.info('starting trajectory ...')
+    result = await traj.start(use_sync_line=use_sync_line)
     if traj.failed or not result:
         raise TrajectoryError('something went wrong starting the trajectory.')
 
@@ -259,24 +263,42 @@ class Trajectory(object):
 
         return True
 
-    async def start(self):
+    async def start(self, use_sync_line=True):
         """Starts the trajectory."""
 
         if not self._ready_to_start or self.failed:
             raise TrajectoryError('the trajectory has not been sent.')
 
+        if use_sync_line:
+            if not self.fps.wago or not self.fps.wago.connected:
+                raise TrajectoryError('WAGO is not connected. Cannot use SYNC line.')
+            if await self.fps.wago.read_plc('sync') == 'on':
+                raise TrajectoryError('The SYNC line is on high.')
+
         for positioner_id in list(self.trajectories.keys()):
             self.fps[positioner_id].move_time = self.move_time
 
-        # Start trajectories
-        command = await self.fps.send_command(
-            'START_TRAJECTORY', positioner_id=0, timeout=1,
-            n_positioners=len(self.trajectories))
+        if use_sync_line:
 
-        if command.status.failed:
-            await self.fps.stop_trajectory()
-            self.failed = True
-            raise TrajectoryError('START_TRAJECTORY failed')
+            # Set SYNC line to high.
+            await self.fps.wago.turn_on('sync')
+
+            await asyncio.sleep(0.5)
+
+            # Reset SYNC line.
+            await self.fps.wago.turn_off('sync')
+
+        else:
+
+            # Start trajectories
+            command = await self.fps.send_command(
+                'START_TRAJECTORY', positioner_id=0, timeout=1,
+                n_positioners=len(self.trajectories))
+
+            if command.status.failed:
+                await self.fps.stop_trajectory()
+                self.failed = True
+                raise TrajectoryError('START_TRAJECTORY failed')
 
         try:
             await self.fps.pollers.set_delay(1)
