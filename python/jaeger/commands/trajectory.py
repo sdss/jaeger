@@ -70,6 +70,12 @@ async def send_trajectory(fps, trajectories, use_sync_line=True):
 
     traj = Trajectory(fps, trajectories)
 
+    if use_sync_line:
+        if not fps.wago or not fps.wago.connected:
+            raise TrajectoryError('WAGO is not connected. Cannot use SYNC line.')
+        if await fps.wago.read_plc('sync') == 'on':
+            raise TrajectoryError('The SYNC line is on high.')
+
     log.debug('sending trajectory data.')
     await traj.send()
 
