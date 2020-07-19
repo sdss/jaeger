@@ -358,11 +358,19 @@ Is is possible to know whether a positioner is in bootloader mode by `getting th
 Upgrading firmware
 ^^^^^^^^^^^^^^^^^^
 
-If is possible to upgrade the firmware of a positioner (or set of them) by using the convenience function `~.commands.load_firmware`. A :ref:`CLI interface <cli>` to this function is available via the ``jaeger`` command, for example ::
+If is possible to upgrade the firmware of a positioner (or set of them) by using the convenience function `~.commands.load_firmware`. A :ref:`CLI interface <cli>` to this function is available via the ``jaeger`` command, for example
+
+.. code-block:: console
 
     jaeger upgrade-firmware ~/Downloads/tendo_v04.00.04.bin
 
-The positioners must be in bootloader mode when the upgrade begins. Since the sync line, which controls the bootloader mode, is not in place yet, it is possible to use the ``--cycle`` flag to power cycle the 24V positioner power source ahead of the upgrade, provided that the IEB module is connected.
+The positioners must be in bootloader mode when the upgrade begins. The easiest way to achieve this is to use the ``--cycle`` flag to power cycle the 24V positioner power source ahead of the upgrade, provided that the IEB module is connected.
+
+If there are multiple positioners and some of them are in an invalid state it's possible to force upgrading the firmware to only certain positioners
+
+.. code-block:: console
+
+    jaeger upgrade-firmware --cycle -f -s 101 ~/Downloads/tendo_v04.00.04.bin
 
 
 .. _kaiju: https://github.com/csayres/kaiju
