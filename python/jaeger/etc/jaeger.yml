@@ -105,3 +105,8 @@ WAGO:
                     category: do
                     on_value: false
                     coil: true
+                "sync":
+                    channel: 4
+                    category: do
+                    on_value: true
+                    coil: true
