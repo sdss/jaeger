@@ -6,6 +6,8 @@
 # @Filename: conf.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+# isort:skip_file
+
 import os
 
 from pkg_resources import parse_version

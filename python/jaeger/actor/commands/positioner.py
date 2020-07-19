@@ -10,8 +10,9 @@ import asyncio
 import pathlib
 
 import click
-import clu
 import numpy
+
+import clu
 
 from jaeger.commands import SetCurrent, Trajectory
 from jaeger.exceptions import TrajectoryError
@@ -187,7 +188,7 @@ async def status(ctx, command, fps, positioner_id, full):
                                    positioner.firmware or '?'])
 
     if full:
-        await clu.Command('wago status', parent=command).parse()
+        await clu.Command('ieb status', parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
 

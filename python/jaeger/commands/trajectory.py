@@ -11,6 +11,7 @@ import pathlib
 import time
 
 import numpy
+
 from sdsstools import read_yaml_file
 
 from jaeger import config, log, maskbits
@@ -71,9 +72,10 @@ async def send_trajectory(fps, trajectories, use_sync_line=True):
     traj = Trajectory(fps, trajectories)
 
     if use_sync_line:
-        if not fps.wago or not fps.wago.connected:
-            raise TrajectoryError('WAGO is not connected. Cannot use SYNC line.')
-        if await fps.wago.read_plc('sync') == 'on':
+        if not fps.ieb or fps.ieb.disabled:
+            raise TrajectoryError('IEB is not connected. '
+                                  'Cannot use SYNC line.')
+        if await fps.ieb.read_plc('sync') == 'on':
             raise TrajectoryError('The SYNC line is on high.')
 
     log.debug('sending trajectory data.')
@@ -276,9 +278,10 @@ class Trajectory(object):
             raise TrajectoryError('the trajectory has not been sent.')
 
         if use_sync_line:
-            if not self.fps.wago or not self.fps.wago.connected:
-                raise TrajectoryError('WAGO is not connected. Cannot use SYNC line.')
-            if await self.fps.wago.read_plc('sync') == 'on':
+            if not self.fps.ieb or not self.fps.ieb.connected:
+                raise TrajectoryError('IEB is not connected. '
+                                      'Cannot use SYNC line.')
+            if await self.fps.ieb.get_device('sync').read()[0] == 'closed':
                 raise TrajectoryError('The SYNC line is on high.')
 
         for positioner_id in list(self.trajectories.keys()):
@@ -286,13 +289,15 @@ class Trajectory(object):
 
         if use_sync_line:
 
+            sync = self.fps.ieb.get_device('sync')
+
             # Set SYNC line to high.
-            await self.fps.wago.turn_on('sync')
+            await sync.close()
 
             await asyncio.sleep(0.5)
 
             # Reset SYNC line.
-            await self.fps.wago.turn_off('sync')
+            await sync.open()
 
         else:
 

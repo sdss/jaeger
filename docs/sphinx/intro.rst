@@ -11,7 +11,7 @@ Introduction to jaeger
 - Interfaces with kaiju_ to provide anticollision path planning for trajectories.
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
-- Interfaces with the modbus WAGO PLC controllers.
+- Interfaces with the Instrument Electronics Box modbus PLC controller.
 - Records QA metrology.
 - Provides a TCP/IP interface to send commands and output keywords using the SDSS-standard formatting.
 

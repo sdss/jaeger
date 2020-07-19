@@ -14,7 +14,7 @@ coverage:
             default:
                 # basic
                 target: auto
-                threshold: 5%
+                threshold: 70%
                 base: auto
                 # advanced
                 if_no_uploads: error
