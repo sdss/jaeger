@@ -15,7 +15,7 @@ import astropy.table
 
 from drift import Drift, DriftError
 
-from jaeger import config, log, sdsscore_path, user_path
+from jaeger import CONFIG_FILE, config, log
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
@@ -265,10 +265,8 @@ class FPS(BaseFPS):
     def __init__(self, can=None, layout=None, can_profile=None,
                  ieb=None, qa=None, loop=None, engineering_mode=False):
 
-        if os.path.exists(sdsscore_path):
-            log.info(f'using configuration from {sdsscore_path}')
-        elif os.path.exists(user_path):
-            log.info(f'using configuration from {user_path}')
+        if CONFIG_FILE:
+            log.info(f'using configuration from {CONFIG_FILE}')
         else:
             log.warning('cannot find SDSSCORE or user configuration. Using default values.')
 

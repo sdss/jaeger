@@ -19,15 +19,21 @@ log = get_logger('jaeger')
 can_log = get_logger('jaeger_can', capture_warnings=False)
 
 
+# Start by loading the internal configuration file.
 config = get_config(NAME, allow_user=False)
+CONFIG_FILE = None
 
-sdsscore_path = os.path.expandvars('$SDSSCORE_DIR/configuration/actors/jaeger.yaml')
-user_path = os.path.expanduser('~/.config/sdss/jaeger.yml')
+# Ranked possible paths for user configuration.
+config_paths = ['$SDSSCORE_DIR/configuration/actors/jaeger',
+                '~/.config/sdss/jaeger']
 
-if os.path.exists(sdsscore_path):
-    config = merge_config(read_yaml_file(sdsscore_path), config)
-elif os.path.exists(user_path):
-    config = merge_config(read_yaml_file(user_path), config)
+for config_path in config_paths:
+    for ext in ['yml', 'yaml']:
+        fpath = os.path.expanduser(os.path.expandvars(config_path + '.' + ext))
+        if os.path.exists(fpath):
+            config = merge_config(read_yaml_file(fpath), config)
+            CONFIG_FILE = os.path.realpath(fpath)
+            break
 
 
 if 'files' in config and 'log_dir' in config['files']:
