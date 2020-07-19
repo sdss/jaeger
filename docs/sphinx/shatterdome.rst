@@ -297,6 +297,25 @@ The ``timeout`` can be set to `None`, in which case the command will never time 
     asyncio.run(get_status())
 
 
+Accessing the IEB
+-----------------
+
+The Instrument Electronics Box (IEB) can be accessed via the `.FPS.ieb` attribute. This field is populated by an `.IEB` instance, which is a very thin wrapper around the `sdss-drift <https://sdss-drift.readthedocs.io/en/latest/>`__ package. The configuration for the IEB is defined in a YAML configuration file following the format required by ``drift`` and then passed to `.FPS` on instantiation or, more frequently, specified in jaeger's :ref:`configuration file <config-files>` in the ``fps.ieb`` field.
+
+Once `.IEB` has been loaded it behaves like any other :class:`~drift.drift.Drift` instance, and we refer to the documentation there. As an example, we can switch the status of the SYNC line by doing ::
+
+    >>> sync = fps.ieb.get_device('SYNC')
+    >>> await sync.read()
+    ('open', False)
+    >>> await sync.switch()
+    >>> await sync.read()
+    ('closed', False)
+
+Note that here ``open`` and ``closed`` refer to the status of the relay that controls the SYNC line.
+
+It's also possible to access the IEB via the :ref:`actor command <actor>` ``ieb``.
+
+
 Internals
 ---------
 

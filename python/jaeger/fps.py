@@ -33,7 +33,7 @@ __ALL__ = ['BaseFPS', 'FPS', 'IEB']
 
 
 class IEB(Drift):
-    """Thing wrapper around a `Drift` class.
+    """Thing wrapper around a :class:`~drift.drift.Drift` class.
 
     Allows additional features such as disabling the interface.
 
