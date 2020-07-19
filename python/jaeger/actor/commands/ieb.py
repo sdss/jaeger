@@ -11,6 +11,7 @@ import asyncio
 import click
 
 from clu.parser import pass_args
+
 from . import jaeger_parser
 
 

@@ -12,6 +12,7 @@ import os
 
 import pytest
 from can import Bus, Notifier
+
 from sdsstools import read_yaml_file
 
 import jaeger

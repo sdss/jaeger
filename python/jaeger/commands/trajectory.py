@@ -11,6 +11,7 @@ import pathlib
 import time
 
 import numpy
+
 from sdsstools import read_yaml_file
 
 from jaeger import config, log, maskbits

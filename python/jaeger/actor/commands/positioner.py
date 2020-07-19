@@ -10,8 +10,9 @@ import asyncio
 import pathlib
 
 import click
-import clu
 import numpy
+
+import clu
 
 from jaeger.commands import SetCurrent, Trajectory
 from jaeger.exceptions import TrajectoryError
