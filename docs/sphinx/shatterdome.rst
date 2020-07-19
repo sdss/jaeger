@@ -362,7 +362,7 @@ If is possible to upgrade the firmware of a positioner (or set of them) by using
 
     jaeger upgrade-firmware ~/Downloads/tendo_v04.00.04.bin
 
-The positioners must be in bootloader mode when the upgrade begins. Since the sync line, which controls the bootloader mode, is not in place yet, it is possible to use the ``--cycle`` flag to power cycle the 24V positioner power source ahead of the upgrade, provided that the WAGO module is connected.
+The positioners must be in bootloader mode when the upgrade begins. Since the sync line, which controls the bootloader mode, is not in place yet, it is possible to use the ``--cycle`` flag to power cycle the 24V positioner power source ahead of the upgrade, provided that the IEB module is connected.
 
 
 .. _kaiju: https://github.com/csayres/kaiju

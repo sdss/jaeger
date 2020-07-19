@@ -54,7 +54,7 @@ class VirtualFPS(jaeger.FPS):
 
     def __init__(self, layout=None, qa=False, loop=None, engineering_mode=False):
 
-        super().__init__(can_profile='virtual', layout=layout, wago=False, qa=qa)
+        super().__init__(can_profile='virtual', layout=layout, ieb=False, qa=qa)
 
 
 class VirtualPositioner(StatusMixIn):

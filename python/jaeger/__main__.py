@@ -55,7 +55,7 @@ def cli_coro(f):
 class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
-    def __init__(self, verbose, profile, layout, wago=None,
+    def __init__(self, verbose, profile, layout, ieb=None,
                  qa=None, danger=None, initialise=True):
 
         self.verbose = verbose
@@ -65,7 +65,7 @@ class FPSWrapper(object):
             self.profile = 'virtual'
 
         self.layout = layout
-        self.wago = wago
+        self.ieb = ieb
         self.qa = qa
         self.danger = danger
         self.initialise = initialise
@@ -85,7 +85,7 @@ class FPSWrapper(object):
             self.fps = VirtualFPS(layout=self.layout)
         else:
             self.fps = FPS(can_profile=self.profile, layout=self.layout,
-                           wago=self.wago, qa=self.qa, engineering_mode=self.danger)
+                           ieb=self.ieb, qa=self.qa, engineering_mode=self.danger)
 
         __FPS__ = self.fps
 
@@ -106,20 +106,20 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 @click.option('-l', '--layout', type=str, help='The FPS layout.')
 @click.option('-v', '--verbose', is_flag=True, help='Debug mode.')
 @click.option('--no-tron', is_flag=True, help='Does not connect to Tron.')
-@click.option('--wago/--no-wago', default=None, help='Does not connect to the WAGO.')
+@click.option('--ieb/--no-ieb', default=None, help='Does not connect to the IEB.')
 @click.option('--qa/--no-qa', default=None, help='Does not use the QA database.')
 @click.option('--danger', is_flag=True,
               help='Enables engineering mode. Most safety checks will be disabled.')
 @click.pass_context
 @cli_coro
-async def jaeger(ctx, layout, profile, verbose, no_tron, wago, qa, danger):
+async def jaeger(ctx, layout, profile, verbose, no_tron, ieb, qa, danger):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
 
     """
 
-    ctx.obj = FPSWrapper(verbose, profile, layout, wago, qa, danger)
+    ctx.obj = FPSWrapper(verbose, profile, layout, ieb, qa, danger)
 
     # If we call jaeger without a subcommand and with the actor flag,
     # start the actor.
@@ -162,17 +162,17 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
 
     async with fps_maker as fps:
 
-        if fps.wago and cycle:
+        if fps.ieb and cycle:
             try:
-                await fps.wago.connect()
-                log.info(f'WAGO connected on host {fps.wago.client.host}')
+                await fps.ieb.connect()
+                log.info(f'IEB connected on host {fps.ieb.client.host}')
             except RuntimeError as ee:
-                log.error(f'failed to initialise WAGO: {ee}')
+                log.error(f'failed to initialise IEB: {ee}')
                 raise
             log.info('power cycling positioners')
-            await fps.wago.turn_off('24V')
+            await fps.ieb.turn_off('24V')
             await asyncio.sleep(5)
-            await fps.wago.turn_on('24V')
+            await fps.ieb.turn_on('24V')
             await asyncio.sleep(3)
             await fps.initialise()
 

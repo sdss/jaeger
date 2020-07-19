@@ -31,13 +31,13 @@ python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
 sdss-clu = "^0.2.0"
 pyserial = "^3.4"
-pymodbus = "^2.3.0"
 peewee = "^3.11.2"
 Sphinx = {version = "^2.1", optional = true}
 sphinxcontrib-trio = {version = "1.1.0", optional = true}
 sphinx-click = {version = "2.3.0", optional = true}
 sdsstools = {version = "^0.1.11", extras = ["dev"]}
 sdssdb = "^0.4.5"
+sdss-drift = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.9.0"
@@ -63,11 +63,11 @@ docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
 jaeger = "jaeger.__main__:jaeger"
 
 [tool.isort]
-line_length = 79
+line_length = 89
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "SDSS", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
 known_first_party = ["jaeger"]
-known_sdss_party = ["sdsstools"]
+known_sdss = ["sdsstools", "sdssdb", "drift"]
 balanced_wrapping = true
 include_trailing_comma = false
 lines_after_imports = 2
@@ -81,8 +81,6 @@ omit = [
     "*/cli.py",
     "*/__init__.py",
     "*/cannet.py",
-    "*/wago.py",
-    "*/wago/*",
     "*/actor/*",
     "testing.py"
 ]

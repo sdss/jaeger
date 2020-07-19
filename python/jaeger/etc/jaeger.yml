@@ -9,7 +9,7 @@ actor:
         delay: 5
     tron_host: 127.0.0.1
     tron_port: 6093
-    wago_delay: 60
+    ieb_status_delay: 60
     log_dir: /data/logs/actors/jaeger
 
 profiles:
@@ -34,7 +34,7 @@ fps:
     initialise_timeouts: 0.5
     status_poller_delay: 5
     position_poller_delay: 5
-    wago: true
+    ieb: true
     qa: false
 
 positioner:
@@ -49,64 +49,4 @@ files:
     log_dir: ~/logs/jaeger
     qa_database: /data/fps/positioners.sqlite
 
-WAGO:
-    address: 10.1.10.1
-    DO_delay: 1  # Seconds to wait when writing digital output relays
-    modules:
-        RTD:
-            device: "750-450"
-            mode: input
-            channels: 4
-            address: 40009
-            comment: "Pt RTD sensors"
-            plcs:
-                "RTD1":
-                    channel: 1
-                    category: rtd
-                    units: celsius
-                "RTD2":
-                    channel: 2
-                    category: rtd
-                    units: celsius
-        EE:
-            device: "750-497"
-            mode: input
-            channels: 8
-            address: 40001
-            comment: "E+E temperature and humidity sensors"
-            plcs:
-                "RH1":
-                    channel: 1
-                    category: ee_rh
-                    units: percent
-                "T1":
-                    channel: 2
-                    category: ee_temp
-                    units: celsius
-        DO:
-            device: "750-530"
-            mode: output
-            channels: 8
-            address: 40513
-            comment: "Power relays"
-            plcs:
-                "24V":
-                    channel: 1
-                    category: do
-                    on_value: false
-                    coil: true
-                "5V":
-                    channel: 2
-                    category: do
-                    on_value: false
-                    coil: true
-                "CANnet":
-                    channel: 3
-                    category: do
-                    on_value: false
-                    coil: true
-                "sync":
-                    channel: 4
-                    category: do
-                    on_value: true
-                    coil: true
+IEB: $SDSSCORE_DIR/configuration/iebs/sextant.yaml

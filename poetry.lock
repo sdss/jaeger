@@ -47,6 +47,7 @@ version = "0.7.12"
 [[package]]
 category = "dev"
 description = "Disable App Nap on OS X 10.9"
+marker = "sys_platform == \"darwin\""
 name = "appnope"
 optional = false
 python-versions = "*"
@@ -69,8 +70,20 @@ docs = ["sphinx-astropy"]
 test = ["pytest-astropy", "pytest-xdist", "pytest-mpl", "objgraph", "ipython", "coverage", "skyfield"]
 
 [[package]]
+category = "main"
+description = "Extension to the standard mock framework to support support async"
+name = "asyncmock"
+optional = false
+python-versions = ">=3.6"
+version = "0.4.2"
+
+[package.dependencies]
+mock = "*"
+
+[[package]]
 category = "dev"
 description = "Atomic file writes."
+marker = "sys_platform == \"win32\""
 name = "atomicwrites"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -133,6 +146,7 @@ version = "2020.6.20"
 [[package]]
 category = "main"
 description = "Foreign Function Interface for Python calling C code."
+marker = "sys_platform == \"linux\""
 name = "cffi"
 optional = false
 python-versions = "*"
@@ -186,7 +200,9 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
 version = "5.0"
 
 [package.dependencies]
-toml = {version = "*", optional = true, markers = "extra == \"toml\""}
+[package.dependencies.toml]
+optional = true
+version = "*"
 
 [package.extras]
 toml = ["toml"]
@@ -194,6 +210,7 @@ toml = ["toml"]
 [[package]]
 category = "main"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
+marker = "sys_platform == \"linux\""
 name = "cryptography"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*"
@@ -265,7 +282,10 @@ version = "3.8.3"
 mccabe = ">=0.6.0,<0.7.0"
 pycodestyle = ">=2.6.0a1,<2.7.0"
 pyflakes = ">=2.2.0,<2.3.0"
-importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = "*"
 
 [[package]]
 category = "main"
@@ -286,6 +306,7 @@ version = "1.2.0"
 [[package]]
 category = "main"
 description = "Read metadata from Python packages"
+marker = "python_version < \"3.8\""
 name = "importlib-metadata"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
@@ -315,16 +336,17 @@ python-versions = ">=3.6"
 version = "7.16.1"
 
 [package.dependencies]
+appnope = "*"
 backcall = "*"
+colorama = "*"
 decorator = "*"
 jedi = ">=0.10"
+pexpect = "*"
 pickleshare = "*"
 prompt-toolkit = ">=2.0.0,<3.0.0 || >3.0.0,<3.0.1 || >3.0.1,<3.1.0"
 pygments = "*"
+setuptools = ">=18.5"
 traitlets = ">=4.2"
-appnope = {version = "*", markers = "sys_platform == \"darwin\""}
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-pexpect = {version = "*", markers = "sys_platform != \"win32\""}
 
 [package.extras]
 all = ["Sphinx (>=1.3)", "ipykernel", "ipyparallel", "ipywidgets", "nbconvert", "nbformat", "nose (>=0.10.1)", "notebook", "numpy (>=1.14)", "pygments", "qtconsole", "requests", "testpath"]
@@ -377,6 +399,7 @@ testing = ["Django (<3.1)", "colorama", "docopt", "pytest (>=3.9.0,<5.0.0)"]
 [[package]]
 category = "main"
 description = "Low-level, pure Python DBus protocol wrapper."
+marker = "sys_platform == \"linux\""
 name = "jeepney"
 optional = false
 python-versions = ">=3.5"
@@ -410,8 +433,12 @@ version = "3.2.0"
 [package.dependencies]
 attrs = ">=17.4.0"
 pyrsistent = ">=0.14.0"
+setuptools = "*"
 six = ">=1.11.0"
-importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = "*"
 
 [package.extras]
 format = ["idna", "jsonpointer (>1.13)", "rfc3987", "strict-rfc3339", "webcolors"]
@@ -426,10 +453,13 @@ python-versions = ">=3.6"
 version = "21.2.1"
 
 [package.dependencies]
-SecretStorage = {version = ">=3", markers = "sys_platform == \"linux\""}
-importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
-jeepney = {version = ">=0.4.2", markers = "sys_platform == \"linux\""}
-pywin32-ctypes = {version = "<0.1.0 || >0.1.0,<0.1.1 || >0.1.1", markers = "sys_platform == \"win32\""}
+SecretStorage = ">=3"
+jeepney = ">=0.4.2"
+pywin32-ctypes = "<0.1.0 || >0.1.0,<0.1.1 || >0.1.1"
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = "*"
 
 [package.extras]
 docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
@@ -473,6 +503,19 @@ name = "mccabe"
 optional = false
 python-versions = "*"
 version = "0.6.1"
+
+[[package]]
+category = "main"
+description = "Rolling backport of unittest.mock for all Pythons"
+name = "mock"
+optional = false
+python-versions = ">=3.6"
+version = "4.0.2"
+
+[package.extras]
+build = ["twine", "wheel", "blurb"]
+docs = ["sphinx"]
+test = ["pytest", "pytest-cov"]
 
 [[package]]
 category = "dev"
@@ -551,6 +594,7 @@ version = "3.13.3"
 [[package]]
 category = "dev"
 description = "Pexpect allows easy control of interactive console applications."
+marker = "sys_platform != \"win32\""
 name = "pexpect"
 optional = false
 python-versions = "*"
@@ -595,7 +639,9 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.13.1"
 
 [package.dependencies]
-importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
@@ -638,6 +684,7 @@ version = "2.8.5"
 [[package]]
 category = "dev"
 description = "Run a subprocess in a pseudo terminal"
+marker = "sys_platform != \"win32\""
 name = "ptyprocess"
 optional = false
 python-versions = "*"
@@ -662,6 +709,7 @@ version = "2.6.0"
 [[package]]
 category = "main"
 description = "C parser in Python"
+marker = "sys_platform == \"linux\""
 name = "pycparser"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -738,15 +786,18 @@ python-versions = ">=3.5"
 version = "5.4.3"
 
 [package.dependencies]
+atomicwrites = ">=1.0"
 attrs = ">=17.4.0"
+colorama = "*"
 more-itertools = ">=4.0.0"
 packaging = "*"
 pluggy = ">=0.12,<1.0"
 py = ">=1.5.0"
 wcwidth = "*"
-atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
 
 [package.extras]
 checkqa-mypy = ["mypy (v0.761)"]
@@ -804,8 +855,8 @@ version = "3.3.3"
 
 [package.dependencies]
 aenum = "*"
+windows-curses = "*"
 wrapt = ">=1.10,<2.0"
-windows-curses = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.extras]
 neovi = ["python-ics (>=2.12)"]
@@ -845,6 +896,7 @@ version = "2020.1"
 [[package]]
 category = "main"
 description = ""
+marker = "sys_platform == \"win32\""
 name = "pywin32-ctypes"
 optional = false
 python-versions = "*"
@@ -945,6 +997,26 @@ docs = ["Sphinx (>=2.3,<3.0)"]
 
 [[package]]
 category = "main"
+description = "Modbus PLC control library"
+name = "sdss-drift"
+optional = false
+python-versions = ">=3.7,<4.0"
+version = "0.1.0"
+
+[package.dependencies]
+asyncmock = ">=0.4.2,<0.5.0"
+pymodbus = ">=2.3.0,<3.0.0"
+pyyaml = ">=5.3.1,<6.0.0"
+
+[package.dependencies.sdsstools]
+extras = ["dev"]
+version = ">=0.1.9,<0.2.0"
+
+[package.extras]
+docs = ["Sphinx (>=2.2.0,<3.0.0)"]
+
+[[package]]
+category = "main"
 description = "SDSS product for database management"
 name = "sdssdb"
 optional = false
@@ -981,9 +1053,18 @@ pygments = ">=2.5.2,<3.0.0"
 pyyaml = ">=4.0"
 semantic-version = ">=2.8.4,<3.0.0"
 six = ">=1.14.0,<2.0.0"
-invoke = {version = ">=1.3.0,<2.0.0", optional = true, markers = "extra == \"dev\""}
-twine = {version = ">=3.1.1,<4.0.0", optional = true, markers = "extra == \"dev\""}
-wheel = {version = ">=0.33.6,<0.34.0", optional = true, markers = "extra == \"dev\""}
+
+[package.dependencies.invoke]
+optional = true
+version = ">=1.3.0,<2.0.0"
+
+[package.dependencies.twine]
+optional = true
+version = ">=3.1.1,<4.0.0"
+
+[package.dependencies.wheel]
+optional = true
+version = ">=0.33.6,<0.34.0"
 
 [package.extras]
 dev = ["invoke (>=1.3.0,<2.0.0)", "twine (>=3.1.1,<4.0.0)", "wheel (>=0.33.6,<0.34.0)"]
@@ -991,6 +1072,7 @@ dev = ["invoke (>=1.3.0,<2.0.0)", "twine (>=3.1.1,<4.0.0)", "wheel (>=0.33.6,<0.
 [[package]]
 category = "main"
 description = "Python bindings to FreeDesktop.org Secret Service API"
+marker = "sys_platform == \"linux\""
 name = "secretstorage"
 optional = false
 python-versions = ">=3.5"
@@ -1037,10 +1119,12 @@ Jinja2 = ">=2.3"
 Pygments = ">=2.0"
 alabaster = ">=0.7,<0.8"
 babel = ">=1.3,<2.0 || >2.0"
+colorama = ">=0.3.5"
 docutils = ">=0.12"
 imagesize = "*"
 packaging = "*"
 requests = ">=2.5.0"
+setuptools = "*"
 snowballstemmer = ">=1.1"
 sphinxcontrib-applehelp = "*"
 sphinxcontrib-devhelp = "*"
@@ -1048,7 +1132,6 @@ sphinxcontrib-htmlhelp = "*"
 sphinxcontrib-jsmath = "*"
 sphinxcontrib-qthelp = "*"
 sphinxcontrib-serializinghtml = "*"
-colorama = {version = ">=0.3.5", markers = "sys_platform == \"win32\""}
 
 [package.extras]
 docs = ["sphinxcontrib-websupport"]
@@ -1178,7 +1261,10 @@ version = "3.1.0"
 
 [package.dependencies]
 pbr = ">=2.0.0,<2.1.0 || >2.1.0"
-importlib-metadata = {version = ">=1.7.0", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=1.7.0"
 
 [[package]]
 category = "dev"
@@ -1239,8 +1325,12 @@ readme-renderer = ">=21.0"
 requests = ">=2.20"
 requests-toolbelt = ">=0.8.0,<0.9.0 || >0.9.0"
 rfc3986 = ">=1.4.0"
+setuptools = ">=0.7.0"
 tqdm = ">=4.14"
-importlib-metadata = {version = "*", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = "*"
 
 [[package]]
 category = "main"
@@ -1285,6 +1375,7 @@ test = ["pytest (>=3.0.0)", "pytest-cov"]
 [[package]]
 category = "main"
 description = "Support for the standard curses module on Windows"
+marker = "platform_system == \"Windows\""
 name = "windows-curses"
 optional = false
 python-versions = "*"
@@ -1313,6 +1404,7 @@ multidict = ">=4.0"
 [[package]]
 category = "main"
 description = "Backport of pathlib-compatible object wrapper for zip files"
+marker = "python_version < \"3.8\""
 name = "zipp"
 optional = false
 python-versions = ">=3.6"
@@ -1326,7 +1418,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
 
 [metadata]
-content-hash = "049d1fe01aa2a1f0cbb9847753f4505a6234e136c2874f967d464531e23fd862"
+content-hash = "0a6e3f675865992877e4cb9bc4162777659d068f5d51343d9334c7351ed8c9a0"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1376,6 +1468,10 @@ astropy = [
     {file = "astropy-3.2.3-cp38-cp38-win32.whl", hash = "sha256:efa49863064bbcb0651eb0f6af9bd439da482e4091764660475b8ff2bcd909b9"},
     {file = "astropy-3.2.3-cp38-cp38-win_amd64.whl", hash = "sha256:bbcaee3527bbc0460a7a46ce31873076312c9b0d9b84ef027b6313b0bb5c26ac"},
     {file = "astropy-3.2.3.tar.gz", hash = "sha256:47f00816c2978fdd10f448c8f0337d6dca7b8cbeaab4bf272b5fd37cb4b890d3"},
+]
+asyncmock = [
+    {file = "asyncmock-0.4.2-py3-none-any.whl", hash = "sha256:fd8bc4e7813251a8959d1140924ccba3adbbc7af885dba7047c67f73c0b664b1"},
+    {file = "asyncmock-0.4.2.tar.gz", hash = "sha256:c251889d542e98fe5f7ece2b5b8643b7d62b50a5657d34a4cbce8a1d5170d750"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
@@ -1575,19 +1671,16 @@ kiwisolver = [
     {file = "kiwisolver-1.2.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:443c2320520eda0a5b930b2725b26f6175ca4453c61f739fef7a5847bd262f74"},
     {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:efcf3397ae1e3c3a4a0a0636542bcad5adad3b1dd3e8e629d0b6e201347176c8"},
     {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:fccefc0d36a38c57b7bd233a9b485e2f1eb71903ca7ad7adacad6c28a56d62d2"},
-    {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:be046da49fbc3aa9491cc7296db7e8d27bcf0c3d5d1a40259c10471b014e4e0c"},
     {file = "kiwisolver-1.2.0-cp36-none-win32.whl", hash = "sha256:60a78858580761fe611d22127868f3dc9f98871e6fdf0a15cc4203ed9ba6179b"},
     {file = "kiwisolver-1.2.0-cp36-none-win_amd64.whl", hash = "sha256:556da0a5f60f6486ec4969abbc1dd83cf9b5c2deadc8288508e55c0f5f87d29c"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:7cc095a4661bdd8a5742aaf7c10ea9fac142d76ff1770a0f84394038126d8fc7"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:c955791d80e464da3b471ab41eb65cf5a40c15ce9b001fdc5bbc241170de58ec"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:603162139684ee56bcd57acc74035fceed7dd8d732f38c0959c8bd157f913fec"},
-    {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:63f55f490b958b6299e4e5bdac66ac988c3d11b7fafa522800359075d4fa56d1"},
     {file = "kiwisolver-1.2.0-cp37-none-win32.whl", hash = "sha256:03662cbd3e6729f341a97dd2690b271e51a67a68322affab12a5b011344b973c"},
     {file = "kiwisolver-1.2.0-cp37-none-win_amd64.whl", hash = "sha256:4eadb361baf3069f278b055e3bb53fa189cea2fd02cb2c353b7a99ebb4477ef1"},
     {file = "kiwisolver-1.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:c31bc3c8e903d60a1ea31a754c72559398d91b5929fcb329b1c3a3d3f6e72113"},
     {file = "kiwisolver-1.2.0-cp38-cp38-manylinux1_i686.whl", hash = "sha256:d52b989dc23cdaa92582ceb4af8d5bcc94d74b2c3e64cd6785558ec6a879793e"},
     {file = "kiwisolver-1.2.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:e586b28354d7b6584d8973656a7954b1c69c93f708c0c07b77884f91640b7657"},
-    {file = "kiwisolver-1.2.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:38d05c9ecb24eee1246391820ed7137ac42a50209c203c908154782fced90e44"},
     {file = "kiwisolver-1.2.0-cp38-none-win32.whl", hash = "sha256:d069ef4b20b1e6b19f790d00097a5d5d2c50871b66d10075dab78938dc2ee2cf"},
     {file = "kiwisolver-1.2.0-cp38-none-win_amd64.whl", hash = "sha256:18d749f3e56c0480dccd1714230da0f328e6e4accf188dd4e6884bdd06bf02dd"},
     {file = "kiwisolver-1.2.0.tar.gz", hash = "sha256:247800260cd38160c362d211dcaf4ed0f7816afb5efe56544748b21d6ad6d17f"},
@@ -1648,6 +1741,10 @@ matplotlib = [
 mccabe = [
     {file = "mccabe-0.6.1-py2.py3-none-any.whl", hash = "sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42"},
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
+]
+mock = [
+    {file = "mock-4.0.2-py3-none-any.whl", hash = "sha256:3f9b2c0196c60d21838f307f5825a7b86b678cedc58ab9e50a8988187b4d81e0"},
+    {file = "mock-4.0.2.tar.gz", hash = "sha256:dd33eb70232b6118298d516bbcecd26704689c386594f0f3c4f13867b2c56f72"},
 ]
 more-itertools = [
     {file = "more-itertools-8.4.0.tar.gz", hash = "sha256:68c70cc7167bdf5c7c9d8f6954a7837089c6a36bf565383919bb595efb8a17e5"},
@@ -1887,6 +1984,10 @@ rfc3986 = [
 sdss-clu = [
     {file = "sdss-clu-0.2.1.tar.gz", hash = "sha256:3b06098db600cd25a061351e73e7235659a569b55072e2eee8e68c044b8f166d"},
     {file = "sdss_clu-0.2.1-py3-none-any.whl", hash = "sha256:e74caac4586865e82b03dc50a7b15f3cc72f568e779e5dc2a570e4d2045803b0"},
+]
+sdss-drift = [
+    {file = "sdss-drift-0.1.0.tar.gz", hash = "sha256:730f7ab21a591ff5433f38d30a1024800da5d1fbd412ad67a7b978a42c72fe3d"},
+    {file = "sdss_drift-0.1.0-py3-none-any.whl", hash = "sha256:789dbef715e683d364c5ed6cca2de61a83732e7412ceaa868e340e51aee8065d"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.5-py3-none-any.whl", hash = "sha256:8b882137a1473761ccb241341a35963484a81907b465e535700c8696cac0c90c"},

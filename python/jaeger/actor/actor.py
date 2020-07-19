@@ -30,7 +30,7 @@ class JaegerActor(clu.LegacyActor):
         # command (the first argument is always the actor command).
         self.parser_args = [fps]
 
-        wago_delay = kwargs.pop('wago_delay', None)
+        ieb_status_delay = kwargs.pop('ieb_status_delay', 60)
 
         super().__init__(*args, parser=jaeger_parser, **kwargs)
 
@@ -41,8 +41,8 @@ class JaegerActor(clu.LegacyActor):
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.INFO)
 
-        if fps.wago and fps.wago.connected and wago_delay:
-            self.timer_commands.add_command('wago status', delay=wago_delay)
+        if fps.ieb and not fps.ieb.disabled:
+            self.timer_commands.add_command('ieb status', delay=ieb_status_delay)
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""

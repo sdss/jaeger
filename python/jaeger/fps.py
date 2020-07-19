@@ -13,14 +13,14 @@ import warnings
 
 import astropy.table
 
+from drift import Drift, DriftError
+
 from jaeger import config, log, sdsscore_path, user_path
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.exceptions import (FPSLockedError, JaegerUserWarning,
-                               TrajectoryError)
+from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int, get_qa_database
-from jaeger.wago import WAGO
 
 
 # try:
@@ -29,7 +29,37 @@ from jaeger.wago import WAGO
 #     targetdb = False
 
 
-__ALL__ = ['BaseFPS', 'FPS']
+__ALL__ = ['BaseFPS', 'FPS', 'IEB']
+
+
+class IEB(Drift):
+    """Thing wrapper around a `Drift` class.
+
+    Allows additional features such as disabling the interface.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+
+        self.disabled = False
+
+        super().__init__(*args, **kwargs)
+
+    async def __aenter__(self):
+
+        if self.disabled:
+            raise DriftError('IEB is disabled.')
+
+        try:
+            await Drift.__aenter__(self)
+        except DriftError:
+            self.disabled = True
+            warnings.warn('Failed connecting to the IEB. Disabling it.',
+                          JaegerUserWarning)
+
+    async def __aexit__(self, *args):
+
+        await Drift.__aexit__(self, *args)
 
 
 class BaseFPS(dict):
@@ -203,8 +233,8 @@ class FPS(BaseFPS):
     can_profile : str or None
         The configuration profile for the CAN interface, or `None` to use the
         default one. Ignored if ``can`` is passed.
-    wago : bool or .WAGO
-        If `True`, connects the WAGO PLC controller.
+    ieb : bool or .IEB instance
+        If `True`, connects the Instrument Electronics Box PLC controller.
     qa : bool or path
         A path to the database used to store QA information. If `True`, uses
         the value from ``config.files.qa_database``. If `False`, does not do
@@ -233,7 +263,7 @@ class FPS(BaseFPS):
     """
 
     def __init__(self, can=None, layout=None, can_profile=None,
-                 wago=None, qa=None, loop=None, engineering_mode=False):
+                 ieb=None, qa=None, loop=None, engineering_mode=False):
 
         if os.path.exists(sdsscore_path):
             log.info(f'using configuration from {sdsscore_path}')
@@ -265,18 +295,22 @@ class FPS(BaseFPS):
 
         self._locked = False
 
-        #: .WAGO: The WAGO PLC system that controls the FPS.
-        self.wago = None
+        #: .IEB: Connection to the instrument electronics box over Modbus.
+        self.ieb = None
 
-        if wago is None:
-            wago = config['fps']['wago']
+        if ieb is None or ieb is True:
+            ieb = config['fps']['IEB']
 
-        if isinstance(wago, WAGO):
-            self.wago = wago
-        elif wago is True:
-            self.wago = WAGO.from_config()
+        if isinstance(ieb, IEB):
+            self.ieb = ieb
+        elif isinstance(ieb, (str, dict)):
+            if isinstance(ieb, str):
+                ieb = os.path.expanduser(os.path.expandvars(ieb))
+            self.ieb = IEB.from_config(ieb)
+        elif ieb is False:
+            self.ieb = False
         else:
-            self.wago = False
+            raise ValueError(f'Invalid input value for ieb {ieb!r}.')
 
         if qa is None:
             qa = config['fps']['qa']
@@ -508,14 +542,11 @@ class FPS(BaseFPS):
 
         unknwon_positioners = []
 
-        # Start by initialising the WAGO.
-        if self.wago and not self.wago.connected:
-
-            try:
-                await self.wago.connect()
-                log.info(f'WAGO connected on host {self.wago.client.host}')
-            except RuntimeError as ee:
-                log.error(f'failed to initialise WAGO: {ee}')
+        # Test IEB connection. This will issue a warning and set
+        # self.ieb.disabled=True if the connection fails.
+        if self.ieb:
+            async with self.ieb:
+                pass
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
