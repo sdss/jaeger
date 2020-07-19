@@ -37,7 +37,7 @@ sphinxcontrib-trio = {version = "1.1.0", optional = true}
 sphinx-click = {version = "2.3.0", optional = true}
 sdsstools = {version = "^0.1.11", extras = ["dev"]}
 sdssdb = "^0.4.5"
-sdss-drift = "^0.1.0"
+sdss-drift = "^0.1.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.9.0"
