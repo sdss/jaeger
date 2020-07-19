@@ -297,7 +297,7 @@ class FPS(BaseFPS):
         self.ieb = None
 
         if ieb is None or ieb is True:
-            ieb = config['fps']['IEB']
+            ieb = config['fps']['ieb']
 
         if isinstance(ieb, IEB):
             self.ieb = ieb
