@@ -34,16 +34,24 @@ async def status(command, fps):
     ieb = fps.ieb
 
     categories = set()
-    for module in ieb.modules:
-        categories.add((dev.category for dev in module.devices
-                        if dev.category is not None))
+    for module in ieb.modules.values():
+        new_categories = set(list(dev.category for dev in module.devices.values()
+                                  if dev.category is not None))
+        categories = categories.union(new_categories)
 
     for category in categories:
         data = await ieb.read_category(category)
         measured = []
         for key, value in data.items():
-            value_unit = f'{value[0]}' if not value[1] else f'{value[0]} {value[1]}'
-            measured.append(f'{key} = {value_unit}')
+            dev_name = ieb.get_device(key).name
+            meas, units = value
+            meas = round(meas, 3) if not isinstance(meas, str) else meas
+            if meas == 'closed':
+                meas = 'on'
+            elif meas == 'open':
+                meas = 'off'
+            value_unit = f'{meas}' if not units else f'{meas} {units}'
+            measured.append(f'{dev_name}={value_unit}')
         command.write('i', message='; '.join(measured))
 
     return command.finish()
@@ -74,7 +82,7 @@ async def switch(command, fps, device, on, cycle):
         return command.fail(text=f'device {dev_name!r} is not output.')
 
     if on is None:  # The --on/--off was not passed
-        current_status = await device_obj.read()[0]
+        current_status = (await device_obj.read())[0]
         if current_status == 'closed':
             on = False
         elif current_status == 'open':
@@ -99,6 +107,6 @@ async def switch(command, fps, device, on, cycle):
         except Exception:
             return command.fail(text=f'failed to power device {dev_name!r} back on.')
 
-    status = 'on' if await device_obj.read()[0] == 'closed' else 'off'
+    status = 'on' if (await device_obj.read())[0] == 'closed' else 'off'
 
     return command.finish(text=f'device {dev_name!r} is now {status!r}.')
