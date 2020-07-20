@@ -71,6 +71,15 @@ test = ["pytest-astropy", "pytest-xdist", "pytest-mpl", "objgraph", "ipython", "
 
 [[package]]
 category = "dev"
+description = "Enhance the standard unittest package with features for testing asyncio libraries"
+marker = "python_version >= \"3.7\" and python_version < \"3.8\""
+name = "asynctest"
+optional = false
+python-versions = ">=3.5"
+version = "0.13.0"
+
+[[package]]
+category = "dev"
 description = "Atomic file writes."
 marker = "sys_platform == \"win32\""
 name = "atomicwrites"
@@ -1403,7 +1412,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
 
 [metadata]
-content-hash = "9a922ed66cda34179cbf3ccac702679223d806034787838bd2e25785dbfd84ba"
+content-hash = "0600d025a18a752d3ca7af52fe80aaa65f7eda745ca3e00a53100c9d19ba2112"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1453,6 +1462,10 @@ astropy = [
     {file = "astropy-3.2.3-cp38-cp38-win32.whl", hash = "sha256:efa49863064bbcb0651eb0f6af9bd439da482e4091764660475b8ff2bcd909b9"},
     {file = "astropy-3.2.3-cp38-cp38-win_amd64.whl", hash = "sha256:bbcaee3527bbc0460a7a46ce31873076312c9b0d9b84ef027b6313b0bb5c26ac"},
     {file = "astropy-3.2.3.tar.gz", hash = "sha256:47f00816c2978fdd10f448c8f0337d6dca7b8cbeaab4bf272b5fd37cb4b890d3"},
+]
+asynctest = [
+    {file = "asynctest-0.13.0-py3-none-any.whl", hash = "sha256:5da6118a7e6d6b54d83a8f7197769d046922a44d2a99c21382f0a6e4fadae676"},
+    {file = "asynctest-0.13.0.tar.gz", hash = "sha256:c27862842d15d83e6a34eb0b2866c323880eb3a75e4485b079ea11748fd77fac"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
