@@ -71,6 +71,18 @@ test = ["pytest-astropy", "pytest-xdist", "pytest-mpl", "objgraph", "ipython", "
 
 [[package]]
 category = "dev"
+description = "Extension to the standard mock framework to support support async"
+marker = "python_version >= \"3.7\" and python_version < \"3.8\""
+name = "asyncmock"
+optional = false
+python-versions = ">=3.6"
+version = "0.4.2"
+
+[package.dependencies]
+mock = "*"
+
+[[package]]
+category = "dev"
 description = "Enhance the standard unittest package with features for testing asyncio libraries"
 marker = "python_version >= \"3.7\" and python_version < \"3.8\""
 name = "asynctest"
@@ -502,6 +514,20 @@ name = "mccabe"
 optional = false
 python-versions = "*"
 version = "0.6.1"
+
+[[package]]
+category = "dev"
+description = "Rolling backport of unittest.mock for all Pythons"
+marker = "python_version >= \"3.7\" and python_version < \"3.8\""
+name = "mock"
+optional = false
+python-versions = ">=3.6"
+version = "4.0.2"
+
+[package.extras]
+build = ["twine", "wheel", "blurb"]
+docs = ["sphinx"]
+test = ["pytest", "pytest-cov"]
 
 [[package]]
 category = "dev"
@@ -1412,7 +1438,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
 
 [metadata]
-content-hash = "0600d025a18a752d3ca7af52fe80aaa65f7eda745ca3e00a53100c9d19ba2112"
+content-hash = "a502f6c283df1fd7474205ef4249f1db22c28c61bc708b3ef5e2af5f3b4b629d"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1462,6 +1488,10 @@ astropy = [
     {file = "astropy-3.2.3-cp38-cp38-win32.whl", hash = "sha256:efa49863064bbcb0651eb0f6af9bd439da482e4091764660475b8ff2bcd909b9"},
     {file = "astropy-3.2.3-cp38-cp38-win_amd64.whl", hash = "sha256:bbcaee3527bbc0460a7a46ce31873076312c9b0d9b84ef027b6313b0bb5c26ac"},
     {file = "astropy-3.2.3.tar.gz", hash = "sha256:47f00816c2978fdd10f448c8f0337d6dca7b8cbeaab4bf272b5fd37cb4b890d3"},
+]
+asyncmock = [
+    {file = "asyncmock-0.4.2-py3-none-any.whl", hash = "sha256:fd8bc4e7813251a8959d1140924ccba3adbbc7af885dba7047c67f73c0b664b1"},
+    {file = "asyncmock-0.4.2.tar.gz", hash = "sha256:c251889d542e98fe5f7ece2b5b8643b7d62b50a5657d34a4cbce8a1d5170d750"},
 ]
 asynctest = [
     {file = "asynctest-0.13.0-py3-none-any.whl", hash = "sha256:5da6118a7e6d6b54d83a8f7197769d046922a44d2a99c21382f0a6e4fadae676"},
@@ -1665,16 +1695,19 @@ kiwisolver = [
     {file = "kiwisolver-1.2.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:443c2320520eda0a5b930b2725b26f6175ca4453c61f739fef7a5847bd262f74"},
     {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:efcf3397ae1e3c3a4a0a0636542bcad5adad3b1dd3e8e629d0b6e201347176c8"},
     {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:fccefc0d36a38c57b7bd233a9b485e2f1eb71903ca7ad7adacad6c28a56d62d2"},
+    {file = "kiwisolver-1.2.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:be046da49fbc3aa9491cc7296db7e8d27bcf0c3d5d1a40259c10471b014e4e0c"},
     {file = "kiwisolver-1.2.0-cp36-none-win32.whl", hash = "sha256:60a78858580761fe611d22127868f3dc9f98871e6fdf0a15cc4203ed9ba6179b"},
     {file = "kiwisolver-1.2.0-cp36-none-win_amd64.whl", hash = "sha256:556da0a5f60f6486ec4969abbc1dd83cf9b5c2deadc8288508e55c0f5f87d29c"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:7cc095a4661bdd8a5742aaf7c10ea9fac142d76ff1770a0f84394038126d8fc7"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:c955791d80e464da3b471ab41eb65cf5a40c15ce9b001fdc5bbc241170de58ec"},
     {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:603162139684ee56bcd57acc74035fceed7dd8d732f38c0959c8bd157f913fec"},
+    {file = "kiwisolver-1.2.0-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:63f55f490b958b6299e4e5bdac66ac988c3d11b7fafa522800359075d4fa56d1"},
     {file = "kiwisolver-1.2.0-cp37-none-win32.whl", hash = "sha256:03662cbd3e6729f341a97dd2690b271e51a67a68322affab12a5b011344b973c"},
     {file = "kiwisolver-1.2.0-cp37-none-win_amd64.whl", hash = "sha256:4eadb361baf3069f278b055e3bb53fa189cea2fd02cb2c353b7a99ebb4477ef1"},
     {file = "kiwisolver-1.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:c31bc3c8e903d60a1ea31a754c72559398d91b5929fcb329b1c3a3d3f6e72113"},
     {file = "kiwisolver-1.2.0-cp38-cp38-manylinux1_i686.whl", hash = "sha256:d52b989dc23cdaa92582ceb4af8d5bcc94d74b2c3e64cd6785558ec6a879793e"},
     {file = "kiwisolver-1.2.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:e586b28354d7b6584d8973656a7954b1c69c93f708c0c07b77884f91640b7657"},
+    {file = "kiwisolver-1.2.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:38d05c9ecb24eee1246391820ed7137ac42a50209c203c908154782fced90e44"},
     {file = "kiwisolver-1.2.0-cp38-none-win32.whl", hash = "sha256:d069ef4b20b1e6b19f790d00097a5d5d2c50871b66d10075dab78938dc2ee2cf"},
     {file = "kiwisolver-1.2.0-cp38-none-win_amd64.whl", hash = "sha256:18d749f3e56c0480dccd1714230da0f328e6e4accf188dd4e6884bdd06bf02dd"},
     {file = "kiwisolver-1.2.0.tar.gz", hash = "sha256:247800260cd38160c362d211dcaf4ed0f7816afb5efe56544748b21d6ad6d17f"},
@@ -1740,6 +1773,10 @@ matplotlib = [
 mccabe = [
     {file = "mccabe-0.6.1-py2.py3-none-any.whl", hash = "sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42"},
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
+]
+mock = [
+    {file = "mock-4.0.2-py3-none-any.whl", hash = "sha256:3f9b2c0196c60d21838f307f5825a7b86b678cedc58ab9e50a8988187b4d81e0"},
+    {file = "mock-4.0.2.tar.gz", hash = "sha256:dd33eb70232b6118298d516bbcecd26704689c386594f0f3c4f13867b2c56f72"},
 ]
 more-itertools = [
     {file = "more-itertools-8.4.0.tar.gz", hash = "sha256:68c70cc7167bdf5c7c9d8f6954a7837089c6a36bf565383919bb595efb8a17e5"},
