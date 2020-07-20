@@ -13,9 +13,12 @@ import os
 import pytest
 from can import Bus, Notifier
 
+import clu.testing
+from clu.testing import TestCommand
 from sdsstools import read_yaml_file
 
 import jaeger
+from jaeger import JaegerActor
 from jaeger.testing import VirtualFPS, VirtualPositioner
 
 
@@ -84,3 +87,27 @@ async def vpositioners(test_config, notifier, event_loop):
 
     for vpositioner in vpositioners:
         await vpositioner.shutdown()
+
+
+@pytest.fixture
+async def actor(vfps):
+
+    await vfps.initialise()
+    await asyncio.sleep(0.1)
+
+    jaeger_actor = JaegerActor(vfps, name='test_actor',
+                               host='localhost', port=19990,
+                               log_dir=False)
+    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)
+
+    yield jaeger_actor
+
+    # Clear replies in preparation for next test.
+    jaeger_actor.mock_replies.clear()
+
+
+@pytest.fixture
+async def command(actor):
+
+    command = TestCommand(commander_id=1, actor=actor)
+    yield command

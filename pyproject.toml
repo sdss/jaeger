@@ -81,7 +81,6 @@ omit = [
     "*/cli.py",
     "*/__init__.py",
     "*/cannet.py",
-    "*/actor/*",
     "testing.py"
 ]
 

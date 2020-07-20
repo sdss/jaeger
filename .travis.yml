@@ -31,5 +31,8 @@ before_install:
 install:
   - poetry install
 
+  # This is needed due to a bug in CLU. Can be removed once we release a new version.
+  - pip install --upgrade git+https://github.com/sdss/clu@master
+
 script:
   - poetry run pytest
