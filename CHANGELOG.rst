@@ -19,6 +19,7 @@ Changelog
 * :feature:`75` Implement trajectories using SYNC line.
 * :support:`21` (and several associated issues) Remove WAGO and use external `drift <https://github.com/sdss/drift>`__ library.
 * :support:`70` Better documentation for firmware update.
+* :support:`83` Use GitHub workflows.
 
 * :release:`0.4.2 <2019-11-22>`
 * :feature:`59` Add an ``engineering_mode`` flag to `.FPS` (can be toogled using the ``jaeger --danger``) flag to override most safety warnings for debugging.
