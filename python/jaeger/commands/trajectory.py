@@ -75,7 +75,7 @@ async def send_trajectory(fps, trajectories, use_sync_line=True):
         if not fps.ieb or fps.ieb.disabled:
             raise TrajectoryError('IEB is not connected. '
                                   'Cannot use SYNC line.')
-        if await fps.ieb.read_plc('sync') == 'on':
+        if (await fps.ieb.get_device('sync').read())[0] == 'closed':
             raise TrajectoryError('The SYNC line is on high.')
 
     log.debug('sending trajectory data.')
@@ -278,10 +278,10 @@ class Trajectory(object):
             raise TrajectoryError('the trajectory has not been sent.')
 
         if use_sync_line:
-            if not self.fps.ieb or not self.fps.ieb.connected:
+            if not self.fps.ieb or self.fps.ieb.disabled:
                 raise TrajectoryError('IEB is not connected. '
                                       'Cannot use SYNC line.')
-            if await self.fps.ieb.get_device('sync').read()[0] == 'closed':
+            if (await self.fps.ieb.get_device('sync').read())[0] == 'closed':
                 raise TrajectoryError('The SYNC line is on high.')
 
         for positioner_id in list(self.trajectories.keys()):
