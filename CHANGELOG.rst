@@ -8,12 +8,11 @@ Changelog
 * :feature:`62` Add a new `.Trajectory` class as a low-level method to send trajectories.
 * :support:`67` Improve initialisation time by making sure all commands after the initial ``GET_FIRMWARE_VERSION`` know how many positioners are connected and don't time out.
 * :support:`68` Use ``sdsstools`` instead of core utilities. Some clean-up of the packaging files.
-* Adapt to using CLU>=0.2.0.
-* Retrieve configuration from ``$SDSSCORE_DIR/configuration/actors/jaeger.yaml`` or from ``~/.config/jaeger/jaeger.yml``.
+* :support:`-` Adapt to using CLU>=0.2.0.
+* :support:`-` Retrieve configuration from ``$SDSSCORE_DIR/configuration/actors/jaeger.yaml`` or from ``~/.config/sdss/jaeger.yml``.
 * :feature:`51` Set up an asyncio exception handler and make the `.Poller` use it if there is a problem with the callback.
 * :bug:`64` Fixed WAGO disconnects by increasing the timeout of the hardware.
 * :support:`61` Stop the positioners before existing if CLI receives a SIGINT, SIGTERM, or SIGHUP.
-* Modify configuration path to ``~/.config/sdss/jaeger.yml`` in line with new standards.
 * :bug:`72` (also :issue:`73`) Fix UIDs not being returned to the pool in some cases, which emptied it after a while.
 * :support:`-` Rename ``cli.py`` to ``__main__.py``.
 * :feature:`76` Implement calibration commands and routines.
