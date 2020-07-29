@@ -21,7 +21,7 @@ import can.interfaces.virtual
 
 import jaeger
 import jaeger.interfaces.cannet
-from jaeger import can_log, config, log
+from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import CommandID, StopTrajectory
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller
@@ -121,6 +121,9 @@ class JaegerCAN(object):
     """
 
     def __init__(self, interface_name, channels, *args, loop=None, fps=None, **kwargs):
+
+        # Start can file logger
+        start_file_loggers(start_log=False, start_can=True)
 
         self.loop = loop or asyncio.get_event_loop()
 

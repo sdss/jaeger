@@ -36,13 +36,18 @@ for config_path in config_paths:
             break
 
 
-if 'files' in config and 'log_dir' in config['files']:
-    log_dir = config['files']['log_dir']
-else:
-    log_dir = '~/.jaeger'
+def start_file_loggers(start_log=True, start_can=True):
 
-log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
-can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
+    if 'files' in config and 'log_dir' in config['files']:
+        log_dir = config['files']['log_dir']
+    else:
+        log_dir = '~/.jaeger'
+
+    if start_log and log.fh is None:
+        log.start_file_logger(os.path.join(log_dir, 'jaeger.log'))
+
+    if start_can and can_log.fh is None:
+        can_log.start_file_logger(os.path.join(log_dir, 'can.log'))
 
 
 from .can import *

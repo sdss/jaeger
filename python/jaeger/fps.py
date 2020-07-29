@@ -265,6 +265,8 @@ class FPS(BaseFPS):
     def __init__(self, can=None, layout=None, can_profile=None,
                  ieb=None, qa=None, loop=None, engineering_mode=False):
 
+        # Start file logger
+        start_file_loggers(start_log=True, start_can=False)
 
         if config.__CONFIG_FILE__:
             log.info(f'using configuration from {config.__CONFIG_FILE__}')
