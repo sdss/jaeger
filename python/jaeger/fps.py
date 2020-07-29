@@ -15,7 +15,7 @@ import astropy.table
 
 from drift import Drift, DriftError
 
-from jaeger import CONFIG_FILE, config, log
+from jaeger import config, log, start_file_loggers
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
 from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
@@ -265,8 +265,9 @@ class FPS(BaseFPS):
     def __init__(self, can=None, layout=None, can_profile=None,
                  ieb=None, qa=None, loop=None, engineering_mode=False):
 
-        if CONFIG_FILE:
-            log.info(f'using configuration from {CONFIG_FILE}')
+
+        if config.__CONFIG_FILE__:
+            log.info(f'using configuration from {config.__CONFIG_FILE__}')
         else:
             log.warning('cannot find SDSSCORE or user configuration. Using default values.')
 
