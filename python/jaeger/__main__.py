@@ -8,14 +8,12 @@
 
 import asyncio
 import logging
-import os
 import signal
 import sys
 import warnings
 from functools import wraps
 
 import click
-from jaeger.exceptions import JaegerError
 import numpy
 
 from jaeger import config, log
@@ -139,17 +137,18 @@ async def jaeger(ctx, config_file, layout, profile, verbose, no_tron, ieb, qa, d
         except ImportError:
             raise ImportError('CLU needs to be installed to run jaeger as an actor.')
 
+        # TODO: not doing this just yet but may have to enable at some point.
         # For the actor we require that the configuration is either defined
         # in $SDSSCORE_DIR or defined as --config.
-        if config_file is None:
-            try:
-                observatory = os.environ['OBSERVATORY'].lower()
-                sdsscore_config = f'$SDSSCORE_DIR/configuration/{observatory}/actors/jaeger.yaml'
-                config.load(os.path.expandvars(sdsscore_config))
-            except (ValueError, KeyError, FileNotFoundError) as ee:
-                if ee.__class__ == KeyError:
-                    ee.args = (f'cannot find environment variable {ee.args[0]}',)
-                raise JaegerError(f'Cannot load configuration file from $SDSSCORE_DIR: {ee}')
+        # if config_file is None:
+        #     try:
+        #         obs = os.environ['OBSERVATORY'].lower()
+        #         sdsscore_config = f'$SDSSCORE_DIR/configuration/{obs}/actors/jaeger.yaml'
+        #         config.load(os.path.expandvars(sdsscore_config))
+        #     except (ValueError, KeyError, FileNotFoundError) as ee:
+        #         if ee.__class__ == KeyError:
+        #             ee.args = (f'cannot find environment variable {ee.args[0]}',)
+        #         raise JaegerError(f'Cannot load configuration file from $SDSSCORE_DIR: {ee}')
 
         actor_config = config['actor'].copy()
         actor_config.pop('status', None)
