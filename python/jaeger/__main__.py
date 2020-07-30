@@ -16,7 +16,7 @@ from functools import wraps
 import click
 import numpy
 
-from jaeger import log
+from jaeger import config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.fps import FPS
@@ -102,6 +102,9 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 
 
 @click.group(invoke_without_command=True)
+@click.option('-c', '--config', 'config_file',
+              type=click.Path(exists=True, dir_okay=False),
+              help='Path to the user configuration file.')
 @click.option('-p', '--profile', type=str, help='The bus interface profile.')
 @click.option('-l', '--layout', type=str, help='The FPS layout.')
 @click.option('-v', '--verbose', is_flag=True, help='Debug mode.')
@@ -112,12 +115,16 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
               help='Enables engineering mode. Most safety checks will be disabled.')
 @click.pass_context
 @cli_coro
-async def jaeger(ctx, layout, profile, verbose, no_tron, ieb, qa, danger):
+async def jaeger(ctx, config_file, layout, profile, verbose, no_tron, ieb, qa, danger):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
 
     """
+
+    if config_file:
+        config.load(config_file)
+        config.__CONFIG_FILE__ = str(config_file)
 
     ctx.obj = FPSWrapper(verbose, profile, layout, ieb, qa, danger)
 
@@ -127,7 +134,6 @@ async def jaeger(ctx, layout, profile, verbose, no_tron, ieb, qa, danger):
 
         try:
             from jaeger.actor import JaegerActor
-            from jaeger import config
         except ImportError:
             raise ImportError('CLU needs to be installed to run jaeger as an actor.')
 

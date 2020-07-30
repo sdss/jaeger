@@ -4,6 +4,8 @@
 Changelog
 =========
 
+* :feature:`86` Allow to pass a custom configuration file in the CLI using the flag ``-c/--config``.
+
 * :release:`0.5.0 <2020-07-20>`
 * :feature:`62` Add a new `.Trajectory` class as a low-level method to send trajectories.
 * :support:`67` Improve initialisation time by making sure all commands after the initial ``GET_FIRMWARE_VERSION`` know how many positioners are connected and don't time out.
