@@ -10,6 +10,8 @@ import click
 
 from clu.parser import pass_args
 
+from jaeger import __version__, config
+
 from . import jaeger_parser
 
 
@@ -31,3 +33,14 @@ def debug(ctx, command, fps, danger):
         return command.finish()
 
     return
+
+
+@jaeger_parser.command('info')
+def info_(command, fps):
+    """Reports information about the system."""
+
+    command.info({'version': __version__,
+                  'config_file': config.__CONFIG_FILE__ or 'NA'},
+                 concatenate=False)
+
+    return command.finish()

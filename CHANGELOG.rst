@@ -5,6 +5,7 @@ Changelog
 =========
 
 * :feature:`86` Allow to pass a custom configuration file in the CLI using the flag ``-c/--config``.
+* :feature:`-` Add actor command ``info`` to report the configuration file and version.
 
 * :release:`0.5.0 <2020-07-20>`
 * :feature:`62` Add a new `.Trajectory` class as a low-level method to send trajectories.
