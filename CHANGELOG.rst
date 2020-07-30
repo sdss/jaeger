@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* :release:`0.5.1 <2020-07-29>`
 * :feature:`86` Allow to pass a custom configuration file in the CLI using the flag ``-c/--config``.
 * :feature:`-` Add actor command ``info`` to report the configuration file and version.
 
