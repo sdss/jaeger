@@ -57,6 +57,7 @@ asyncmock = {version="^0.4.2", python="~3.7"}
 Sphinx = {version = "^3.0"}
 sphinxcontrib-trio = {version = "^1.1.0"}
 sphinx-click = {version = "^2.3.0"}
+ipdb = "^0.13.3"
 
 [tool.poetry.extras]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
