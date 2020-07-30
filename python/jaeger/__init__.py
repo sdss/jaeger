@@ -24,16 +24,21 @@ config = get_config(NAME, allow_user=False)
 config.__CONFIG_FILE__ = None
 
 # Ranked possible paths for user configuration.
-config_paths = ['$SDSSCORE_DIR/configuration/$OBSERVATORY/actors/jaeger',
-                '~/.config/sdss/jaeger']
+config_paths = []
+if 'OBSERVATORY' in os.environ:
+    observatory = os.environ['OBSERVATORY'].lower()
+    config_paths.append(f'$SDSSCORE_DIR/configuration/{observatory}/actors/jaeger')
+config_paths.append('~/.config/sdss/jaeger')
 
 for config_path in config_paths:
-    for ext in ['yml', 'yaml']:
+    for ext in ['yaml', 'yml']:
         fpath = os.path.expanduser(os.path.expandvars(config_path + '.' + ext))
         if os.path.exists(fpath):
             config.load(fpath)
-            config.__CONFIG_FILE__ = os.path.realpath(fpath)
+            config.__CONFIG_FILE__ = fpath
             break
+    if config.__CONFIG_FILE__:
+        break
 
 
 def start_file_loggers(start_log=True, start_can=True):
