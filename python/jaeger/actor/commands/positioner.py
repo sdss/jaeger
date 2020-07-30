@@ -175,7 +175,7 @@ async def status(ctx, command, fps, positioner_id, full):
     else:
         command.info(engineering_mode=False)
 
-    for pid in positioner_ids:
+    for pid in sorted(positioner_ids):
         positioner = fps[pid]
         alpha_pos = -999 if positioner.alpha is None else numpy.round(positioner.alpha, 4)
         beta_pos = -999 if positioner.beta is None else numpy.round(positioner.beta, 4)
