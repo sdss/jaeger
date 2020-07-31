@@ -324,7 +324,7 @@ description = "iniconfig: brain-dead simple config-ini parsing"
 name = "iniconfig"
 optional = false
 python-versions = "*"
-version = "1.0.0"
+version = "1.0.1"
 
 [[package]]
 category = "main"
@@ -390,7 +390,7 @@ description = "A Python utility / library to sort Python imports."
 name = "isort"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "5.2.1"
+version = "5.2.2"
 
 [package.extras]
 colors = ["colorama (>=0.4.3,<0.5.0)"]
@@ -795,7 +795,7 @@ description = "pytest: simple powerful testing with Python"
 name = "pytest"
 optional = false
 python-versions = ">=3.5"
-version = "6.0.0"
+version = "6.0.1"
 
 [package.dependencies]
 attrs = ">=17.4.0"
@@ -991,16 +991,16 @@ description = "A new protocol for SDSS actors."
 name = "sdss-clu"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.2.2"
+version = "0.3.0"
 
 [package.dependencies]
 Click = ">=7.0,<8.0"
 aio_pika = ">=6.4.1,<7.0.0"
 jsonschema = ">=3.0.1,<4.0.0"
-sdsstools = ">=0.1.0"
+sdsstools = ">=0.2.0"
 
 [package.extras]
-docs = ["Sphinx (>=2.3,<3.0)"]
+docs = ["Sphinx (>=2.3)"]
 
 [[package]]
 category = "main"
@@ -1008,7 +1008,7 @@ description = "Modbus PLC control library"
 name = "sdss-drift"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.1.2"
+version = "0.1.3"
 
 [package.dependencies]
 pymodbus = ">=2.3.0,<3.0.0"
@@ -1016,7 +1016,7 @@ pyyaml = ">=5.3.1,<6.0.0"
 sdsstools = {version = ">=0.1.9", extras = ["dev"]}
 
 [package.extras]
-docs = ["Sphinx (>=2.2.0,<3.0.0)"]
+docs = ["Sphinx (>=2.2.0)"]
 
 [[package]]
 category = "main"
@@ -1048,7 +1048,7 @@ description = "Small tools for SDSS products"
 name = "sdsstools"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "0.2.0"
+version = "0.2.1"
 
 [package.dependencies]
 docutils = ">=0.16,<0.17"
@@ -1403,7 +1403,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
 
 [metadata]
-content-hash = "8bac5d61ca9e9300adbc00ab28de1808f6142903b06083cc7e3727bc42a16db6"
+content-hash = "e17855461177a954483fdd3875cf00026fc7acdc30b5087303536b9080f90342"
 lock-version = "1.1"
 python-versions = "^3.7"
 
@@ -1624,7 +1624,8 @@ importlib-metadata = [
     {file = "importlib_metadata-1.7.0.tar.gz", hash = "sha256:90bb658cdbbf6d1735b6341ce708fc7024a3e14e99ffdc5783edea9f9b077f83"},
 ]
 iniconfig = [
-    {file = "iniconfig-1.0.0.tar.gz", hash = "sha256:aa0b40f50a00e72323cb5d41302f9c6165728fd764ac8822aa3fff00a40d56b4"},
+    {file = "iniconfig-1.0.1-py3-none-any.whl", hash = "sha256:80cf40c597eb564e86346103f609d74efce0f6b4d4f30ec8ce9e2c26411ba437"},
+    {file = "iniconfig-1.0.1.tar.gz", hash = "sha256:e5f92f89355a67de0595932a6c6c02ab4afddc6fcdc0bfc5becd0d60884d3f69"},
 ]
 invoke = [
     {file = "invoke-1.4.1-py2-none-any.whl", hash = "sha256:93e12876d88130c8e0d7fd6618dd5387d6b36da55ad541481dfa5e001656f134"},
@@ -1643,8 +1644,8 @@ ipython-genutils = [
     {file = "ipython_genutils-0.2.0.tar.gz", hash = "sha256:eb2e116e75ecef9d4d228fdc66af54269afa26ab4463042e33785b887c628ba8"},
 ]
 isort = [
-    {file = "isort-5.2.1-py3-none-any.whl", hash = "sha256:a4401d357b0f7a9064781da345e6e2f075ebc09fbebf605740163140d5ac418c"},
-    {file = "isort-5.2.1.tar.gz", hash = "sha256:761a8f490d8bbcd3549b5618ed423468bbdece603cce44b290ee274c9a360893"},
+    {file = "isort-5.2.2-py3-none-any.whl", hash = "sha256:aea484023188ef1c38256dd24afa96e914adafe3a911a1786800a74e433006d1"},
+    {file = "isort-5.2.2.tar.gz", hash = "sha256:96b27045e3187b9bdde001143b79f9b10a462f372bff7062302818013b6c86f3"},
 ]
 jedi = [
     {file = "jedi-0.17.2-py2.py3-none-any.whl", hash = "sha256:98cc583fa0f2f8304968199b01b6b4b94f469a1f4a74c1560506ca2a211378b5"},
@@ -1948,8 +1949,8 @@ pyserial = [
     {file = "pyserial-3.4.tar.gz", hash = "sha256:6e2d401fdee0eab996cf734e67773a0143b932772ca8b42451440cfed942c627"},
 ]
 pytest = [
-    {file = "pytest-6.0.0-py3-none-any.whl", hash = "sha256:869ec27f9b89964ccfe4fbdd5ccb8d3f285aaa3e9aa16a8491b9c8829148c230"},
-    {file = "pytest-6.0.0.tar.gz", hash = "sha256:a64d8fb4c15cdc70dae047352e980a197d855747cc885eb332cb73ddcc769168"},
+    {file = "pytest-6.0.1-py3-none-any.whl", hash = "sha256:8b6007800c53fdacd5a5c192203f4e531eb2a1540ad9c752e052ec0f7143dbad"},
+    {file = "pytest-6.0.1.tar.gz", hash = "sha256:85228d75db9f45e06e57ef9bf4429267f81ac7c0d742cc9ed63d09886a9fe6f4"},
 ]
 pytest-asyncio = [
     {file = "pytest-asyncio-0.14.0.tar.gz", hash = "sha256:9882c0c6b24429449f5f969a5158b528f39bde47dc32e85b9f0403965017e700"},
@@ -2014,20 +2015,20 @@ rfc3986 = [
     {file = "rfc3986-1.4.0.tar.gz", hash = "sha256:112398da31a3344dc25dbf477d8df6cb34f9278a94fee2625d89e4514be8bb9d"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-0.2.2.tar.gz", hash = "sha256:d1108b288b33703eaebc1810327074665e5874f80d8d4a75442da2c6bcbfd983"},
-    {file = "sdss_clu-0.2.2-py3-none-any.whl", hash = "sha256:5c6c9a41ea0387b67eb959719969b1701dc45c39628eca6eda5c0d9a8c771aec"},
+    {file = "sdss-clu-0.3.0.tar.gz", hash = "sha256:546aec57b2c752dd293a69a57d4862f0c8b895dd277e96cf4b00df6174b1f3d4"},
+    {file = "sdss_clu-0.3.0-py3-none-any.whl", hash = "sha256:5db2e8061dde27944a501be748525728710fcc9cef54c83f51fdae398be0f38d"},
 ]
 sdss-drift = [
-    {file = "sdss-drift-0.1.2.tar.gz", hash = "sha256:e4724fe0f7a2f72f4f8c325eb6a45d997cd065815fdb1d55b160d13fd3ebad30"},
-    {file = "sdss_drift-0.1.2-py3-none-any.whl", hash = "sha256:cfbfe0e2ff6c4ee21d8a9b1acc9f87ac37ecb728cd3a856fe08661727bcd6f79"},
+    {file = "sdss-drift-0.1.3.tar.gz", hash = "sha256:e1dee789c0e4f5c5fa4260ef79ce97ecb0abde7c836cb5a1dbb711f4aaece283"},
+    {file = "sdss_drift-0.1.3-py3-none-any.whl", hash = "sha256:7693fe9f073ec59eea2918181174b22c9dd96d73035dc7621cadbdf5dce5590e"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.5-py3-none-any.whl", hash = "sha256:8b882137a1473761ccb241341a35963484a81907b465e535700c8696cac0c90c"},
     {file = "sdssdb-0.4.5.tar.gz", hash = "sha256:10d9001fb45864501d3dede34c3243786389ebec86963a641407f4f696d9a575"},
 ]
 sdsstools = [
-    {file = "sdsstools-0.2.0-py3-none-any.whl", hash = "sha256:b2d043f0577bb2134371f527cf0d47f31c51e731532099f6702baea91044e55e"},
-    {file = "sdsstools-0.2.0.tar.gz", hash = "sha256:0d7917ec909207083ba5a767f3bc2a421f250dd7d341cf96ed5cfd83d5330894"},
+    {file = "sdsstools-0.2.1-py3-none-any.whl", hash = "sha256:f78df4e98d6755f1680eaa91614d9f14c0f82cee465f0bf1a918f48db632730d"},
+    {file = "sdsstools-0.2.1.tar.gz", hash = "sha256:00a5b3e74485a3fb1f35bf86a3f90b001c095b2fdde753bf25b655dd164521fb"},
 ]
 secretstorage = [
     {file = "SecretStorage-3.1.2-py3-none-any.whl", hash = "sha256:b5ec909dde94d4ae2fa26af7c089036997030f0cf0a5cb372b4cccabd81c143b"},
