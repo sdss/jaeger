@@ -9,7 +9,7 @@
 # flake8: noqa
 # isort:skip_file
 
-from ..actor import jaeger_parser
+from clu.parser import command_parser as jaeger_parser
 
 from .bootloader import *
 from .debug import *
