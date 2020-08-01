@@ -26,8 +26,7 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx.ext.autosummary',
               'sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax',
-              'sphinx.ext.intersphinx', 'sphinxcontrib_trio', 'sdsstools.releases',
-              'sphinx_click.ext']
+              'sphinx.ext.intersphinx', 'sdsstools.releases', 'sphinx_click.ext']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
