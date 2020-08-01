@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jaeger"
-version = "0.5.2-alpha.0"
+version = "0.6.0-alpha.0"
 description = "Controllers for the SDSS-V FPS"
 authors = ["José Sánchez-Gallego <gallegoj@uw.edu>"]
 license = "BSD-3-Clause"
@@ -24,19 +24,16 @@ include = ["README.md", "python/jaeger/etc/*"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-astropy = "^3.0.4"
 numpy = "^1.15.1"
 Click = "^7.0"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
 sdss-drift = ">=0.1.1"
-sdss-clu = ">=0.2.0"
-pyserial = "^3.4"
-peewee = "^3.11.2"
+sdss-clu = "^0.3.0"
+pyserial = {version = "^3.4", optional = true}
 sdssdb = ">=0.4.5"
 sdsstools = {version = ">=0.2.0", extras = ["dev"]}
 Sphinx = {version = "^3.0", optional = true}
-sphinxcontrib-trio = {version = "^1.1.0", optional = true}
 sphinx-click = {version = "^2.3.0", optional = true}
 
 [tool.poetry.dev-dependencies]
@@ -44,23 +41,23 @@ ipython = "*"
 matplotlib = "*"
 invoke = "*"
 flake8 = "*"
-doc8 = "^0.8.0"
-pytest = "^6.0"
+doc8 = ">=0.8.0"
+pytest = ">=6.0"
 pytest-asyncio = "*"
 pytest-cov = "*"
 pytest-sugar = "*"
-isort = "^5.0.0"
-codecov = "^2.0.15"
-coverage = {version = "^5.0", extras = ["toml"]}
-asynctest = {version="^0.13.0", python="~3.7"}
-asyncmock = {version="^0.4.2", python="~3.7"}
-Sphinx = {version = "^3.0"}
-sphinxcontrib-trio = {version = "^1.1.0"}
-sphinx-click = {version = "^2.3.0"}
-ipdb = "^0.13.3"
+isort = ">=5.0.0"
+codecov = ">=2.0.15"
+coverage = {version = ">=5.0", extras = ["toml"]}
+asynctest = {version=">=0.13.0", python="~3.7"}
+asyncmock = {version=">=0.4.2", python="~3.7"}
+Sphinx = {version = ">=3.0"}
+sphinx-click = {version = ">=2.3.0"}
+ipdb = ">=0.13.3"
 
 [tool.poetry.extras]
-docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
+docs = ["Sphinx", "sphinx-click"]
+serial = ["pyserial"]
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
@@ -75,6 +72,14 @@ balanced_wrapping = true
 include_trailing_comma = false
 lines_after_imports = 2
 use_parentheses = true
+
+[tool.pytest.ini_options]
+addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore:.+unknown positioners.+",
+    "ignore:.+from the database.+"
+]
 
 [tool.coverage.run]
 branch = true

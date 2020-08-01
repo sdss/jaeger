@@ -4,5 +4,6 @@ ignore =
     H101
     N
     W504
+    E116
 
 max-line-length = 99

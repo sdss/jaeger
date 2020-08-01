@@ -10,8 +10,7 @@ import json
 import logging
 
 import clu
-from clu import command_parser as jaeger_parser
-from clu.misc.logger import ActorHandler
+from clu.tools import ActorHandler
 
 from jaeger import __version__, log
 
@@ -32,7 +31,7 @@ class JaegerActor(clu.LegacyActor):
 
         ieb_status_delay = kwargs.pop('ieb_status_delay', 60)
 
-        super().__init__(*args, parser=jaeger_parser, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.version = __version__
 

@@ -53,22 +53,6 @@ python-versions = "*"
 version = "0.1.0"
 
 [[package]]
-category = "main"
-description = "Community-developed python astronomy tools"
-name = "astropy"
-optional = false
-python-versions = ">=3.5"
-version = "3.2.3"
-
-[package.dependencies]
-numpy = ">=1.13"
-
-[package.extras]
-all = ["scipy", "h5py", "beautifulsoup4", "html5lib", "bleach", "pyyaml", "pandas", "sortedcontainers", "pytz", "jplephem", "matplotlib (>=2.0)", "scikit-image", "mpmath", "asdf (>=2.3)", "bottleneck", "ipython", "pytest"]
-docs = ["sphinx-astropy"]
-test = ["pytest-astropy", "pytest-xdist", "pytest-mpl", "objgraph", "ipython", "coverage", "skyfield"]
-
-[[package]]
 category = "dev"
 description = "Extension to the standard mock framework to support support async"
 name = "asyncmock"
@@ -324,7 +308,7 @@ description = "iniconfig: brain-dead simple config-ini parsing"
 name = "iniconfig"
 optional = false
 python-versions = "*"
-version = "1.0.0"
+version = "1.0.1"
 
 [[package]]
 category = "main"
@@ -390,7 +374,7 @@ description = "A Python utility / library to sort Python imports."
 name = "isort"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "5.2.1"
+version = "5.2.2"
 
 [package.extras]
 colors = ["colorama (>=0.4.3,<0.5.0)"]
@@ -795,7 +779,7 @@ description = "pytest: simple powerful testing with Python"
 name = "pytest"
 optional = false
 python-versions = ">=3.5"
-version = "6.0.0"
+version = "6.0.1"
 
 [package.dependencies]
 attrs = ">=17.4.0"
@@ -991,16 +975,16 @@ description = "A new protocol for SDSS actors."
 name = "sdss-clu"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.2.2"
+version = "0.3.0"
 
 [package.dependencies]
 Click = ">=7.0,<8.0"
 aio_pika = ">=6.4.1,<7.0.0"
 jsonschema = ">=3.0.1,<4.0.0"
-sdsstools = ">=0.1.0"
+sdsstools = ">=0.2.0"
 
 [package.extras]
-docs = ["Sphinx (>=2.3,<3.0)"]
+docs = ["Sphinx (>=2.3)"]
 
 [[package]]
 category = "main"
@@ -1008,7 +992,7 @@ description = "Modbus PLC control library"
 name = "sdss-drift"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.1.2"
+version = "0.1.3"
 
 [package.dependencies]
 pymodbus = ">=2.3.0,<3.0.0"
@@ -1016,7 +1000,7 @@ pyyaml = ">=5.3.1,<6.0.0"
 sdsstools = {version = ">=0.1.9", extras = ["dev"]}
 
 [package.extras]
-docs = ["Sphinx (>=2.2.0,<3.0.0)"]
+docs = ["Sphinx (>=2.2.0)"]
 
 [[package]]
 category = "main"
@@ -1048,7 +1032,7 @@ description = "Small tools for SDSS products"
 name = "sdsstools"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "0.2.0"
+version = "0.2.1"
 
 [package.dependencies]
 docutils = ">=0.16,<0.17"
@@ -1212,17 +1196,6 @@ version = "1.1.4"
 [package.extras]
 lint = ["flake8", "mypy", "docutils-stubs"]
 test = ["pytest"]
-
-[[package]]
-category = "main"
-description = "Make Sphinx better at documenting Python functions and methods"
-name = "sphinxcontrib-trio"
-optional = false
-python-versions = "*"
-version = "1.1.2"
-
-[package.dependencies]
-sphinx = ">=1.7"
 
 [[package]]
 category = "main"
@@ -1400,10 +1373,11 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [extras]
-docs = ["Sphinx", "sphinxcontrib-trio", "sphinx-click"]
+docs = ["Sphinx", "sphinx-click"]
+serial = ["pyserial"]
 
 [metadata]
-content-hash = "8bac5d61ca9e9300adbc00ab28de1808f6142903b06083cc7e3727bc42a16db6"
+content-hash = "bbf690c71bbff7e8af73607488aefeb11e5b3c313d8436adf2fc3fb90e1f526b"
 lock-version = "1.1"
 python-versions = "^3.7"
 
@@ -1428,32 +1402,6 @@ alabaster = [
 appnope = [
     {file = "appnope-0.1.0-py2.py3-none-any.whl", hash = "sha256:5b26757dc6f79a3b7dc9fab95359328d5747fcb2409d331ea66d0272b90ab2a0"},
     {file = "appnope-0.1.0.tar.gz", hash = "sha256:8b995ffe925347a2138d7ac0fe77155e4311a0ea6d6da4f5128fe4b3cbe5ed71"},
-]
-astropy = [
-    {file = "astropy-3.2.3-cp35-cp35m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:cad36fd1a1fcb676a0be42b74c5d2f559d1cbb8116d08e100421b6809edeb339"},
-    {file = "astropy-3.2.3-cp35-cp35m-macosx_10_6_intel.whl", hash = "sha256:c2c75bd2a74ecec5a1ea09c1cf442be4adb37bc5ad904e7c437409755677abdc"},
-    {file = "astropy-3.2.3-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:78636648183cb0efe14d887a2dddd9877048d76121ca221571322405c0f07eb9"},
-    {file = "astropy-3.2.3-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:cfc4f02f8780fe23ff1e057c16d6318ad643e1d811e5052383fc42d603a36e2e"},
-    {file = "astropy-3.2.3-cp35-cp35m-win32.whl", hash = "sha256:57f3f6b21b8e3629a1bd436594e141e24b7ce0e6b26194e2872599391a8245e8"},
-    {file = "astropy-3.2.3-cp35-cp35m-win_amd64.whl", hash = "sha256:2375c06ea92b56b8ee2d54b8930a8b28cf3d7532b200c94f05e44acaa6bd5037"},
-    {file = "astropy-3.2.3-cp36-cp36m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:3a75065e9194756ba1732aa725ea41ce46ec6389a851d35071940aa60e5fa4b4"},
-    {file = "astropy-3.2.3-cp36-cp36m-macosx_10_6_intel.whl", hash = "sha256:af87375bca7325fadd8cacf15446abeae68181b58fbc5b92732dd02e08033df1"},
-    {file = "astropy-3.2.3-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:99cbddc61cfc061fdf73ef000d7c548264bdf131a8e00652ab7183e41265a7b8"},
-    {file = "astropy-3.2.3-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:cdd87113f16a5c07522dbb30898cf6ba6571cbf912efff06da37342851d08a9d"},
-    {file = "astropy-3.2.3-cp36-cp36m-win32.whl", hash = "sha256:26205b678153faf2cfdd4dcf3fb3fab94b33cbda4f6158e9d9fbe33a6c788f3e"},
-    {file = "astropy-3.2.3-cp36-cp36m-win_amd64.whl", hash = "sha256:eaaf8149e27bf247132cc330ac918e3d2a72c4b5c59077da7162a09bd9a4c6b5"},
-    {file = "astropy-3.2.3-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:4a40edb974ed4866e86d1af2d7a3399ef0c634af91a6dd4fe4ff68f7f4656c84"},
-    {file = "astropy-3.2.3-cp37-cp37m-macosx_10_6_intel.whl", hash = "sha256:78f743020d63203cc723b2915a80d53f60416c1fcd54efba9538579bbf794d76"},
-    {file = "astropy-3.2.3-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:6a22733069d352309f2c9482599fede0a249037ae6d0cd83db6f501eec2ae3ac"},
-    {file = "astropy-3.2.3-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:f35a3eb0438c0d65fe73b8cd09ff1323cd265a05701049359a203fd8f9a08dbd"},
-    {file = "astropy-3.2.3-cp37-cp37m-win32.whl", hash = "sha256:729c9b905562dd7866739fd52c819c1f9437dac8d83480e4cd1e86322110ed29"},
-    {file = "astropy-3.2.3-cp37-cp37m-win_amd64.whl", hash = "sha256:1f0991019df0d9049143e6f63b773aeb9d16c632d2efb6761f0582a7afa59d7d"},
-    {file = "astropy-3.2.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:8850958fb5cdcc4c40369541cd1be1c28c5f40c1f0b372dc9b3c799ca81ca6a4"},
-    {file = "astropy-3.2.3-cp38-cp38-manylinux1_i686.whl", hash = "sha256:3de20dcb6ef676c851e27778d27bbb8d7f4e1a149ec3c5968dec87ce20ea3864"},
-    {file = "astropy-3.2.3-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:4c03051504655bc83d1adf5a2772e1b1b1c4b49e1d54454dbc358d99eee88902"},
-    {file = "astropy-3.2.3-cp38-cp38-win32.whl", hash = "sha256:efa49863064bbcb0651eb0f6af9bd439da482e4091764660475b8ff2bcd909b9"},
-    {file = "astropy-3.2.3-cp38-cp38-win_amd64.whl", hash = "sha256:bbcaee3527bbc0460a7a46ce31873076312c9b0d9b84ef027b6313b0bb5c26ac"},
-    {file = "astropy-3.2.3.tar.gz", hash = "sha256:47f00816c2978fdd10f448c8f0337d6dca7b8cbeaab4bf272b5fd37cb4b890d3"},
 ]
 asyncmock = [
     {file = "asyncmock-0.4.2-py3-none-any.whl", hash = "sha256:fd8bc4e7813251a8959d1140924ccba3adbbc7af885dba7047c67f73c0b664b1"},
@@ -1624,7 +1572,8 @@ importlib-metadata = [
     {file = "importlib_metadata-1.7.0.tar.gz", hash = "sha256:90bb658cdbbf6d1735b6341ce708fc7024a3e14e99ffdc5783edea9f9b077f83"},
 ]
 iniconfig = [
-    {file = "iniconfig-1.0.0.tar.gz", hash = "sha256:aa0b40f50a00e72323cb5d41302f9c6165728fd764ac8822aa3fff00a40d56b4"},
+    {file = "iniconfig-1.0.1-py3-none-any.whl", hash = "sha256:80cf40c597eb564e86346103f609d74efce0f6b4d4f30ec8ce9e2c26411ba437"},
+    {file = "iniconfig-1.0.1.tar.gz", hash = "sha256:e5f92f89355a67de0595932a6c6c02ab4afddc6fcdc0bfc5becd0d60884d3f69"},
 ]
 invoke = [
     {file = "invoke-1.4.1-py2-none-any.whl", hash = "sha256:93e12876d88130c8e0d7fd6618dd5387d6b36da55ad541481dfa5e001656f134"},
@@ -1643,8 +1592,8 @@ ipython-genutils = [
     {file = "ipython_genutils-0.2.0.tar.gz", hash = "sha256:eb2e116e75ecef9d4d228fdc66af54269afa26ab4463042e33785b887c628ba8"},
 ]
 isort = [
-    {file = "isort-5.2.1-py3-none-any.whl", hash = "sha256:a4401d357b0f7a9064781da345e6e2f075ebc09fbebf605740163140d5ac418c"},
-    {file = "isort-5.2.1.tar.gz", hash = "sha256:761a8f490d8bbcd3549b5618ed423468bbdece603cce44b290ee274c9a360893"},
+    {file = "isort-5.2.2-py3-none-any.whl", hash = "sha256:aea484023188ef1c38256dd24afa96e914adafe3a911a1786800a74e433006d1"},
+    {file = "isort-5.2.2.tar.gz", hash = "sha256:96b27045e3187b9bdde001143b79f9b10a462f372bff7062302818013b6c86f3"},
 ]
 jedi = [
     {file = "jedi-0.17.2-py2.py3-none-any.whl", hash = "sha256:98cc583fa0f2f8304968199b01b6b4b94f469a1f4a74c1560506ca2a211378b5"},
@@ -1948,8 +1897,8 @@ pyserial = [
     {file = "pyserial-3.4.tar.gz", hash = "sha256:6e2d401fdee0eab996cf734e67773a0143b932772ca8b42451440cfed942c627"},
 ]
 pytest = [
-    {file = "pytest-6.0.0-py3-none-any.whl", hash = "sha256:869ec27f9b89964ccfe4fbdd5ccb8d3f285aaa3e9aa16a8491b9c8829148c230"},
-    {file = "pytest-6.0.0.tar.gz", hash = "sha256:a64d8fb4c15cdc70dae047352e980a197d855747cc885eb332cb73ddcc769168"},
+    {file = "pytest-6.0.1-py3-none-any.whl", hash = "sha256:8b6007800c53fdacd5a5c192203f4e531eb2a1540ad9c752e052ec0f7143dbad"},
+    {file = "pytest-6.0.1.tar.gz", hash = "sha256:85228d75db9f45e06e57ef9bf4429267f81ac7c0d742cc9ed63d09886a9fe6f4"},
 ]
 pytest-asyncio = [
     {file = "pytest-asyncio-0.14.0.tar.gz", hash = "sha256:9882c0c6b24429449f5f969a5158b528f39bde47dc32e85b9f0403965017e700"},
@@ -2014,20 +1963,20 @@ rfc3986 = [
     {file = "rfc3986-1.4.0.tar.gz", hash = "sha256:112398da31a3344dc25dbf477d8df6cb34f9278a94fee2625d89e4514be8bb9d"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-0.2.2.tar.gz", hash = "sha256:d1108b288b33703eaebc1810327074665e5874f80d8d4a75442da2c6bcbfd983"},
-    {file = "sdss_clu-0.2.2-py3-none-any.whl", hash = "sha256:5c6c9a41ea0387b67eb959719969b1701dc45c39628eca6eda5c0d9a8c771aec"},
+    {file = "sdss-clu-0.3.0.tar.gz", hash = "sha256:546aec57b2c752dd293a69a57d4862f0c8b895dd277e96cf4b00df6174b1f3d4"},
+    {file = "sdss_clu-0.3.0-py3-none-any.whl", hash = "sha256:5db2e8061dde27944a501be748525728710fcc9cef54c83f51fdae398be0f38d"},
 ]
 sdss-drift = [
-    {file = "sdss-drift-0.1.2.tar.gz", hash = "sha256:e4724fe0f7a2f72f4f8c325eb6a45d997cd065815fdb1d55b160d13fd3ebad30"},
-    {file = "sdss_drift-0.1.2-py3-none-any.whl", hash = "sha256:cfbfe0e2ff6c4ee21d8a9b1acc9f87ac37ecb728cd3a856fe08661727bcd6f79"},
+    {file = "sdss-drift-0.1.3.tar.gz", hash = "sha256:e1dee789c0e4f5c5fa4260ef79ce97ecb0abde7c836cb5a1dbb711f4aaece283"},
+    {file = "sdss_drift-0.1.3-py3-none-any.whl", hash = "sha256:7693fe9f073ec59eea2918181174b22c9dd96d73035dc7621cadbdf5dce5590e"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.5-py3-none-any.whl", hash = "sha256:8b882137a1473761ccb241341a35963484a81907b465e535700c8696cac0c90c"},
     {file = "sdssdb-0.4.5.tar.gz", hash = "sha256:10d9001fb45864501d3dede34c3243786389ebec86963a641407f4f696d9a575"},
 ]
 sdsstools = [
-    {file = "sdsstools-0.2.0-py3-none-any.whl", hash = "sha256:b2d043f0577bb2134371f527cf0d47f31c51e731532099f6702baea91044e55e"},
-    {file = "sdsstools-0.2.0.tar.gz", hash = "sha256:0d7917ec909207083ba5a767f3bc2a421f250dd7d341cf96ed5cfd83d5330894"},
+    {file = "sdsstools-0.2.1-py3-none-any.whl", hash = "sha256:f78df4e98d6755f1680eaa91614d9f14c0f82cee465f0bf1a918f48db632730d"},
+    {file = "sdsstools-0.2.1.tar.gz", hash = "sha256:00a5b3e74485a3fb1f35bf86a3f90b001c095b2fdde753bf25b655dd164521fb"},
 ]
 secretstorage = [
     {file = "SecretStorage-3.1.2-py3-none-any.whl", hash = "sha256:b5ec909dde94d4ae2fa26af7c089036997030f0cf0a5cb372b4cccabd81c143b"},
@@ -2076,10 +2025,6 @@ sphinxcontrib-qthelp = [
 sphinxcontrib-serializinghtml = [
     {file = "sphinxcontrib-serializinghtml-1.1.4.tar.gz", hash = "sha256:eaa0eccc86e982a9b939b2b82d12cc5d013385ba5eadcc7e4fed23f4405f77bc"},
     {file = "sphinxcontrib_serializinghtml-1.1.4-py2.py3-none-any.whl", hash = "sha256:f242a81d423f59617a8e5cf16f5d4d74e28ee9a66f9e5b637a18082991db5a9a"},
-]
-sphinxcontrib-trio = [
-    {file = "sphinxcontrib-trio-1.1.2.tar.gz", hash = "sha256:9f1ba9c1d5965b534e85258d8b677dd94e9b1a9a2e918b85ccd42590596b47c0"},
-    {file = "sphinxcontrib_trio-1.1.2-py3-none-any.whl", hash = "sha256:1b849be08a147ef4113e35c191a51c5792613a9a54697b497cd91656d906a232"},
 ]
 sqlalchemy = [
     {file = "SQLAlchemy-1.3.18-cp27-cp27m-macosx_10_14_x86_64.whl", hash = "sha256:f11c2437fb5f812d020932119ba02d9e2bc29a6eca01a055233a8b449e3e1e7d"},

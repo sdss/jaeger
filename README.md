@@ -2,7 +2,7 @@
 
 ![Versions](https://img.shields.io/badge/python->3.7-blue)
 [![Documentation Status](https://readthedocs.org/projects/jaeger/badge/?version=latest)](https://sdss-jaeger.readthedocs.io/en/latest/?badge=latest)
-![Build](https://img.shields.io/github/workflow/status/sdss/jaeger/Test)
+[![Build](https://img.shields.io/github/workflow/status/sdss/jaeger/Test)](https://github.com/sdss/jaeger/actions)
 [![codecov](https://codecov.io/gh/sdss/jaeger/branch/master/graph/badge.svg)](https://codecov.io/gh/sdss/jaeger)
 
 [jaeger](http://pacificrim.wikia.com/wiki/Jaeger>) provides high level control for the SDSS-V [Focal Plane System](https://wiki.sdss.org/display/FPS). Some of the features that jaeger provide are:
