@@ -11,7 +11,7 @@ import os
 import pathlib
 import warnings
 
-import astropy.table
+import numpy
 
 from drift import Drift, DriftError
 
@@ -126,11 +126,13 @@ class BaseFPS(dict):
 
             log.info(f'{self._class_name}: reading layout from file {layout!s}.')
 
-            data = astropy.table.Table.read(layout, format='ascii.no_header',
-                                            names=['id', 'row', 'pos', 'x', 'y', 'type'])
+            data = numpy.loadtxt(layout, dtype=[('id', int), ('row', int),
+                                                ('pos', int), ('x', float),
+                                                ('y', float), ('type', 'U10')])
 
             for row in data:
                 if row['type'].lower() == 'fiducial':
+                    print('f')
                     continue
                 self.add_positioner(row['id'], centre=(row['x'], row['y']))
 
