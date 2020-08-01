@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* :release:`0.5.2 <2020-07-31>`
 * :support:`-` Adapt actor system to use ``CLU>=0.3.0``.
 
 * :release:`0.5.1 <2020-07-29>`
