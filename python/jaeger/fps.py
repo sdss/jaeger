@@ -309,7 +309,11 @@ class FPS(BaseFPS):
         elif isinstance(ieb, (str, dict)):
             if isinstance(ieb, str):
                 ieb = os.path.expanduser(os.path.expandvars(ieb))
-            self.ieb = IEB.from_config(ieb)
+            try:
+                self.ieb = IEB.from_config(ieb)
+            except FileNotFoundError:
+                warnings.warn(f'IEB configuration file {ieb} not found.',
+                              JaegerUserWarning)
         elif ieb is False:
             self.ieb = False
         else:
