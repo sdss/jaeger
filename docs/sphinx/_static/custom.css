@@ -1,41 +1,51 @@
+@charset "utf-8";
+
 .red {
-  color: red;
-}
+    color: red;
+  }
 
-.green {
-  color: green;
-}
+  .green {
+    color: green;
+  }
 
-.pink {
-  color: pink;
-}
+  .pink {
+    color: pink;
+  }
 
-.orange {
-  color: orange;
-}
+  .orange {
+    color: orange;
+  }
 
-.purple {
-  color: purple;
-}
+  .purple {
+    color: purple;
+  }
 
-a.reference > em {
-  font-style: normal !important;
-}
-
-a.reference > code {
-  font-weight: inherit !important;
-  color: inherit;
-  background-color: inherit;
-}
-
-ul, ol {
-  margin: 0px 0 0px 30px;
-}
-
-a.reference {
-  border-bottom: 0px;
-}
-
-td.field-body > ul > li > em {
+  a.reference > em {
     font-style: normal !important;
-}
+  }
+
+  a.reference > code {
+    font-weight: inherit !important;
+    color: inherit;
+    background-color: inherit;
+  }
+
+  ul, ol {
+    margin: 0px 0 0px 30px;
+  }
+
+  a.reference {
+    border-bottom: 0px;
+  }
+
+  td.field-body > ul > li > em {
+      font-style: normal !important;
+  }
+
+  .underline{
+    text-decoration: underline;
+  }
+
+  dl + .class, dl + .function, span + .class, span + .function {
+    padding-top: 40px;
+  }
