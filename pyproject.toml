@@ -76,6 +76,9 @@ include_trailing_comma = false
 lines_after_imports = 2
 use_parentheses = true
 
+[tool.pytest.ini_options]
+addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
+
 [tool.coverage.run]
 branch = true
 include = ["python/jaeger/*"]
