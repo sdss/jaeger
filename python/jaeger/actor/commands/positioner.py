@@ -159,8 +159,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 @jaeger_parser.command()
 @click.argument('positioner-id', type=int, nargs=-1, required=False)
 @click.option('-f', '--full', is_flag=True, default=False, help='outputs more statuses.')
-@click.pass_context
-async def status(ctx, command, fps, positioner_id, full):
+async def status(command, fps, positioner_id, full):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioner_id or list(fps.positioners.keys())
@@ -199,9 +198,8 @@ async def status(ctx, command, fps, positioner_id, full):
 @click.argument('beta', type=click.FloatRange(0., 100.))
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all connected positioners.')
-@click.pass_context
-async def current(ctx, command, fps, positioner_id, alpha, beta, all):
-    """Reports the position and status bit of a list of positioners."""
+async def current(command, fps, positioner_id, alpha, beta, all):
+    """Sets the current of the positioner."""
 
     if all:
         positioner_id = [pid for pid in fps.positioners if fps[pid].initialised]
