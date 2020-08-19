@@ -837,7 +837,7 @@ description = "A new protocol for SDSS actors."
 name = "sdss-clu"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.3.3"
+version = "0.4.0"
 
 [package.dependencies]
 Click = ">=7.0,<8.0"
@@ -1173,7 +1173,7 @@ docs = ["Sphinx", "sphinx-click"]
 serial = ["pyserial"]
 
 [metadata]
-content-hash = "ab98bf4eca46eec69de0c0fb441b1ed21becbd49965b7841365d942453a43064"
+content-hash = "eb678029c820fde5faed8f3ddcbada2e31da044429fc6c9b3fbee2bb42965284"
 lock-version = "1.1"
 python-versions = "^3.7"
 
@@ -1669,8 +1669,8 @@ restructuredtext-lint = [
     {file = "restructuredtext_lint-1.3.1.tar.gz", hash = "sha256:470e53b64817211a42805c3a104d2216f6f5834b22fe7adb637d1de4d6501fb8"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-0.3.3.tar.gz", hash = "sha256:a9ebad6f57d8d6cd343be6f526a18c7b4cc0e0aafc8b797d10608aabedbd54e8"},
-    {file = "sdss_clu-0.3.3-py3-none-any.whl", hash = "sha256:20b1da68408867488bb598085d208d0635bf0a0179090b28bee71cd82a80eebb"},
+    {file = "sdss-clu-0.4.0.tar.gz", hash = "sha256:ee51df6e37650861e217329ee6c63c5ddc2d2458d1d4d81b4ec953804c9c219e"},
+    {file = "sdss_clu-0.4.0-py3-none-any.whl", hash = "sha256:2c3ee96de3d7c3ddcdc74bb915ae6799e85e728f414ca25fb8755f2158cc90bc"},
 ]
 sdss-drift = [
     {file = "sdss-drift-0.1.4.tar.gz", hash = "sha256:3edf5199bab7c4a81991761337c931cf2b81cc24e804289bd8a1d027b7e65132"},
