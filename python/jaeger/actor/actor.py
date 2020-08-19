@@ -50,7 +50,7 @@ class JaegerActor(clu.LegacyActor):
             self.host, port, periodic_callback=self._report_status_cb,
             sleep_time=delay)
 
-        await self.status_server.start_server()
+        await self.status_server.start()
 
         self.log.info(f'starting status server on {self.host}:{port}')
 
