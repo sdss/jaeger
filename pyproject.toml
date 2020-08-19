@@ -32,7 +32,7 @@ sdss-drift = ">=0.1.1"
 sdss-clu = "^0.3.0"
 pyserial = {version = "^3.4", optional = true}
 sdssdb = ">=0.4.5"
-sdsstools = {version = ">=0.2.0", extras = ["dev"]}
+sdsstools = ">=0.2.0"
 Sphinx = {version = "^3.0", optional = true}
 sphinx-click = {version = "^2.3.0", optional = true}
 
@@ -99,5 +99,5 @@ exclude_lines = [
 ]
 
 [build-system]
-requires = ["poetry-core>=1.0.0a9"]
+requires = ["poetry-core>=1.0.0a9", "setuptools>=49.6.0"]
 build-backend = "poetry.core.masonry.api"
