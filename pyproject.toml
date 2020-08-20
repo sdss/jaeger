@@ -35,6 +35,8 @@ sdssdb = ">=0.4.5"
 sdsstools = ">=0.4.1"
 Sphinx = {version = "^3.0", optional = true}
 sphinx-click = {version = "^2.3.0", optional = true}
+click_default_group = "^1.2.2"
+daemonocle = "^1.0.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"
