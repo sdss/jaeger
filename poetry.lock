@@ -1210,7 +1210,7 @@ docs = ["Sphinx", "sphinx-click"]
 serial = ["pyserial"]
 
 [metadata]
-content-hash = "f106848566c454f8982cdf13f19dadddf855cf648f4e1795fc91db49de4caef3"
+content-hash = "d66a2339000b0b50f2a9e12d40cf23b1453dbc4adfcb506ef5035508e98208ca"
 lock-version = "1.1"
 python-versions = "^3.7"
 
