@@ -8,6 +8,7 @@
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 import warnings
@@ -15,6 +16,9 @@ from functools import wraps
 
 import click
 import numpy
+from click_default_group import DefaultGroup
+
+from sdsstools.daemonizer import DaemonGroup
 
 from jaeger import config, log
 from jaeger.commands.bootloader import load_firmware
@@ -101,21 +105,19 @@ class FPSWrapper(object):
 pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 
 
-@click.group(invoke_without_command=True)
+@click.group(cls=DefaultGroup, default='daemon', default_if_no_args=True)
 @click.option('-c', '--config', 'config_file',
               type=click.Path(exists=True, dir_okay=False),
               help='Path to the user configuration file.')
 @click.option('-p', '--profile', type=str, help='The bus interface profile.')
 @click.option('-l', '--layout', type=str, help='The FPS layout.')
 @click.option('-v', '--verbose', is_flag=True, help='Debug mode.')
-@click.option('--no-tron', is_flag=True, help='Does not connect to Tron.')
 @click.option('--ieb/--no-ieb', default=None, help='Does not connect to the IEB.')
 @click.option('--qa/--no-qa', default=None, help='Does not use the QA database.')
 @click.option('--danger', is_flag=True,
               help='Enables engineering mode. Most safety checks will be disabled.')
 @click.pass_context
-@cli_coro
-async def jaeger(ctx, config_file, layout, profile, verbose, no_tron, ieb, qa, danger):
+def jaeger(ctx, config_file, layout, profile, verbose, ieb, qa, danger):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
@@ -128,40 +130,30 @@ async def jaeger(ctx, config_file, layout, profile, verbose, no_tron, ieb, qa, d
 
     ctx.obj = FPSWrapper(verbose, profile, layout, ieb, qa, danger)
 
-    # If we call jaeger without a subcommand and with the actor flag,
-    # start the actor.
-    if ctx.invoked_subcommand is None:
 
-        try:
-            from jaeger.actor import JaegerActor
-        except ImportError:
-            raise ImportError('CLU needs to be installed to run jaeger as an actor.')
+@jaeger.group(cls=DaemonGroup, prog='daemon', workdir=os.getcwd())
+@click.option('--no-tron', is_flag=True, help='Does not connect to Tron.')
+@pass_fps
+@cli_coro
+async def daemon(fps_maker, no_tron):
+    """Handle the daemon."""
 
-        # TODO: not doing this just yet but may have to enable at some point.
-        # For the actor we require that the configuration is either defined
-        # in $SDSSCORE_DIR or defined as --config.
-        # if config_file is None:
-        #     try:
-        #         obs = os.environ['OBSERVATORY'].lower()
-        #         sdsscore_config = f'$SDSSCORE_DIR/configuration/{obs}/actors/jaeger.yaml'
-        #         config.load(os.path.expandvars(sdsscore_config))
-        #     except (ValueError, KeyError, FileNotFoundError) as ee:
-        #         if ee.__class__ == KeyError:
-        #             ee.args = (f'cannot find environment variable {ee.args[0]}',)
-        #         raise JaegerError(f'Cannot load configuration file from $SDSSCORE_DIR: {ee}')
+    try:
+        from jaeger.actor import JaegerActor
+    except ImportError:
+        raise ImportError('CLU needs to be installed to run jaeger as an actor.')
 
-        actor_config = config['actor'].copy()
-        actor_config.pop('status', None)
+    actor_config = config['actor'].copy()
+    actor_config.pop('status', None)
 
-        if no_tron:
-            actor_config.pop('tron', None)
+    if no_tron:
+        actor_config.pop('tron', None)
 
-        async with ctx.obj:
-            actor = await JaegerActor.from_config(actor_config, __FPS__).start()
-            await actor.start_status_server(config['actor']['status']['port'],
-                                            delay=config['actor']['status']['delay'])
-
-            await actor.run_forever()
+    async with fps_maker as fps:
+        actor = await JaegerActor.from_config(actor_config, fps).start()
+        await actor.start_status_server(config['actor']['status']['port'],
+                                        delay=config['actor']['status']['delay'])
+        await actor.run_forever()
 
 
 @jaeger.command(name='upgrade-firmware')
