@@ -4,6 +4,9 @@
 Changelog
 =========
 
+* :bug:`-` Do not pass context to actor commands.
+* :bug:`-` Fix starting status server.
+
 * :release:`0.5.2 <2020-07-31>`
 * :support:`-` Adapt actor system to use ``CLU>=0.3.0``.
 
