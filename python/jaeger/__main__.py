@@ -175,9 +175,9 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
 
         if fps.ieb and cycle:
             log.info('power cycling positioners')
-            await fps.ieb.open('24V')
+            await fps.ieb.get_device('24V').open()
             await asyncio.sleep(5)
-            await fps.ieb.close('24V')
+            await fps.ieb.get_device('24V').close()
             await asyncio.sleep(3)
             await fps.initialise()
 
