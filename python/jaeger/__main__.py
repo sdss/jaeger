@@ -174,12 +174,6 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
     async with fps_maker as fps:
 
         if fps.ieb and cycle:
-            try:
-                await fps.ieb.connect()
-                log.info(f'IEB connected on host {fps.ieb.client.host}')
-            except RuntimeError as ee:
-                log.error(f'failed to initialise IEB: {ee}')
-                raise
             log.info('power cycling positioners')
             await fps.ieb.turn_off('24V')
             await asyncio.sleep(5)
