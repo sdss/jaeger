@@ -12,7 +12,7 @@ from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
-__ALL__ = ['GetID', 'GetStatus']
+__ALL__ = ['GetID', 'GetStatus', 'GetCurrent', 'GetActualPosition']
 
 
 class GetID(Command):
@@ -78,3 +78,31 @@ class GetActualPosition(Command):
         data = int_to_bytes(int(alpha_motor), 'i4') + int_to_bytes(int(beta_motor), 'i4')
 
         return data
+
+
+class GetCurrent(Command):
+    """Gets the current of the alpha and beta motors."""
+
+    command_id = CommandID.GET_CURRENT
+    broadcastable = False
+    safe = True
+
+    def get_current(self):
+        """Returns the current of alpha and beta.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError('no positioners have replied to this command.')
+
+        data = self.replies[0].data
+
+        beta = bytes_to_int(data[4:], dtype='i4')
+        alpha = bytes_to_int(data[0:4], dtype='i4')
+
+        return numpy.array([alpha, beta])
