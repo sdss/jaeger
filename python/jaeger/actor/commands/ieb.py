@@ -21,8 +21,10 @@ def ieb(command, fps):
     """Manages the IEB."""
 
     ieb = fps.ieb
+
     if not ieb or ieb.disabled:
-        return command.fail(text='ieb not connected.')
+        command.fail(text='ieb not connected.')
+        raise click.Abort()
 
     return
 
