@@ -526,8 +526,8 @@ category = "main"
 description = "Python Build Reasonableness"
 name = "pbr"
 optional = false
-python-versions = "*"
-version = "5.4.5"
+python-versions = ">=2.6"
+version = "5.5.0"
 
 [[package]]
 category = "main"
@@ -603,7 +603,7 @@ docs = ["sphinx (>=1.7.4)"]
 tests = ["flake8 (>=3.7.7)", "pytest (>=4.6.9)", "pytest-cov (>=2.6.1)", "pytest-flakes (>=4.0.0)", "pytest-pep8 (>=1.0.6)", "freezegun (>=0.3.11)", "sphinx (>=1.8.5)"]
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Library for building powerful interactive command lines in Python"
 name = "prompt-toolkit"
 optional = false
@@ -873,12 +873,14 @@ description = "A new protocol for SDSS actors."
 name = "sdss-clu"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "0.4.1"
+version = "0.5.0"
 
 [package.dependencies]
 Click = ">=7.0,<8.0"
 aio_pika = ">=6.4.1,<7.0.0"
+aiormq = ">=3.2.0,<4.0.0"
 jsonschema = ">=3.0.1,<4.0.0"
+prompt_toolkit = ">=3.0.6,<4.0.0"
 sdsstools = ">=0.2.0"
 
 [package.extras]
@@ -1162,7 +1164,7 @@ secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "pyOpenSSL (>=0
 socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7,<2.0)"]
 
 [[package]]
-category = "dev"
+category = "main"
 description = "Measures the displayed width of unicode strings in a terminal"
 name = "wcwidth"
 optional = false
@@ -1207,7 +1209,7 @@ docs = ["Sphinx", "sphinx-click"]
 serial = ["pyserial"]
 
 [metadata]
-content-hash = "d66a2339000b0b50f2a9e12d40cf23b1453dbc4adfcb506ef5035508e98208ca"
+content-hash = "b558621af5c2a574729184f9639c0bb329e7c07e6e84c6ee5620fa3186ecea4b"
 lock-version = "1.1"
 python-versions = "^3.7"
 
@@ -1545,8 +1547,8 @@ parso = [
     {file = "parso-0.7.1.tar.gz", hash = "sha256:caba44724b994a8a5e086460bb212abc5a8bc46951bf4a9a1210745953622eb9"},
 ]
 pbr = [
-    {file = "pbr-5.4.5-py2.py3-none-any.whl", hash = "sha256:579170e23f8e0c2f24b0de612f71f648eccb79fb1322c814ae6b3c07b5ba23e8"},
-    {file = "pbr-5.4.5.tar.gz", hash = "sha256:07f558fece33b05caf857474a366dfcc00562bca13dd8b47b2b3e22d9f9bf55c"},
+    {file = "pbr-5.5.0-py2.py3-none-any.whl", hash = "sha256:5adc0f9fc64319d8df5ca1e4e06eea674c26b80e6f00c530b18ce6a6592ead15"},
+    {file = "pbr-5.5.0.tar.gz", hash = "sha256:14bfd98f51c78a3dd22a1ef45cf194ad79eee4a19e8e1a0d5c7f8e81ffe182ea"},
 ]
 peewee = [
     {file = "peewee-3.13.3.tar.gz", hash = "sha256:1269a9736865512bd4056298003aab190957afe07d2616cf22eaf56cb6398369"},
@@ -1736,8 +1738,8 @@ restructuredtext-lint = [
     {file = "restructuredtext_lint-1.3.1.tar.gz", hash = "sha256:470e53b64817211a42805c3a104d2216f6f5834b22fe7adb637d1de4d6501fb8"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-0.4.1.tar.gz", hash = "sha256:0b39ce7fa6a41065b25e49f801d20f788022097abad528ab8fbcb12159820b32"},
-    {file = "sdss_clu-0.4.1-py3-none-any.whl", hash = "sha256:bd5fd571e29785a58cc812431b633082ad73621e8d9b1c835f57ef441dce20fc"},
+    {file = "sdss-clu-0.5.0.tar.gz", hash = "sha256:053034575add591c5ed15d4d2b0507552cb88f67777b2b2bc51adcf632a0f39b"},
+    {file = "sdss_clu-0.5.0-py3-none-any.whl", hash = "sha256:cd7c472742f04a8cb1eb815894ffcdee9abe829aaf9cf33084d1b283f101e9c9"},
 ]
 sdss-drift = [
     {file = "sdss-drift-0.1.4.tar.gz", hash = "sha256:3edf5199bab7c4a81991761337c931cf2b81cc24e804289bd8a1d027b7e65132"},
