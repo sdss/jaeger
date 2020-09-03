@@ -7,6 +7,7 @@ Changelog
 * :bug:`-` Do not pass context to actor commands.
 * :bug:`-` Fix starting status server.
 * :support:`89` Implement daemon.
+* :bug:`-` Initialise FPS during ``upgrade-firmware``. If the FPS is not initialised and a layout is not loaded there is no way for the upgrade script to know what positioners may be connected or their statuses.
 
 * :release:`0.5.2 <2020-07-31>`
 * :support:`-` Adapt actor system to use ``CLU>=0.3.0``.

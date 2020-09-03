@@ -169,8 +169,6 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
 
-    fps_maker.initialise = False
-
     async with fps_maker as fps:
 
         if fps.ieb and cycle:
