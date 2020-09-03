@@ -19,7 +19,7 @@ __ALL__ = ['calibration_positioner', 'StartDatumCalibration',
            'SaveInternalCalibration']
 
 
-async def calibrate_positioner(fps, positioner_id):
+async def calibrate_positioner(fps, positioner_id, cogging=True):
     """Runs the calibration process and saves it to the internal memory.
 
     Parameters
@@ -28,6 +28,8 @@ async def calibrate_positioner(fps, positioner_id):
         The instance of `.FPS` that will receive the trajectory.
     positioner_id : int
         The ID of the positioner to calibrate.
+    cogging : bool
+        Whether to run the cogging calibration (may take more than one hour).
 
     Raises
     ------
@@ -81,18 +83,16 @@ async def calibrate_positioner(fps, positioner_id):
                                       PositionerStatus.DATUM_ALPHA_CALIBRATED,
                                       PositionerStatus.DATUM_BETA_CALIBRATED])
 
-    log.info('Starting cogging calibration.')
-    cmd = await fps.send_command(CommandID.START_COGGING_CALIBRATION,
-                                 positioner_id=positioner_id)
-    if cmd.status.failed:
-        raise JaegerError('Cogging calibration failed.')
+    if cogging:
+        log.info('Starting cogging calibration.')
+        cmd = await fps.send_command(CommandID.START_COGGING_CALIBRATION,
+                                     positioner_id=positioner_id)
+        if cmd.status.failed:
+            raise JaegerError('Cogging calibration failed.')
 
-    await asyncio.sleep(1)
-    result = await positioner.wait_for_status([PositionerStatus.COGGING_ALPHA_CALIBRATED,
-                                               PositionerStatus.COGGING_BETA_CALIBRATED],
-                                              timeout=1800)
-    if result is False:
-        raise JaegerError('Cogging calibration timed out')
+        await asyncio.sleep(1)
+        await positioner.wait_for_status([PositionerStatus.COGGING_ALPHA_CALIBRATED,
+                                          PositionerStatus.COGGING_BETA_CALIBRATED])
 
     log.info('Saving calibration.')
     cmd = await fps.send_command(CommandID.SAVE_INTERNAL_CALIBRATION,

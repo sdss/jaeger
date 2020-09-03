@@ -185,9 +185,11 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
 
 @jaeger.command()
 @click.argument('positioner-id', nargs=1, type=int)
+@click.option('--cogging/--no-cogging', is_flag=True, default=True,
+              help='Run the cogging calibration (can take a long time).')
 @pass_fps
 @cli_coro
-async def calibrate(fps_maker, positioner_id):
+async def calibrate(fps_maker, positioner_id, cogging):
     """Runs a full calibration on a positioner."""
 
     fps_maker.initialise = False
@@ -195,7 +197,7 @@ async def calibrate(fps_maker, positioner_id):
 
     async with fps_maker as fps:
         await fps.initialise(start_pollers=False)
-        await calibrate_positioner(fps, positioner_id)
+        await calibrate_positioner(fps, positioner_id, cogging=cogging)
 
 
 @jaeger.command()
