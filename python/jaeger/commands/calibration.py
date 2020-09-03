@@ -93,6 +93,8 @@ async def calibrate_positioner(fps, positioner_id, cogging=True):
         await asyncio.sleep(1)
         await positioner.wait_for_status([PositionerStatus.COGGING_ALPHA_CALIBRATED,
                                           PositionerStatus.COGGING_BETA_CALIBRATED])
+    else:
+        log.warning('Skipping cogging calibration.')
 
     log.info('Saving calibration.')
     cmd = await fps.send_command(CommandID.SAVE_INTERNAL_CALIBRATION,
