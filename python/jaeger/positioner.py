@@ -483,6 +483,11 @@ class Positioner(StatusMixIn):
 
         eng_mode = True if self.fps and self.fps.engineering_mode else False
 
+        if not eng_mode and self.moving:
+            log.error(f'positioner {self.positioner_id}: '
+                      'positioner is already moving.')
+            return False
+
         async def _restore(original_speed):
             if original_speed != self.speed:
                 await self.set_speed(*original_speed)
