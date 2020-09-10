@@ -27,7 +27,7 @@ def bootloader():
 
 
 @bootloader.command()
-@click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
+@click.argument('FIRMWARE-FILE', nargs=1, type=click.Path(exists=True))
 @click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
 async def upgrade(command, fps, firmware_file, positioners):
     """Upgrades the firmware for all positioners connected."""

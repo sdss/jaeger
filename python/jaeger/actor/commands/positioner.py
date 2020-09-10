@@ -38,8 +38,8 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 
 @jaeger_parser.command()
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
-@click.argument('alpha', type=click.FloatRange(-360., 360.))
-@click.argument('beta', type=click.FloatRange(-360., 360.))
+@click.argument('ALPHA', type=click.FloatRange(-360., 360.))
+@click.argument('BETA', type=click.FloatRange(-360., 360.))
 @click.option('-r', '--relative', is_flag=True,
               help='whether this is a relative move')
 @click.option('-s', '--speed', type=click.FloatRange(0., 2000.), nargs=2,
@@ -105,8 +105,8 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
 @jaeger_parser.command()
 @click.argument('POSITIONER-ID', type=int, nargs=-1)
-@click.argument('alpha', type=click.FloatRange(50., 5000.))
-@click.argument('beta', type=click.FloatRange(50., 5000.))
+@click.argument('ALPHA', type=click.FloatRange(50., 5000.))
+@click.argument('BETA', type=click.FloatRange(50., 5000.))
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all valid positioners.')
 async def speed(command, fps, positioner_id, alpha, beta, all):
@@ -135,7 +135,7 @@ async def speed(command, fps, positioner_id, alpha, beta, all):
 
 
 @jaeger_parser.command()
-@click.argument('positioner-id', type=int, nargs=-1)
+@click.argument('POSITIONER-ID', type=int, nargs=-1)
 @click.option('--datums', is_flag=True, help='If set, initialises the datums.')
 async def initialise(command, fps, positioner_id, datums=False):
     """Initialises positioners."""
@@ -157,7 +157,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 
 @jaeger_parser.command()
-@click.argument('positioner-id', type=int, nargs=-1, required=False)
+@click.argument('POSITIONER-ID', type=int, nargs=-1, required=False)
 @click.option('-f', '--full', is_flag=True, default=False, help='outputs more statuses.')
 async def status(command, fps, positioner_id, full):
     """Reports the position and status bit of a list of positioners."""
@@ -193,9 +193,9 @@ async def status(command, fps, positioner_id, full):
 
 
 @jaeger_parser.command()
-@click.argument('positioner-id', type=int, nargs=-1, required=False)
-@click.argument('alpha', type=click.FloatRange(0., 100.))
-@click.argument('beta', type=click.FloatRange(0., 100.))
+@click.argument('POSITIONER-ID', type=int, nargs=-1, required=False)
+@click.argument('ALPHA', type=click.FloatRange(0., 100.))
+@click.argument('BETA', type=click.FloatRange(0., 100.))
 @click.option('-a', '--all', is_flag=True, default=False,
               help='applies to all connected positioners.')
 async def current(command, fps, positioner_id, alpha, beta, all):
@@ -249,7 +249,7 @@ async def unlock(command, fps):
 
 
 @jaeger_parser.command()
-@click.argument('path', type=str)
+@click.argument('PATH', type=str)
 async def trajectory(command, fps, path):
     """Sends a trajectory from a file."""
 
