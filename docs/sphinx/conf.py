@@ -14,8 +14,6 @@ from pkg_resources import parse_version
 
 from jaeger import __version__
 
-# import releases  # noqa
-
 
 # Are we building in RTD?
 on_rtd = os.environ.get('READTHEDOCS') == 'True'

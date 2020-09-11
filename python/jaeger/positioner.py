@@ -522,18 +522,9 @@ class Positioner(StatusMixIn):
                  f'{"relative" if relative else "absolute"} position '
                  f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
 
-        # Stores the QA information in the DB before the move
-        record = self._store_move_qa()
-        if record:
-            record.alpha_move = alpha
-            record.beta_move = beta
-            record.relative = relative
-
         goto_command = await self._goto_position(alpha, beta, relative=relative)
 
         if not goto_command:
-            self._store_move_qa(record, success=False,
-                                fail_reason='CAN command failed')
             log.error(f'positioner {self.positioner_id}: '
                       'failed sending the goto position command.')
             await _restore(original_speed)
@@ -580,8 +571,6 @@ class Positioner(StatusMixIn):
             self.flags.DISPLACEMENT_COMPLETED, delay=0.1, timeout=3)
 
         if result is False:
-            self._store_move_qa(record, success=False,
-                                fail_reason='Failed to reach position')
             log.error(f'positioner {self.positioner_id}: '
                       'failed to reach commanded position.')
             await _restore(original_speed)
@@ -589,62 +578,9 @@ class Positioner(StatusMixIn):
 
         log.info(f'positioner {self.positioner_id}: position reached.')
 
-        self._store_move_qa(record, success=True)
         await _restore(original_speed)
 
         return True
-
-    def _store_move_qa(self, record=None, success=True, fail_reason=''):
-        """Stores information about a goto move to the QA DB.
-
-        Parameters
-        ----------
-        record
-            The information is stored in two stages. In the first one, before
-            the move, ``record=None`` and a new record is created. In the
-            second stage, after the move or if it fails, the previously
-            generated record is passed, completed, and saved.
-        success : bool
-            Whether the move succeeded.
-        fail_reason : str
-            If ``success=False``, the reason why it failed.
-
-        Returns
-        -------
-        record
-            The DB record, or `None` if there is not a QA database.
-
-        """
-
-        if not self.fps or not self.fps.qa_db:
-            return
-
-        if not record:
-            Goto = self.fps.qa_db.models['Goto']
-            record = Goto()
-            record.positioner = self.positioner_id
-            record.x_center = self.centre[0] or -999.
-            record.y_center = self.centre[1] or -999.
-            record.start_time = datetime.datetime.now()
-            record.alpha_start = self.position[0]
-            record.beta_start = self.position[1]
-            record.alpha_speed = self.speed[0]
-            record.beta_speed = self.speed[1]
-            record.status_start = self.status
-            return record
-
-        record.end_time = datetime.datetime.now()
-        record.alpha_end = self.position[0]
-        record.beta_end = self.position[1]
-        record.status_end = self.status
-
-        record.success = success
-        if not success:
-            record.fail_reason = fail_reason
-
-        record.save(force_insert=True)
-
-        return record
 
     def __repr__(self):
         return (f'<Positioner (id={self.positioner_id}, '

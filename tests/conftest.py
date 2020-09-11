@@ -57,14 +57,13 @@ def notifier(test_config, event_loop):
 
 
 @pytest.fixture()
-async def vfps(event_loop, tmp_path):
+async def vfps(event_loop):
     """Sets up the virtual FPS."""
 
     # Make initialisation faster.
     jaeger.config['fps']['initialise_timeouts'] = 0.05
 
-    qa = tmp_path / 'qa.sql'
-    fps = VirtualFPS(qa=qa)
+    fps = VirtualFPS()
 
     yield fps
 

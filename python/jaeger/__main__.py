@@ -60,7 +60,7 @@ class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
     def __init__(self, verbose, profile, layout, ieb=None,
-                 qa=None, danger=None, initialise=True):
+                 danger=None, initialise=True):
 
         self.verbose = verbose
 
@@ -70,7 +70,6 @@ class FPSWrapper(object):
 
         self.layout = layout
         self.ieb = ieb
-        self.qa = qa
         self.danger = danger
         self.initialise = initialise
 
@@ -89,7 +88,7 @@ class FPSWrapper(object):
             self.fps = VirtualFPS(layout=self.layout)
         else:
             self.fps = FPS(can_profile=self.profile, layout=self.layout,
-                           ieb=self.ieb, qa=self.qa, engineering_mode=self.danger)
+                           ieb=self.ieb, engineering_mode=self.danger)
 
         __FPS__ = self.fps
 
@@ -113,11 +112,10 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 @click.option('-l', '--layout', type=str, help='The FPS layout.')
 @click.option('-v', '--verbose', is_flag=True, help='Debug mode.')
 @click.option('--ieb/--no-ieb', default=None, help='Does not connect to the IEB.')
-@click.option('--qa/--no-qa', default=None, help='Does not use the QA database.')
 @click.option('--danger', is_flag=True,
               help='Enables engineering mode. Most safety checks will be disabled.')
 @click.pass_context
-def jaeger(ctx, config_file, layout, profile, verbose, ieb, qa, danger):
+def jaeger(ctx, config_file, layout, profile, verbose, ieb, danger):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
@@ -128,7 +126,7 @@ def jaeger(ctx, config_file, layout, profile, verbose, ieb, qa, danger):
         config.load(config_file)
         config.__CONFIG_FILE__ = str(config_file)
 
-    ctx.obj = FPSWrapper(verbose, profile, layout, ieb, qa, danger)
+    ctx.obj = FPSWrapper(verbose, profile, layout, ieb, danger)
 
 
 @jaeger.group(cls=DaemonGroup, prog='daemon', workdir=os.getcwd())

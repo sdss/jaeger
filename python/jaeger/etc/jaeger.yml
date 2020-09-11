@@ -35,7 +35,6 @@ fps:
     status_poller_delay: 5
     position_poller_delay: 5
     ieb: $SDSSCORE_DIR/configuration/iebs/sextant.yaml
-    qa: false
 
 positioner:
     motor_speed: 3000
@@ -47,4 +46,3 @@ positioner:
 
 files:
     log_dir: ~/logs/jaeger
-    qa_database: /data/fps/positioners.sqlite

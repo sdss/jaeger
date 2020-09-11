@@ -13,7 +13,6 @@
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
 - Interfaces with the Instrument Electronics Box modbus PLC controller.
-- Records QA metrology.
 - Provides a TCP/IP interface to send commands and output keywords using the SDSS-standard formatting.
 
 The code for jaeger is developed in [GitHub](https://github.com/sdss/jaeger) and can be installed using [sdss_install](https://github.com/sdss/sdss_install) or by running

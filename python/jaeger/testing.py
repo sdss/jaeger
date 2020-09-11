@@ -39,10 +39,6 @@ class VirtualFPS(jaeger.FPS):
         If `None`, the default layout will be used. Can be either a layout name
         to be recovered from the database, or a file path to the layout
         configuration.
-    qa : bool or path
-        A path to the database used to store QA information. If `True`, uses
-        the value from ``config['files']['qa_database']``. If `False`, does not do
-        any QA recording.
     loop : event loop or `None`
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
@@ -52,9 +48,9 @@ class VirtualFPS(jaeger.FPS):
 
     """
 
-    def __init__(self, layout=None, qa=False, loop=None, engineering_mode=False):
+    def __init__(self, layout=None, **kwargs):
 
-        super().__init__(can_profile='virtual', layout=layout, ieb=False, qa=qa)
+        super().__init__(can_profile='virtual', layout=layout, ieb=False)
 
 
 class VirtualPositioner(StatusMixIn):
