@@ -10,6 +10,8 @@ Changelog
 * :bug:`-` Initialise FPS during ``upgrade-firmware``. If the FPS is not initialised and a layout is not loaded there is no way for the upgrade script to know what positioners may be connected or their statuses.
 * :feature:`-` Allow to skip cogging calibration.
 * :support:`-` Remove QA database features since they need a full rethink.
+* :support:`-` Update ``sdss-drift`` to ``0.1.5`` to fix ``pymodbus`` import.
+* :support:`90` Remove the option to initialise datums in `.Positioner`.
 
 * :release:`0.5.2 <2020-07-31>`
 * :support:`-` Adapt actor system to use ``CLU>=0.3.0``.
