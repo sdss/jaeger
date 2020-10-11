@@ -11,6 +11,10 @@ import time
 from can import BusABC, Message
 
 
+class CANNetMessage(Message):
+    __slots__ = ('interface', 'bus')
+
+
 class CANNetBus(BusABC):
     r"""Interface for Ixxat CAN\@net NT 200/420.
 
@@ -142,10 +146,10 @@ class CANNetBus(BusABC):
         # from the device so we return it.
         data = readStr.split(' ')
         if data[0] != 'M':
-            msg = Message(arbitration_id=0,
-                          timestamp=time.time(),
-                          dlc=0,
-                          data=msgStr)
+            msg = CANNetMessage(arbitration_id=0,
+                                timestamp=time.time(),
+                                dlc=0,
+                                data=msgStr)
             msg.interface = self
             msg.bus = None
             return msg, False
@@ -183,12 +187,12 @@ class CANNetBus(BusABC):
             dlc = dlc + 1
 
         if canId is not None:
-            msg = Message(arbitration_id=canId,
-                          is_extended_id=extended,
-                          timestamp=time.time(),   # Better than nothing...
-                          is_remote_frame=remote,
-                          dlc=dlc,
-                          data=frame)
+            msg = CANNetMessage(arbitration_id=canId,
+                                is_extended_id=extended,
+                                timestamp=time.time(),
+                                is_remote_frame=remote,
+                                dlc=dlc,
+                                data=frame)
             msg.interface = self
             msg.bus = bus
             return msg, False
