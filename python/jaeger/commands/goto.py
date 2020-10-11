@@ -8,12 +8,16 @@
 
 import numpy
 
-from jaeger.commands import TIME_STEP, Command, CommandID
+import jaeger
+from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
 __ALL__ = ['InitialiseDatums', 'StartTrajectory', 'GotoAbsolutePosition',
            'SetSpeed', 'SetCurrent']
+
+
+TIME_STEP = jaeger.config['positioner']['time_step']
 
 
 class InitialiseDatums(Command):

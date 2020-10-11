@@ -16,12 +16,15 @@ from can.listener import AsyncBufferedReader
 
 import jaeger
 from jaeger import utils
-from jaeger.commands import TIME_STEP, CommandID
+from jaeger.commands import CommandID
 from jaeger.maskbits import BootloaderStatus, PositionerStatus, ResponseCode
 from jaeger.utils.helpers import StatusMixIn
 
 
 __ALL__ = ['VirtualFPS', 'VirtualPositioner']
+
+
+TIME_STEP = jaeger.config['positioner']['time_step']
 
 
 class VirtualFPS(jaeger.FPS):

@@ -12,13 +12,6 @@
 import enum
 
 
-# Number of motor steps
-MOTOR_STEPS = 2**30
-
-# Time resolution
-TIME_STEP = 5e-4
-
-
 class CommandID(enum.IntEnum):
     """IDs associated with commands."""
 

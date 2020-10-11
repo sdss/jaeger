@@ -15,7 +15,7 @@ import numpy
 from sdsstools import read_yaml_file
 
 from jaeger import config, log, maskbits
-from jaeger.commands import MOTOR_STEPS, TIME_STEP, Command, CommandID
+from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, TrajectoryError
 from jaeger.utils import int_to_bytes
 
@@ -23,6 +23,10 @@ from jaeger.utils import int_to_bytes
 __ALL__ = ['send_trajectory', 'SendNewTrajectory', 'SendTrajectoryData',
            'TrajectoryDataEnd', 'TrajectoryTransmissionAbort',
            'StartTrajectory', 'StopTrajectory']
+
+
+MOTOR_STEPS = config['positioner']['motor_steps']
+TIME_STEP = config['positioner']['time_step']
 
 
 async def send_trajectory(fps, trajectories, use_sync_line=True):

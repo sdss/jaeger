@@ -9,13 +9,15 @@
 import numpy
 
 from jaeger import config
-from jaeger.commands import MOTOR_STEPS
 from jaeger.maskbits import ResponseCode
 
 
 __ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
            'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory',
            'motor_steps_to_angle', 'get_goto_move_time']
+
+
+MOTOR_STEPS = config['positioner']['motor_steps']
 
 
 def get_dtype_str(dtype, byteorder='little'):
@@ -247,7 +249,7 @@ def motor_steps_to_angle(alpha, beta, motor_steps=None, inverse=False):
         The beta position.
     motor_steps : int
         The number of steps in the motor. Defaults to
-        `~jaeger.commands.MOTOR_STEPS`.
+        the configuration value ``positioner.moter_steps``.
     inverse : bool
         If `True`, converts from angles to motor steps.
 
