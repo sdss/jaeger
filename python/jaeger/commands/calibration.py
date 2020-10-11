@@ -11,7 +11,7 @@ import asyncio
 from jaeger import log
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import JaegerError
-from jaeger.maskbits import PositionerStatus
+from jaeger.maskbits import PositionerStatus as PS
 
 
 __ALL__ = ['calibration_positioner', 'StartDatumCalibration',
@@ -19,7 +19,8 @@ __ALL__ = ['calibration_positioner', 'StartDatumCalibration',
            'SaveInternalCalibration']
 
 
-async def calibrate_positioner(fps, positioner_id, cogging=True):
+async def calibrate_positioner(fps, positioner_id, motors=True, datums=True,
+                               cogging=True):
     """Runs the calibration process and saves it to the internal memory.
 
     Parameters
@@ -28,8 +29,13 @@ async def calibrate_positioner(fps, positioner_id, cogging=True):
         The instance of `.FPS` that will receive the trajectory.
     positioner_id : int
         The ID of the positioner to calibrate.
+    motors : bool
+        Whether to perform the motor calibration.
+    datums : bool
+        Whether to perform the datums calibration.
     cogging : bool
-        Whether to run the cogging calibration (may take more than one hour).
+        Whether to perform the cogging calibration (may take more
+        than one hour).
 
     Raises
     ------
@@ -59,29 +65,35 @@ async def calibrate_positioner(fps, positioner_id, cogging=True):
         log.debug('Stopping pollers')
         await fps.pollers.stop()
 
-    log.info('Starting motor calibration.')
+    if motors:
+        log.info('Starting motor calibration.')
 
-    cmd = await fps.send_command(CommandID.START_MOTOR_CALIBRATION,
-                                 positioner_id=positioner_id)
+        cmd = await fps.send_command(CommandID.START_MOTOR_CALIBRATION,
+                                     positioner_id=positioner_id)
 
-    if cmd.status.failed:
-        raise JaegerError('Motor calibration failed.')
+        if cmd.status.failed:
+            raise JaegerError('Motor calibration failed.')
 
-    await asyncio.sleep(1)
-    await positioner.wait_for_status([PositionerStatus.DISPLACEMENT_COMPLETED,
-                                      PositionerStatus.MOTOR_ALPHA_CALIBRATED,
-                                      PositionerStatus.MOTOR_BETA_CALIBRATED])
+        await asyncio.sleep(1)
+        await positioner.wait_for_status([PS.DISPLACEMENT_COMPLETED,
+                                          PS.MOTOR_ALPHA_CALIBRATED,
+                                          PS.MOTOR_BETA_CALIBRATED])
+    else:
+        log.warning('Skipping motor calibration.')
 
-    log.info('Starting datum calibration.')
-    cmd = await fps.send_command(CommandID.START_DATUM_CALIBRATION,
-                                 positioner_id=positioner_id)
-    if cmd.status.failed:
-        raise JaegerError('Datum calibration failed.')
+    if datums:
+        log.info('Starting datum calibration.')
+        cmd = await fps.send_command(CommandID.START_DATUM_CALIBRATION,
+                                     positioner_id=positioner_id)
+        if cmd.status.failed:
+            raise JaegerError('Datum calibration failed.')
 
-    await asyncio.sleep(1)
-    await positioner.wait_for_status([PositionerStatus.DISPLACEMENT_COMPLETED,
-                                      PositionerStatus.DATUM_ALPHA_CALIBRATED,
-                                      PositionerStatus.DATUM_BETA_CALIBRATED])
+        await asyncio.sleep(1)
+        await positioner.wait_for_status([PS.DISPLACEMENT_COMPLETED,
+                                          PS.DATUM_ALPHA_CALIBRATED,
+                                          PS.DATUM_BETA_CALIBRATED])
+    else:
+        log.warning('Skipping datum calibration.')
 
     if cogging:
         log.info('Starting cogging calibration.')
@@ -91,18 +103,19 @@ async def calibrate_positioner(fps, positioner_id, cogging=True):
             raise JaegerError('Cogging calibration failed.')
 
         await asyncio.sleep(1)
-        await positioner.wait_for_status([PositionerStatus.COGGING_ALPHA_CALIBRATED,
-                                          PositionerStatus.COGGING_BETA_CALIBRATED])
+        await positioner.wait_for_status([PS.COGGING_ALPHA_CALIBRATED,
+                                          PS.COGGING_BETA_CALIBRATED])
     else:
         log.warning('Skipping cogging calibration.')
 
-    log.info('Saving calibration.')
-    cmd = await fps.send_command(CommandID.SAVE_INTERNAL_CALIBRATION,
-                                 positioner_id=positioner_id)
-    if cmd.status.failed:
-        raise JaegerError('Saving calibration failed.')
+    if motors or datums or cogging:
+        log.info('Saving calibration.')
+        cmd = await fps.send_command(CommandID.SAVE_INTERNAL_CALIBRATION,
+                                     positioner_id=positioner_id)
+        if cmd.status.failed:
+            raise JaegerError('Saving calibration failed.')
 
-    log.info(f'Positioner {positioner_id} has been calibrated.')
+        log.info(f'Positioner {positioner_id} has been calibrated.')
 
     return
 

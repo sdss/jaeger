@@ -257,8 +257,8 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def initialise(self, initialise_datums=False):
-        """Initialises the datum and starts the position watcher."""
+    async def initialise(self):
+        """Initialises the position watcher."""
 
         eng_mode = True if self.fps and self.fps.engineering_mode else False
 
@@ -286,11 +286,6 @@ class Positioner(StatusMixIn):
             log.debug(f'positioner {self.positioner_id}: positioner is in bootloader mode.')
             return True
 
-        if initialise_datums:
-            result = await self.initialise_datums()
-            if not result:
-                return False
-
         if not self.initialised:
             log.error(f'positioner {self.positioner_id}: not initialised. '
                       'Set the position manually.')
@@ -299,39 +294,10 @@ class Positioner(StatusMixIn):
 
         # Sets the default speed
         if not await self.set_speed(alpha=config['positioner']['motor_speed'],
-                                    beta=config['positioner']['motor_speed']) and not eng_mode:
+                                    beta=config['positioner']['motor_speed']):
             return False
 
         log.debug(f'positioner {self.positioner_id}: initialisation complete.')
-
-        return True
-
-    async def initialise_datums(self):
-        """Initialise datums by driving the positioner against hard stops."""
-
-        warnings.warn(f'positioner {self.positioner_id}: reinitialise datums.',
-                      JaegerUserWarning)
-
-        result = await self.fps.send_command('INITIALIZE_DATUMS',
-                                             positioner_id=self.positioner_id)
-
-        if not result:
-            log.error(f'positioner {self.positioner_id}: failed reinitialising datums.')
-            return False
-
-        self.status = self.flags.UNKNOWN
-
-        log.info(f'positioner {self.positioner_id}: waiting for datums to initialise.')
-
-        result = await self.wait_for_status(
-            [self.flags.DATUM_ALPHA_INITIALIZED,
-             self.flags.DATUM_BETA_INITIALIZED],
-            timeout=config['positioner']['initialise_datums_timeout'])
-
-        if not result:
-            log.error(f'positioner {self.positioner_id}: timeout waiting for '
-                      'datums to be reinitialised.')
-            return False
 
         return True
 
