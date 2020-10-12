@@ -8,15 +8,21 @@
 
 import asyncio
 
-from jaeger import log
+import numpy
+
+from jaeger import config, log
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import JaegerError
 from jaeger.maskbits import PositionerStatus as PS
+from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
 __ALL__ = ['calibration_positioner', 'StartDatumCalibration',
            'StartMotorCalibration', 'StartCoggingCalibration',
            'SaveInternalCalibration']
+
+
+MOTOR_STEPS = config['positioner']['motor_steps']
 
 
 async def calibrate_positioner(fps, positioner_id, motors=True, datums=True,
@@ -150,3 +156,49 @@ class SaveInternalCalibration(Command):
     command_id = CommandID.SAVE_INTERNAL_CALIBRATION
     broadcastable = False
     move_command = False
+
+
+class GetOffset(Command):
+    """Gets the motor offsets."""
+
+    command_id = CommandID.GET_OFFSETS
+    broadcastable = False
+    safe = True
+
+    def get_offsets(self):
+        """Returns the alpha and beta offsets, in degrees.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError('No positioners have replied to this command.')
+
+        data = self.replies[0].data
+
+        alpha = bytes_to_int(data[0:4], dtype='i4')
+        beta = bytes_to_int(data[4:], dtype='i4')
+
+        return numpy.array(motor_steps_to_angle(alpha, beta))
+
+
+class SetOffsets(Command):
+    """Sets the motor offsets."""
+
+    command_id = CommandID.SET_OFFSETS
+    broadcastable = False
+    safe = True
+    move_command = False
+
+    def __init__(self, alpha=0, beta=0, **kwargs):
+
+        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
+
+        data = int_to_bytes(int(alpha_steps)) + int_to_bytes(int(beta_steps))
+        kwargs['data'] = data
+
+        super().__init__(**kwargs)
