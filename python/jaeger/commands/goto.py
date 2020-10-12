@@ -13,17 +13,33 @@ from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
-__ALL__ = ['InitialiseDatums', 'StartTrajectory', 'GotoAbsolutePosition',
-           'SetSpeed', 'SetCurrent']
+__ALL__ = ['GoToDatums', 'GoToDatumAlpha', 'GoToDatumBeta', 'StartTrajectory',
+           'GotoAbsolutePosition', 'SetSpeed', 'SetCurrent']
 
 
 TIME_STEP = jaeger.config['positioner']['time_step']
 
 
-class InitialiseDatums(Command):
+class GoToDatums(Command):
     """Initialises and zeroes the positioner."""
 
-    command_id = CommandID.INITIALIZE_DATUMS
+    command_id = CommandID.GO_TO_DATUMS
+    broadcastable = False
+    move_command = True
+
+
+class GoToDatumAlpha(Command):
+    """Initialises and zeroes the alpha arm of the positioner."""
+
+    command_id = CommandID.GO_TO_DATUM_ALPHA
+    broadcastable = False
+    move_command = True
+
+
+class GoToDatumBeta(Command):
+    """Initialises and zeroes the beta arm of the positioner."""
+
+    command_id = CommandID.GO_TO_DATUM_BETA
     broadcastable = False
     move_command = True
 
