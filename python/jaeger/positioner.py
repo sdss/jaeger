@@ -7,14 +7,12 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
-import warnings
 from distutils.version import StrictVersion
 
 import numpy.testing
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
-from jaeger.exceptions import JaegerUserWarning
 from jaeger.utils import StatusMixIn, bytes_to_int
 
 
@@ -546,6 +544,36 @@ class Positioner(StatusMixIn):
         await _restore(original_speed)
 
         return True
+
+    async def home(self):
+        """Homes the positioner.
+
+        Zeroes the positioner by counter-clockwise rotating alpha and beta
+        until they hit the hardstops. Blocks until the move is complete.
+
+        """
+
+        if self.moving:
+            log.error(f'Positioner {self.positioner_id}: '
+                      'positioner is already moving.')
+            return False
+
+        if not self.fps:
+            log.error(f'Positioner {self.positioner_id}: '
+                      'the positioner is not linked to a FPS instance.')
+            return False
+
+        command = await self.fps.send_command('GO_TO_DATUMS',
+                                              positioner_id=self.positioner_id)
+        if command.status.failed:
+            log.error(f'Positioner {self.positioner_id}: '
+                      'failed while sending GO_TO_DATUMS command.')
+            return False
+
+        log.debug(f'Positioner {self.positioner_id}: waiting to home.')
+        await self.wait_for_status(self.flags.DISPLACEMENT_COMPLETED)
+
+        log.info(f'Positioner {self.positioner_id}: homed.')
 
     def __repr__(self):
         return (f'<Positioner (id={self.positioner_id}, '

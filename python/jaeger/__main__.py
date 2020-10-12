@@ -352,8 +352,7 @@ async def home(fps_maker, positioner_id):
             warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
                           'have not been initialised and will not be homed.')
 
-        await asyncio.gather(*[fps.send_command('INITIALIZE_DATUMS',
-                                                positioner_id=pos.positioner_id)
-                               for pos in valid_positioners])
+        await asyncio.gather(*[positioner.home()
+                               for positioner in valid_positioners])
 
     return
