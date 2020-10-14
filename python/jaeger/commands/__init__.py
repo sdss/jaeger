@@ -6,13 +6,25 @@
 # @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# flake8: noqa
 # isort:skip_file
 
 import enum
 
 
-class CommandID(enum.IntEnum):
+class TypesEnumMeta(enum.EnumMeta):
+    """Metaclass to allow initialising an Enum from a string."""
+
+    def __call__(cls, value):
+
+        if isinstance(value, str):
+            for flag in cls:
+                if flag.name.lower() == value.lower():
+                    return cls(flag.value)
+
+        return super().__call__(value)
+
+
+class CommandID(enum.IntEnum, metaclass=TypesEnumMeta):
     """IDs associated with commands."""
 
     GET_ID = 1
@@ -41,33 +53,27 @@ class CommandID(enum.IntEnum):
     START_COGGING_CALIBRATION = 47
     SAVE_INTERNAL_CALIBRATION = 53
     GET_CURRENT = 56
+    HALL_ON = 116
+    HALL_OFF = 117
+    ALPHA_CLOSED_LOOP_COLLISION_DETECTION = 118
+    ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION = 119
+    ALPHA_OPEN_LOOP_COLLISION_DETECTION = 120
+    ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION = 121
+    BETA_CLOSED_LOOP_COLLISION_DETECTION = 122
+    BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION = 123
+    BETA_OPEN_LOOP_COLLISION_DETECTION = 124
+    BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION = 125
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
 
-    def get_command(self):
+    def get_command_class(self):
         """Returns the class associated with this command."""
 
-        return COMMAND_LIST[self]
+        if self in COMMAND_LIST:
+            return COMMAND_LIST[self]
 
 
-def CommandID__new__(cls, value):
-    """Allows to instantiate based on the flag string.
-
-    We cannot override __new__ directly on the subclass. We need
-    to add it after the class has been defined. See http://bit.ly/2CStmNm.
-
-    """
-
-    if isinstance(value, str):
-        for flag in cls:
-            if flag.name.lower() == value.lower():
-                return CommandID(flag.value)
-
-    return super(CommandID, cls).__new__(cls, value)
-
-
-CommandID.__new__ = CommandID__new__
-
+from .base import Command
 
 from .base import *
 from .bootloader import *
@@ -78,14 +84,17 @@ from .calibration import *
 
 
 # Generate a dictionary of commands
+COMMAND_LIST = {cclass.command_id: cclass
+                for cclass in Command.__subclasses__()
+                if cclass.command_id in CommandID}
 
-_tmp_command_list = []
-
-for item in vars().copy().values():
-    if not hasattr(item, '__bases__'):
-        continue
-    bases = item.__bases__
-    if  Command in bases or any([issubclass(base, Command) for base in bases]):
-        _tmp_command_list.append((item.command_id, item))
-
-COMMAND_LIST = dict(sorted(_tmp_command_list))
+# Dynamically generate command classes for those commands for which we
+# didn't write a class. These classes are identical to a generic Command
+# but with a custom name.
+for cid in list(CommandID):
+    if cid not in COMMAND_LIST:
+        CommandClass = type(cid.name.title().replace('_', ''),
+                            (Command,),
+                            {'command_id': cid,
+                             'broadcastable': False})
+        COMMAND_LIST[cid] = CommandClass

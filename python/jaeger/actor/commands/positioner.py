@@ -284,3 +284,47 @@ async def trajectory(command, fps, path):
 
     except TrajectoryError as ee:
         return command.fail(str(ee))
+
+
+@jaeger_parser.group()
+def hall():
+    """Turns the hall sensor on/off."""
+
+    pass
+
+
+@hall.command()
+@click.argument('POSITIONER-ID', type=int, nargs=-1, required=False)
+async def on(command, fps, positioner_id):
+    """Turns the hall sensor on."""
+
+    if positioner_id is None:
+        positioner_id = list(fps.positioners.keys())
+
+    if not check_positioners(positioner_id, command, fps, initialised=False):
+        return
+
+    command.debug('Turning hall sensors ON')
+    await fps.send_to_all('HALL_ON', positioners=positioner_id)
+
+    command.debug('Waiting 5 seconds ...')
+    await asyncio.sleep(5)
+
+    command.finish()
+
+
+@hall.command()
+@click.argument('POSITIONER-ID', type=int, nargs=-1, required=False)
+async def off(command, fps, positioner_id):
+    """Turns the hall sensor off."""
+
+    if positioner_id is None:
+        positioner_id = list(fps.positioners.keys())
+
+    if not check_positioners(positioner_id, command, fps, initialised=False):
+        return
+
+    command.debug('Turning hall sensors OFF')
+    await fps.send_to_all('HALL_OFF', positioners=positioner_id)
+
+    command.finish()

@@ -19,7 +19,7 @@ from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 __ALL__ = ['calibration_positioner', 'StartDatumCalibration',
            'StartMotorCalibration', 'StartCoggingCalibration',
-           'SaveInternalCalibration']
+           'SaveInternalCalibration', 'HallOn', 'HallOff']
 
 
 MOTOR_STEPS = config['positioner']['motor_steps']
@@ -202,3 +202,21 @@ class SetOffsets(Command):
         kwargs['data'] = data
 
         super().__init__(**kwargs)
+
+
+class HallOn(Command):
+    """Turns hall sensors ON."""
+
+    command_id = CommandID.HALL_ON
+    broadcastable = False
+    move_command = False
+    safe = True
+
+
+class HallOff(Command):
+    """Turns hall sensors ON."""
+
+    command_id = CommandID.HALL_OFF
+    broadcastable = False
+    move_command = False
+    safe = True
