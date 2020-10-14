@@ -7,12 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import logging
 from distutils.version import StrictVersion
 
 import numpy.testing
 
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
+from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
 
 
@@ -110,7 +112,7 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def reset(self):
+    def reset(self):
         """Resets positioner values and statuses."""
 
         self.alpha = None
@@ -118,66 +120,69 @@ class Positioner(StatusMixIn):
         self.status = self.flags.UNKNOWN
         self.firmware = None
 
+    def _log(self, message, level=logging.DEBUG):
+        """Logs a message."""
+
+        log.log(level, f'Positioner {self.positioner_id}: {message}')
+
+    async def send_command(self, command, error=None, **kwargs):
+        """Sends and awaits a command to the FPS for this positioner."""
+
+        if not self.fps:
+            raise PositionerError(self, 'FPS is not set.')
+
+        command = await self.fps.send_command(command,
+                                              positioner_id=self.positioner_id,
+                                              **kwargs)
+
+        if error and (command.status.failed or command.status.timed_out):
+            raise PositionerError(self, error)
+
+        return command
+
     async def update_position(self, position=None, timeout=1):
         """Updates the position of the alpha and beta arms."""
 
         if position is None:
 
-            command = self.fps.send_command(CommandID.GET_ACTUAL_POSITION,
-                                            positioner_id=self.positioner_id,
-                                            timeout=timeout,
-                                            silent_on_conflict=True,
-                                            override=True)
-
-            await command
+            command = await self.send_command(CommandID.GET_ACTUAL_POSITION,
+                                              timeout=timeout,
+                                              silent_on_conflict=True,
+                                              override=True)
 
             if command.status.failed:
-                log.error(f'positioner {self.positioner_id}: failed updating position')
                 self.alpha = self.beta = None
-                return
+                raise PositionerError(self, 'failed updating position')
 
             try:
                 position = command.get_positions()
             except ValueError:
-                log.debug(f'positioner {self.positioner_id}: '
-                          'failed to receive current position.')
-                return
+                raise PositionerError(self, 'cannot parse current position.')
 
         self.alpha, self.beta = position
 
-        log.debug(f'positioner {self.positioner_id}: '
-                  f'(alpha, beta)={self.alpha}, {self.beta}')
+        self._log(f'at position ({self.alpha:.2f}, {self.beta:.2f})')
 
     async def update_status(self, status=None, timeout=1.):
         """Updates the status of the positioner."""
 
         # Need to update the firmware to make sure we get the right flags.
-        result = await self.update_firmware_version()
-        if result is False:
-            return False
+        await self.update_firmware_version()
 
         if not status:
 
-            command = self.fps.send_command(CommandID.GET_STATUS,
-                                            positioner_id=self.positioner_id,
-                                            timeout=timeout,
-                                            silent_on_conflict=True)
-
-            await command
-
-            if command.status.failed or command.status.timed_out:
-                log.error(f'positioner {self.positioner_id}: '
-                          f'{CommandID.GET_STATUS.name!r} failed to complete.')
-                return False
+            command = await self.send_command(CommandID.GET_STATUS,
+                                              timeout=timeout,
+                                              silent_on_conflict=True,
+                                              error='cannot get status.')
 
             if len(command.replies) == 1:
                 status = int(bytes_to_int(command.replies[0].data))
             else:
-                log.error(f'positioner {self.positioner_id}: '
-                          f'{CommandID.GET_STATUS.name!r} received '
-                          f'{len(command.replies)} replies.')
                 self.status = self.flags.UNKNOWN
-                return False
+                raise PositionerError(self, 'GET_STATUS received '
+                                            f'{len(command.replies)} '
+                                            'replies.')
 
         if not self.is_bootloader():
             self.flags = self.get_positioner_flags()
@@ -186,14 +191,10 @@ class Positioner(StatusMixIn):
 
         self.status = self.flags(status)
 
-        log.debug(f'positioner {self.positioner_id}: '
-                  f'status={self.status!s} ({self.status.value})')
-
         # Checks if the positioner is collided. If so, locks the FPS.
         if not self.is_bootloader() and self.collision and not self.fps.locked:
-            log.error(f'positioner {self.positioner_id} has collided. Locking the FPS.')
             await self.fps.lock()
-            return False
+            raise PositionerError(self, 'collision detected. Locking the FPS.')
 
         return True
 
@@ -220,12 +221,8 @@ class Positioner(StatusMixIn):
         """
 
         if self.is_bootloader():
-            log.error('this coroutine cannot be scheduled in bootloader mode.')
-            return False
-
-        if not self.fps:
-            log.error('no FPS associated with this positioner.')
-            return False
+            raise JaegerError('wait_for_status cannot be scheduled '
+                              'in bootloader mode.')
 
         if not isinstance(status, (list, tuple)):
             status = [status]
@@ -258,68 +255,45 @@ class Positioner(StatusMixIn):
     async def initialise(self):
         """Initialises the position watcher."""
 
-        eng_mode = True if self.fps and self.fps.engineering_mode else False
-
-        log.debug(f'positioner {self.positioner_id}: initialising')
-
         # Resets all.
-        await self.reset()
+        self.reset()
 
-        try:
-            await self.update_firmware_version()
-        except Exception as ee:
-            log.error(f'positioner {self.positioner_id}: failed to update '
-                      f'firmware version: {ee}.')
-            if not eng_mode:
-                return False
+        await self.update_firmware_version()
+        await self.update_status()
 
-        result = await self.update_status()
-        if not result:
-            log.error(f'positioner {self.positioner_id}: failed to refresh status.')
-            if not eng_mode:
-                return False
-
-        # Exists if we are in bootloader mode.
+        # Exits if we are in bootloader mode.
         if self.is_bootloader():
-            log.debug(f'positioner {self.positioner_id}: positioner is in bootloader mode.')
             return True
 
         if not self.initialised:
-            log.error(f'positioner {self.positioner_id}: not initialised. '
-                      'Set the position manually.')
-            if not eng_mode:
-                return False
+            raise PositionerError(self, 'failed inisialising.')
 
         # Sets the default speed
-        if not await self.set_speed(alpha=config['positioner']['motor_speed'],
-                                    beta=config['positioner']['motor_speed']):
-            return False
+        await self.set_speed(alpha=config['positioner']['motor_speed'],
+                             beta=config['positioner']['motor_speed'])
 
-        log.debug(f'positioner {self.positioner_id}: initialisation complete.')
+        self._log('initialisation complete.')
 
         return True
 
     async def update_firmware_version(self):
         """Updates the firmware version."""
 
-        command = self.fps.send_command(CommandID.GET_FIRMWARE_VERSION,
-                                        positioner_id=self.positioner_id)
-        await command
-
-        if command.status.failed or command.status.timed_out:
-            log.error(f'positioner {self.positioner_id}: '
-                      'failed retrieving firmware version.')
-            return False
+        command = await self.send_command(CommandID.GET_FIRMWARE_VERSION,
+                                          error='failed retrieving '
+                                                'firmware version.')
 
         self.firmware = command.get_firmware()
         self.flags = self.get_positioner_flags()
+
+        self._log(f'firmware {self.firmware}')
 
         return True
 
     def get_positioner_flags(self):
         """Returns the correct position maskbits from the firmware version."""
 
-        assert self.firmware, 'firmware is not set.'
+        assert self.firmware, 'Firmware is not set.'
 
         if self.is_bootloader():
             return maskbits.BootloaderStatus
@@ -340,17 +314,13 @@ class Positioner(StatusMixIn):
     async def set_position(self, alpha, beta):
         """Sets the internal position of the motors."""
 
-        set_position_command = self.fps.send_command(
+        set_position_command = await self.send_command(
             CommandID.SET_ACTUAL_POSITION,
-            positioner_id=self.positioner_id,
             alpha=float(alpha),
-            beta=float(beta))
+            beta=float(beta),
+            error='failed setting position.')
 
-        await set_position_command
-
-        if set_position_command.status.failed:
-            log.error(f'positioner {self.positioner_id}: failed setting position.')
-            return False
+        self._log(f'position set to ({alpha:.2f}, {beta:.2f})')
 
         return set_position_command
 
@@ -373,41 +343,31 @@ class Positioner(StatusMixIn):
 
         if (alpha < MIN_SPEED or alpha > MAX_SPEED or
                 beta < MIN_SPEED or beta > MAX_SPEED) and not force:
-            log.error(f'positioner {self.positioner_id}: speed out of limits.')
-            return False
+            raise PositionerError(self, 'speed out of limits.')
 
-        log.debug(f'positioner {self.positioner_id}: setting speed '
-                  f'({float(alpha):.2f}, {float(beta):.2f})')
-
-        speed_command = self.fps.send_command(CommandID.SET_SPEED,
-                                              positioner_id=self.positioner_id,
-                                              alpha=float(alpha),
-                                              beta=float(beta))
-        await speed_command
-
-        if speed_command.status.failed:
-            return False
+        speed_command = await self.send_command(CommandID.SET_SPEED,
+                                                alpha=float(alpha),
+                                                beta=float(beta),
+                                                error='failed setting speed.')
 
         self.speed = (alpha, beta)
+
+        self._log(f'speed set to ({alpha:.2f}, {beta:.2f})')
 
         return speed_command
 
     async def _goto_position(self, alpha, beta, relative=False):
         """Go to a position."""
 
-        command_id = CommandID.GO_TO_RELATIVE_POSITION \
-            if relative else CommandID.GO_TO_ABSOLUTE_POSITION
+        if relative:
+            command_id = CommandID.GO_TO_RELATIVE_POSITION
+        else:
+            command_id = CommandID.GO_TO_ABSOLUTE_POSITION
 
-        goto_command = self.fps.send_command(command_id,
-                                             positioner_id=self.positioner_id,
-                                             alpha=float(alpha),
-                                             beta=float(beta))
-        await goto_command
-
-        if goto_command.status.failed:
-            return False
-
-        return goto_command
+        return await self.send_command(command_id,
+                                       alpha=float(alpha),
+                                       beta=float(beta),
+                                       error='failed going to position.')
 
     async def goto(self, alpha, beta, speed=None, relative=False, force=False):
         """Moves positioner to a given position.
@@ -444,104 +404,87 @@ class Positioner(StatusMixIn):
 
         """
 
-        eng_mode = True if self.fps and self.fps.engineering_mode else False
+        if self.moving:
+            raise PositionerError(self, 'positioner is already moving.')
 
-        if not eng_mode and self.moving:
-            log.error(f'positioner {self.positioner_id}: '
-                      'positioner is already moving.')
-            return False
+        ALPHA_MAX = 360
+        BETA_MAX = 360
+        ALPHA_MIN = -ALPHA_MAX if relative else 0
+        BETA_MIN = -BETA_MAX if relative else 0
 
-        async def _restore(original_speed):
-            if original_speed != self.speed:
-                await self.set_speed(*original_speed)
-
-        ALPHA_MAX_POSITION = 360
-        BETA_MAX_POSITION = 360
-        ALPHA_MIN_POSITION = -ALPHA_MAX_POSITION if relative else 0
-        BETA_MIN_POSITION = -BETA_MAX_POSITION if relative else 0
+        if (alpha < ALPHA_MIN or alpha > ALPHA_MAX or
+                beta < BETA_MIN or beta > BETA_MAX) and not force:
+            raise PositionerError(self, 'position out of limits.')
 
         if not self.initialised:
-            log.error(f'positioner {self.positioner_id}: not initialised.')
-            return False
+            raise PositionerError(self, 'not initialised.')
 
-        if not self.fps:
-            log.error('the positioner is not linked to a FPS instance.')
-            return False
+        original_speed = self.speed
 
-        # Set the speed
-        original_speed = self.speed[:]
-        if speed and all(speed) and not await self.set_speed(*speed, force=force):
-            return False
+        try:  # Wrap in try-except to restore speed if something fails.
 
-        # Go to position
-        if (alpha < ALPHA_MIN_POSITION or alpha > ALPHA_MAX_POSITION or
-                beta < BETA_MIN_POSITION or beta > BETA_MAX_POSITION) and not force:
-            log.error(f'positioner {self.positioner_id}: position out of limits.')
-            if not eng_mode:
-                await _restore(original_speed)
-                return False
+            # Set the speed
+            if speed and all(speed):
+                await self.set_speed(*speed, force=force)
 
-        log.info(f'positioner {self.positioner_id}: goto '
-                 f'{"relative" if relative else "absolute"} position '
-                 f'({float(alpha):.3f}, {float(beta):.3f}) degrees')
+            self._log(f'goto {"relative" if relative else "absolute"} '
+                      f'position ({alpha:.3f}, {beta:.3f}) degrees.')
 
-        goto_command = await self._goto_position(alpha, beta, relative=relative)
+            goto_command = await self._goto_position(alpha, beta,
+                                                     relative=relative)
 
-        if not goto_command:
-            log.error(f'positioner {self.positioner_id}: '
-                      'failed sending the goto position command.')
-            await _restore(original_speed)
-            return False
+            # Sleeps for the time the firmware believes it's going to take
+            # to get to the desired position.
+            alpha_time, beta_time = goto_command.get_move_time()
 
-        # Sleeps for the time the firmware believes it's going to take
-        # to get to the desired position.
-        alpha_time, beta_time = goto_command.get_move_time()
+            # Update status as soon as we start moving. This clears any
+            # possible DISPLACEMENT_COMPLETED.
+            await asyncio.sleep(0.1)
+            await self.update_status()
 
-        # Update status as soon as we start moving. This clears any possible
-        # DISPLACEMENT_COMPLETED.
-        await asyncio.sleep(0.1)
-        await self.update_status()
+            if not self.moving:
 
-        if not self.moving:
+                if not relative:
+                    goto_position = (alpha, beta)
+                else:
+                    goto_position = (alpha + self.position[0],
+                                     beta + self.position[1])
 
-            if not relative:
-                goto_position = (alpha, beta)
-            else:
-                goto_position = (alpha + self.position[0], beta + self.position[1])
+                try:
 
-            try:
+                    numpy.testing.assert_allclose(self.position,
+                                                  goto_position,
+                                                  atol=0.001)
+                    self._log('position reached (did not move).', logging.INFO)
+                    return True
 
-                numpy.testing.assert_allclose(self.position, goto_position, atol=0.001)
-                log.info(f'positioner {self.positioner_id}: position reached (did not move).')
-                return True
+                except AssertionError:
 
-            except AssertionError:
+                    raise PositionerError(self, 'positioner is not '
+                                                'moving when it should.')
 
-                log.error(f'positioner {self.positioner_id}: positioner is '
-                          'not moving when it should.')
-                if not eng_mode:
-                    return False
+            self.move_time = max([alpha_time, beta_time])
 
-        self.move_time = max([alpha_time, beta_time])
+            self._log(f'the move will take {self.move_time:.2f} seconds',
+                      logging.INFO)
 
-        log.info(f'positioner {self.positioner_id}: '
-                 f'the move will take {self.move_time:.2f} seconds')
+            await asyncio.sleep(self.move_time)
 
-        await asyncio.sleep(self.move_time)
+            # Blocks until we're sure both arms at at the position.
+            result = await self.wait_for_status(
+                self.flags.DISPLACEMENT_COMPLETED, delay=0.1, timeout=3)
 
-        # Blocks until we're sure both arms at at the position.
-        result = await self.wait_for_status(
-            self.flags.DISPLACEMENT_COMPLETED, delay=0.1, timeout=3)
+            if result is False:
+                raise PositionerError(self, 'failed to reach '
+                                            'commanded position.')
 
-        if result is False:
-            log.error(f'positioner {self.positioner_id}: '
-                      'failed to reach commanded position.')
-            await _restore(original_speed)
-            return False
+            self._log('position reached.', logging.INFO)
 
-        log.info(f'positioner {self.positioner_id}: position reached.')
+        except BaseException:
+            raise
 
-        await _restore(original_speed)
+        finally:
+            await self.set_speed(*original_speed, force=force)
 
         return True
 
@@ -554,27 +497,64 @@ class Positioner(StatusMixIn):
         """
 
         if self.moving:
-            log.error(f'Positioner {self.positioner_id}: '
-                      'positioner is already moving.')
-            return False
+            raise PositionerError(self, 'positioner is already moving.')
 
         if not self.fps:
-            log.error(f'Positioner {self.positioner_id}: '
-                      'the positioner is not linked to a FPS instance.')
-            return False
+            raise PositionerError(self, 'the positioner is not '
+                                        'linked to a FPS instance.')
 
-        command = await self.fps.send_command('GO_TO_DATUMS',
-                                              positioner_id=self.positioner_id)
-        if command.status.failed:
-            log.error(f'Positioner {self.positioner_id}: '
-                      'failed while sending GO_TO_DATUMS command.')
-            return False
+        await self.send_command('GO_TO_DATUMS',
+                                positioner_id=self.positioner_id,
+                                error='failed while sending '
+                                'GO_TO_DATUMS command.')
 
-        log.debug(f'Positioner {self.positioner_id}: waiting to home.')
+        self._log('waiting to home.')
         await self.wait_for_status(self.flags.DISPLACEMENT_COMPLETED)
 
-        log.info(f'Positioner {self.positioner_id}: homed.')
+        self._log('homed.', logging.INFO)
+
+    async def set_loop(self, motor='both', loop='closed', collisions=True):
+        """Sets the control loop for a motor.
+
+        These parameters are cleared after a restart. The motors revert to
+        closed loop with collision detection.
+
+        Parameters
+        ----------
+        motor : str
+            The motor to which these changes apply, either ``'alpha`'``,
+            ``'beta'``, or ``'both'``.
+        loop : str
+            The type of control loop, either ``'open'`` or ``'closed'``.
+        collisions : bool
+            Whether the firmware should automatically detect collisions and
+            stop the positioner.
+
+        """
+
+        if motor == 'both':
+            motors = ['alpha', 'beta']
+        else:
+            motors = [motor]
+
+        for motor in motors:
+
+            command_name = motor.upper() + '_' + loop.upper() + '_LOOP'
+            if collisions:
+                command_name += '_COLLISION_DETECTION'
+            else:
+                command_name += '_WITHOUT_COLLISION_DETECTION'
+
+            await self.send_command(command_name,
+                                    positioner_id=self.positioner_id,
+                                    error=f'failed setting loop for {motor}.')
+
+            self._log(f'set motor={motor!r}, loop={loop!r}, '
+                      f'detect_collision={collisions}')
+
+        return True
 
     def __repr__(self):
+
         return (f'<Positioner (id={self.positioner_id}, '
                 f'status={self.status!s}, initialised={self.initialised})>')

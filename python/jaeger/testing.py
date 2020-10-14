@@ -148,7 +148,7 @@ class VirtualPositioner(StatusMixIn):
                 continue
 
             command_id = CommandID(command_id)
-            command = command_id.get_command()
+            command = command_id.get_command_class()
 
             if positioner_id == 0 and not command.broadcastable:
                 self.reply(command_id, uid, response_code=ResponseCode.INVALID_BROADCAST_COMMAND)
@@ -253,7 +253,7 @@ class VirtualPositioner(StatusMixIn):
 
         __, command_id, uid, __ = utils.parse_identifier(message.arbitration_id)
         command_id = CommandID(command_id)
-        command = command_id.get_command()
+        command = command_id.get_command_class()
 
         data = message.data
         alpha_move, beta_move = command.decode(data)
