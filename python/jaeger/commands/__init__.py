@@ -83,9 +83,16 @@ from .trajectory import *
 from .calibration import *
 
 
+def all_subclasses(cls):
+    """Recursive subclasses."""
+
+    return set(cls.__subclasses__()).union([s for c in cls.__subclasses__()
+                                            for s in all_subclasses(c)])
+
+
 # Generate a dictionary of commands
 COMMAND_LIST = {cclass.command_id: cclass
-                for cclass in Command.__subclasses__()
+                for cclass in all_subclasses(Command)
                 if cclass.command_id in CommandID}
 
 # Dynamically generate command classes for those commands for which we
