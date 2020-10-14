@@ -58,7 +58,7 @@ class PositionerError(JaegerError):
 
         message = f'Positioner {positioner.positioner_id}: {message}'
 
-        super(JaegerCANError, self).__init__(message)
+        super(PositionerError, self).__init__(message)
 
 
 class JaegerMissingDependency(JaegerError):

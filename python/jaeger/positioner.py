@@ -484,7 +484,8 @@ class Positioner(StatusMixIn):
             raise
 
         finally:
-            await self.set_speed(*original_speed, force=force)
+            if self.speed != original_speed:
+                await self.set_speed(*original_speed, force=force)
 
         return True
 
