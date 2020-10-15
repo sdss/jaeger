@@ -98,7 +98,9 @@ class VirtualPositioner(StatusMixIn):
                        PositionerStatus.DATUM_ALPHA_INITIALIZED |
                        PositionerStatus.DATUM_BETA_INITIALIZED |
                        PositionerStatus.MOTOR_ALPHA_CALIBRATED |
-                       PositionerStatus.MOTOR_BETA_CALIBRATED)
+                       PositionerStatus.MOTOR_BETA_CALIBRATED |
+                       PositionerStatus.CLOSED_LOOP_ALPHA |
+                       PositionerStatus.CLOSED_LOOP_BETA)
 
     def __init__(self, positioner_id, centre=None, position=(0.0, 0.0),
                  speed=None, channel=None, loop=None, notifier=None,
