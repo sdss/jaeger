@@ -356,6 +356,30 @@ class Positioner(StatusMixIn):
 
         return speed_command
 
+    def _can_move(self):
+        """Returns `True` if the positioner can be moved."""
+
+        if self.moving or self.collision or not self.initialised:
+            return False
+
+        if self.flags == maskbits.PositionerStatusV4_0:
+            return True
+        else:
+            PS = maskbits.PositionerStatus
+            invalid_bits = [PS.COLLISION_DETECT_ALPHA_DISABLE,
+                            PS.COLLISION_DETECT_BETA_DISABLE]
+            for b in invalid_bits:
+                if b in self.status:
+                    self._log(f'canot move; found status bit {b.name}.',
+                              logging.ERROR)
+                    return False
+            if (PS.CLOSED_LOOP_ALPHA not in self.status or
+                    PS.CLOSED_LOOP_BETA not in self.status):
+                self._log('canot move; positioner not in closed loop mode.',
+                          logging.ERROR)
+                return False
+            return True
+
     async def _goto_position(self, alpha, beta, relative=False):
         """Go to a position."""
 
@@ -406,6 +430,10 @@ class Positioner(StatusMixIn):
 
         if self.moving:
             raise PositionerError(self, 'positioner is already moving.')
+
+        if force is False and not self._can_move():
+            raise PositionerError(self, 'positioner is not in a '
+                                        'movable state.')
 
         ALPHA_MAX = 360
         BETA_MAX = 360
@@ -505,7 +533,6 @@ class Positioner(StatusMixIn):
                                         'linked to a FPS instance.')
 
         await self.send_command('GO_TO_DATUMS',
-                                positioner_id=self.positioner_id,
                                 error='failed while sending '
                                 'GO_TO_DATUMS command.')
 
@@ -547,7 +574,6 @@ class Positioner(StatusMixIn):
                 command_name += '_WITHOUT_COLLISION_DETECTION'
 
             await self.send_command(command_name,
-                                    positioner_id=self.positioner_id,
                                     error=f'failed setting loop for {motor}.')
 
             self._log(f'set motor={motor!r}, loop={loop!r}, '
