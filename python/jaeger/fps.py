@@ -18,7 +18,8 @@ from drift import Drift, DriftError
 from jaeger import config, log, start_file_loggers
 from jaeger.can import JaegerCAN
 from jaeger.commands import Command, CommandID, send_trajectory
-from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
+from jaeger.exceptions import (FPSLockedError, JaegerError,
+                               JaegerUserWarning, TrajectoryError)
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int
 
@@ -170,9 +171,9 @@ class BaseFPS(dict):
         """Adds a new positioner to the list, and checks for duplicates."""
 
         if positioner_id in self.positioners:
-            raise ValueError(f'{self._class_name}: there is already a '
-                             f'positioner in the list with positioner_id '
-                             f'{positioner_id}.')
+            raise VJaegerError(f'{self._class_name}: there is already a '
+                               f'positioner in the list with positioner_id '
+                               f'{positioner_id}.')
 
         self.positioners[positioner_id] = self._positioner_class(positioner_id, self,
                                                                  centre=centre)
@@ -248,9 +249,9 @@ class FPS(BaseFPS):
         start_file_loggers(start_log=True, start_can=False)
 
         if config.__CONFIG_FILE__:
-            log.info(f'using configuration from {config.__CONFIG_FILE__}')
+            log.info(f'Using configuration from {config.__CONFIG_FILE__}')
         else:
-            log.warning('cannot find SDSSCORE or user configuration. '
+            log.warning('Cannot find SDSSCORE or user configuration. '
                         'Using default values.')
 
         self.engineering_mode = engineering_mode
@@ -408,14 +409,13 @@ class FPS(BaseFPS):
 
         elif not self.engineering_mode and command.move_command and self.moving:
             command.cancel(silent=True)
-            log.error('Cannot send move command while the FPS is moving. '
-                      'Use FPS.stop_trajectory() to stop the FPS.')
-            return command
+            raise JaegerError('Cannot send move command while the '
+                              'FPS is moving. Use FPS.stop_trajectory() '
+                              'to stop the FPS.')
 
         if command.status.is_done:
-            log.error(f'({command_name}, {positioner_id}): '
-                      'trying to send a done command.')
-            return command
+            raise JaegerError(f'({command_name}, {positioner_id}): '
+                              'trying to send a done command.')
 
         command._override = override
         command._silent_on_conflict = silent_on_conflict
@@ -452,7 +452,8 @@ class FPS(BaseFPS):
             return
 
         if command.positioner_id not in self.positioner_to_bus:
-            log.error(f'Positioner {command.positioner_id} has no assigned bus.')
+            raise JaegerError(f'Positioner {command.positioner_id} '
+                              'has no assigned bus.')
             command.finish_command(command.status.FAILED)
             return
 
@@ -479,7 +480,7 @@ class FPS(BaseFPS):
 
         """
 
-        warnings.warn('locking FPS.', JaegerUserWarning)
+        warnings.warn('Locking FPS.', JaegerUserWarning)
         self._locked = True
 
         if stop_trajectories:
@@ -493,9 +494,8 @@ class FPS(BaseFPS):
         for positioner in self.positioners.values():
             if positioner.collision and not self.engineering_mode:
                 self._locked = True
-                log.error('Cannot unlock the FPS until all '
-                          'the collisions have been cleared.')
-                return False
+                raise JaegerError('Cannot unlock the FPS until all '
+                                  'the collisions have been cleared.')
 
         self._locked = False
 
@@ -552,11 +552,10 @@ class FPS(BaseFPS):
 
         if get_firmware_command.status.failed:
             if not self.engineering_mode:
-                log.error('failed retrieving firmware version. '
-                          'Cannot initialise FPS.')
-                return False
+                raise JaegerError('Failed retrieving firmware version. '
+                                  'Cannot initialise FPS.')
             else:
-                warnings.warn('failed retrieving firmware version. '
+                warnings.warn('Failed retrieving firmware version. '
                               'Continuing because engineering mode.',
                               JaegerUserWarning)
 
@@ -572,16 +571,16 @@ class FPS(BaseFPS):
                     unknwon_positioners.append(positioner_id)
                     self.add_positioner(positioner_id)
                 else:
-                    log.error(f'found positioner with ID={positioner_id} '
-                              'that is not in the layout.')
-                    return False
+                    raise JaegerError('Found positioner with '
+                                      f'ID={positioner_id} '
+                                      'that is not in the layout.')
 
             positioner = self.positioners[positioner_id]
             positioner.firmware = get_firmware_command.get_firmware(positioner_id)
 
         if len(set([pos.firmware for pos in self.values()])) > 1:
-            warnings.warn('positioners with different firmware versions found.',
-                          JaegerUserWarning)
+            warnings.warn('Positioners with different firmware '
+                          'versions found.', JaegerUserWarning)
 
         # Stop positioners that are not in bootloader mode.
         await self.stop_trajectory()
@@ -589,7 +588,7 @@ class FPS(BaseFPS):
         await self.update_status(timeout=config['fps']['initialise_timeouts'])
 
         if len(unknwon_positioners) > 0:
-            warnings.warn(f'found {len(unknwon_positioners)} unknown positioners '
+            warnings.warn(f'Found {len(unknwon_positioners)} unknown positioners '
                           f'with IDs {sorted(unknwon_positioners)!r}. '
                           'They have been added to the layout.',
                           JaegerUserWarning)
@@ -612,8 +611,8 @@ class FPS(BaseFPS):
         if self.locked:
             log.info('FPS is locked. Trying to unlock it.')
             if not await self.unlock():
-                log.error('FPS cannot be unlocked. Initialisation failed.')
-                return False
+                raise JaegerError('FPS cannot be unlocked. '
+                                  'Initialisation failed.')
             else:
                 log.info('FPS unlocked successfully.')
 
@@ -624,10 +623,12 @@ class FPS(BaseFPS):
         results = await asyncio.gather(*initialise_cmds)
 
         if False in results:
-            log.error('some positioners failed to initialise.')
             if self.engineering_mode:
-                warnings.warn('continuing because engineering mode ...',
+                warnings.warn('Some positioners failed to initialise. '
+                              'Continuing because engineering mode ...',
                               JaegerUserWarning)
+            else:
+                raise JaegerError('Some positioners failed to initialise.')
 
         await self.update_position()
 
@@ -670,7 +671,7 @@ class FPS(BaseFPS):
         await command
 
         if command.status.failed:
-            log.warning(f'failed broadcasting {CommandID.GET_STATUS.name!r} '
+            log.warning(f'Failed broadcasting {CommandID.GET_STATUS.name!r} '
                         'during update status.')
             return False
 
@@ -735,8 +736,8 @@ class FPS(BaseFPS):
                 position = command.get_positions()
                 update_position_commands.append(self[pid].update_position(position))
             except ValueError as ee:
-                log.error(f'Failed updating position for positioner {pid}: {ee}')
-                return False
+                raise JaegerError('Failed updating position for '
+                                  f'positioner {pid}: {ee}')
 
         await asyncio.gather(*update_position_commands)
 
@@ -772,8 +773,7 @@ class FPS(BaseFPS):
         await get_firmware_command
 
         if get_firmware_command.status.failed:
-            log.error('failed retrieving firmware version.')
-            return False
+            raise JaegerError('Failed retrieving firmware version.')
 
         for reply in get_firmware_command.replies:
             pid = reply.positioner_id
@@ -809,10 +809,13 @@ class FPS(BaseFPS):
             if positioners == []:
                 return
 
-        await self.send_to_all('TRAJECTORY_TRANSMISSION_ABORT', positioners=positioners)
+        await self.send_to_all('TRAJECTORY_TRANSMISSION_ABORT',
+                               positioners=positioners)
 
         if clear_flags:
-            await self.send_command('STOP_TRAJECTORY', positioner_id=0, timeout=timeout)
+            await self.send_command('STOP_TRAJECTORY',
+                                    positioner_id=0,
+                                    timeout=timeout)
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.
@@ -824,8 +827,7 @@ class FPS(BaseFPS):
         try:
             return await send_trajectory(self, *args, **kwargs)
         except TrajectoryError as ee:
-            log.error(f'sending trajectory failed with error: {ee}')
-            return False
+            raise JaegerError(f'Sending trajectory failed with error: {ee}')
 
     def abort(self):
         """Aborts trajectories and stops positioners."""
@@ -862,7 +864,9 @@ class FPS(BaseFPS):
         positioners = positioners or list(self.positioners.keys())
 
         if data is None or len(data) == 1:
-            commands = [self.send_command(command, positioner_id=positioner_id, **kwargs)
+            commands = [self.send_command(command,
+                                          positioner_id=positioner_id,
+                                          **kwargs)
                         for positioner_id in positioners]
         else:
             commands = [self.send_command(command, positioner_id=positioner_id,
@@ -872,8 +876,8 @@ class FPS(BaseFPS):
         results = await asyncio.gather(*commands, return_exceptions=True)
 
         if any([isinstance(rr, FPSLockedError) for rr in results]):
-            raise FPSLockedError('one or more of the commands failed because '
-                                 'the FPS is locked.')
+            raise FPSLockedError('One or more of the commands failed '
+                                 'because the FPS is locked.')
 
         return commands
 
@@ -884,15 +888,15 @@ class FPS(BaseFPS):
                           for positioner in self.values()])
 
         if not bootloader:
-            log.info('stopping positioners')
+            log.info('Stopping positioners')
             await self.stop_trajectory()
 
-        log.info('stopping all pollers.')
+        log.info('Stopping all pollers.')
         await self.pollers.stop()
 
         await asyncio.sleep(1)
 
-        log.info('cancelling all pending tasks and shutting down.')
+        log.info('Cancelling all pending tasks and shutting down.')
 
         tasks = [task for task in asyncio.all_tasks(loop=self.loop)
                  if task is not asyncio.current_task(loop=self.loop)]
