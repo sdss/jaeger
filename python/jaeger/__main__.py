@@ -20,7 +20,7 @@ from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
 
-from jaeger import config, log
+from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.fps import FPS
@@ -59,10 +59,8 @@ def cli_coro(f):
 class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
-    def __init__(self, verbose, profile, layout, ieb=None,
+    def __init__(self, profile, layout, ieb=None,
                  danger=None, initialise=True):
-
-        self.verbose = verbose
 
         self.profile = profile
         if self.profile in ['test', 'virtual']:
@@ -74,9 +72,6 @@ class FPSWrapper(object):
         self.initialise = initialise
 
         self.fps = None
-
-        if self.verbose:
-            log.set_level(logging.DEBUG)
 
     async def __aenter__(self):
 
@@ -110,7 +105,8 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
               help='Path to the user configuration file.')
 @click.option('-p', '--profile', type=str, help='The bus interface profile.')
 @click.option('-l', '--layout', type=str, help='The FPS layout.')
-@click.option('-v', '--verbose', is_flag=True, help='Debug mode.')
+@click.option('-v', '--verbose', count=True,
+              help='Debug mode. Use additional v for more details.')
 @click.option('--ieb/--no-ieb', default=None, help='Does not connect to the IEB.')
 @click.option('--danger', is_flag=True,
               help='Enables engineering mode. Most safety checks will be disabled.')
@@ -122,11 +118,19 @@ def jaeger(ctx, config_file, layout, profile, verbose, ieb, danger):
 
     """
 
+    if verbose == 1:
+        log.sh.setLevel(logging.INFO)
+    elif verbose == 2:
+        log.sh.setLevel(logging.DEBUG)
+    elif verbose >= 3:
+        log.sh.setLevel(logging.DEBUG)
+        can_log.sh.setLevel(logging.DEBUG)
+
     if config_file:
         config.load(config_file)
         config.__CONFIG_FILE__ = str(config_file)
 
-    ctx.obj = FPSWrapper(verbose, profile, layout, ieb, danger)
+    ctx.obj = FPSWrapper(profile, layout, ieb, danger)
 
 
 @jaeger.group(cls=DaemonGroup, prog='daemon', workdir=os.getcwd())

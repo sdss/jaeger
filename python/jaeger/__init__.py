@@ -2,6 +2,7 @@
 
 # isort:skip_file
 
+import logging
 import os
 import warnings
 
@@ -14,8 +15,9 @@ NAME = 'jaeger'
 __version__ = get_package_version(path='./', package_name=NAME)
 
 
-log = get_logger('jaeger')
-can_log = get_logger('jaeger_can', capture_warnings=False)
+log = get_logger('jaeger', log_level=logging.WARNING)
+can_log = get_logger('jaeger_can', log_level=logging.WARNING,
+                     capture_warnings=False)
 
 
 # Start by loading the internal configuration file.
