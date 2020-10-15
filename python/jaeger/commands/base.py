@@ -14,10 +14,11 @@ import time
 
 import can
 
-import jaeger.utils
-from jaeger import can_log, config, exceptions, log
+from jaeger import can_log, config, log
+from jaeger.exceptions import CommandError, JaegerError
 from jaeger.maskbits import CommandStatus, ResponseCode
-from jaeger.utils import AsyncQueue, StatusMixIn
+from jaeger.utils import (AsyncQueue, StatusMixIn,
+                          get_identifier, parse_identifier)
 
 from . import CommandID
 
@@ -68,10 +69,10 @@ class Message(can.Message):
         assert self.uid < max_uid, f'UID must be <= {max_uid}.'
 
         if extended_id:
-            arbitration_id = jaeger.utils.get_identifier(positioner_id,
-                                                         int(command.command_id),
-                                                         uid=self.uid,
-                                                         response_code=response_code)
+            arbitration_id = get_identifier(positioner_id,
+                                            int(command.command_id),
+                                            uid=self.uid,
+                                            response_code=response_code)
         else:
             arbitration_id = positioner_id
 
@@ -123,12 +124,14 @@ class Reply(object):
         #: The UID of the message this reply is for.
         self.uid = None
 
-        self.positioner_id, reply_cmd_id, self.uid, self.response_code = \
-            jaeger.utils.parse_identifier(message.arbitration_id)
+        (self.positioner_id,
+         reply_cmd_id,
+         self.uid,
+         self.response_code) = parse_identifier(message.arbitration_id)
 
         if command is not None:
             assert command.command_id == reply_cmd_id, \
-                (f'command command_id={command.command_id} and '
+                (f'Command command_id={command.command_id} and '
                  f'reply command_id={reply_cmd_id} do not match')
 
         self.command_id = CommandID(reply_cmd_id)
@@ -214,7 +217,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         self.positioner_id = positioner_id
         if self.positioner_id == 0 and self.broadcastable is False:
-            raise exceptions.JaegerError('this command cannot be broadcast.')
+            raise JaegerError(f'Command {self.command_id.name} '
+                              'cannot be broadcast.')
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -241,12 +245,13 @@ class Command(StatusMixIn, asyncio.Future):
         # the replies.
         self.message_uids = []
 
-        if self.positioner_id != 0 and self.positioner_id not in UID_POOL[self.command_id]:
-            UID_POOL[self.command_id][self.positioner_id] = \
-                set(range(1, 2**config['positioner']['uid_bits']))
+        uid_bits = config['positioner']['uid_bits']
+        pool = UID_POOL[self.command_id]
+        if self.positioner_id != 0 and self.positioner_id not in pool:
+            pool[self.positioner_id] = set(range(1, 2**uid_bits))
 
-        if n_positioners is not None:
-            assert self.is_broadcast, 'n_positioners can only be used with a broadcast.'
+        if n_positioners is not None and not self.is_broadcast:
+            raise JaegerError('n_positioners must be used with a broadcast.')
         self.n_positioners = n_positioners
 
         self.timeout = timeout if timeout is not None else self.timeout
@@ -282,11 +287,10 @@ class Command(StatusMixIn, asyncio.Future):
         """Logs a message."""
 
         command_id = command_id or self.command_id
-        command_name = command_id.name
+        c_name = command_id.name
+        pid = positioner_id or self.positioner_id
 
-        positioner_id = positioner_id or self.positioner_id
-
-        msg = f'({command_name}, {positioner_id}, {self.command_uid!s}): ' + msg
+        msg = f'({c_name}, {pid}, {self.command_uid!s}): ' + msg
 
         for ll in logs:
             ll.log(level, msg)
@@ -340,7 +344,6 @@ class Command(StatusMixIn, asyncio.Future):
         """Watches the reply queue."""
 
         reply = Reply(reply_message, command=self)
-        command_name = self.command_id.name
 
         # Return the UID to the pool
         if self.positioner_id != 0:
@@ -349,17 +352,18 @@ class Command(StatusMixIn, asyncio.Future):
         if self.status == CommandStatus.TIMEDOUT:
             return
         elif (self.status not in [CommandStatus.RUNNING,
-                                  CommandStatus.CANCELLED] and self.timeout > 0):
-            # We add CANCELLED because when a command is cancelled replies can arrive
-            # later. That's ok and not an error.
-            log.error(f'{(command_name, self.positioner_id, self.command_uid)}: '
-                      'received a reply but command is not running')
+                                  CommandStatus.CANCELLED] and
+              self.timeout > 0):
+            # We add CANCELLED because when a command is cancelled replies
+            # can arrive later. That's ok and not an error.
+            self._log('received a reply but command is not running',
+                      level=logging.ERROR, logs=[log, can_log])
             return
 
         if self.positioner_id != 0:
-            assert reply.positioner_id == self.positioner_id, \
-                (f'{(command_name, self.positioner_id)}: '
-                 'received a reply from a different positioner.')
+            if reply.positioner_id != self.positioner_id:
+                raise CommandError('received a reply from a '
+                                   'different positioner.')
 
         self.replies.append(reply)
 
@@ -403,6 +407,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
+        pid = self.positioner_id
+
         if self._timeout_handle:
             self._timeout_handle.cancel()
 
@@ -415,29 +421,29 @@ class Command(StatusMixIn, asyncio.Future):
             self.set_result(self)
 
             is_done = (self.status == CommandStatus.DONE or
-                       (self.positioner_id == 0 and self.status == CommandStatus.TIMEDOUT))
+                       (pid == 0 and self.status == CommandStatus.TIMEDOUT))
 
             if is_done and self._done_callback:
                 if asyncio.iscoroutinefunction(self._done_callback):
-                    # I don't love this because this task is not awaited but ...
                     asyncio.create_task(self._done_callback())
-                    pass
                 else:
                     self._done_callback()
 
-            if self.positioner_id != 0 and self.status == CommandStatus.TIMEDOUT:
+            if pid != 0 and self.status == CommandStatus.TIMEDOUT:
                 level = logging.WARNING if not silent else logging.DEBUG
-                self._log('this command timed out and it is not a broadcast.', level=level)
+                self._log('this command timed out and '
+                          'it is not a broadcast.', level=level)
             elif self.status == CommandStatus.CANCELLED:
                 self._log('command has been cancelled.', logging.DEBUG)
             elif self.status.failed:
                 level = logging.ERROR if not silent else logging.DEBUG
-                self._log(f'command finished with status {self.status.name!r}', level=level)
+                self._log(f'command finished with status {self.status.name!r}',
+                          level=level)
 
             # For good measure we return all the UIDs
-            if self.positioner_id != 0:
+            if pid != 0:
                 for uid in self.message_uids:
-                    UID_POOL[self.command_id][self.positioner_id].add(uid)
+                    UID_POOL[self.command_id][pid].add(uid)
 
             self._log(f'finished command with status {self.status.name!r}')
 
@@ -471,6 +477,9 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
+        pid = self.positioner_id
+        cid = self.command_id
+
         data = data or self.data
 
         if len(data) == 0:
@@ -482,27 +491,24 @@ class Command(StatusMixIn, asyncio.Future):
 
             try:
 
-                if self.positioner_id != 0:
-                    uid = UID_POOL[self.command_id][self.positioner_id].pop()
+                if pid != 0:
+                    uid = UID_POOL[cid][pid].pop()
                 else:
                     uid = 0
 
             except KeyError:
 
                 # Before failing, put back the UIDs of the other messages
-                if self.positioner_id != 0:
+                if pid != 0:
                     for message in messages:
-                        UID_POOL[self.command_id][self.positioner_id].add(message.uid)
+                        UID_POOL[cid][pid].add(message.uid)
 
-                raise jaeger.JaegerError(
-                    f'({self.command_id.name}, {self.positioner_id}): '
-                    'no UIDs left in the pool.')
+                raise CommandError('no UIDs left in the pool.')
 
-            messages.append(
-                Message(self,
-                        positioner_id=self.positioner_id,
-                        uid=uid,
-                        data=data_chunk))
+            messages.append(Message(self,
+                                    positioner_id=pid,
+                                    uid=uid,
+                                    data=data_chunk))
 
         return messages
 

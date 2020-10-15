@@ -66,7 +66,7 @@ serial = ["pyserial"]
 jaeger = "jaeger.__main__:jaeger"
 
 [tool.isort]
-line_length = 89
+line_length = 79
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "SDSS", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
 known_first_party = ["jaeger"]

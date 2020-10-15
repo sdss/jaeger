@@ -398,6 +398,8 @@ class FPS(BaseFPS):
                                    loop=self.loop, data=data, **kwargs)
 
         command_name = command.name
+        command_uid = command.command_uid
+        header = f'({command_name}, {positioner_id}, {command_uid}): '
 
         if not self.engineering_mode and self.locked:
             if command.safe or safe:
@@ -414,8 +416,7 @@ class FPS(BaseFPS):
                               'to stop the FPS.')
 
         if command.status.is_done:
-            raise JaegerError(f'({command_name}, {positioner_id}): '
-                              'trying to send a done command.')
+            raise JaegerError(header + 'trying to send a done command.')
 
         command._override = override
         command._silent_on_conflict = silent_on_conflict
@@ -430,12 +431,10 @@ class FPS(BaseFPS):
 
         if not synchronous:
             self.can.command_queue.put_nowait(command)
-            log.debug(f'({command_name}, {positioner_id}): '
-                      'added command to CAN processing queue.')
+            log.debug(header + 'added command to CAN processing queue.')
         else:
             self.can._send_messages(command)
-            log.debug(f'({command_name}, {positioner_id}): '
-                      'sent command to CAN synchronously.')
+            log.debug(header + 'sent command to CAN synchronously.')
 
         return command
 

@@ -232,7 +232,7 @@ class JaegerCAN(object):
 
         if found:
             can_log.debug(f'({command_id_flag.name}, '
-                          f'{positioner_id}): '
+                          f'{positioner_id}, {r_cmd.command_uid}): '
                           f'queuing reply UID={reply_uid} '
                           f'to command {r_cmd.command_uid}.')
             r_cmd.reply_queue.put_nowait(msg)

@@ -352,15 +352,30 @@ But we want to change the channel of the default configuration we can create a f
 Logging
 ^^^^^^^
 
-There are two loggers in jaeger. Both of them are output to the terminal (with different logging levels) and stored in files. The first one logs all jaeger specific messages and it is stored at ``~/.jaeger/jaeger.log``. The second logs interaction with the CAN bus and saves messages to ``~/.jaeger/can.log``. In both cases, all messages with logging level ``INFO`` or above are output to the terminal. The logger instances can be access from the top jaeger module by importing ``from jaeger import log, can_log``.
+There are two loggers in jaeger. Both of them are output to the terminal (with different logging levels) and stored in files. The first one logs all jaeger specific messages and it is written to ``~/.jaeger/jaeger.log``; by default messages with logging level equal or greater than ``WARNING`` are also output to the console. The second log track interactions with the CAN bus and saves messages to ``~/.jaeger/can.log``; ``ERROR`` messages are also output to the console. The logger instances can be access from the top jaeger module by importing ``from jaeger import log, can_log``.
 
 To change the terminal logging level you can use the `~logging.Handler.setLevel` method. For instance ::
 
     import logging
-    from jaeger import log
+    from jaeger import can_log, log
 
     # log.sh contains the terminal logging handler
     log.sh.setLevel(logging.DEBUG)
+    can_log.sh.setLevel(logging.INFO)
+
+Similarly, the file logger can be accessed as ``log.fh`` or ``can_log.fh``. To disable all logging you can do ::
+
+    log.propagate = False
+    can_log.propagate = False
+
+or for a specific handler ::
+
+    log.sh.propagate = False
+
+Note that although warnings issues with the `warning` method are redirected to the logging system, but they may need to be silenced independently by doing something like ::
+
+    import warnings
+    warnings.simplefilter('ignore')
 
 
 .. _bootloader-mode:

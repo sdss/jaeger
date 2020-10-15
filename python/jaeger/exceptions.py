@@ -74,6 +74,30 @@ class PositionerError(JaegerError):
         super(PositionerError, self).__init__(message)
 
 
+class CommandError(JaegerError):
+    """Exception class for command-related errors."""
+
+    def __init__(self, message=None, command=None):
+
+        if message is None:
+            message = ''
+
+        if command is None:
+            stack = inspect.stack()
+            f_locals = stack[1][0].f_locals
+
+            if 'self' in f_locals:
+                command = f_locals['self']
+
+        if command:
+            c_name = command.name
+            pid = command.positioner_id
+            c_uid = command.command_uid
+            message = f'({c_name}, {pid}, {c_uid!s}): {message}'
+
+        super(CommandError, self).__init__(message)
+
+
 class JaegerMissingDependency(JaegerError):
     """A custom exception for missing dependencies."""
     pass
