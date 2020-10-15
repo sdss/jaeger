@@ -8,6 +8,8 @@
 # @Last modified by: José Sánchez-Gallego
 # @Last Modified time: 2017-12-05 12:19:32
 
+import inspect
+
 
 class JaegerError(Exception):
     """A custom core Jaeger exception"""
@@ -51,12 +53,23 @@ class JaegerCANError(JaegerError):
 class PositionerError(JaegerError):
     """Exception class for positioner-related errors."""
 
-    def __init__(self, positioner, message=None):
+    def __init__(self, message=None, positioner=None):
 
         if message is None:
             message = ''
 
-        message = f'Positioner {positioner.positioner_id}: {message}'
+        if positioner is not None:
+            pid = positioner.positioner_id
+        else:
+            stack = inspect.stack()
+            f_locals = stack[1][0].f_locals
+
+            if 'self' in f_locals:
+                pid = f_locals['self'].positioner_id
+            else:
+                pid = 'UNKNOWN'
+
+        message = f'Positioner {pid}: {message}'
 
         super(PositionerError, self).__init__(message)
 

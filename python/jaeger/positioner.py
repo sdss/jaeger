@@ -129,14 +129,14 @@ class Positioner(StatusMixIn):
         """Sends and awaits a command to the FPS for this positioner."""
 
         if not self.fps:
-            raise PositionerError(self, 'FPS is not set.')
+            raise PositionerError('FPS is not set.')
 
         command = await self.fps.send_command(command,
                                               positioner_id=self.positioner_id,
                                               **kwargs)
 
         if error and (command.status.failed or command.status.timed_out):
-            raise PositionerError(self, error)
+            raise PositionerError(error)
 
         return command
 
@@ -152,12 +152,12 @@ class Positioner(StatusMixIn):
 
             if command.status.failed:
                 self.alpha = self.beta = None
-                raise PositionerError(self, 'failed updating position')
+                raise PositionerError('failed updating position')
 
             try:
                 position = command.get_positions()
             except ValueError:
-                raise PositionerError(self, 'cannot parse current position.')
+                raise PositionerError('cannot parse current position.')
 
         self.alpha, self.beta = position
 
@@ -176,13 +176,14 @@ class Positioner(StatusMixIn):
                                               silent_on_conflict=True,
                                               error='cannot get status.')
 
-            if len(command.replies) == 1:
+            n_replies = len(command.replies)
+
+            if n_replies == 1:
                 status = int(bytes_to_int(command.replies[0].data))
             else:
                 self.status = self.flags.UNKNOWN
-                raise PositionerError(self, 'GET_STATUS received '
-                                            f'{len(command.replies)} '
-                                            'replies.')
+                raise PositionerError(f'GET_STATUS received {n_replies} '
+                                      'replies.')
 
         if not self.is_bootloader():
             self.flags = self.get_positioner_flags()
@@ -194,7 +195,7 @@ class Positioner(StatusMixIn):
         # Checks if the positioner is collided. If so, locks the FPS.
         if not self.is_bootloader() and self.collision and not self.fps.locked:
             await self.fps.lock()
-            raise PositionerError(self, 'collision detected. Locking the FPS.')
+            raise PositionerError('collision detected. Locking the FPS.')
 
         return True
 
@@ -266,7 +267,7 @@ class Positioner(StatusMixIn):
             return True
 
         if not self.initialised:
-            raise PositionerError(self, 'failed inisialising.')
+            raise PositionerError('failed inisialising.')
 
         # Sets the default speed
         await self.set_speed(alpha=config['positioner']['motor_speed'],
@@ -343,7 +344,7 @@ class Positioner(StatusMixIn):
 
         if (alpha < MIN_SPEED or alpha > MAX_SPEED or
                 beta < MIN_SPEED or beta > MAX_SPEED) and not force:
-            raise PositionerError(self, 'speed out of limits.')
+            raise PositionerError('speed out of limits.')
 
         speed_command = await self.send_command(CommandID.SET_SPEED,
                                                 alpha=float(alpha),
@@ -429,11 +430,10 @@ class Positioner(StatusMixIn):
         """
 
         if self.moving:
-            raise PositionerError(self, 'positioner is already moving.')
+            raise PositionerError('positioner is already moving.')
 
         if force is False and not self._can_move():
-            raise PositionerError(self, 'positioner is not in a '
-                                        'movable state.')
+            raise PositionerError('positioner is not in a movable state.')
 
         ALPHA_MAX = 360
         BETA_MAX = 360
@@ -442,10 +442,10 @@ class Positioner(StatusMixIn):
 
         if (alpha < ALPHA_MIN or alpha > ALPHA_MAX or
                 beta < BETA_MIN or beta > BETA_MAX) and not force:
-            raise PositionerError(self, 'position out of limits.')
+            raise PositionerError('position out of limits.')
 
         if not self.initialised:
-            raise PositionerError(self, 'not initialised.')
+            raise PositionerError('not initialised.')
 
         original_speed = self.speed
 
@@ -488,8 +488,8 @@ class Positioner(StatusMixIn):
 
                 except AssertionError:
 
-                    raise PositionerError(self, 'positioner is not '
-                                                'moving when it should.')
+                    raise PositionerError('positioner is not '
+                                          'moving when it should.')
 
             self.move_time = max([alpha_time, beta_time])
 
@@ -503,8 +503,7 @@ class Positioner(StatusMixIn):
                 self.flags.DISPLACEMENT_COMPLETED, delay=0.1, timeout=3)
 
             if result is False:
-                raise PositionerError(self, 'failed to reach '
-                                            'commanded position.')
+                raise PositionerError('failed to reach commanded position.')
 
             self._log('position reached.', logging.INFO)
 
@@ -526,15 +525,14 @@ class Positioner(StatusMixIn):
         """
 
         if self.moving:
-            raise PositionerError(self, 'positioner is already moving.')
+            raise PositionerError('positioner is already moving.')
 
         if not self.fps:
-            raise PositionerError(self, 'the positioner is not '
-                                        'linked to a FPS instance.')
+            raise PositionerError('the positioner is not '
+                                  'linked to a FPS instance.')
 
-        await self.send_command('GO_TO_DATUMS',
-                                error='failed while sending '
-                                'GO_TO_DATUMS command.')
+        await self.send_command('GO_TO_DATUMS', error='failed while sending '
+                                                      'GO_TO_DATUMS command.')
 
         self._log('waiting to home.')
         await self.wait_for_status(self.flags.DISPLACEMENT_COMPLETED)
