@@ -224,3 +224,4 @@ class ResponseCode(enum.IntFlag):
     INVALID_COMMAND = 12,
     UNKNOWN_COMMAND = 13,
     DATUM_NOT_CALIBRATED = 14
+    HALL_SENSORS_DISABLED = 15
