@@ -14,7 +14,7 @@ Changelog
 * :support:`90` Remove the option to initialise datums in `.Positioner`.
 * :support`-` Wrap message from ``CANNetBus`` in custom message class with additional ``__slots__``. This fixes a deprecation introduced in ``python-can>=3.3.4``.
 * :support:`-` ``motor_steps`` and ``time_step`` are now defined in the configuration file under ``positioner``.
-* :feature:`90` Implement additional commands for powering up/down hall sensors, and setting the open/closed loop.
+* :feature:`90` Implement additional commands for powering up/down hall sensors, and setting the open/closed loop. In the process, `.Positioner` was cleaned and streamlined. Most functions now raise a ``PositionerError`` if they fail, instead of failing silently with a log message.
 
 * :release:`0.5.2 <2020-07-31>`
 * :support:`-` Adapt actor system to use ``CLU>=0.3.0``.
