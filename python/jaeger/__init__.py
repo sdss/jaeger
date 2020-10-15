@@ -1,6 +1,5 @@
 # encoding: utf-8
 
-# flake8: noqa
 # isort:skip_file
 
 import os
@@ -65,7 +64,8 @@ try:
     from .actor import *
 except ImportError as ee:
     if 'No module named \'clu\'' in str(ee):
-        warnings.warn('clu not in PYTHONPATH. Cannot import JaegerActor.', JaegerUserWarning)
+        warnings.warn('clu not in PYTHONPATH. Cannot import JaegerActor.',
+                      JaegerUserWarning)  # noqa
         JaegerActor = None
     else:
         raise

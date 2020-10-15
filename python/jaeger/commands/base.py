@@ -372,8 +372,8 @@ class Command(StatusMixIn, asyncio.Future):
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
 
-            self._log(f'command failed with code {reply.response_code.name!r}.',
-                      level=logging.ERROR)
+            self._log(f'command failed with code {reply.response_code} '
+                      f'({reply.response_code.name}).', level=logging.ERROR)
 
             self.finish_command(CommandStatus.FAILED)
 

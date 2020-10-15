@@ -283,8 +283,8 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
                    'commands another move.')
 @pass_fps
 @cli_coro
-async def demo(fps_maker, positioner_id, alpha=None, beta=None, speed=None, moves=None,
-               skip_errors=False):
+async def demo(fps_maker, positioner_id, alpha=None, beta=None,
+               speed=None, moves=None, skip_errors=False):
     """Moves a robot to random positions."""
 
     if (alpha[0] >= alpha[1]) or (alpha[0] < 0 or alpha[1] > 360):
@@ -348,12 +348,7 @@ async def home(fps_maker, positioner_id):
         valid_positioners = [positioner for positioner in positioners
                              if positioner.status.initialised]
 
-        if len(valid_positioners) < len(positioners):
-            warnings.warn(f'{len(positioners) - len(valid_positioners)} positioners '
-                          'have not been initialised and will not be homed.')
-
-        await asyncio.gather(*[fps.send_command('INITIALIZE_DATUMS',
-                                                positioner_id=pos.positioner_id)
-                               for pos in valid_positioners])
+        await asyncio.gather(*[positioner.home()
+                               for positioner in valid_positioners])
 
     return

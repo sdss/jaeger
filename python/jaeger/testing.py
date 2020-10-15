@@ -98,7 +98,9 @@ class VirtualPositioner(StatusMixIn):
                        PositionerStatus.DATUM_ALPHA_INITIALIZED |
                        PositionerStatus.DATUM_BETA_INITIALIZED |
                        PositionerStatus.MOTOR_ALPHA_CALIBRATED |
-                       PositionerStatus.MOTOR_BETA_CALIBRATED)
+                       PositionerStatus.MOTOR_BETA_CALIBRATED |
+                       PositionerStatus.CLOSED_LOOP_ALPHA |
+                       PositionerStatus.CLOSED_LOOP_BETA)
 
     def __init__(self, positioner_id, centre=None, position=(0.0, 0.0),
                  speed=None, channel=None, loop=None, notifier=None,
@@ -148,7 +150,7 @@ class VirtualPositioner(StatusMixIn):
                 continue
 
             command_id = CommandID(command_id)
-            command = command_id.get_command()
+            command = command_id.get_command_class()
 
             if positioner_id == 0 and not command.broadcastable:
                 self.reply(command_id, uid, response_code=ResponseCode.INVALID_BROADCAST_COMMAND)
@@ -253,7 +255,7 @@ class VirtualPositioner(StatusMixIn):
 
         __, command_id, uid, __ = utils.parse_identifier(message.arbitration_id)
         command_id = CommandID(command_id)
-        command = command_id.get_command()
+        command = command_id.get_command_class()
 
         data = message.data
         alpha_move, beta_move = command.decode(data)
