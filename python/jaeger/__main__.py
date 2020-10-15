@@ -107,16 +107,23 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 @click.option('-l', '--layout', type=str, help='The FPS layout.')
 @click.option('-v', '--verbose', count=True,
               help='Debug mode. Use additional v for more details.')
-@click.option('--ieb/--no-ieb', default=None, help='Does not connect to the IEB.')
+@click.option('-q', '--quiet', is_flag=True,
+              help='Disable all console logging.')
+@click.option('--ieb/--no-ieb', default=None,
+              help='Does not connect to the IEB.')
 @click.option('--danger', is_flag=True,
-              help='Enables engineering mode. Most safety checks will be disabled.')
+              help='Enables engineering mode. '
+                   'Most safety checks will be disabled.')
 @click.pass_context
-def jaeger(ctx, config_file, layout, profile, verbose, ieb, danger):
+def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
 
     """
+
+    if verbose > 0 and quiet:
+        raise click.UsageError('--quiet and --verbose are mutually exclusive.')
 
     if verbose == 1:
         log.sh.setLevel(logging.INFO)
@@ -125,6 +132,10 @@ def jaeger(ctx, config_file, layout, profile, verbose, ieb, danger):
     elif verbose >= 3:
         log.sh.setLevel(logging.DEBUG)
         can_log.sh.setLevel(logging.DEBUG)
+
+    if quiet:
+        log.sh.propagate = False
+        warnings.simplefilter('ignore')
 
     if config_file:
         config.load(config_file)
