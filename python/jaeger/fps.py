@@ -171,9 +171,9 @@ class BaseFPS(dict):
         """Adds a new positioner to the list, and checks for duplicates."""
 
         if positioner_id in self.positioners:
-            raise VJaegerError(f'{self._class_name}: there is already a '
-                               f'positioner in the list with positioner_id '
-                               f'{positioner_id}.')
+            raise JaegerError(f'{self._class_name}: there is already a '
+                              f'positioner in the list with positioner_id '
+                              f'{positioner_id}.')
 
         self.positioners[positioner_id] = self._positioner_class(positioner_id, self,
                                                                  centre=centre)
