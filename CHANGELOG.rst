@@ -4,6 +4,7 @@
 Changelog
 =========
 
+* :release:`0.6.0 <2020-10-15>`
 * :bug:`-` Do not pass context to actor commands.
 * :bug:`-` Fix starting status server.
 * :support:`89` Implement daemon.
