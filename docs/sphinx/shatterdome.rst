@@ -372,7 +372,7 @@ or for a specific handler ::
 
     log.sh.propagate = False
 
-Note that although warnings issues with the `warning` method are redirected to the logging system, but they may need to be silenced independently by doing something like ::
+Note that although warnings issues with the `warnings` module are redirected to the logging system, but they may need to be silenced independently by doing something like ::
 
     import warnings
     warnings.simplefilter('ignore')
