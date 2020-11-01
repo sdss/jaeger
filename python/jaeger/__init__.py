@@ -4,7 +4,7 @@
 
 import logging
 import os
-import warnings
+import pathlib
 
 from sdsstools import (get_package_version, get_config, get_logger,
                        merge_config, read_yaml_file)
@@ -21,25 +21,7 @@ can_log = get_logger('jaeger_can', log_level=logging.ERROR,
 
 
 # Start by loading the internal configuration file.
-config = get_config(NAME, allow_user=False)
-config.__CONFIG_FILE__ = None
-
-# Ranked possible paths for user configuration.
-config_paths = []
-if 'OBSERVATORY' in os.environ:
-    observatory = os.environ['OBSERVATORY'].lower()
-    config_paths.append(f'$SDSSCORE_DIR/configuration/{observatory}/actors/jaeger')
-config_paths.append('~/.config/sdss/jaeger')
-
-for config_path in config_paths:
-    for ext in ['yaml', 'yml']:
-        fpath = os.path.expanduser(os.path.expandvars(config_path + '.' + ext))
-        if os.path.exists(fpath):
-            config.load(fpath)
-            config.__CONFIG_FILE__ = fpath
-            break
-    if config.__CONFIG_FILE__:
-        break
+config = get_config(NAME)
 
 
 def start_file_loggers(start_log=True, start_can=True):
@@ -61,13 +43,4 @@ from .exceptions import *
 from .fps import *
 from .maskbits import *
 from .positioner import *
-
-try:
-    from .actor import *
-except ImportError as ee:
-    if 'No module named \'clu\'' in str(ee):
-        warnings.warn('clu not in PYTHONPATH. Cannot import JaegerActor.',
-                      JaegerUserWarning)  # noqa
-        JaegerActor = None
-    else:
-        raise
+from .actor import *

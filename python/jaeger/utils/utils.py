@@ -280,8 +280,7 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
         The path to the raw trajectory.
     speed : float
         The maximum speed, used to convert from kaiju steps to times,
-        in degrees per second. If not set, uses the default positioner
-        speed from the configuration file.
+        in degrees per second. If not set, assumes 1000 RPM.
     step_size : float
         The step size in degrees per step.
     invert : bool
@@ -295,7 +294,7 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
 
     """
 
-    # TODO: this is a rough estimate of the deg/sec if RPM=1000. Need to get the real speed.
+    # TODO: this is a rough estimate of the deg/sec if RPM=1000.
     speed = speed or 6.82
 
     raw = open(path, 'r').read().splitlines()

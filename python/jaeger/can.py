@@ -218,24 +218,25 @@ class JaegerCAN(object):
         # be sent to the running command first.
         self.running_commands = sorted(
             [rcmd for rcmd in self.running_commands
-             if not rcmd.status == rcmd.status.DONE and (time.time() - rcmd.start_time) < 60],
+             if not rcmd.status == rcmd.status.DONE and
+                (time.time() - rcmd.start_time) < 60],
             key=lambda cmd: cmd.start_time, reverse=True)
 
-        found = False
+        found_cmd = False
         for r_cmd in self.running_commands:
             if r_cmd.command_id == command_id:
                 if ((reply_uid == 0 and r_cmd.positioner_id == 0) or
                         (reply_uid in r_cmd.message_uids and
                          positioner_id == r_cmd.positioner_id)):
-                    found = True
+                    found_cmd = r_cmd
                     break
 
-        if found:
+        if found_cmd:
             can_log.debug(f'({command_id_flag.name}, '
-                          f'{positioner_id}, {r_cmd.command_uid}): '
+                          f'{positioner_id}, {found_cmd.command_uid}): '
                           f'queuing reply UID={reply_uid} '
-                          f'to command {r_cmd.command_uid}.')
-            r_cmd.reply_queue.put_nowait(msg)
+                          f'to command {found_cmd.command_uid}.')
+            found_cmd.reply_queue.put_nowait(msg)
         else:
             can_log.debug(f'({command_id_flag.name}, {positioner_id}): '
                           f'cannot find running command for reply UID={reply_uid}.')

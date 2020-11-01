@@ -1,0 +1,64 @@
+address: 10.1.10.1
+port: 502
+modules:
+    RTD:
+        model: "750-450"
+        mode: input
+        channels: 4
+        address: 40009
+        description: "Pt RTD sensors"
+        devices:
+            "RTD1":
+                channel: 0
+                category: temperature
+                adaptor: rtd
+                units: degC
+            "RTD2":
+                channel: 1
+                category: temperature
+                adaptor: rtd
+                units: degC
+    EE:
+        model: "750-497"
+        mode: input
+        channels: 8
+        address: 40001
+        description: "E+E temperature and humidity sensors"
+        devices:
+            "RH1":
+                channel: 0
+                category: humidity
+                adaptor: ee_rh
+                units: percent
+            "T1":
+                channel: 1
+                category: temperature
+                adaptor: ee_temp
+                units: degC
+    DO:
+        model: "750-530"
+        mode: output
+        channels: 8
+        address: 40513
+        description: "Power relays"
+        devices:
+            "24V":
+                channel: 0
+                type: relay
+                category: relay
+                relay_type: NC
+            "5V":
+                channel: 1
+                type: relay
+                category: relay
+                relay_type: NC
+            "CANnet":
+                channel: 2
+                type: relay
+                category: relay
+                relay_type: NC
+            "SYNC":
+                channel: 3
+                type: relay
+                category: relay
+                relay_type: "NO"
