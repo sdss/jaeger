@@ -4,6 +4,8 @@
 Changelog
 =========
 
+* :support:`96` Discontinue the use of ``sdsscore``. Improved the handling of user configuration files.
+
 * :release:`0.6.0 <2020-10-15>`
 * :bug:`-` Do not pass context to actor commands.
 * :bug:`-` Fix starting status server.
