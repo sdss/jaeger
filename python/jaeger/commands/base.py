@@ -540,7 +540,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         return False
 
-    def cancel(self, silent=False):
+    def cancel(self, silent=False, msg=None):
         """Cancels a command, stopping the reply queue watcher."""
 
         self.finish_command(CommandStatus.CANCELLED, silent=silent)
