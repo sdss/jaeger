@@ -139,17 +139,16 @@ def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
 
     if config_file:
         config.load(config_file)
-        config.__CONFIG_FILE__ = str(config_file)
 
     ctx.obj = FPSWrapper(profile, layout, ieb, danger)
 
 
-@jaeger.group(cls=DaemonGroup, prog='daemon', workdir=os.getcwd())
+@jaeger.group(cls=DaemonGroup, prog='actor', workdir=os.getcwd())
 @click.option('--no-tron', is_flag=True, help='Does not connect to Tron.')
 @pass_fps
 @cli_coro
-async def daemon(fps_maker, no_tron):
-    """Handle the daemon."""
+async def actor(fps_maker, no_tron):
+    """Runs the actor."""
 
     try:
         from jaeger.actor import JaegerActor
@@ -171,16 +170,20 @@ async def daemon(fps_maker, no_tron):
 
 @jaeger.command(name='upgrade-firmware')
 @click.argument('firmware-file', nargs=1, type=click.Path(exists=True))
-@click.option('-f', '--force', is_flag=True, help='Forces skipping of invalid positioners')
-@click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
-@click.option('-c', '--cycle', is_flag=True, help='Power cycle positioners before upgrade')
+@click.option('-f', '--force', is_flag=True,
+              help='Forces skipping of invalid positioners')
+@click.option('-s', '--positioners', type=str,
+              help='Comma-separated positioners to upgrade')
+@click.option('-c', '--cycle', is_flag=True,
+              help='Power cycle positioners before upgrade')
 @pass_fps
 @cli_coro
 async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
     """Upgrades the firmaware."""
 
     if positioners is not None:
-        positioners = [int(positioner.strip()) for positioner in positioners.split(',')]
+        positioners = [int(positioner.strip())
+                       for positioner in positioners.split(',')]
 
     async with fps_maker as fps:
 

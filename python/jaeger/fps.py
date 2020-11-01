@@ -248,11 +248,8 @@ class FPS(BaseFPS):
         # Start file logger
         start_file_loggers(start_log=True, start_can=False)
 
-        if config.__CONFIG_FILE__:
-            log.info(f'Using configuration from {config.__CONFIG_FILE__}')
-        else:
-            log.warning('Cannot find SDSSCORE or user configuration. '
-                        'Using default values.')
+        if config.CONFIG_FILE:
+            log.info(f'Using configuration from {config.CONFIG_FILE}')
 
         self.engineering_mode = engineering_mode
 
@@ -291,6 +288,8 @@ class FPS(BaseFPS):
         elif isinstance(ieb, (str, dict)):
             if isinstance(ieb, str):
                 ieb = os.path.expanduser(os.path.expandvars(ieb))
+                if not os.path.isabs(ieb):
+                    ieb = os.path.join(os.path.dirname(__file__), ieb)
             try:
                 self.ieb = IEB.from_config(ieb)
             except FileNotFoundError:
