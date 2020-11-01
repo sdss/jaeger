@@ -99,7 +99,7 @@ class FPSWrapper(object):
 pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 
 
-@click.group(cls=DefaultGroup, default='daemon', default_if_no_args=True)
+@click.group(cls=DefaultGroup, default='actor', default_if_no_args=True)
 @click.option('-c', '--config', 'config_file',
               type=click.Path(exists=True, dir_okay=False),
               help='Path to the user configuration file.')
