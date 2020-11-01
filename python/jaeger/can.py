@@ -228,7 +228,7 @@ class JaegerCAN(object):
                 if ((reply_uid == 0 and r_cmd.positioner_id == 0) or
                         (reply_uid in r_cmd.message_uids and
                          positioner_id == r_cmd.positioner_id)):
-                    found_cmd = True
+                    found_cmd = r_cmd
                     break
 
         if found_cmd:

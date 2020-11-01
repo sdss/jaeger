@@ -40,7 +40,7 @@ def info_(command, fps):
     """Reports information about the system."""
 
     command.info({'version': __version__,
-                  'config_file': config.CONFIG_FILE or 'NA'},
+                  'config_file': config.CONFIG_FILE or 'internal'},
                  concatenate=False)
 
     return command.finish()
