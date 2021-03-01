@@ -16,7 +16,10 @@ from jaeger.commands.bootloader import load_firmware
 from . import jaeger_parser
 
 
-last_reported = 0.
+__all__ = ["bootloader"]
+
+
+last_reported = 0.0
 
 
 @jaeger_parser.group()
@@ -27,8 +30,10 @@ def bootloader():
 
 
 @bootloader.command()
-@click.argument('FIRMWARE-FILE', nargs=1, type=click.Path(exists=True))
-@click.option('-s', '--positioners', type=str, help='Comma-separated positioners to upgrade')
+@click.argument("FIRMWARE-FILE", nargs=1, type=click.Path(exists=True))
+@click.option(
+    "-s", "--positioners", type=str, help="Comma-separated positioners to upgrade"
+)
 async def upgrade(command, fps, firmware_file, positioners):
     """Upgrades the firmware for all positioners connected."""
 
@@ -36,11 +41,13 @@ async def upgrade(command, fps, firmware_file, positioners):
     last_reported = 0
 
     if positioners is not None:
-        positioner_id = [int(positioner.strip()) for positioner in positioners.split(',')]
+        positioner_id = [
+            int(positioner.strip()) for positioner in positioners.split(",")
+        ]
     else:
         positioner_id = fps.positioner_to_bus.keys()
 
-    command.debug('stopping pollers')
+    command.debug("stopping pollers")
     await fps.pollers.stop()
 
     await fps.update_firmware_version(positioner_id=positioner_id)
@@ -50,37 +57,40 @@ async def upgrade(command, fps, firmware_file, positioners):
 
         global last_reported
 
-        perc_completed = current_chunk / n_chunks * 100.
+        perc_completed = current_chunk / n_chunks * 100.0
 
         # Report only after each 10% increase in completion
-        if (perc_completed - last_reported) > 10.:
-            command.write('i', text=f'{int(perc_completed)}% completed')
+        if (perc_completed - last_reported) > 10.0:
+            command.write("i", text=f"{int(perc_completed)}% completed")
             last_reported = int(perc_completed)
 
-    command.write('i', text=f'starting load of firmware file {firmware_file!r}')
+    command.write("i", text=f"starting load of firmware file {firmware_file!r}")
 
     try:
-        result = await load_firmware(fps, firmware_file,
-                                     positioners=positioner_id,
-                                     show_progressbar=False,
-                                     progress_callback=report_progress)
+        result = await load_firmware(
+            fps,
+            firmware_file,
+            positioners=positioner_id,
+            show_progressbar=False,
+            progress_callback=report_progress,
+        )
     except JaegerError as ee:
-        command.write('w', text=ee)
+        command.write("w", text=ee)
         result = False
 
     if not result:
-        return command.fail('firmware upgrade failed.')
+        return command.fail("firmware upgrade failed.")
 
-    command.info('firmware loaded. Waiting 10 seconds to exit bootloader mode.')
+    command.info("firmware loaded. Waiting 10 seconds to exit bootloader mode.")
 
     await asyncio.sleep(11)
 
-    command.info('restarting FPS')
+    command.info("restarting FPS")
     await fps.initialise()
 
     # Check that we really are in normal mode
     for positioner in fps.positioners.values():
         if positioner.is_bootloader():
-            return command.fail('some positioner are still in bootloader mode.')
+            return command.fail("some positioner are still in bootloader mode.")
 
-    return command.finish('firmware load complete.')
+    return command.finish("firmware load complete.")

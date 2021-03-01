@@ -14,7 +14,7 @@ from jaeger import maskbits
 from jaeger.commands.bootloader import load_firmware
 
 
-pytestmark = [pytest.mark.usefixtures('vpositioners'), pytest.mark.asyncio]
+pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_bootloader(vfps, vpositioners):
@@ -38,7 +38,7 @@ async def test_load_firmware(vfps, vpositioners):
 
     await vfps.initialise()
 
-    firmware_file = pathlib.Path(__file__).parent / 'data/firmware.bin'
+    firmware_file = pathlib.Path(__file__).parent / "data/firmware.bin"
     firmware_version = open(firmware_file).read().strip()[-8:]
 
     await load_firmware(vfps, firmware_file, positioners=[1], force=True)

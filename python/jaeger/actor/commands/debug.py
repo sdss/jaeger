@@ -15,8 +15,13 @@ from jaeger import __version__, config
 from . import jaeger_parser
 
 
+__all__ = ["debug", "info_"]
+
+
 @jaeger_parser.group(invoke_without_command=True)
-@click.option('--danger/--no-danger', default=None, help='Use engineering mode (unsafe)?')
+@click.option(
+    "--danger/--no-danger", default=None, help="Use engineering mode (unsafe)?"
+)
 @pass_args()
 @click.pass_context
 def debug(ctx, command, fps, danger):
@@ -25,9 +30,9 @@ def debug(ctx, command, fps, danger):
     fps.engineering_mode = danger
 
     if fps.engineering_mode:
-        command.warning('you are now in engineering mode.')
+        command.warning("you are now in engineering mode.")
     else:
-        command.info('you are not in engineering mode.')
+        command.info("you are not in engineering mode.")
 
     if ctx.invoked_subcommand is None:
         return command.finish()
@@ -35,12 +40,13 @@ def debug(ctx, command, fps, danger):
     return
 
 
-@jaeger_parser.command('info')
+@jaeger_parser.command("info")
 def info_(command, fps):
     """Reports information about the system."""
 
-    command.info({'version': __version__,
-                  'config_file': config.CONFIG_FILE or 'internal'},
-                 concatenate=False)
+    command.info(
+        {"version": __version__, "config_file": config.CONFIG_FILE or "internal"},
+        concatenate=False,
+    )
 
     return command.finish()

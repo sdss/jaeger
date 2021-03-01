@@ -14,7 +14,7 @@ import pytest
 
 # Need to mark all tests with positioners to make sure they are created,
 # and with asyncio to allow execution of coroutines.
-pytestmark = [pytest.mark.usefixtures('vpositioners'), pytest.mark.asyncio]
+pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_get_position(vfps, vpositioners):
@@ -24,13 +24,13 @@ async def test_get_position(vfps, vpositioners):
     await vfps.initialise()
     await asyncio.sleep(0.1)
 
-    assert vfps[1].position == (90., 90.)
+    assert vfps[1].position == (90.0, 90.0)
 
     vpositioners[0].position = (180, 180)
 
     await vfps[1].update_position()
 
-    assert vfps[1].position == (180., 180.)
+    assert vfps[1].position == (180.0, 180.0)
 
 
 async def test_goto(vfps, event_loop):
@@ -48,7 +48,7 @@ async def test_goto_no_move(vfps, event_loop, caplog):
 
     assert await vfps[1].goto(0, 0)
 
-    assert 'did not move' in caplog.records[-1].message
+    assert "did not move" in caplog.records[-1].message
 
 
 async def test_goto_relative(vfps, event_loop):

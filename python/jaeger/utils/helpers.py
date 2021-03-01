@@ -11,8 +11,10 @@ from concurrent.futures import Executor
 from contextlib import suppress
 from threading import Thread
 
+from typing import Optional
 
-__ALL__ = ['AsyncQueue', 'StatusMixIn', 'PollerList', 'Poller', 'AsyncioExecutor']
+
+__all__ = ["AsyncQueue", "StatusMixIn", "PollerList", "Poller", "AsyncioExecutor"]
 
 
 class AsyncQueue(asyncio.Queue):
@@ -29,7 +31,6 @@ class AsyncQueue(asyncio.Queue):
     """
 
     def __init__(self, loop=None, callback=None):
-
         async def process_queue(loop):
             """Waits for the next item and sends it to the cb function."""
 
@@ -70,8 +71,9 @@ class StatusMixIn(object):
 
     """
 
-    def __init__(self, maskbit_flags, initial_status=None,
-                 callback_func=None, call_now=False):
+    def __init__(
+        self, maskbit_flags, initial_status=None, callback_func=None, call_now=False
+    ):
 
         self._flags = maskbit_flags
         self.callbacks = []
@@ -97,8 +99,9 @@ class StatusMixIn(object):
     def do_callbacks(self):
         """Calls functions in ``callbacks``."""
 
-        assert hasattr(self, 'callbacks'), \
-            'missing callbacks attribute. Did you call __init__()?'
+        assert hasattr(
+            self, "callbacks"
+        ), "missing callbacks attribute. Did you call __init__()?"
 
         for func in self.callbacks:
             func()
@@ -132,17 +135,18 @@ class StatusMixIn(object):
         self._flags = value
         self._status = None
 
-    async def wait_for_status(self, value, loop=None):
+    async def wait_for_status(
+        self,
+        value,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ):
         """Awaits until the status matches ``value``."""
 
         if self.status == value:
             return
 
         if loop is None:
-            if hasattr(self, 'loop') and self.loop is not None:
-                loop = self.loop
-            else:
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
 
         self.watcher = asyncio.Event(loop=loop)
 
@@ -160,7 +164,7 @@ class PollerList(list):
     def __init__(self, pollers=[]):
 
         names = [poller.name for poller in pollers]
-        assert len(names) == len(set(names)), 'repeated names in poller list.'
+        assert len(names) == len(set(names)), "repeated names in poller list."
 
         list.__init__(self, pollers)
 
@@ -173,12 +177,13 @@ class PollerList(list):
     def append(self, poller):
         """Adds a poller."""
 
-        assert isinstance(poller, Poller), 'not a poller.'
+        assert isinstance(poller, Poller), "not a poller."
 
         names = [pp.name for pp in self]
         if poller.name in names:
-            raise ValueError(f'a poller with name {poller.name} is '
-                             'already in the list.')
+            raise ValueError(
+                f"a poller with name {poller.name} is " "already in the list."
+            )
 
         list.append(self, poller)
 
@@ -213,8 +218,9 @@ class PollerList(list):
 
         """
 
-        delay_coros = [poller.set_delay(delay=delay, immediate=immediate)
-                       for poller in self]
+        delay_coros = [
+            poller.set_delay(delay=delay, immediate=immediate) for poller in self
+        ]
         await asyncio.gather(*delay_coros)
 
     def start(self, delay=None):
@@ -268,7 +274,7 @@ class Poller(object):
         self._orig_delay = delay
         self.delay = delay
 
-        self.loop = loop or asyncio.get_event_loop()
+        self.loop: asyncio.AbstractEventLoop = loop or asyncio.get_event_loop()
 
         # Create two tasks, one for the sleep timer and another for the poller
         # itself. We do this because we want to be able to cancell the sleep
@@ -290,8 +296,9 @@ class Poller(object):
                 if ee.__class__ == asyncio.CancelledError:
                     raise
                 if not self._task.cancelled:
-                    self.loop.call_exception_handler({'message': 'failed running callback',
-                                                      'exception': ee})
+                    self.loop.call_exception_handler(
+                        {"message": "failed running callback", "exception": ee}
+                    )
 
             self._sleep_task = self.loop.create_task(asyncio.sleep(self.delay))
 
@@ -353,7 +360,8 @@ class Poller(object):
         self._task.cancel()
 
         with suppress(asyncio.CancelledError):
-            await self._task
+            if self._task is not None:
+                await self._task
 
     async def call_now(self):
         """Calls the callback immediately."""

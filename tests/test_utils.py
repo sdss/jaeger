@@ -12,14 +12,18 @@ import pytest
 import jaeger.utils
 
 
-@pytest.mark.parametrize('dtype, byteorder, result',
-                         [(numpy.uint32, '>', '>u4'),
-                          (numpy.uint16, '<', '<u2'),
-                          (numpy.int16, 'big', '>i2'),
-                          (numpy.int32, 'little', '<i4'),
-                          ('u4', 'big', '>u4'),
-                          ('<u4', '>', '<u4'),
-                          ('=u4', 'little', None)])
+@pytest.mark.parametrize(
+    "dtype, byteorder, result",
+    [
+        (numpy.uint32, ">", ">u4"),
+        (numpy.uint16, "<", "<u2"),
+        (numpy.int16, "big", ">i2"),
+        (numpy.int32, "little", "<i4"),
+        ("u4", "big", ">u4"),
+        ("<u4", ">", "<u4"),
+        ("=u4", "little", None),
+    ],
+)
 def test_get_dtype_str(dtype, byteorder, result):
 
     if result is None:
@@ -29,36 +33,48 @@ def test_get_dtype_str(dtype, byteorder, result):
         assert jaeger.utils.get_dtype_str(dtype, byteorder=byteorder) == result
 
 
-@pytest.mark.parametrize('value, dtype, byteorder, result',
-                         [(5, numpy.uint32, '>', b'\x00\x00\x00\x05'),
-                          (5, numpy.uint32, '<', b'\x05\x00\x00\x00'),
-                          (5, numpy.uint16, '>', b'\x00\x05')])
+@pytest.mark.parametrize(
+    "value, dtype, byteorder, result",
+    [
+        (5, numpy.uint32, ">", b"\x00\x00\x00\x05"),
+        (5, numpy.uint32, "<", b"\x05\x00\x00\x00"),
+        (5, numpy.uint16, ">", b"\x00\x05"),
+    ],
+)
 def test_int_to_bytes(value, dtype, byteorder, result):
 
     assert jaeger.utils.int_to_bytes(value, dtype=dtype, byteorder=byteorder) == result
 
 
-@pytest.mark.parametrize('bytes, dtype, byteorder, result',
-                         [(b'\x00\x00\x00\x05', numpy.uint32, '>', 5),
-                          (b'\x05\x00\x00\x00', numpy.uint32, '<', 5),
-                          (b'\x00\x05', numpy.uint16, '>', 5)])
+@pytest.mark.parametrize(
+    "bytes, dtype, byteorder, result",
+    [
+        (b"\x00\x00\x00\x05", numpy.uint32, ">", 5),
+        (b"\x05\x00\x00\x00", numpy.uint32, "<", 5),
+        (b"\x00\x05", numpy.uint16, ">", 5),
+    ],
+)
 def test_bytes_to_int(bytes, dtype, byteorder, result):
 
     assert jaeger.utils.bytes_to_int(bytes, dtype=dtype, byteorder=byteorder) == result
 
 
-@pytest.mark.parametrize('positioner_id, command_id, result',
-                         [(5, 17, 1328128), (450, 5, 117969920)])
+@pytest.mark.parametrize(
+    "positioner_id, command_id, result", [(5, 17, 1328128), (450, 5, 117969920)]
+)
 def test_get_identifier(positioner_id, command_id, result):
 
     assert jaeger.utils.get_identifier(positioner_id, command_id) == result
 
 
-@pytest.mark.parametrize('identifier, result',
-                         [(1315072, (5, 4, 0)), (117969920, (450, 5, 0))])
+@pytest.mark.parametrize(
+    "identifier, result", [(1315072, (5, 4, 0)), (117969920, (450, 5, 0))]
+)
 def test_parse_identifier(identifier, result):
 
-    positioner_id, command_id, uid, response_flag = jaeger.utils.parse_identifier(identifier)
+    positioner_id, command_id, uid, response_flag = jaeger.utils.parse_identifier(
+        identifier
+    )
 
     assert positioner_id == result[0]
     assert command_id == result[1]

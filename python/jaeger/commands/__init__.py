@@ -6,15 +6,15 @@
 # @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# isort:skip_file
-
 import enum
+
+from typing import Type, Union
 
 
 class TypesEnumMeta(enum.EnumMeta):
     """Metaclass to allow initialising an Enum from a string."""
 
-    def __call__(cls, value):
+    def __call__(cls: Type[enum.Enum], value: Union[str, int]):
 
         if isinstance(value, str):
             for flag in cls:
@@ -73,35 +73,38 @@ class CommandID(enum.IntEnum, metaclass=TypesEnumMeta):
             return COMMAND_LIST[self]
 
 
-from .base import Command
-
 from .base import *
+from .base import Command
 from .bootloader import *
+from .calibration import *
 from .goto import *
 from .status import *
 from .trajectory import *
-from .calibration import *
 
 
 def all_subclasses(cls):
     """Recursive subclasses."""
 
-    return set(cls.__subclasses__()).union([s for c in cls.__subclasses__()
-                                            for s in all_subclasses(c)])
+    return set(cls.__subclasses__()).union(
+        [s for c in cls.__subclasses__() for s in all_subclasses(c)]
+    )
 
 
 # Generate a dictionary of commands
-COMMAND_LIST = {cclass.command_id: cclass
-                for cclass in all_subclasses(Command)
-                if cclass.command_id in CommandID}
+COMMAND_LIST = {
+    cclass.command_id: cclass
+    for cclass in all_subclasses(Command)
+    if cclass.command_id in CommandID
+}
 
 # Dynamically generate command classes for those commands for which we
 # didn't write a class. These classes are identical to a generic Command
 # but with a custom name.
 for cid in list(CommandID):
     if cid not in COMMAND_LIST:
-        CommandClass = type(cid.name.title().replace('_', ''),
-                            (Command,),
-                            {'command_id': cid,
-                             'broadcastable': False})
+        CommandClass = type(
+            cid.name.title().replace("_", ""),
+            (Command,),
+            {"command_id": cid, "broadcastable": False},
+        )
         COMMAND_LIST[cid] = CommandClass

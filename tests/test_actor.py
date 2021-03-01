@@ -9,12 +9,12 @@
 import pytest
 
 
-pytestmark = [pytest.mark.usefixtures('vpositioners'), pytest.mark.asyncio]
+pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_status(actor):
 
-    command = await actor.invoke_mock_command('status')
+    command = await actor.invoke_mock_command("status")
 
     assert command.status.did_succeed
 
@@ -24,9 +24,9 @@ async def test_status(actor):
 
 async def test_info(actor):
 
-    command = await actor.invoke_mock_command('info')
+    command = await actor.invoke_mock_command("info")
     assert command.status.did_succeed
 
     data = actor.mock_replies[1:3]
-    assert 'version' in data[0]
-    assert 'config_file' in data[1]
+    assert "version" in data[0]
+    assert "config_file" in data[1]

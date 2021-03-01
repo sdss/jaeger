@@ -22,11 +22,13 @@ from jaeger import JaegerActor
 from jaeger.testing import VirtualFPS, VirtualPositioner
 
 
-TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'data/virtual_fps.yaml')
+TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
 
 # Disable logging to file.
-jaeger.log.removeHandler(jaeger.log.fh)
-jaeger.can_log.removeHandler(jaeger.can_log.fh)
+if jaeger.log.fh:
+    jaeger.log.removeHandler(jaeger.log.fh)
+if jaeger.can_log.fh:
+    jaeger.can_log.removeHandler(jaeger.can_log.fh)
 
 
 @pytest.fixture()
@@ -37,7 +39,7 @@ def event_loop(request):
     yield loop
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def test_config():
     """Yield the test configuration as a dictionary."""
 
@@ -48,8 +50,8 @@ def test_config():
 def notifier(test_config, event_loop):
     """Yields a CAN notifier."""
 
-    channel = jaeger.config['profiles']['virtual']['channel']
-    notifier = Notifier(Bus(channel, bustype='virtual'), [], loop=event_loop)
+    channel = jaeger.config["profiles"]["virtual"]["channel"]
+    notifier = Notifier(Bus(channel, bustype="virtual"), [], loop=event_loop)
 
     yield notifier
 
@@ -61,7 +63,7 @@ async def vfps(event_loop):
     """Sets up the virtual FPS."""
 
     # Make initialisation faster.
-    jaeger.config['fps']['initialise_timeouts'] = 0.05
+    jaeger.config["fps"]["initialise_timeouts"] = 0.05
 
     fps = VirtualFPS()
 
@@ -78,9 +80,15 @@ async def vpositioners(test_config, notifier, event_loop):
     """Yields positioners."""
 
     vpositioners = []
-    for pid in test_config['positioners']:
-        vpositioners.append(VirtualPositioner(pid, notifier=notifier, loop=event_loop,
-                                              **test_config['positioners'][pid]))
+    for pid in test_config["positioners"]:
+        vpositioners.append(
+            VirtualPositioner(
+                pid,
+                notifier=notifier,
+                loop=event_loop,
+                **test_config["positioners"][pid],
+            )
+        )
 
     yield vpositioners
 
@@ -94,10 +102,14 @@ async def actor(vfps):
     await vfps.initialise()
     await asyncio.sleep(0.1)
 
-    jaeger_actor = JaegerActor(vfps, name='test_actor',
-                               host='localhost', port=19990,
-                               log_dir=False)
-    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)
+    jaeger_actor = JaegerActor(
+        vfps,
+        name="test_actor",
+        host="localhost",
+        port=19990,
+        log_dir=False,
+    )
+    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)  # type: ignore
 
     yield jaeger_actor
 

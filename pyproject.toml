@@ -20,7 +20,7 @@ classifiers = [
 packages = [
     { include = "jaeger", from = "python" }
 ]
-include = ["README.md", "python/jaeger/etc/*"]
+include = ["python/jaeger/etc/*"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -29,12 +29,10 @@ Click = "^7.0"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
 sdss-drift = ">=0.1.5"
-sdss-clu = "^0.5.0"
-pyserial = {version = "^3.4", optional = true}
+sdss-clu = "^0.7.0"
+pyserial = "^3.4"
 sdssdb = ">=0.4.5"
 sdsstools = ">=0.4.2"
-Sphinx = {version = "^3.0", optional = true}
-sphinx-click = {version = "^2.3.0", optional = true}
 click_default_group = "^1.2.2"
 daemonocle = "^1.0.2"
 
@@ -57,24 +55,25 @@ Sphinx = {version = ">=3.0"}
 sphinx-click = {version = ">=2.3.0"}
 ipdb = ">=0.13.3"
 autopep8 = "^1.5.4"
-
-[tool.poetry.extras]
-docs = ["Sphinx", "sphinx-click"]
-serial = ["pyserial"]
+black = {version = "^20.8b1", allow-prereleases = true}
+rstcheck = "^3.3.1"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
 
+[tool.black]
+line-length = 88
+target-version = ['py38']
+fast = true
+
 [tool.isort]
-line_length = 79
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "SDSS", "FIRSTPARTY", "LOCALFOLDER"]
+profile = "black"
+sections = ["FUTURE", "STDLIB", "TYPING", "THIRDPARTY", "SDSS", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
-known_first_party = ["jaeger"]
-known_sdss = ["sdsstools", "sdssdb", "drift", "clu"]
-balanced_wrapping = true
-include_trailing_comma = false
+known_first_party = "jaeger"
+known_typing = ["typing"]
+known_sdss = ["sdsstools", "clu", "sdssdb", "drift"]
 lines_after_imports = 2
-use_parentheses = true
 
 [tool.pytest.ini_options]
 addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
@@ -97,7 +96,6 @@ omit = [
 exclude_lines = [
     "class AsyncioExecutor",
     "def convert_kaiju_trajectory",
-    "def _process_replies(cmds)",
     "class CANnetInterface"
 ]
 

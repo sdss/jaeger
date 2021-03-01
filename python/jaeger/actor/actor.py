@@ -10,12 +10,13 @@ import json
 import logging
 
 import clu
+import clu.protocol
 from clu.tools import ActorHandler
 
 from jaeger import __version__, log
 
 
-__all__ = ['JaegerActor']
+__all__ = ["JaegerActor"]
 
 
 class JaegerActor(clu.LegacyActor):
@@ -29,30 +30,30 @@ class JaegerActor(clu.LegacyActor):
         # command (the first argument is always the actor command).
         self.parser_args = [fps]
 
-        ieb_status_delay = kwargs.pop('ieb_status_delay', 60)
+        ieb_status_delay = kwargs.pop("ieb_status_delay", 60)
 
         super().__init__(*args, **kwargs)
 
         self.version = __version__
 
         # Add ActorHandler to log
-        self.actor_handler = ActorHandler(self, code_mapping={logging.INFO: 'd'})
+        self.actor_handler = ActorHandler(self, code_mapping={logging.INFO: "d"})
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.INFO)
 
         if fps.ieb and not fps.ieb.disabled:
-            self.timer_commands.add_command('ieb status', delay=ieb_status_delay)
+            self.timed_commands.add_command("ieb status", delay=ieb_status_delay)
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
 
         self.status_server = clu.protocol.TCPStreamPeriodicServer(
-            self.host, port, periodic_callback=self._report_status_cb,
-            sleep_time=delay)
+            self.host, port, periodic_callback=self._report_status_cb, sleep_time=delay
+        )
 
         await self.status_server.start()
 
-        self.log.info(f'starting status server on {self.host}:{port}')
+        self.log.info(f"starting status server on {self.host}:{port}")
 
     async def _report_status_cb(self, transport):
         """Reports the status to the status server."""
@@ -60,6 +61,6 @@ class JaegerActor(clu.LegacyActor):
         status = self.fps.report_status()
         status_json = json.dumps(status)
 
-        transport.write(status_json.encode() + '\n'.encode())
+        transport.write(status_json.encode() + "\n".encode())
 
         return status

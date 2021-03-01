@@ -14,42 +14,33 @@ import time
 import warnings
 import zlib
 
+from typing import Any
+
 import numpy
 
-from jaeger import commands, log
+from jaeger import log
+from jaeger.commands import Command, CommandID
 from jaeger.exceptions import JaegerError, JaegerUserWarning
-from jaeger.maskbits import BootloaderStatus, ResponseCode
+from jaeger.maskbits import BootloaderStatus
 from jaeger.utils import int_to_bytes
 
 
-__ALL__ = ['load_firmware', 'StartFirmwareUpgrade', 'GetFirmwareVersion',
-           'SendFirmwareData']
+__all__ = [
+    "load_firmware",
+    "StartFirmwareUpgrade",
+    "GetFirmwareVersion",
+    "SendFirmwareData",
+]
 
 
-def _process_replies(cmds):
-    """Checks if any of the replies is invalid."""
-
-    for cmd in cmds:
-
-        cmd_acc = ResponseCode.COMMAND_ACCEPTED
-
-        if (cmd is False or len(cmd.replies) == 0 or
-                cmd_acc not in cmd.replies[0].response_code):
-            log.error(f'positioner {cmd.positioner_id} did not replied or '
-                      'command was not accepted. Cancelling firmware upgrade.')
-
-            if len(cmd.replies) > 0:
-                log.error(f'positioner {cmd.positioner_id}: response code to '
-                          f'{cmd.command_id.name!r} is '
-                          f'{cmd.replies[0].response_code}')
-
-            return False
-
-    return True
-
-
-async def load_firmware(fps, firmware_file, positioners=None, force=False,
-                        show_progressbar=False, progress_callback=None):
+async def load_firmware(
+    fps,
+    firmware_file,
+    positioners=None,
+    force=False,
+    show_progressbar=False,
+    progress_callback=None,
+):
     """Convenience function to run through the steps of loading a new firmware.
 
     This function is a coroutine and not intendend for direct use. Use the
@@ -81,20 +72,24 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
         try:
             import progressbar
         except ImportError:
-            warnings.warn('progressbar2 is not installed. '
-                          'Cannot show a progress bar.',
-                          JaegerUserWarning)
+            warnings.warn(
+                "progressbar2 is not installed. " "Cannot show a progress bar.",
+                JaegerUserWarning,
+            )
+            progressbar = None
             show_progressbar = False
+    else:
+        progressbar = None
 
     start_time = time.time()
 
     firmware_file = pathlib.Path(firmware_file)
-    assert firmware_file.exists(), 'cannot find firmware file'
+    assert firmware_file.exists(), "cannot find firmware file"
 
-    log.info(f'firmware file {firmware_file!s} found.')
+    log.info(f"firmware file {firmware_file!s} found.")
 
     # Open firmware data as binary.
-    firmware_data = open(firmware_file, 'rb')
+    firmware_data = open(firmware_file, "rb")
     crc32 = zlib.crc32(firmware_data.read())
     filesize = os.path.getsize(firmware_file)
 
@@ -109,9 +104,11 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
 
         positioner = fps.positioners[positioner_id]
 
-        if (not positioner.is_bootloader() or
-                BootloaderStatus.BOOTLOADER_INIT not in positioner.status or
-                BootloaderStatus.UNKNOWN in positioner.status):
+        if (
+            not positioner.is_bootloader()
+            or BootloaderStatus.BOOTLOADER_INIT not in positioner.status
+            or BootloaderStatus.UNKNOWN in positioner.status
+        ):
 
             n_bad += 1
             continue
@@ -119,43 +116,48 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
         valid_positioners.append(positioner)
 
     if len(valid_positioners) == 0:
-        raise JaegerError('no positioners found in bootloader mode or '
-                          'with valid status.')
+        raise JaegerError(
+            "no positioners found in bootloader mode or " "with valid status."
+        )
         return
 
     if n_bad > 0:
 
-        msg = (f'{n_bad} positioners not in bootloader mode or state is invalid.')
+        msg = f"{n_bad} positioners not in bootloader mode or state is invalid."
         if force:
-            warnings.warn(msg + ' Proceeding becasuse force=True.', JaegerUserWarning)
+            warnings.warn(msg + " Proceeding becasuse force=True.", JaegerUserWarning)
         else:
             raise JaegerError(msg)
 
-    log.info('stopping pollers')
+    log.info("stopping pollers")
     await fps.pollers.stop()
 
-    log.info(f'upgrading firmware on {len(valid_positioners)} positioners.')
+    log.info(f"upgrading firmware on {len(valid_positioners)} positioners.")
 
     start_firmware_payload = int_to_bytes(filesize) + int_to_bytes(crc32)
 
-    log.info(f'CRC32: {crc32}')
-    log.info(f'File size: {filesize} bytes')
+    log.info(f"CRC32: {crc32}")
+    log.info(f"File size: {filesize} bytes")
 
-    cmds = [fps.send_command(commands.CommandID.START_FIRMWARE_UPGRADE,
-                             positioner_id=positioner.positioner_id,
-                             data=start_firmware_payload)
-            for positioner in valid_positioners]
+    cmds = [
+        fps.send_command(
+            CommandID.START_FIRMWARE_UPGRADE,
+            positioner_id=positioner.positioner_id,
+            data=start_firmware_payload,
+        )
+        for positioner in valid_positioners
+    ]
 
     await asyncio.gather(*cmds)
 
     if any(cmd.status.failed or cmd.status.timed_out for cmd in cmds):
-        log.error('firmware upgrade failed.')
+        log.error("firmware upgrade failed.")
         return False
 
     # Restore pointer to start of file
     firmware_data.seek(0)
 
-    log.info('starting data send.')
+    log.info("starting data send.")
 
     chunk_size = 8
     n_chunks = int(numpy.ceil(filesize / chunk_size))
@@ -164,6 +166,8 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
 
         if show_progressbar:
             bar = stack.enter_context(progressbar.ProgressBar(max_value=n_chunks))
+        else:
+            bar = None
 
         ii = 0
         while True:
@@ -175,15 +179,20 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
             if len(packetdata) == 0:
                 break
 
-            cmds = [fps.send_command(commands.CommandID.SEND_FIRMWARE_DATA,
-                                     positioner_id=positioner.positioner_id,
-                                     data=packetdata, timeout=15)
-                    for positioner in valid_positioners]
+            cmds = [
+                fps.send_command(
+                    CommandID.SEND_FIRMWARE_DATA,
+                    positioner_id=positioner.positioner_id,
+                    data=packetdata,
+                    timeout=15,
+                )
+                for positioner in valid_positioners
+            ]
 
             await asyncio.gather(*cmds)
 
             if any(cmd.status.failed or cmd.status.timed_out for cmd in cmds):
-                log.error('firmware upgrade failed.')
+                log.error("firmware upgrade failed.")
                 return False
 
             ii += 1
@@ -193,17 +202,17 @@ async def load_firmware(fps, firmware_file, positioners=None, force=False,
             if progress_callback:
                 progress_callback(ii, n_chunks)
 
-    log.info('firmware upgrade complete.')
+    log.info("firmware upgrade complete.")
 
     total_time = time.time() - start_time
-    log.info(f'upgrading firmware took {total_time:.2f}')
+    log.info(f"upgrading firmware took {total_time:.2f}")
 
     return True
 
 
-class GetFirmwareVersion(commands.Command):
+class GetFirmwareVersion(Command):
 
-    command_id = commands.CommandID.GET_FIRMWARE_VERSION
+    command_id = CommandID.GET_FIRMWARE_VERSION
     broadcastable = True
     safe = True
 
@@ -233,14 +242,14 @@ class GetFirmwareVersion(commands.Command):
         """
 
         def format_version(reply):
-            return '.'.join(format(byt, '02d') for byt in reply.data[0:3][::-1])
+            return ".".join(format(byt, "02d") for byt in reply.data[0:3][::-1])
 
         # If not a broadcast, use the positioner_id of the command
         if self.positioner_id != 0:
             positioner_id = self.positioner_id
 
         if len(self.replies) == 0:
-            raise ValueError('no positioners have replied to this command.')
+            raise ValueError("no positioners have replied to this command.")
 
         if positioner_id is None:
             return [format_version(reply) for reply in self.replies]
@@ -255,24 +264,24 @@ class GetFirmwareVersion(commands.Command):
     def encode(firmware):
         """Returns the bytearray encoding the firmware version."""
 
-        chunks = firmware.split('.')[::-1]
+        chunks = firmware.split(".")[::-1]
 
-        data = b''
+        data = b""
         for chunk in chunks:
-            data += int_to_bytes(int(chunk), 'u1')
+            data += int_to_bytes(int(chunk), "u1")
 
         return data
 
 
-class StartFirmwareUpgrade(commands.Command):
+class StartFirmwareUpgrade(Command):
 
-    command_id = commands.CommandID.START_FIRMWARE_UPGRADE
+    command_id = CommandID.START_FIRMWARE_UPGRADE
     broadcastable = False
     safe = True
 
 
-class SendFirmwareData(commands.Command):
+class SendFirmwareData(Command):
 
-    command_id = commands.CommandID.SEND_FIRMWARE_DATA
+    command_id = CommandID.SEND_FIRMWARE_DATA
     broadcastable = False
     safe = True

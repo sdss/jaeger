@@ -11,6 +11,9 @@ import click
 from . import jaeger_parser
 
 
+__all__ = ["pollers"]
+
+
 @jaeger_parser.group()
 def pollers():
     """Handle the positioner pollers."""
@@ -24,13 +27,13 @@ async def list(command, fps):
 
     poller_status = []
     for name in fps.pollers.names:
-        poller_status.append(name + ('*' if fps.pollers[name].running else ''))
+        poller_status.append(name + ("*" if fps.pollers[name].running else ""))
 
-    command.finish(text=','.join(poller_status))
+    command.finish(text=",".join(poller_status))
 
 
 @pollers.command()
-@click.argument('POLLER', type=str, required=False)
+@click.argument("POLLER", type=str, required=False)
 async def stop(command, fps, poller):
     """Stop pollers."""
 
@@ -38,14 +41,14 @@ async def stop(command, fps, poller):
         await fps.pollers.stop()
     else:
         if poller not in fps.pollers.names:
-            command.fail('poller not found.')
+            command.fail("poller not found.")
         await fps.pollers[poller].stop()
 
-    command.finish('pollers stopped')
+    command.finish("pollers stopped")
 
 
 @pollers.command()
-@click.argument('POLLER', type=str, required=False)
+@click.argument("POLLER", type=str, required=False)
 async def start(command, fps, poller):
     """Start pollers."""
 
@@ -53,7 +56,7 @@ async def start(command, fps, poller):
         fps.pollers.start()
     else:
         if poller not in fps.pollers.names:
-            command.fail('poller not found.')
+            command.fail("poller not found.")
         fps.pollers[poller].start()
 
-    command.finish('pollers started')
+    command.finish("pollers started")
