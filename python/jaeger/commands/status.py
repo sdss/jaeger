@@ -12,7 +12,7 @@ from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
-__ALL__ = ['GetID', 'GetStatus', 'GetCurrent', 'GetActualPosition']
+__all__ = ["GetID", "GetStatus", "GetCurrent", "GetActualPosition"]
 
 
 class GetID(Command):
@@ -60,12 +60,12 @@ class GetActualPosition(Command):
         """
 
         if len(self.replies) == 0:
-            raise ValueError('no positioners have replied to this command.')
+            raise ValueError("no positioners have replied to this command.")
 
         data = self.replies[0].data
 
-        beta = bytes_to_int(data[4:], dtype='i4')
-        alpha = bytes_to_int(data[0:4], dtype='i4')
+        beta = bytes_to_int(data[4:], dtype="i4")
+        alpha = bytes_to_int(data[0:4], dtype="i4")
 
         return numpy.array(motor_steps_to_angle(alpha, beta))
 
@@ -75,7 +75,9 @@ class GetActualPosition(Command):
 
         alpha_motor, beta_motor = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        data = int_to_bytes(int(alpha_motor), 'i4') + int_to_bytes(int(beta_motor), 'i4')
+        data = int_to_bytes(int(alpha_motor), "i4") + int_to_bytes(
+            int(beta_motor), "i4"
+        )
 
         return data
 
@@ -98,11 +100,11 @@ class GetCurrent(Command):
         """
 
         if len(self.replies) == 0:
-            raise ValueError('no positioners have replied to this command.')
+            raise ValueError("no positioners have replied to this command.")
 
         data = self.replies[0].data
 
-        beta = bytes_to_int(data[4:], dtype='i4')
-        alpha = bytes_to_int(data[0:4], dtype='i4')
+        beta = bytes_to_int(data[4:], dtype="i4")
+        alpha = bytes_to_int(data[0:4], dtype="i4")
 
         return numpy.array([alpha, beta])

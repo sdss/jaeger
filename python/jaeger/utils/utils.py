@@ -12,15 +12,22 @@ from jaeger import config
 from jaeger.maskbits import ResponseCode
 
 
-__ALL__ = ['get_dtype_str', 'int_to_bytes', 'bytes_to_int',
-           'get_identifier', 'parse_identifier', 'convert_kaiju_trajectory',
-           'motor_steps_to_angle', 'get_goto_move_time']
+__all__ = [
+    "get_dtype_str",
+    "int_to_bytes",
+    "bytes_to_int",
+    "get_identifier",
+    "parse_identifier",
+    "convert_kaiju_trajectory",
+    "motor_steps_to_angle",
+    "get_goto_move_time",
+]
 
 
-MOTOR_STEPS = config['positioner']['motor_steps']
+MOTOR_STEPS = config["positioner"]["motor_steps"]
 
 
-def get_dtype_str(dtype, byteorder='little'):
+def get_dtype_str(dtype, byteorder="little"):
     """Parses dtype and byte order to return a type string code.
 
     Parameters
@@ -53,21 +60,22 @@ def get_dtype_str(dtype, byteorder='little'):
 
     """
 
-    if byteorder == 'big':
-        byteorder = '>'
-    elif byteorder == 'little':
-        byteorder = '<'
-    elif byteorder in ['>', '<']:
+    if byteorder == "big":
+        byteorder = ">"
+    elif byteorder == "little":
+        byteorder = "<"
+    elif byteorder in [">", "<"]:
         pass
     else:
-        raise ValueError(f'invalid byteorder {byteorder}')
+        raise ValueError(f"invalid byteorder {byteorder}")
 
     if isinstance(dtype, str):
-        if dtype[0] in ['>', '<']:
+        if dtype[0] in [">", "<"]:
             return dtype
-        elif dtype[0] == '=':
-            raise ValueError('invalid byte order =. '
-                             'Please, use a specific endianess.')
+        elif dtype[0] == "=":
+            raise ValueError(
+                "invalid byte order =. " "Please, use a specific endianess."
+            )
         else:
             return byteorder + dtype
 
@@ -76,7 +84,7 @@ def get_dtype_str(dtype, byteorder='little'):
     return byteorder + dtype_str[1:]
 
 
-def int_to_bytes(value, dtype='u4', byteorder='little'):
+def int_to_bytes(value, dtype="u4", byteorder="little"):
     r"""Returns a bytearray with the representation of an integer.
 
     Parameters
@@ -112,7 +120,7 @@ def int_to_bytes(value, dtype='u4', byteorder='little'):
     return bytearray(np_value.tobytes())
 
 
-def bytes_to_int(bytes, dtype='u4', byteorder='little'):
+def bytes_to_int(bytes, dtype="u4", byteorder="little"):
     r"""Returns the integer from a bytearray representation.
 
     Parameters
@@ -183,10 +191,10 @@ def get_identifier(positioner_id, command_id, uid=0, response_code=0):
 
     """
 
-    posid_bin = format(positioner_id, '011b')
-    cid_bin = format(command_id, '08b')
-    cuid_bin = format(uid, '06b')
-    response_bin = format(int(response_code), '04b')
+    posid_bin = format(positioner_id, "011b")
+    cid_bin = format(command_id, "08b")
+    cuid_bin = format(uid, "06b")
+    response_bin = format(int(response_code), "04b")
 
     identifier = posid_bin + cid_bin + cuid_bin + response_bin
 
@@ -226,7 +234,7 @@ def parse_identifier(identifier):
 
     """
 
-    identifier_bin = format(identifier, '029b')
+    identifier_bin = format(identifier, "029b")
 
     positioner_id = int(identifier_bin[0:11], 2)
     command_id = int(identifier_bin[11:19], 2)
@@ -265,10 +273,12 @@ def motor_steps_to_angle(alpha, beta, motor_steps=None, inverse=False):
     motor_steps = motor_steps or MOTOR_STEPS
 
     if inverse:
-        return (int(numpy.round(alpha * motor_steps / 360.)),
-                int(numpy.round(beta * motor_steps / 360.)))
+        return (
+            int(numpy.round(alpha * motor_steps / 360.0)),
+            int(numpy.round(beta * motor_steps / 360.0)),
+        )
 
-    return alpha / motor_steps * 360., beta / motor_steps * 360.
+    return alpha / motor_steps * 360.0, beta / motor_steps * 360.0
 
 
 def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
@@ -297,7 +307,7 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
     # TODO: this is a rough estimate of the deg/sec if RPM=1000.
     speed = speed or 6.82
 
-    raw = open(path, 'r').read().splitlines()
+    raw = open(path, "r").read().splitlines()
 
     alpha_steps = []
     beta_steps = []
@@ -305,14 +315,14 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
     beta_deg = []
 
     for line in raw:
-        if line.startswith('smoothAlphaStep'):
-            alpha_steps = list(map(int, line.split(':')[1].split(',')))
-        elif line.startswith('smoothBetaStep'):
-            beta_steps = list(map(int, line.split(':')[1].split(',')))
-        elif line.startswith('smoothAlphaDeg'):
-            alpha_deg = list(map(float, line.split(':')[1].split(',')))
-        elif line.startswith('smoothBetaDeg'):
-            beta_deg = list(map(float, line.split(':')[1].split(',')))
+        if line.startswith("smoothAlphaStep"):
+            alpha_steps = list(map(int, line.split(":")[1].split(",")))
+        elif line.startswith("smoothBetaStep"):
+            beta_steps = list(map(int, line.split(":")[1].split(",")))
+        elif line.startswith("smoothAlphaDeg"):
+            alpha_deg = list(map(float, line.split(":")[1].split(",")))
+        elif line.startswith("smoothBetaDeg"):
+            beta_deg = list(map(float, line.split(":")[1].split(",")))
         else:
             pass
 
@@ -333,7 +343,7 @@ def convert_kaiju_trajectory(path, speed=None, step_size=0.03, invert=True):
         alpha[:, 1] = -alpha[:, 1] + alpha[0, 1]
         beta[:, 1] = -beta[:, 1] + beta[0, 1]
 
-    return {'alpha': alpha.tolist(), 'beta': beta.tolist()}
+    return {"alpha": alpha.tolist(), "beta": beta.tolist()}
 
 
 def get_goto_move_time(move, speed=None):
@@ -354,6 +364,6 @@ def get_goto_move_time(move, speed=None):
 
     """
 
-    speed = speed or config['positioner']['motor_speed']
+    speed = speed or config["positioner"]["motor_speed"]
 
-    return move * config['positioner']['reduction_ratio'] / (6. * speed) + 0.25
+    return move * config["positioner"]["reduction_ratio"] / (6.0 * speed) + 0.25

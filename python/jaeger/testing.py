@@ -15,16 +15,16 @@ from can.interfaces.virtual import VirtualBus
 from can.listener import AsyncBufferedReader
 
 import jaeger
-from jaeger import utils
+from jaeger import config, utils
 from jaeger.commands import CommandID
 from jaeger.maskbits import BootloaderStatus, PositionerStatus, ResponseCode
 from jaeger.utils.helpers import StatusMixIn
 
 
-__ALL__ = ['VirtualFPS', 'VirtualPositioner']
+__all__ = ["VirtualFPS", "VirtualPositioner"]
 
 
-TIME_STEP = jaeger.config['positioner']['time_step']
+TIME_STEP = config["positioner"]["time_step"]
 
 
 class VirtualFPS(jaeger.FPS):
@@ -53,7 +53,7 @@ class VirtualFPS(jaeger.FPS):
 
     def __init__(self, layout=None, **kwargs):
 
-        super().__init__(can_profile='virtual', layout=layout, ieb=False)
+        super().__init__(can_profile="virtual", layout=layout, ieb=False)
 
 
 class VirtualPositioner(StatusMixIn):
@@ -77,7 +77,7 @@ class VirtualPositioner(StatusMixIn):
         beta.
     channel : str
         The channel on which to listen to the virtual CAN bus. Defaults to
-        ``jaeger.config['profiles']['virtual']['channel']``.
+        ``config['profiles']['virtual']['channel']``.
     loop
         The event loop.
     notifier : ~can.Notifier
@@ -90,28 +90,40 @@ class VirtualPositioner(StatusMixIn):
 
     #: The initial status of the positioner. Represents a positioner that
     #: is not moving and is fully calibrated.
-    _initial_status = (PositionerStatus.SYSTEM_INITIALIZED |
-                       PositionerStatus.DISPLACEMENT_COMPLETED |
-                       PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
-                       PositionerStatus.DISPLACEMENT_COMPLETED_BETA |
-                       PositionerStatus.POSITION_RESTORED |
-                       PositionerStatus.DATUM_ALPHA_INITIALIZED |
-                       PositionerStatus.DATUM_BETA_INITIALIZED |
-                       PositionerStatus.MOTOR_ALPHA_CALIBRATED |
-                       PositionerStatus.MOTOR_BETA_CALIBRATED |
-                       PositionerStatus.CLOSED_LOOP_ALPHA |
-                       PositionerStatus.CLOSED_LOOP_BETA)
+    _initial_status = (
+        PositionerStatus.SYSTEM_INITIALIZED
+        | PositionerStatus.DISPLACEMENT_COMPLETED
+        | PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA
+        | PositionerStatus.DISPLACEMENT_COMPLETED_BETA
+        | PositionerStatus.POSITION_RESTORED
+        | PositionerStatus.DATUM_ALPHA_INITIALIZED
+        | PositionerStatus.DATUM_BETA_INITIALIZED
+        | PositionerStatus.MOTOR_ALPHA_CALIBRATED
+        | PositionerStatus.MOTOR_BETA_CALIBRATED
+        | PositionerStatus.CLOSED_LOOP_ALPHA
+        | PositionerStatus.CLOSED_LOOP_BETA
+    )
 
-    def __init__(self, positioner_id, centre=None, position=(0.0, 0.0),
-                 speed=None, channel=None, loop=None, notifier=None,
-                 firmware='10.11.12'):
+    def __init__(
+        self,
+        positioner_id,
+        centre=None,
+        position=(0.0, 0.0),
+        speed=None,
+        channel=None,
+        loop=None,
+        notifier=None,
+        firmware="10.11.12",
+    ):
 
         self.positioner_id = positioner_id
         self.centre = centre or (None, None)
 
         self.position = position
-        self.speed = speed or (jaeger.config['positioner']['motor_speed'],
-                               jaeger.config['positioner']['motor_speed'])
+        self.speed = speed or (
+            config["positioner"]["motor_speed"],
+            config["positioner"]["motor_speed"],
+        )
 
         self.firmware = firmware
         self._initial_firmware = firmware
@@ -119,9 +131,9 @@ class VirtualPositioner(StatusMixIn):
         # To be used for a firmware upgrade.
         self._crc32 = 0
         self._firmware_size = 0
-        self._firmware_received = b''
+        self._firmware_received = b""
 
-        self.channel = channel or jaeger.config['profiles']['virtual']['channel']
+        self.channel = channel or config["profiles"]["virtual"]["channel"]
         self.interface = VirtualBus(self.channel)
 
         self.loop = loop or asyncio.get_event_loop()
@@ -134,7 +146,9 @@ class VirtualPositioner(StatusMixIn):
             self.notifier.add_listener(self.listener)
             self._listener_task = self.loop.create_task(self.process_message())
 
-        StatusMixIn.__init__(self, PositionerStatus, initial_status=self._initial_status)
+        StatusMixIn.__init__(
+            self, PositionerStatus, initial_status=self._initial_status
+        )
 
     async def process_message(self):
         """Processes incoming commands from the bus."""
@@ -153,7 +167,11 @@ class VirtualPositioner(StatusMixIn):
             command = command_id.get_command_class()
 
             if positioner_id == 0 and not command.broadcastable:
-                self.reply(command_id, uid, response_code=ResponseCode.INVALID_BROADCAST_COMMAND)
+                self.reply(
+                    command_id,
+                    uid,
+                    response_code=ResponseCode.INVALID_BROADCAST_COMMAND,
+                )
                 continue
 
             if command_id == CommandID.GET_ID:
@@ -167,8 +185,10 @@ class VirtualPositioner(StatusMixIn):
                 data_status = utils.int_to_bytes(self.status)
                 self.reply(command_id, uid, data=data_status)
 
-            elif command_id in [CommandID.GO_TO_ABSOLUTE_POSITION,
-                                CommandID.GO_TO_RELATIVE_POSITION]:
+            elif command_id in [
+                CommandID.GO_TO_ABSOLUTE_POSITION,
+                CommandID.GO_TO_RELATIVE_POSITION,
+            ]:
                 self.loop.create_task(self.process_goto(msg))
 
             elif command_id == CommandID.GET_ACTUAL_POSITION:
@@ -181,20 +201,24 @@ class VirtualPositioner(StatusMixIn):
 
             elif command_id == CommandID.START_FIRMWARE_UPGRADE:
                 if not self.is_bootloader():
-                    self.reply(command_id, uid, response_code=ResponseCode.INVALID_COMMAND)
+                    self.reply(
+                        command_id, uid, response_code=ResponseCode.INVALID_COMMAND
+                    )
                     continue
 
                 try:
                     data = msg.data
-                    firmware_size = utils.bytes_to_int(data[0:4], 'u4')
-                    crc32 = utils.bytes_to_int(data[4:9], 'u4')
+                    firmware_size = utils.bytes_to_int(data[0:4], "u4")
+                    crc32 = utils.bytes_to_int(data[4:9], "u4")
                 except Exception:
-                    self.reply(command_id, uid, response_code=ResponseCode.INVALID_COMMAND)
+                    self.reply(
+                        command_id, uid, response_code=ResponseCode.INVALID_COMMAND
+                    )
                     continue
 
                 self._firmware_size = firmware_size
                 self._crc32 = crc32
-                self._firmware_received = b''
+                self._firmware_received = b""
 
                 self.reply(command_id, uid)
 
@@ -215,15 +239,14 @@ class VirtualPositioner(StatusMixIn):
         elif not data:
             data = [None]
 
-        reply_id = utils.get_identifier(self.positioner_id,
-                                        command_id,
-                                        uid=uid,
-                                        response_code=response_code)
+        reply_id = utils.get_identifier(
+            self.positioner_id, command_id, uid=uid, response_code=response_code
+        )
 
         for data_chunk in data:
-            message = Message(arbitration_id=reply_id,
-                              is_extended_id=True,
-                              data=data_chunk)
+            message = Message(
+                arbitration_id=reply_id, is_extended_id=True, data=data_chunk
+            )
             self.notifier.bus.send(message)
 
     def process_firmware_data(self, uid, data):
@@ -243,9 +266,11 @@ class VirtualPositioner(StatusMixIn):
             self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
         elif fw_size == self._firmware_size:
             if not zlib.crc32(self._firmware_received) == self._crc32:
-                self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+                self.reply(
+                    command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE
+                )
             else:
-                self.firmware = self._firmware_received.decode('utf-8')[-8:]
+                self.firmware = self._firmware_received.decode("utf-8")[-8:]
                 self.reply(command_id, uid)
         else:
             self.reply(command_id, uid)
@@ -267,37 +292,56 @@ class VirtualPositioner(StatusMixIn):
         target_alpha = self.position[0] + alpha_move
         target_beta = self.position[1] + beta_move
 
-        if target_alpha < 0 or target_beta < 0 or target_alpha > 360 or target_beta > 360:
+        if (
+            target_alpha < 0
+            or target_beta < 0
+            or target_alpha > 360
+            or target_beta > 360
+        ):
             self.reply(command_id, uid, ResponseCode.VALUE_OUT_OF_RANGE)
             return
 
-        if alpha_move == 0.:
-            alpha_move_time = 0.
+        if alpha_move == 0.0:
+            alpha_move_time = 0.0
         else:
-            alpha_move_time = int(utils.get_goto_move_time(alpha_move,
-                                                           self.speed[0]) / TIME_STEP)
+            alpha_move_time = int(
+                utils.get_goto_move_time(alpha_move, self.speed[0]) / TIME_STEP
+            )
 
-        if beta_move == 0.:
+        if beta_move == 0.0:
             beta_move_time = 0.0
         else:
-            beta_move_time = int(utils.get_goto_move_time(beta_move,
-                                                          self.speed[1]) / TIME_STEP)
+            beta_move_time = int(
+                utils.get_goto_move_time(beta_move, self.speed[1]) / TIME_STEP
+            )
 
-        self.reply(command_id, uid, ResponseCode.COMMAND_ACCEPTED,
-                   data=[utils.int_to_bytes(alpha_move_time, 'i4') +
-                         utils.int_to_bytes(beta_move_time, 'i4')])
+        self.reply(
+            command_id,
+            uid,
+            ResponseCode.COMMAND_ACCEPTED,
+            data=[
+                utils.int_to_bytes(alpha_move_time, "i4")
+                + utils.int_to_bytes(beta_move_time, "i4")
+            ],
+        )
 
-        self.status ^= (PositionerStatus.DISPLACEMENT_COMPLETED |
-                        PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
-                        PositionerStatus.DISPLACEMENT_COMPLETED_BETA)
-        self.status |= (PositionerStatus.TRAJECTORY_ALPHA_RECEIVED |
-                        PositionerStatus.TRAJECTORY_BETA_RECEIVED)
+        self.status ^= (
+            PositionerStatus.DISPLACEMENT_COMPLETED
+            | PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA
+            | PositionerStatus.DISPLACEMENT_COMPLETED_BETA
+        )
+        self.status |= (
+            PositionerStatus.TRAJECTORY_ALPHA_RECEIVED
+            | PositionerStatus.TRAJECTORY_BETA_RECEIVED
+        )
 
         await asyncio.sleep(max(alpha_move * TIME_STEP, beta_move_time * TIME_STEP))
 
-        self.status |= (PositionerStatus.DISPLACEMENT_COMPLETED |
-                        PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA |
-                        PositionerStatus.DISPLACEMENT_COMPLETED_BETA)
+        self.status |= (
+            PositionerStatus.DISPLACEMENT_COMPLETED
+            | PositionerStatus.DISPLACEMENT_COMPLETED_ALPHA
+            | PositionerStatus.DISPLACEMENT_COMPLETED_BETA
+        )
 
     def reset(self):
         """Resets the positioner."""
@@ -309,23 +353,23 @@ class VirtualPositioner(StatusMixIn):
     def is_bootloader(self):
         """Returns `True` if the positioner is in bootloader mode."""
 
-        return self.firmware.split('.')[1] == '80'
+        return self.firmware.split(".")[1] == "80"
 
     def set_bootloader(self, bootloader=True):
         """Sets the positioner in bootloader mode."""
 
-        firmware_chunks = self.firmware.split('.')
+        firmware_chunks = self.firmware.split(".")
 
         if bootloader:
-            firmware_chunks[1] = '80'
+            firmware_chunks[1] = "80"
             self.flags = BootloaderStatus
             self.status = BootloaderStatus.BOOTLOADER_INIT
         else:
-            firmware_chunks[1] = self._initial_firmware.split('.')[1]
+            firmware_chunks[1] = self._initial_firmware.split(".")[1]
             self.flags = PositionerStatus
             self.status = self._initial_status
 
-        self.firmware = '.'.join(firmware_chunks)
+        self.firmware = ".".join(firmware_chunks)
 
     async def shutdown(self):
         """Stops the command queue."""

@@ -9,8 +9,13 @@
 import enum
 
 
-__ALL__ = ['Maskbit', 'PositionerStatus', 'CommandStatus' 'ResponseCode',
-           'RobotStatus', 'BootloaderStatus']
+__all__ = [
+    "Maskbit",
+    "PositionerStatus",
+    "CommandStatus",
+    "ResponseCode",
+    "BootloaderStatus",
+]
 
 
 class Maskbit(enum.IntFlag):
@@ -19,8 +24,8 @@ class Maskbit(enum.IntFlag):
     __version__ = None
 
     def __str__(self):
-        members, uncovered = enum._decompose(self.__class__, self._value_)
-        return '|'.join([str(m._name_ or m._value_) for m in members])
+        members, _ = enum._decompose(self.__class__, self._value_)  # type: ignore
+        return "|".join([str(m._name_ or m._value_) for m in members])
 
     @property
     def version(self):
@@ -32,7 +37,7 @@ class Maskbit(enum.IntFlag):
     def active_bits(self):
         """Returns a list of flags that match the value."""
 
-        return [bit for bit in self.__class__ if bit.value & self.value]
+        return [bit for bit in self.__class__ if bit.value & self.value]  # type: ignore
 
 
 class CommandStatus(Maskbit):
@@ -74,7 +79,7 @@ class CommandStatus(Maskbit):
 class PositionerStatusV4_1(Maskbit):
     """Maskbits for positioner status (firmware >=04.01.00)."""
 
-    __version__ = '4.1'
+    __version__ = "4.1"
 
     SYSTEM_INITIALIZED = 0x0000000000000001
     CONFIG_CHANGED = 0x0000000000000002
@@ -122,8 +127,14 @@ class PositionerStatusV4_1(Maskbit):
     def collision(self):
         """Returns `True` if the positioner is collided."""
 
-        return True if (PositionerStatusV4_1.COLLISION_ALPHA & self or
-                        PositionerStatusV4_1.COLLISION_BETA & self) else False
+        return (
+            True
+            if (
+                PositionerStatusV4_1.COLLISION_ALPHA & self
+                or PositionerStatusV4_1.COLLISION_BETA & self
+            )
+            else False
+        )
 
     @property
     def initialised(self):
@@ -135,7 +146,7 @@ class PositionerStatusV4_1(Maskbit):
 class PositionerStatusV4_0(Maskbit):
     """Maskbits for positioner status (firmware <=04.00.04)."""
 
-    __version__ = '4.0'
+    __version__ = "4.0"
 
     SYSTEM_INITIALIZATION = 0x00000001
     RECEIVING_TRAJECTORY = 0x00000100
@@ -164,8 +175,14 @@ class PositionerStatusV4_0(Maskbit):
     def collision(self):
         """Returns `True` if the positioner is collided."""
 
-        return True if (PositionerStatusV4_0.ALPHA_COLLISION & self or
-                        PositionerStatusV4_0.BETA_COLLISION & self) else False
+        return (
+            True
+            if (
+                PositionerStatusV4_0.ALPHA_COLLISION & self
+                or PositionerStatusV4_0.BETA_COLLISION & self
+            )
+            else False
+        )
 
 
 #: Alias to the default positioner status flags.
@@ -209,19 +226,19 @@ class ResponseCode(enum.IntFlag):
 
     """
 
-    COMMAND_ACCEPTED = 0,
-    VALUE_OUT_OF_RANGE = 1,
-    INVALID_TRAJECTORY = 2,
-    ALREADY_IN_MOTION = 3,
-    DATUM_NOT_INITIALIZED = 4,
-    INCORRECT_AMOUNT_OF_DATA = 5,
-    CALIBRATION_MODE_ACTIVE = 6,
-    MOTOR_NOT_CALIBRATED = 7,
-    COLLISION_DETECTED = 8,
-    HALL_SENSOR_DISABLED = 9,
-    INVALID_BROADCAST_COMMAND = 10,
-    INVALID_BOOTLOADER_COMMAND = 11,
-    INVALID_COMMAND = 12,
-    UNKNOWN_COMMAND = 13,
+    COMMAND_ACCEPTED = (0,)
+    VALUE_OUT_OF_RANGE = (1,)
+    INVALID_TRAJECTORY = (2,)
+    ALREADY_IN_MOTION = (3,)
+    DATUM_NOT_INITIALIZED = (4,)
+    INCORRECT_AMOUNT_OF_DATA = (5,)
+    CALIBRATION_MODE_ACTIVE = (6,)
+    MOTOR_NOT_CALIBRATED = (7,)
+    COLLISION_DETECTED = (8,)
+    HALL_SENSOR_DISABLED = (9,)
+    INVALID_BROADCAST_COMMAND = (10,)
+    INVALID_BOOTLOADER_COMMAND = (11,)
+    INVALID_COMMAND = (12,)
+    UNKNOWN_COMMAND = (13,)
     DATUM_NOT_CALIBRATED = 14
     HALL_SENSORS_DISABLED = 15

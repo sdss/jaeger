@@ -17,16 +17,23 @@ from jaeger.maskbits import PositionerStatus as PS
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
-__ALL__ = ['calibration_positioner', 'StartDatumCalibration',
-           'StartMotorCalibration', 'StartCoggingCalibration',
-           'SaveInternalCalibration', 'HallOn', 'HallOff']
+__all__ = [
+    "calibrate_positioner",
+    "StartDatumCalibration",
+    "StartMotorCalibration",
+    "StartCoggingCalibration",
+    "SaveInternalCalibration",
+    "HallOn",
+    "HallOff",
+]
 
 
-MOTOR_STEPS = config['positioner']['motor_steps']
+MOTOR_STEPS = config["positioner"]["motor_steps"]
 
 
-async def calibrate_positioner(fps, positioner_id, motors=True, datums=True,
-                               cogging=True):
+async def calibrate_positioner(
+    fps, positioner_id, motors=True, datums=True, cogging=True
+):
     """Runs the calibration process and saves it to the internal memory.
 
     Parameters
@@ -60,68 +67,81 @@ async def calibrate_positioner(fps, positioner_id, motors=True, datums=True,
 
     """
 
-    log.info(f'Calibrating positioner {positioner_id}.')
+    log.info(f"Calibrating positioner {positioner_id}.")
 
     if positioner_id not in fps.positioners:
-        raise JaegerError(f'Positioner {positioner_id} not found.')
+        raise JaegerError(f"Positioner {positioner_id} not found.")
 
     positioner = fps[positioner_id]
 
     if fps.pollers.running:
-        log.debug('Stopping pollers')
+        log.debug("Stopping pollers")
         await fps.pollers.stop()
 
     if motors:
-        log.info('Starting motor calibration.')
+        log.info("Starting motor calibration.")
 
-        cmd = await fps.send_command(CommandID.START_MOTOR_CALIBRATION,
-                                     positioner_id=positioner_id)
+        cmd = await fps.send_command(
+            CommandID.START_MOTOR_CALIBRATION, positioner_id=positioner_id
+        )
 
         if cmd.status.failed:
-            raise JaegerError('Motor calibration failed.')
+            raise JaegerError("Motor calibration failed.")
 
         await asyncio.sleep(1)
-        await positioner.wait_for_status([PS.DISPLACEMENT_COMPLETED,
-                                          PS.MOTOR_ALPHA_CALIBRATED,
-                                          PS.MOTOR_BETA_CALIBRATED])
+        await positioner.wait_for_status(
+            [
+                PS.DISPLACEMENT_COMPLETED,
+                PS.MOTOR_ALPHA_CALIBRATED,
+                PS.MOTOR_BETA_CALIBRATED,
+            ]
+        )
     else:
-        log.warning('Skipping motor calibration.')
+        log.warning("Skipping motor calibration.")
 
     if datums:
-        log.info('Starting datum calibration.')
-        cmd = await fps.send_command(CommandID.START_DATUM_CALIBRATION,
-                                     positioner_id=positioner_id)
+        log.info("Starting datum calibration.")
+        cmd = await fps.send_command(
+            CommandID.START_DATUM_CALIBRATION, positioner_id=positioner_id
+        )
         if cmd.status.failed:
-            raise JaegerError('Datum calibration failed.')
+            raise JaegerError("Datum calibration failed.")
 
         await asyncio.sleep(1)
-        await positioner.wait_for_status([PS.DISPLACEMENT_COMPLETED,
-                                          PS.DATUM_ALPHA_CALIBRATED,
-                                          PS.DATUM_BETA_CALIBRATED])
+        await positioner.wait_for_status(
+            [
+                PS.DISPLACEMENT_COMPLETED,
+                PS.DATUM_ALPHA_CALIBRATED,
+                PS.DATUM_BETA_CALIBRATED,
+            ]
+        )
     else:
-        log.warning('Skipping datum calibration.')
+        log.warning("Skipping datum calibration.")
 
     if cogging:
-        log.info('Starting cogging calibration.')
-        cmd = await fps.send_command(CommandID.START_COGGING_CALIBRATION,
-                                     positioner_id=positioner_id)
+        log.info("Starting cogging calibration.")
+        cmd = await fps.send_command(
+            CommandID.START_COGGING_CALIBRATION, positioner_id=positioner_id
+        )
         if cmd.status.failed:
-            raise JaegerError('Cogging calibration failed.')
+            raise JaegerError("Cogging calibration failed.")
 
         await asyncio.sleep(1)
-        await positioner.wait_for_status([PS.COGGING_ALPHA_CALIBRATED,
-                                          PS.COGGING_BETA_CALIBRATED])
+        await positioner.wait_for_status(
+            [PS.COGGING_ALPHA_CALIBRATED, PS.COGGING_BETA_CALIBRATED]
+        )
     else:
-        log.warning('Skipping cogging calibration.')
+        log.warning("Skipping cogging calibration.")
 
     if motors or datums or cogging:
-        log.info('Saving calibration.')
-        cmd = await fps.send_command(CommandID.SAVE_INTERNAL_CALIBRATION,
-                                     positioner_id=positioner_id)
+        log.info("Saving calibration.")
+        cmd = await fps.send_command(
+            CommandID.SAVE_INTERNAL_CALIBRATION, positioner_id=positioner_id
+        )
         if cmd.status.failed:
-            raise JaegerError('Saving calibration failed.')
+            raise JaegerError("Saving calibration failed.")
 
-        log.info(f'Positioner {positioner_id} has been calibrated.')
+        log.info(f"Positioner {positioner_id} has been calibrated.")
 
     return
 
@@ -176,12 +196,12 @@ class GetOffset(Command):
         """
 
         if len(self.replies) == 0:
-            raise ValueError('No positioners have replied to this command.')
+            raise ValueError("No positioners have replied to this command.")
 
         data = self.replies[0].data
 
-        alpha = bytes_to_int(data[0:4], dtype='i4')
-        beta = bytes_to_int(data[4:], dtype='i4')
+        alpha = bytes_to_int(data[0:4], dtype="i4")
+        beta = bytes_to_int(data[4:], dtype="i4")
 
         return numpy.array(motor_steps_to_angle(alpha, beta))
 
@@ -199,7 +219,7 @@ class SetOffsets(Command):
         alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
         data = int_to_bytes(int(alpha_steps)) + int_to_bytes(int(beta_steps))
-        kwargs['data'] = data
+        kwargs["data"] = data
 
         super().__init__(**kwargs)
 

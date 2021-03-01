@@ -12,18 +12,19 @@ import collections
 import logging
 import time
 
+from typing import List
+
 import can
 
-from jaeger import can_log, config, log
+from jaeger import can_log, config, log, maskbits
 from jaeger.exceptions import CommandError, JaegerError
 from jaeger.maskbits import CommandStatus, ResponseCode
-from jaeger.utils import (AsyncQueue, StatusMixIn,
-                          get_identifier, parse_identifier)
+from jaeger.utils import AsyncQueue, StatusMixIn, get_identifier, parse_identifier
 
 from . import CommandID
 
 
-__ALL__ = ['Message', 'Command']
+__all__ = ["Message", "Command"]
 
 
 # A pool of UIDs that can be assigned to each command for a given command_id.
@@ -57,29 +58,37 @@ class Message(can.Message):
 
     """
 
-    def __init__(self, command, data=[], positioner_id=0, uid=0,
-                 response_code=0, extended_id=True):
+    def __init__(
+        self,
+        command,
+        data=[],
+        positioner_id=0,
+        uid=0,
+        response_code=0,
+        extended_id=True,
+    ):
 
         self.command = command
         self.positioner_id = positioner_id
         self.uid = uid
 
-        uid_bits = config['positioner']['uid_bits']
-        max_uid = 2**uid_bits
-        assert self.uid < max_uid, f'UID must be <= {max_uid}.'
+        uid_bits = config["positioner"]["uid_bits"]
+        max_uid = 2 ** uid_bits
+        assert self.uid < max_uid, f"UID must be <= {max_uid}."
 
         if extended_id:
-            arbitration_id = get_identifier(positioner_id,
-                                            int(command.command_id),
-                                            uid=self.uid,
-                                            response_code=response_code)
+            arbitration_id = get_identifier(
+                positioner_id,
+                int(command.command_id),
+                uid=self.uid,
+                response_code=response_code,
+            )
         else:
             arbitration_id = positioner_id
 
-        can.Message.__init__(self,
-                             data=data,
-                             arbitration_id=arbitration_id,
-                             is_extended_id=extended_id)
+        can.Message.__init__(
+            self, data=data, arbitration_id=arbitration_id, is_extended_id=extended_id
+        )
 
 
 class Reply(object):
@@ -107,7 +116,7 @@ class Reply(object):
 
     def __init__(self, message, command=None):
 
-        assert isinstance(message, can.Message), 'invalid message'
+        assert isinstance(message, can.Message), "invalid message"
 
         #: The command for which this reply is intended.
         self.command = command
@@ -119,32 +128,33 @@ class Reply(object):
         self.data = message.data
 
         #: The `~.maskbits.ResponseCode` bit returned by the reply.
-        self.response_code = None
+        self.response_code: maskbits.ResponseCode
 
         #: The UID of the message this reply is for.
-        self.uid = None
+        self.uid: int
 
-        (self.positioner_id,
-         reply_cmd_id,
-         self.uid,
-         self.response_code) = parse_identifier(message.arbitration_id)
+        (
+            self.positioner_id,
+            reply_cmd_id,
+            self.uid,
+            self.response_code,
+        ) = parse_identifier(message.arbitration_id)
 
         if command is not None:
-            assert command.command_id == reply_cmd_id, \
-                (f'Command command_id={command.command_id} and '
-                 f'reply command_id={reply_cmd_id} do not match')
+            assert command.command_id == reply_cmd_id, (
+                f"Command command_id={command.command_id} and "
+                f"reply command_id={reply_cmd_id} do not match"
+            )
 
         self.command_id = CommandID(reply_cmd_id)
 
-        # Does not issue a warning if at the time of queuing the command there
-        # is already a command for the same positioner id running.
-        self._silent_on_conflict = False
-
     def __repr__(self):
-        command_name = self.command.command_id.name if self.command else 'NONE'
-        return (f'<Reply (command_id={command_name!r}, '
-                f'positioner_id={self.positioner_id}, '
-                f'response_code={self.response_code.name!r})>')
+        command_name = self.command.command_id.name if self.command else "NONE"
+        return (
+            f"<Reply (command_id={command_name!r}, "
+            f"positioner_id={self.positioner_id}, "
+            f"response_code={self.response_code.name!r})>"
+        )
 
 
 class Command(StatusMixIn, asyncio.Future):
@@ -197,9 +207,9 @@ class Command(StatusMixIn, asyncio.Future):
     """
 
     #: The id of the command.
-    command_id = None
+    command_id: CommandID
     #: Whether the command can be broadcast to all robots.
-    broadcastable = None
+    broadcastable: bool = False
     #: The default timeout for this command.
     timeout = 5
     #: Whether it's safe to execute this command when the FPS is locked.
@@ -207,18 +217,24 @@ class Command(StatusMixIn, asyncio.Future):
     #: Whether this command produces a positioner move.
     move_command = False
 
-    def __init__(self, positioner_id, loop=None, timeout=None,
-                 done_callback=None, n_positioners=None, data=None):
+    def __init__(
+        self,
+        positioner_id,
+        loop=None,
+        timeout=None,
+        done_callback=None,
+        n_positioners=None,
+        data=None,
+    ):
 
         global COMMAND_UID
 
-        assert self.broadcastable is not None, 'broadcastable not set'
-        assert self.command_id is not None, 'command_id not set'
+        assert self.broadcastable is not None, "broadcastable not set"
+        assert self.command_id is not None, "command_id not set"
 
         self.positioner_id = positioner_id
         if self.positioner_id == 0 and self.broadcastable is False:
-            raise JaegerError(f'Command {self.command_id.name} '
-                              'cannot be broadcast.')
+            raise JaegerError(f"Command {self.command_id.name} " "cannot be broadcast.")
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -228,7 +244,7 @@ class Command(StatusMixIn, asyncio.Future):
             self.data = [self.data]
 
         #: A list of messages with the responses to this command.
-        self.replies = []
+        self.replies: List[Reply] = []
 
         # Numbers of messages to send. If the command is not a broadcast,
         # the command will be marked done after receiving this many replies.
@@ -245,13 +261,13 @@ class Command(StatusMixIn, asyncio.Future):
         # the replies.
         self.message_uids = []
 
-        uid_bits = config['positioner']['uid_bits']
+        uid_bits = config["positioner"]["uid_bits"]
         pool = UID_POOL[self.command_id]
         if self.positioner_id != 0 and self.positioner_id not in pool:
-            pool[self.positioner_id] = set(range(1, 2**uid_bits))
+            pool[self.positioner_id] = set(range(1, 2 ** uid_bits))
 
         if n_positioners is not None and not self.is_broadcast:
-            raise JaegerError('n_positioners must be used with a broadcast.')
+            raise JaegerError("n_positioners must be used with a broadcast.")
         self.n_positioners = n_positioners
 
         self.timeout = timeout if timeout is not None else self.timeout
@@ -268,29 +284,39 @@ class Command(StatusMixIn, asyncio.Future):
 
         self._timeout_handle = None
 
-        self.reply_queue = AsyncQueue(callback=self.process_reply,
-                                      loop=self.loop)
+        self.reply_queue = AsyncQueue(callback=self.process_reply, loop=self.loop)
 
-        StatusMixIn.__init__(self, maskbit_flags=CommandStatus,
-                             initial_status=CommandStatus.READY,
-                             callback_func=self.status_callback)
+        StatusMixIn.__init__(
+            self,
+            maskbit_flags=CommandStatus,
+            initial_status=CommandStatus.READY,
+            callback_func=self.status_callback,
+        )
 
         asyncio.Future.__init__(self, loop=self.loop)
 
     def __repr__(self):
-        return (f'<Command {self.command_id.name} '
-                f'(positioner_id={self.positioner_id}, '
-                f'status={self.status.name!r})>')
+        return (
+            f"<Command {self.command_id.name} "
+            f"(positioner_id={self.positioner_id}, "
+            f"status={self.status.name!r})>"
+        )
 
-    def _log(self, msg, level=logging.DEBUG, command_id=None,
-             positioner_id=None, logs=[can_log]):
+    def _log(
+        self,
+        msg,
+        level=logging.DEBUG,
+        command_id=None,
+        positioner_id=None,
+        logs=[can_log],
+    ):
         """Logs a message."""
 
         command_id = command_id or self.command_id
         c_name = command_id.name
         pid = positioner_id or self.positioner_id
 
-        msg = f'({c_name}, {pid}, {self.command_uid!s}): ' + msg
+        msg = f"({c_name}, {pid}, {self.command_uid!s}): " + msg
 
         for ll in logs:
             ll.log(level, msg)
@@ -322,20 +348,24 @@ class Command(StatusMixIn, asyncio.Future):
                 uids = sorted(uids * self.n_positioners)
                 n_messages *= self.n_positioners
 
-        if len(self.replies) < n_messages:
+        if n_messages is None or len(self.replies) < n_messages:
             return None
 
         if len(self.replies) > n_messages:
-            self._log('command received more replies than messages. '
-                      'This should not be possible.',
-                      level=logging.ERROR)
+            self._log(
+                "command received more replies than messages. "
+                "This should not be possible.",
+                level=logging.ERROR,
+            )
             self.finish_command(CommandStatus.FAILED)
             return None
 
         # Compares each message-reply UID.
         if not uids == replies_uids:
-            self._log('the UIDs of the messages and replies do not match.',
-                      level=logging.ERROR)
+            self._log(
+                "the UIDs of the messages and replies do not match.",
+                level=logging.ERROR,
+            )
             return False
 
         return True
@@ -351,33 +381,41 @@ class Command(StatusMixIn, asyncio.Future):
 
         if self.status == CommandStatus.TIMEDOUT:
             return
-        elif (self.status not in [CommandStatus.RUNNING,
-                                  CommandStatus.CANCELLED] and
-              self.timeout > 0):
+        elif (
+            self.status not in [CommandStatus.RUNNING, CommandStatus.CANCELLED]
+            and self.timeout > 0
+        ):
             # We add CANCELLED because when a command is cancelled replies
             # can arrive later. That's ok and not an error.
-            self._log('received a reply but command is not running',
-                      level=logging.ERROR, logs=[log, can_log])
+            self._log(
+                "received a reply but command is not running",
+                level=logging.ERROR,
+                logs=[log, can_log],
+            )
             return
 
         if self.positioner_id != 0:
             if reply.positioner_id != self.positioner_id:
-                raise CommandError('received a reply from a '
-                                   'different positioner.')
+                raise CommandError("received a reply from a " "different positioner.")
 
         self.replies.append(reply)
 
         data_hex = binascii.hexlify(reply.data).decode()
-        self._log(f'positioner {reply.positioner_id} replied with '
-                  f'id={reply.message.arbitration_id}, '
-                  f'UID={reply.uid}, '
-                  f'code={reply.response_code.name!r}, '
-                  f'data={data_hex!r}')
+        self._log(
+            f"positioner {reply.positioner_id} replied with "
+            f"id={reply.message.arbitration_id}, "
+            f"UID={reply.uid}, "
+            f"code={reply.response_code.name!r}, "
+            f"data={data_hex!r}"
+        )
 
         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
 
-            self._log(f'command failed with code {reply.response_code} '
-                      f'({reply.response_code.name}).', level=logging.ERROR)
+            self._log(
+                f"command failed with code {reply.response_code} "
+                f"({reply.response_code.name}).",
+                level=logging.ERROR,
+            )
 
             self.finish_command(CommandStatus.FAILED)
 
@@ -420,8 +458,9 @@ class Command(StatusMixIn, asyncio.Future):
 
             self.set_result(self)
 
-            is_done = (self.status == CommandStatus.DONE or
-                       (pid == 0 and self.status == CommandStatus.TIMEDOUT))
+            is_done = self.status == CommandStatus.DONE or (
+                pid == 0 and self.status == CommandStatus.TIMEDOUT
+            )
 
             if is_done and self._done_callback:
                 if asyncio.iscoroutinefunction(self._done_callback):
@@ -431,21 +470,23 @@ class Command(StatusMixIn, asyncio.Future):
 
             if pid != 0 and self.status == CommandStatus.TIMEDOUT:
                 level = logging.WARNING if not silent else logging.DEBUG
-                self._log('this command timed out and '
-                          'it is not a broadcast.', level=level)
+                self._log(
+                    "this command timed out and " "it is not a broadcast.", level=level
+                )
             elif self.status == CommandStatus.CANCELLED:
-                self._log('command has been cancelled.', logging.DEBUG)
+                self._log("command has been cancelled.", logging.DEBUG)
             elif self.status.failed:
                 level = logging.ERROR if not silent else logging.DEBUG
-                self._log(f'command finished with status {self.status.name!r}',
-                          level=level)
+                self._log(
+                    f"command finished with status {self.status.name!r}", level=level
+                )
 
             # For good measure we return all the UIDs
             if pid != 0:
                 for uid in self.message_uids:
                     UID_POOL[self.command_id][pid].add(uid)
 
-            self._log(f'finished command with status {self.status.name!r}')
+            self._log(f"finished command with status {self.status.name!r}")
 
     def status_callback(self):
         """Callback for change status.
@@ -455,7 +496,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         """
 
-        self._log(f'status changed to {self.status.name}')
+        self._log(f"status changed to {self.status.name}")
 
         if self.status == CommandStatus.RUNNING:
             self.start_time = time.time()
@@ -465,7 +506,8 @@ class Command(StatusMixIn, asyncio.Future):
                 self.finish_command(CommandStatus.TIMEDOUT)
             else:
                 self._timeout_handle = self.loop.call_later(
-                    self.timeout, self.finish_command, CommandStatus.TIMEDOUT)
+                    self.timeout, self.finish_command, CommandStatus.TIMEDOUT
+                )
         elif self.status.is_done:
             self.finish_command(self.status)
 
@@ -503,12 +545,9 @@ class Command(StatusMixIn, asyncio.Future):
                     for message in messages:
                         UID_POOL[cid][pid].add(message.uid)
 
-                raise CommandError('no UIDs left in the pool.')
+                raise CommandError("no UIDs left in the pool.")
 
-            messages.append(Message(self,
-                                    positioner_id=pid,
-                                    uid=uid,
-                                    data=data_chunk))
+            messages.append(Message(self, positioner_id=pid, uid=uid, data=data_chunk))
 
         return messages
 

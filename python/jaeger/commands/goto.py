@@ -13,11 +13,17 @@ from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
-__ALL__ = ['GoToDatums', 'GoToDatumAlpha', 'GoToDatumBeta', 'StartTrajectory',
-           'GotoAbsolutePosition', 'SetSpeed', 'SetCurrent']
+__all__ = [
+    "GoToDatums",
+    "GoToDatumAlpha",
+    "GoToDatumBeta",
+    "GotoAbsolutePosition",
+    "SetSpeed",
+    "SetCurrent",
+]
 
 
-TIME_STEP = jaeger.config['positioner']['time_step']
+TIME_STEP = jaeger.config["positioner"]["time_step"]
 
 
 class GoToDatums(Command):
@@ -55,8 +61,10 @@ class GotoAbsolutePosition(Command):
 
         alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        data = int_to_bytes(alpha_steps, dtype='i4') + int_to_bytes(beta_steps, dtype='i4')
-        kwargs['data'] = data
+        data = int_to_bytes(alpha_steps, dtype="i4") + int_to_bytes(
+            beta_steps, dtype="i4"
+        )
+        kwargs["data"] = data
 
         super().__init__(**kwargs)
 
@@ -64,8 +72,8 @@ class GotoAbsolutePosition(Command):
     def decode(data):
         """Decodes message data into alpha and beta moves."""
 
-        alpha_steps = bytes_to_int(data[0:4], dtype='i4')
-        beta_steps = bytes_to_int(data[4:8], dtype='i4')
+        alpha_steps = bytes_to_int(data[0:4], dtype="i4")
+        beta_steps = bytes_to_int(data[4:8], dtype="i4")
 
         return motor_steps_to_angle(alpha_steps, beta_steps)
 
@@ -80,12 +88,12 @@ class GotoAbsolutePosition(Command):
         """
 
         if len(self.replies) == 0:
-            raise ValueError('no positioners have replied to this command.')
+            raise ValueError("no positioners have replied to this command.")
 
         data = self.replies[0].data
 
-        beta = bytes_to_int(data[4:], dtype='i4')
-        alpha = bytes_to_int(data[0:4], dtype='i4')
+        beta = bytes_to_int(data[4:], dtype="i4")
+        alpha = bytes_to_int(data[0:4], dtype="i4")
 
         return numpy.array([alpha, beta]) * TIME_STEP
 
@@ -104,16 +112,17 @@ class SetActualPosition(Command):
     command_id = CommandID.SET_ACTUAL_POSITION
     broadcastable = False
     safe = True
-    move_command = True     # Technically not a move command but we don't
-                            # want to issue it during a move.
+    move_command = True  # Technically not a move command but we don't
+    # want to issue it during a move.
 
     def __init__(self, alpha=0.0, beta=0.0, **kwargs):
 
         alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        data = (int_to_bytes(int(alpha_steps), dtype='i4') +
-                int_to_bytes(int(beta_steps), dtype='i4'))
-        kwargs['data'] = data
+        data = int_to_bytes(int(alpha_steps), dtype="i4") + int_to_bytes(
+            int(beta_steps), dtype="i4"
+        )
+        kwargs["data"] = data
 
         super().__init__(**kwargs)
 
@@ -128,10 +137,10 @@ class SetSpeed(Command):
 
     def __init__(self, alpha=0, beta=0, **kwargs):
 
-        assert alpha >= 0 and beta >= 0, 'invalid speed.'
+        assert alpha >= 0 and beta >= 0, "invalid speed."
 
         data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
-        kwargs['data'] = data
+        kwargs["data"] = data
 
         super().__init__(**kwargs)
 
@@ -154,9 +163,9 @@ class SetCurrent(Command):
 
     def __init__(self, alpha=0, beta=0, **kwargs):
 
-        assert alpha >= 0 and beta >= 0, 'invalid current.'
+        assert alpha >= 0 and beta >= 0, "invalid current."
 
         data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
-        kwargs['data'] = data
+        kwargs["data"] = data
 
         super().__init__(**kwargs)
