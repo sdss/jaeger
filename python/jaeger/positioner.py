@@ -188,7 +188,7 @@ class Positioner(StatusMixIn):
                 status = int(bytes_to_int(command.replies[0].data))
             else:
                 self.status = self.flags.UNKNOWN
-                raise PositionerError(f"GET_STATUS received {n_replies} " "replies.")
+                raise PositionerError(f"GET_STATUS received {n_replies} replies.")
 
         if not self.is_bootloader():
             self.flags = self.get_positioner_flags()
@@ -227,9 +227,7 @@ class Positioner(StatusMixIn):
         """
 
         if self.is_bootloader():
-            raise JaegerError(
-                "wait_for_status cannot be scheduled " "in bootloader mode."
-            )
+            raise JaegerError("wait_for_status cannot be scheduled in bootloader mode.")
 
         if not isinstance(status, (list, tuple)):
             status = [status]
@@ -290,7 +288,7 @@ class Positioner(StatusMixIn):
 
         command = await self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
-            error="failed retrieving " "firmware version.",
+            error="failed retrieving firmware version.",
         )
 
         self.firmware = command.get_firmware()
@@ -511,7 +509,7 @@ class Positioner(StatusMixIn):
 
                 except AssertionError:
 
-                    raise PositionerError("positioner is not " "moving when it should.")
+                    raise PositionerError("positioner is not moving when it should.")
 
             self.move_time = max([alpha_time, beta_time])
 
@@ -550,10 +548,10 @@ class Positioner(StatusMixIn):
             raise PositionerError("positioner is already moving.")
 
         if not self.fps:
-            raise PositionerError("the positioner is not " "linked to a FPS instance.")
+            raise PositionerError("the positioner is not linked to a FPS instance.")
 
         await self.send_command(
-            "GO_TO_DATUMS", error="failed while sending " "GO_TO_DATUMS command."
+            "GO_TO_DATUMS", error="failed while sending GO_TO_DATUMS command."
         )
 
         self._log("waiting to home.")

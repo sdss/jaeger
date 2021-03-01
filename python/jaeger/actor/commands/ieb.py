@@ -72,10 +72,12 @@ async def status(command, fps):
 @click.option(
     "--on/--off",
     default=None,
-    help="the value of the device. If not provided, " "switches the current status.",
+    help="the value of the device. If not provided, switches the current status.",
 )
 @click.option(
-    "--cycle", is_flag=True, help="power cycles a relay. " "The final status is on."
+    "--cycle",
+    is_flag=True,
+    help="power cycles a relay. The final status is on.",
 )
 async def switch(command, fps, device, on, cycle):
     """Switches the status of an on/off device."""

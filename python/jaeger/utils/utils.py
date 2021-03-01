@@ -73,9 +73,7 @@ def get_dtype_str(dtype, byteorder="little"):
         if dtype[0] in [">", "<"]:
             return dtype
         elif dtype[0] == "=":
-            raise ValueError(
-                "invalid byte order =. " "Please, use a specific endianess."
-            )
+            raise ValueError("invalid byte order =. Please, use a specific endianess.")
         else:
             return byteorder + dtype
 

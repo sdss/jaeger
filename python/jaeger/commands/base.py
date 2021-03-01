@@ -234,7 +234,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         self.positioner_id = positioner_id
         if self.positioner_id == 0 and self.broadcastable is False:
-            raise JaegerError(f"Command {self.command_id.name} " "cannot be broadcast.")
+            raise JaegerError(f"Command {self.command_id.name} cannot be broadcast.")
 
         self.loop = loop or asyncio.get_event_loop()
 
@@ -396,7 +396,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         if self.positioner_id != 0:
             if reply.positioner_id != self.positioner_id:
-                raise CommandError("received a reply from a " "different positioner.")
+                raise CommandError("received a reply from a different positioner.")
 
         self.replies.append(reply)
 
@@ -471,7 +471,7 @@ class Command(StatusMixIn, asyncio.Future):
             if pid != 0 and self.status == CommandStatus.TIMEDOUT:
                 level = logging.WARNING if not silent else logging.DEBUG
                 self._log(
-                    "this command timed out and " "it is not a broadcast.", level=level
+                    "this command timed out and it is not a broadcast.", level=level
                 )
             elif self.status == CommandStatus.CANCELLED:
                 self._log("command has been cancelled.", logging.DEBUG)

@@ -53,7 +53,12 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 @click.argument("POSITIONER-ID", type=int, nargs=-1)
 @click.argument("ALPHA", type=click.FloatRange(-360.0, 360.0))
 @click.argument("BETA", type=click.FloatRange(-360.0, 360.0))
-@click.option("-r", "--relative", is_flag=True, help="whether this is a relative move")
+@click.option(
+    "-r",
+    "--relative",
+    is_flag=True,
+    help="whether this is a relative move",
+)
 @click.option(
     "-s",
     "--speed",
@@ -62,10 +67,18 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
     help="the speed of both alpha and beta arms, in RPS on the input.",
 )
 @click.option(
-    "-a", "--all", is_flag=True, default=False, help="applies to all valid positioners."
+    "-a",
+    "--all",
+    is_flag=True,
+    default=False,
+    help="applies to all valid positioners.",
 )
 @click.option(
-    "-f", "--force", is_flag=True, default=False, help="forces a move to happen."
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="forces a move to happen.",
 )
 async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, relative):
     """Sends positioners to a given (alpha, beta) position."""
@@ -73,7 +86,7 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
     if all:
         if not force:
             return command.fail(
-                "need to specify --force to move " "all positioners at once."
+                "need to specify --force to move all positioners at once."
             )
         positioner_id = list(fps.positioners.keys())
 
@@ -132,7 +145,11 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 @click.argument("ALPHA", type=click.FloatRange(50.0, 5000.0))
 @click.argument("BETA", type=click.FloatRange(50.0, 5000.0))
 @click.option(
-    "-a", "--all", is_flag=True, default=False, help="applies to all valid positioners."
+    "-a",
+    "--all",
+    is_flag=True,
+    default=False,
+    help="applies to all valid positioners.",
 )
 async def speed(command, fps, positioner_id, alpha, beta, all):
     """Sets the ``(alpha, beta)`` speed in RPM on the input."""
@@ -161,7 +178,11 @@ async def speed(command, fps, positioner_id, alpha, beta, all):
 
 @jaeger_parser.command()
 @click.argument("POSITIONER-ID", type=int, nargs=-1)
-@click.option("--datums", is_flag=True, help="If set, initialises the datums.")
+@click.option(
+    "--datums",
+    is_flag=True,
+    help="If set, initialises the datums.",
+)
 async def initialise(command, fps, positioner_id, datums=False):
     """Initialises positioners."""
 
@@ -184,7 +205,11 @@ async def initialise(command, fps, positioner_id, datums=False):
 @jaeger_parser.command()
 @click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
 @click.option(
-    "-f", "--full", is_flag=True, default=False, help="outputs more statuses."
+    "-f",
+    "--full",
+    is_flag=True,
+    default=False,
+    help="outputs more statuses.",
 )
 async def status(command, fps, positioner_id, full):
     """Reports the position and status bit of a list of positioners."""

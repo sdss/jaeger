@@ -182,7 +182,7 @@ class PollerList(list):
         names = [pp.name for pp in self]
         if poller.name in names:
             raise ValueError(
-                f"a poller with name {poller.name} is " "already in the list."
+                f"a poller with name {poller.name} is already in the list."
             )
 
         list.append(self, poller)

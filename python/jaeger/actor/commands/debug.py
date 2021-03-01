@@ -20,7 +20,9 @@ __all__ = ["debug", "info_"]
 
 @jaeger_parser.group(invoke_without_command=True)
 @click.option(
-    "--danger/--no-danger", default=None, help="Use engineering mode (unsafe)?"
+    "--danger/--no-danger",
+    default=None,
+    help="Use engineering mode (unsafe)?",
 )
 @pass_args()
 @click.pass_context
@@ -45,7 +47,10 @@ def info_(command, fps):
     """Reports information about the system."""
 
     command.info(
-        {"version": __version__, "config_file": config.CONFIG_FILE or "internal"},
+        {
+            "version": __version__,
+            "config_file": config.CONFIG_FILE or "internal",
+        },
         concatenate=False,
     )
 

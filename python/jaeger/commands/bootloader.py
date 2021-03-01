@@ -71,7 +71,7 @@ async def load_firmware(
             import progressbar
         except ImportError:
             warnings.warn(
-                "progressbar2 is not installed. " "Cannot show a progress bar.",
+                "progressbar2 is not installed. Cannot show a progress bar.",
                 JaegerUserWarning,
             )
             progressbar = None
@@ -115,7 +115,7 @@ async def load_firmware(
 
     if len(valid_positioners) == 0:
         raise JaegerError(
-            "no positioners found in bootloader mode or " "with valid status."
+            "no positioners found in bootloader mode or with valid status."
         )
         return
 

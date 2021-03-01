@@ -112,17 +112,39 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     type=click.Path(exists=True, dir_okay=False),
     help="Path to the user configuration file.",
 )
-@click.option("-p", "--profile", type=str, help="The bus interface profile.")
-@click.option("-l", "--layout", type=str, help="The FPS layout.")
 @click.option(
-    "-v", "--verbose", count=True, help="Debug mode. Use additional v for more details."
+    "-p",
+    "--profile",
+    type=str,
+    help="The bus interface profile.",
 )
-@click.option("-q", "--quiet", is_flag=True, help="Disable all console logging.")
-@click.option("--ieb/--no-ieb", default=None, help="Does not connect to the IEB.")
+@click.option(
+    "-l",
+    "--layout",
+    type=str,
+    help="The FPS layout.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Debug mode. Use additional v for more details.",
+)
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    help="Disable all console logging.",
+)
+@click.option(
+    "--ieb/--no-ieb",
+    default=None,
+    help="Does not connect to the IEB.",
+)
 @click.option(
     "--danger",
     is_flag=True,
-    help="Enables engineering mode. " "Most safety checks will be disabled.",
+    help="Enables engineering mode. Most safety checks will be disabled.",
 )
 @click.pass_context
 def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
@@ -154,7 +176,11 @@ def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
 
 
 @jaeger.group(cls=DaemonGroup, prog="actor", workdir=os.getcwd())
-@click.option("--no-tron", is_flag=True, help="Does not connect to Tron.")
+@click.option(
+    "--no-tron",
+    is_flag=True,
+    help="Does not connect to Tron.",
+)
 @pass_fps
 @cli_coro
 async def actor(fps_maker, no_tron):
@@ -181,15 +207,28 @@ async def actor(fps_maker, no_tron):
 
 
 @jaeger.command(name="upgrade-firmware")
-@click.argument("firmware-file", nargs=1, type=click.Path(exists=True))
-@click.option(
-    "-f", "--force", is_flag=True, help="Forces skipping of invalid positioners"
+@click.argument(
+    "firmware-file",
+    nargs=1,
+    type=click.Path(exists=True),
 )
 @click.option(
-    "-s", "--positioners", type=str, help="Comma-separated positioners to upgrade"
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Forces skipping of invalid positioners",
 )
 @click.option(
-    "-c", "--cycle", is_flag=True, help="Power cycle positioners before upgrade"
+    "-s",
+    "--positioners",
+    type=str,
+    help="Comma-separated positioners to upgrade",
+)
+@click.option(
+    "-c",
+    "--cycle",
+    is_flag=True,
+    help="Power cycle positioners before upgrade",
 )
 @pass_fps
 @cli_coro
@@ -353,7 +392,7 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
     "-f",
     "--skip-errors",
     is_flag=True,
-    help="If an error occurs, ignores it and " "commands another move.",
+    help="If an error occurs, ignores it and commands another move.",
 )
 @pass_fps
 @cli_coro
@@ -404,7 +443,7 @@ async def demo(
                     return
                 else:
                     warnings.warn(
-                        "an error happened but ignoring it " "because skip-error=True"
+                        "an error happened but ignoring it because skip-error=True"
                     )
                     continue
 

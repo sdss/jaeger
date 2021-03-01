@@ -259,7 +259,7 @@ class FPS(BaseFPS):
 
         if engineering_mode:
             warnings.warn(
-                "Engineering mode enable. " "Please don't break anything.",
+                "Engineering mode enable. Please don't break anything.",
                 JaegerUserWarning,
             )
 
@@ -426,7 +426,7 @@ class FPS(BaseFPS):
             else:
                 command.cancel(silent=True)
                 raise FPSLockedError(
-                    "Solve the problem and unlock the FPS " "before sending commands."
+                    "Solve the problem and unlock the FPS before sending commands."
                 )
 
         elif not self.engineering_mode and command.move_command and self.moving:
@@ -473,7 +473,7 @@ class FPS(BaseFPS):
 
         if command.positioner_id not in self.positioner_to_bus:
             raise JaegerError(
-                f"Positioner {command.positioner_id} " "has no assigned bus."
+                f"Positioner {command.positioner_id} has no assigned bus."
             )
             command.finish_command(command.status.FAILED)
             return
@@ -578,7 +578,7 @@ class FPS(BaseFPS):
         if get_firmware_command.status.failed:
             if not self.engineering_mode:
                 raise JaegerError(
-                    "Failed retrieving firmware version. " "Cannot initialise FPS."
+                    "Failed retrieving firmware version. Cannot initialise FPS."
                 )
             else:
                 warnings.warn(
@@ -610,7 +610,7 @@ class FPS(BaseFPS):
 
         if len(set([pos.firmware for pos in self.values()])) > 1:
             warnings.warn(
-                "Positioners with different firmware " "versions found.",
+                "Positioners with different firmware versions found.",
                 JaegerUserWarning,
             )
 
@@ -663,7 +663,7 @@ class FPS(BaseFPS):
         if self.locked:
             log.info("FPS is locked. Trying to unlock it.")
             if not await self.unlock():
-                raise JaegerError("FPS cannot be unlocked. " "Initialisation failed.")
+                raise JaegerError("FPS cannot be unlocked. Initialisation failed.")
             else:
                 log.info("FPS unlocked successfully.")
 
@@ -949,7 +949,7 @@ class FPS(BaseFPS):
 
         if any([isinstance(rr, FPSLockedError) for rr in results]):
             raise FPSLockedError(
-                "One or more of the commands failed " "because the FPS is locked."
+                "One or more of the commands failed because the FPS is locked."
             )
 
         return commands
