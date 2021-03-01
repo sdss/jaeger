@@ -14,8 +14,6 @@ import time
 import warnings
 import zlib
 
-from typing import Any
-
 import numpy
 
 from jaeger import log
