@@ -6,6 +6,7 @@ Changelog
 
 * :support:`96` Discontinue the use of ``sdsscore``. Improved the handling of user configuration files.
 * :support:`95` Support Python 3.9.
+* :feature:`85` Raise error if sending a bootloader command while not in bootloader mode.
 
 * :release:`0.6.0 <2020-10-15>`
 * :bug:`-` Do not pass context to actor commands.

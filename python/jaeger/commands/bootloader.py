@@ -213,6 +213,7 @@ class GetFirmwareVersion(Command):
     command_id = CommandID.GET_FIRMWARE_VERSION
     broadcastable = True
     safe = True
+    bootloader = True
 
     def get_firmware(self, positioner_id=None):
         """Returns the firmware version string.
@@ -276,6 +277,7 @@ class StartFirmwareUpgrade(Command):
     command_id = CommandID.START_FIRMWARE_UPGRADE
     broadcastable = False
     safe = True
+    bootloader = True
 
 
 class SendFirmwareData(Command):
@@ -283,3 +285,4 @@ class SendFirmwareData(Command):
     command_id = CommandID.SEND_FIRMWARE_DATA
     broadcastable = False
     safe = True
+    bootloader = True

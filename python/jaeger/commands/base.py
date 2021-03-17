@@ -216,6 +216,8 @@ class Command(StatusMixIn, asyncio.Future):
     safe = False
     #: Whether this command produces a positioner move.
     move_command = False
+    #: Whether the command is safe to be issues in bootloader mode.
+    bootloader = False
 
     def __init__(
         self,
