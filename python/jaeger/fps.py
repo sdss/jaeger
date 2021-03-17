@@ -10,6 +10,7 @@ import asyncio
 import os
 import pathlib
 import warnings
+from contextlib import suppress
 
 from typing import Union, cast
 
@@ -350,6 +351,11 @@ class FPS(BaseFPS):
                 reply.message.bus,
             )
 
+    def is_bootloader(self):
+        """Returns `True` if any positioner is in bootloader mode."""
+
+        return any([pos.is_bootloader() is not False for pos in self.positioners])
+
     def send_command(
         self,
         command,
@@ -415,6 +421,19 @@ class FPS(BaseFPS):
             command = CommandClass(
                 positioner_id=positioner_id, loop=self.loop, data=data, **kwargs
             )
+
+        if positioner_id != 0 and positioner_id not in self.positioners:
+            raise JaegerError(f"Positioner {positioner_id} is not connected.")
+
+        # Check if we are in bootloader mode.
+        if (broadcast and self.is_bootloader()) or self[
+            positioner_id
+        ].is_bootloader() is not False:
+            if not command.bootloader:
+                raise JaegerError(
+                    f"Cannot send command {command.command_id.name!r} "
+                    "while in bootloader mode."
+                )
 
         command_name = command.name
         command_uid = command.command_uid
@@ -940,17 +959,21 @@ class FPS(BaseFPS):
         else:
             commands = [
                 self.send_command(
-                    command, positioner_id=positioner_id, data=data[ii], **kwargs
+                    command,
+                    positioner_id=positioner_id,
+                    data=data[ii],
+                    **kwargs,
                 )
                 for ii, positioner_id in enumerate(positioners)
             ]
-
-        results = await asyncio.gather(*commands, return_exceptions=True)
-
-        if any([isinstance(rr, FPSLockedError) for rr in results]):
-            raise FPSLockedError(
-                "One or more of the commands failed because the FPS is locked."
-            )
+        try:
+            await asyncio.gather(*commands)
+        except (JaegerError, FPSLockedError):
+            for command in commands:
+                command.cancel()
+                with suppress(asyncio.CancelledError):
+                    await command
+            raise
 
         return commands
 
