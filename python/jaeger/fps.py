@@ -354,7 +354,7 @@ class FPS(BaseFPS):
     def is_bootloader(self):
         """Returns `True` if any positioner is in bootloader mode."""
 
-        return any([pos.is_bootloader() is not False for pos in self.positioners])
+        return any([pos.is_bootloader() is not False for pos in self.values()])
 
     def send_command(
         self,
@@ -426,9 +426,9 @@ class FPS(BaseFPS):
             raise JaegerError(f"Positioner {positioner_id} is not connected.")
 
         # Check if we are in bootloader mode.
-        if (broadcast and self.is_bootloader()) or self[
-            positioner_id
-        ].is_bootloader() is not False:
+        if (broadcast and self.is_bootloader()) or (
+            not broadcast and self[positioner_id].is_bootloader() is not False
+        ):
             if not command.bootloader:
                 raise JaegerError(
                     f"Cannot send command {command.command_id.name!r} "
