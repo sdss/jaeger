@@ -22,6 +22,7 @@ class GetID(Command):
     broadcastable = True
     timeout = 1
     safe = True
+    bootloader = True
 
     def get_ids(self):
         """Returns a list of positioners that replied back."""
@@ -35,6 +36,7 @@ class GetStatus(Command):
     command_id = CommandID.GET_STATUS
     broadcastable = True
     safe = True
+    bootloader = True
 
     def get_positioner_status(self):
         """Returns the positioner status flag for each reply."""
