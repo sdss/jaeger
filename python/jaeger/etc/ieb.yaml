@@ -1,0 +1,313 @@
+address: sdss-fps-ieb
+port: 502
+modules:
+    RTD:
+        model: 750-450
+        mode: input
+        channels: 12
+        address: 40021
+        description: Pt RTD sensors (Three 4-channel cards)
+        devices:
+            RTD1:
+                channel: 0
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD2:
+                channel: 1
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD3:
+                channel: 2
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD4:
+                channel: 3
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD5:
+                channel: 4
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD6:
+                channel: 5
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD7:
+                channel: 6
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD8:
+                channel: 7
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD9:
+                channel: 8
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD10:
+                channel: 9
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD11:
+                channel: 10
+                category: temperature
+                adaptor: rtd10
+                units: degC
+            RTD12:
+                channel: 11
+                category: temperature
+                adaptor: rtd10
+                units: degC
+    Dwyer:
+        model: 750-497
+        mode: input
+        channels: 8
+        address: 40005
+        description: Temperature, humidity, and flow sensors
+        devices:
+            RH1:
+                channel: 0
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+            T1:
+                channel: 1
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+            RH2:
+                channel: 2
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+            T2:
+                channel: 3
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+            RH3:
+                channel: 4
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+            T3:
+                channel: 5
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+    Voltage:
+        model: 750-497
+        mode: input
+        channels: 8
+        address: 40013
+        description: Positioner voltage measurement
+        devices:
+            V1:
+                channel: 0
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32760]
+                units: V
+                description: 24V DC sextant 1
+            V2:
+                channel: 1
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32760]
+                units: V
+                description: 24V DC sextant 2
+            V3:
+                channel: 2
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32760]
+                units: V
+                description: 24V DC sextant 3
+            V4:
+                channel: 3
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32760]
+                units: V
+                description: 24V DC sextant 4
+            V5:
+                channel: 4
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32760]
+                units: V
+                description: 24V DC sextant 5
+            V6:
+                channel: 5
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32760]
+                units: V
+                description: 24V DC sextant 6
+    DO:
+        model: 750-530
+        mode: output
+        channels: 32
+        address: 40517
+        description: Relays for AC power switching (Cards 1-4)
+        devices:
+            PS1:
+                channel: 0
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 1
+            PS2:
+                channel: 1
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 2
+            PS3:
+                channel: 2
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 3
+            PS4:
+                channel: 3
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 4
+            PS5:
+                channel: 4
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 5
+            PS6:
+                channel: 5
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 6
+            CM1:
+                channel: 6
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 1
+            CM2:
+                channel: 7
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 2
+            CM3:
+                channel: 8
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 3
+            CM4:
+                channel: 9
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 4
+            CM5:
+                channel: 10
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 5
+            CM6:
+                channel: 11
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 6
+            Sync:
+                channel: 12
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Sync line
+            GFA1:
+                channel: 13
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 1
+            GFA2:
+                channel: 14
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 2
+            GFA3:
+                channel: 15
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 3
+            GFA4:
+                channel: 16
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 4
+            GFA5:
+                channel: 17
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 5
+            GFA6:
+                channel: 18
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 6
+            NUC1:
+                channel: 19
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 1
+            NUC2:
+                channel: 20
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 2
+            NUC3:
+                channel: 21
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 3
+            NUC4:
+                channel: 22
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 4
+            NUC5:
+                channel: 23
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 5
+            NUC6:
+                channel: 24
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 6
