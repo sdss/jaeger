@@ -288,7 +288,11 @@ async def calibrate(fps_maker, positioner_id, motors, datums, cogging):
     async with fps_maker as fps:
         await fps.initialise(start_pollers=False)
         await calibrate_positioner(
-            fps, positioner_id, motors=motors, datums=datums, cogging=cogging
+            fps,
+            positioner_id,
+            motors=motors,
+            datums=datums,
+            cogging=cogging,
         )
 
 

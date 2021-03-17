@@ -63,7 +63,8 @@ class IEB(Drift):
         except DriftError:
             self.disabled = True
             warnings.warn(
-                "Failed connecting to the IEB. Disabling it.", JaegerUserWarning
+                "Failed connecting to the IEB. Disabling it.",
+                JaegerUserWarning,
             )
 
     async def __aexit__(self, *args):
@@ -419,7 +420,10 @@ class FPS(BaseFPS):
             CommandClass = command_flag.get_command_class()
 
             command = CommandClass(
-                positioner_id=positioner_id, loop=self.loop, data=data, **kwargs
+                positioner_id=positioner_id,
+                loop=self.loop,
+                data=data,
+                **kwargs,
             )
 
         if positioner_id != 0 and positioner_id not in self.positioners:
@@ -796,7 +800,9 @@ class FPS(BaseFPS):
                 return True
 
         commands_all = self.send_to_all(
-            CommandID.GET_ACTUAL_POSITION, positioners=positioner_ids, timeout=timeout
+            CommandID.GET_ACTUAL_POSITION,
+            positioners=positioner_ids,
+            timeout=timeout,
         )
 
         commands = await commands_all
@@ -900,10 +906,17 @@ class FPS(BaseFPS):
             if positioners == []:
                 return
 
-        await self.send_to_all("TRAJECTORY_TRANSMISSION_ABORT", positioners=positioners)
+        await self.send_to_all(
+            "TRAJECTORY_TRANSMISSION_ABORT",
+            positioners=positioners,
+        )
 
         if clear_flags:
-            await self.send_command("STOP_TRAJECTORY", positioner_id=0, timeout=timeout)
+            await self.send_command(
+                "STOP_TRAJECTORY",
+                positioner_id=0,
+                timeout=timeout,
+            )
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.
