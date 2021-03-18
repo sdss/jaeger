@@ -16,12 +16,12 @@ profiles:
     cannet:
         interface: cannet
         channels:
-        - sdss-cannet-1
-        - sdss-cannet-2
-        - sdss-cannet-3
-        - sdss-cannet-4
-        - sdss-cannet-5
-        - sdss-cannet-6
+            - sdss-cannet-1
+            - sdss-cannet-2
+            - sdss-cannet-3
+            - sdss-cannet-4
+            - sdss-cannet-5
+            - sdss-cannet-6
         port: 19228
         buses: [1, 2, 3, 4]
         bitrate: 1000000
@@ -35,7 +35,7 @@ profiles:
         channel: test1
 
 fps:
-    default_layout: filled_hex
+    default_layout: etc/fps_RTConfig.txt
     initialise_timeouts: 0.5
     status_poller_delay: 5
     position_poller_delay: 5
@@ -45,11 +45,9 @@ positioner:
     motor_speed: 3000
     initialise_datums_timeout: 300
     reduction_ratio: 1024
-    uid_bits: 6 # Bits available for the message UID.
-    trajectory_data_n_points:
-        3 # How many points from the trajectory to
-        # put in each SEND_TRAJECTORY_DATA command.
-    motor_steps: 1073741824 # 2^30
+    uid_bits: 6
+    trajectory_data_n_points: 3
+    motor_steps: 1073741824
     time_step: 0.0005
 
 files:
