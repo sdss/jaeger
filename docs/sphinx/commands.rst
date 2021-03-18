@@ -27,10 +27,6 @@ List of commands
     :exclude-members:
     :undoc-members:
 
-.. autoclass:: jaeger.commands.InitialiseDatums
-    :exclude-members:
-    :undoc-members:
-
 .. autoclass:: jaeger.commands.GotoAbsolutePosition
     :exclude-members:
     :undoc-members:

@@ -123,6 +123,8 @@ intersphinx_mapping = {
 # 'matplotlib': ('https://matplotlib.org/', None),
 # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None)}
 
+# autodoc_typehints = "description"
+
 autodoc_mock_imports = ["_tkinter"]
 autodoc_member_order = "groupwise"
 autodoc_default_options = {"members": None, "show-inheritance": None}
