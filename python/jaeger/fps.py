@@ -6,15 +6,18 @@
 # @Filename: fps.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import os
 import pathlib
 import warnings
 from contextlib import suppress
 
-from typing import Union, cast
+from typing import Any, Optional, Type, Union
 
 import numpy
+from can import BusABC
 
 from drift import Drift, DriftError
 
@@ -29,12 +32,6 @@ from jaeger.exceptions import (
 )
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int
-
-
-# try:
-#     from sdssdb.peewee.sdss5db import targetdb
-# except ImportError:
-#     targetdb = False
 
 
 __all__ = ["BaseFPS", "FPS", "IEB"]
@@ -81,19 +78,21 @@ class BaseFPS(dict):
 
     Parameters
     ----------
-    layout : str
-        The layout describing the position of the robots on the focal plane.
-        If `None`, the default layout will be used. Can be either a layout name
-        to be recovered from the database, or a file path to the layout
-        configuration.
-    positioner_class : class
+    layout
+        The path to the layout describing the position of the robots on the focal
+        plane.
+    positioner_class
         The class to be used to create a new positioner. In principle this will
         be `.Positioner` but it may be different if the positioners are created
         for a `~jaeger.testing.VirtualFPS`.
 
     """
 
-    def __init__(self, layout=None, positioner_class=Positioner):
+    def __init__(
+        self,
+        layout: Optional[str | pathlib.Path] = None,
+        positioner_class: Type[Any] = Positioner,
+    ):
 
         self._class_name = self.__class__.__name__
 
@@ -117,22 +116,19 @@ class BaseFPS(dict):
 
         return self
 
-    def _load_layout(self, layout):
+    def _load_layout(self, layout: str | pathlib.Path):
         """Loads positioner information from a layout file or DB.
 
         Parameters
         ----------
-        layout : `str` or `pathlib.Path`
-            Either the path to a layout file or a string with the layout name
-            to be retrieved from the database. If ``layout=None``, retrieves
-            the default layout as defined in the config from the DB. If
-            no DB is present and no layout file is provided, loads an empty
+        layout
+            The path to a layout file. If ``layout=None``, loads an empty
             layout to which connected positioners will be added but without
             spatial information.
 
         """
 
-        if isinstance(layout, pathlib.Path) or os.path.exists(layout):
+        if isinstance(layout, (str, pathlib.Path)) and os.path.exists(layout):
 
             log.info(f"{self._class_name}: reading layout from file {layout!s}.")
 
@@ -160,34 +156,10 @@ class BaseFPS(dict):
 
             n_pos = len(self.positioners)
 
-        # elif targetdb and targetdb.database.connected:
-
-        #     log.info(f'{self._class_name}: reading profile {layout!r} from database.')
-
-        #     if not targetdb.database.connected:
-        #         targetdb.database.connect()
-        #     assert targetdb.database.connected, \
-        #         f'{self._class_name}: database is not connected.'
-
-        #     positioners_db = targetdb.Actuator.select().join(
-        #         targetdb.FPSLayout).switch(targetdb.Actuator).join(
-        #             targetdb.ActuatorType).filter(
-        #                 targetdb.FPSLayout.label == layout,
-        #                 targetdb.ActuatorType.label == 'Robot')
-
-        #     for pos in positioners_db:
-        #         self.add_positioner(pos.id, centre=(pos.xcen, pos.ycen))
-
-        #     n_pos = positioners_db.count()
-
         else:
 
             n_pos = 0
-            warnings.warn(
-                f"cannot retrieve layout {layout!r} from the database. "
-                "targetdb may be down. Loading an empty FPS.",
-                JaegerUserWarning,
-            )
+            warnings.warn("Loading an empty FPS.", JaegerUserWarning)
 
         log.debug(f"{self._class_name}: loaded positions for {n_pos} positioners.")
 
@@ -209,27 +181,31 @@ class BaseFPS(dict):
         )
 
 
+IEBArg = Union[bool, IEB, dict, None, str, pathlib.Path]
+
+
 class FPS(BaseFPS):
     """A class describing the Focal Plane System.
 
     Parameters
     ----------
-    can : `.JaegerCAN` instance
+    can
         The CAN bus to use.
-    layout : str
-        The layout describing the position of the robots on the focal plane.
-        If `None`, the default layout will be used. Can be either a layout name
-        to be recovered from the database, or a file path to the layout
-        configuration.
-    can_profile : str or None
+    layout
+        The file path to the layout describing the position of the robots on
+        the focal plane. If `None`, the default layout will be used.
+    can_profile
         The configuration profile for the CAN interface, or `None` to use the
         default one. Ignored if ``can`` is passed.
-    ieb : bool or .IEB instance
-        If `True`, connects the Instrument Electronics Box PLC controller.
-    loop : event loop or `None`
+    ieb
+        If `True` or `None`, connects the Instrument Electronics Box PLC controller
+        using the path to the IEB configuration file stored in jaeger's configuration.
+        Can also be an `.IEB` instance, the path to a custom configuration file used
+        to load one, or a dictionary with the configuration itself.
+    loop
         The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
         get a valid loop.
-    engineering_mode : bool
+    engineering_mode
         If `True`, disables most safety checks to enable debugging. This may
         result in hardware damage so it must not be used lightly.
 
@@ -251,12 +227,12 @@ class FPS(BaseFPS):
 
     def __init__(
         self,
-        can=None,
-        layout=None,
-        can_profile=None,
-        ieb=None,
-        loop=None,
-        engineering_mode=False,
+        can: Optional[str] = None,
+        layout: Optional[str] = None,
+        can_profile: Optional[str] = None,
+        ieb: IEBArg = True,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        engineering_mode: bool = False,
     ):
 
         # Start file logger
@@ -276,8 +252,8 @@ class FPS(BaseFPS):
         self.loop = loop or asyncio.get_event_loop()
         self.loop.set_exception_handler(log.asyncio_exception_handler)
 
-        #: dict: The mapping between positioners and buses.
-        self.positioner_to_bus = {}
+        #: The mapping between positioners and buses.
+        self.positioner_to_bus: dict[int, tuple[BusABC, int | None]] = {}
 
         if isinstance(can, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
@@ -291,27 +267,27 @@ class FPS(BaseFPS):
         self._locked = False
 
         #: .IEB: Connection to the instrument electronics box over Modbus.
-        self.ieb: Union[IEB, bool] = False
+        self.ieb: IEB | None = None
 
         if ieb is None or ieb is True:
             ieb = config["fps"]["ieb"]
 
-        if isinstance(ieb, IEB):
-            self.ieb = ieb
+        if isinstance(self.ieb, IEB):
+            pass
         elif isinstance(ieb, (str, dict)):
             if isinstance(ieb, str):
                 ieb = os.path.expanduser(os.path.expandvars(ieb))
                 if not os.path.isabs(ieb):
                     ieb = os.path.join(os.path.dirname(__file__), ieb)
             try:
-                self.ieb = cast(IEB, IEB.from_config(ieb))
+                self.ieb = IEB.from_config(ieb)
             except FileNotFoundError:
                 warnings.warn(
-                    f"IEB configuration file {ieb} not found.",
+                    f"IEB configuration file {ieb} cannot be loaded.",
                     JaegerUserWarning,
                 )
         elif ieb is False:
-            self.ieb = False
+            self.ieb = None
         else:
             raise ValueError(f"Invalid input value for ieb {ieb!r}.")
 
