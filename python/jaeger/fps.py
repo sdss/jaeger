@@ -145,13 +145,18 @@ class BaseFPS(dict):
                     ("x", float),
                     ("y", float),
                     ("type", "U10"),
+                    ("sextant", int),
                 ],
             )
 
             for row in data:
                 if row["type"].lower() == "fiducial":
                     continue
-                self.add_positioner(row["id"], centre=(row["x"], row["y"]))
+                self.add_positioner(
+                    row["id"],
+                    centre=(row["x"], row["y"]),
+                    sextant=row["sextant"],
+                )
 
             n_pos = len(self.positioners)
 
@@ -186,7 +191,7 @@ class BaseFPS(dict):
 
         log.debug(f"{self._class_name}: loaded positions for {n_pos} positioners.")
 
-    def add_positioner(self, positioner_id, centre=(None, None)):
+    def add_positioner(self, positioner_id, centre=(None, None), sextant=None):
         """Adds a new positioner to the list, and checks for duplicates."""
 
         if positioner_id in self.positioners:
@@ -197,7 +202,10 @@ class BaseFPS(dict):
             )
 
         self.positioners[positioner_id] = self._positioner_class(
-            positioner_id, self, centre=centre
+            positioner_id,
+            self,
+            centre=centre,
+            sextant=sextant,
         )
 
 
