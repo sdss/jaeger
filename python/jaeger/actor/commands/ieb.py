@@ -130,7 +130,7 @@ async def switch(command, fps, device, on, cycle):
     return command.finish(text=f"device {dev_name!r} is now {status!r}.")
 
 
-async def _power_sequence(command, ieb, seq, mode="on") -> bool:
+async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
     """Applies the power on/off sequence."""
 
     relay_result = "closed" if mode == "on" else "open"
@@ -143,7 +143,7 @@ async def _power_sequence(command, ieb, seq, mode="on") -> bool:
         command.debug(text="SYNC line is high. Opening it.")
         await sync.open()  # type: ignore
 
-    if not (await sync.read())[0] == "open":
+    if (await sync.read())[0] != "open":
         command.fail(error="Failed opening SYNC line.")
         return False
 
@@ -194,6 +194,8 @@ async def _power_sequence(command, ieb, seq, mode="on") -> bool:
         else:
             command.fail(error=f"Invalid relay {devname!r}.")
             return False
+
+        await asyncio.sleep(delay)
 
     return True
 
