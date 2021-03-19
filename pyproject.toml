@@ -77,11 +77,6 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
-filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore:.+unknown positioners.+",
-    "ignore:.+from the database.+"
-]
 
 [tool.coverage.run]
 branch = true

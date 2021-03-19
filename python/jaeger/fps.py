@@ -23,7 +23,7 @@ from drift import Drift, DriftError
 
 from jaeger import config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
-from jaeger.commands import Command, CommandID, send_trajectory
+from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
 from jaeger.exceptions import (
     FPSLockedError,
     JaegerError,
@@ -343,54 +343,54 @@ class FPS(BaseFPS):
 
     def send_command(
         self,
-        command,
-        positioner_id=0,
-        data=[],
-        interface=None,
-        bus=None,
-        broadcast=False,
-        override=False,
-        safe=False,
-        synchronous=False,
+        command: str | int | CommandID | Command,
+        positioner_id: int = 0,
+        data: bytearray = bytearray([]),
+        interface: Optional[BusABC] = None,
+        bus: Optional[int] = None,
+        broadcast: bool = False,
+        override: bool = False,
+        safe: bool = False,
+        synchronous: bool = False,
         **kwargs,
-    ):
+    ) -> Command:
         """Sends a command to the bus.
 
         Parameters
         ----------
-        command : str, int, .CommandID, or .Command
+        command
             The ID of the command, either as the integer value, a string,
             or the `.CommandID` flag. Alternatively, the `.Command` to send.
-        positioner_id : int
+        positioner_id
             The positioner ID to command, or zero for broadcast.
-        data : bytearray
+        data
             The bytes to send.
-        interface : int
+        interface
             The index in the interface list for the interface to use. Only
             relevant in case of a multibus interface. If `None`, the positioner
             to bus map will be used.
-        bus : int
+        bus
             The bus within the interface to be used. Only relevant in case of
             a multibus interface. If `None`, the positioner to bus map will
             be used.
-        broadcast : bool
+        broadcast
             If `True`, sends the command to all the buses.
-        override : bool
+        override
             If another instance of this command_id with the same positioner_id
             is running, cancels it and schedules this one immediately.
             Otherwise the command is queued until the first one finishes.
-        safe : bool
+        safe
             Whether the command is safe to send to a locked `.FPS`.
-        synchronous : bool
+        synchronous
             If `True`, the command is sent to the CAN network immediately,
             skipping the command queue. No tracking is done for this command.
             It should only be used for shutdown commands.
-        kwargs : dict
+        kwargs
             Extra arguments to be passed to the command.
 
         Returns
         -------
-        command : `.Command`
+        command
             The command sent to the bus. The command needs to be awaited
             before it is considered done.
 
@@ -409,6 +409,8 @@ class FPS(BaseFPS):
                 data=data,
                 **kwargs,
             )
+
+        assert isinstance(command, Command)
 
         if positioner_id != 0 and positioner_id not in self.positioners:
             raise JaegerError(f"Positioner {positioner_id} is not connected.")
@@ -466,7 +468,12 @@ class FPS(BaseFPS):
 
         return command
 
-    def set_interface(self, command, interface=None, bus=None):
+    def set_interface(
+        self,
+        command: Command,
+        interface: Optional[BusABC] = None,
+        bus: Optional[int] = None,
+    ):
         """Sets the interface and bus to which to send a command."""
 
         # Don't do anything if the interface is not multibus
@@ -498,12 +505,12 @@ class FPS(BaseFPS):
 
         return self._locked
 
-    async def lock(self, stop_trajectories=True):
+    async def lock(self, stop_trajectories: bool = True):
         """Locks the `.FPS` and prevents commands to be sent.
 
         Parameters
         ----------
-        stop_trajectories : bool
+        stop_trajectories
             Whether to stop trajectories when locking.
 
         """
@@ -539,14 +546,16 @@ class FPS(BaseFPS):
             [pos.moving for pos in self.values() if pos.status != pos.flags.UNKNOWN]
         )
 
-    async def initialise(self, allow_unknown=True, start_pollers=True):
+    async def initialise(self, allow_unknown: bool = True, start_pollers: bool = True):
         """Initialises all positioners with status and firmware version.
 
         Parameters
         ----------
-        allow_unknown : bool
+        allow_unknown
             If `True`, allows to add positioners that are connected but not
             in the layout.
+        start_pollers
+            Whether to initialise the pollers.
 
         """
 
@@ -580,6 +589,7 @@ class FPS(BaseFPS):
             n_positioners=n_expected_positioners,
         )
 
+        assert isinstance(get_firmware_command, GetFirmwareVersion)
         await get_firmware_command
 
         if get_firmware_command.status.failed:
@@ -700,17 +710,19 @@ class FPS(BaseFPS):
 
         return self
 
-    async def update_status(self, positioner_ids=None, timeout=1):
+    async def update_status(
+        self,
+        positioner_ids: Optional[list[int]] = None,
+        timeout: float = 1,
+    ) -> bool:
         """Update statuses for all positioners.
 
         Parameters
         ----------
-        positioner_ids : list
+        positioner_ids
             The list of positioners to update. If `None`, update all
-            positioners. ``positioner_ids=False`` ignores currently
-            connected positioners and times out to receive all possible
-            replies.
-        timeout : float
+            positioners.
+        timeout
             How long to wait before timing out the command.
 
         """
@@ -759,15 +771,19 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_position(self, positioner_ids=None, timeout=1):
+    async def update_position(
+        self,
+        positioner_ids: Optional[list[int]] = None,
+        timeout: float = 1,
+    ) -> bool:
         """Updates positions.
 
         Parameters
         ----------
-        positioner_ids : list
+        positioner_ids
             The list of positioners to update. If `None`, update all
             positioners.
-        timeout : float
+        timeout
             How long to wait before timing out the command.
 
         """
@@ -818,17 +834,21 @@ class FPS(BaseFPS):
 
         return True
 
-    async def update_firmware_version(self, positioner_ids=None, timeout=2):
+    async def update_firmware_version(
+        self,
+        positioner_ids: Optional[list[int]] = None,
+        timeout: float = 2,
+    ) -> bool:
         """Updates the firmware version of connected positioners.
 
         Parameters
         ----------
-        positioner_ids : list
+        positioner_ids
             The list of positioners to update. If `None`, update all
             positioners. ``positioner_ids=False`` ignores currently
             connected positioners and times out to receive all possible
             replies.
-        timeout : float
+        timeout
             How long to wait before timing out the command.
 
         """
@@ -847,6 +867,7 @@ class FPS(BaseFPS):
             n_positioners=n_positioners,
         )
 
+        assert isinstance(get_firmware_command, GetFirmwareVersion)
         await get_firmware_command
 
         if get_firmware_command.status.failed:
@@ -864,18 +885,23 @@ class FPS(BaseFPS):
 
         return True
 
-    async def stop_trajectory(self, positioners=None, clear_flags=True, timeout=0):
+    async def stop_trajectory(
+        self,
+        positioners: Optional[list[int]] = None,
+        clear_flags: bool = True,
+        timeout: float = 0,
+    ):
         """Stops all the positioners.
 
         Parameters
         ----------
-        positioners : list
+        positioners
             The list of positioners to abort. If `None`, abort all positioners.
-        clear_flags : bool
+        clear_flags
             If `True`, in addition to sending ``TRAJECTORY_TRANSMISSION_ABORT``
             sends ``STOP_TRAJECTORY`` which clears all the collision and
             warning flags.
-        timeout : float
+        timeout
             How long to wait before timing out the command. By default, just
             sends the command and does not wait for replies.
 
@@ -920,28 +946,34 @@ class FPS(BaseFPS):
         cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_id=0)
         return asyncio.create_task(cmd)
 
-    async def send_to_all(self, command, positioners=None, data=None, **kwargs):
+    async def send_to_all(
+        self,
+        command: str | int | CommandID | Command,
+        positioners: Optional[list[int]] = None,
+        data: Optional[list[bytearray]] = None,
+        **kwargs,
+    ) -> list[Command]:
         """Sends a command to multiple positioners and awaits completion.
 
         Parameters
         ----------
-        command : str, int, .CommandID or .Command
+        command
             The ID of the command, either as the integer value, a string,
             or the `.CommandID` flag. Alternatively, the `.Command` to send.
-        positioners : list
+        positioners
             The list of ``positioner_id`` of the positioners to command. If
             `None`, sends the command to all the positioners in the FPS.
-        data : list
+        data
             The payload to send. If `None`, no payload is sent. If the value
             is a list with a single value, the same payload is sent to all
             the positioners. Otherwise the list length must match the number
             of positioners.
-        kwargs : dict
+        kwargs
             Keyword argument to pass to the command.
 
         Returns
         -------
-        commands : `list`
+        commands
             A list with the command instances executed.
 
         """
@@ -974,7 +1006,7 @@ class FPS(BaseFPS):
 
         return commands
 
-    def report_status(self):
+    def report_status(self) -> dict[int, dict[str, Any]]:
         """Returns a dict with the position and status of each positioner."""
 
         assert isinstance(self.can, CANnetInterface)
