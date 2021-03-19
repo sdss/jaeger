@@ -6,12 +6,15 @@
 # @Filename: helpers.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
+import enum
 from concurrent.futures import Executor
 from contextlib import suppress
 from threading import Thread
 
-from typing import Optional
+from typing import Callable, Generic, Optional, Type, TypeVar
 
 
 __all__ = ["AsyncQueue", "StatusMixIn", "PollerList", "Poller", "AsyncioExecutor"]
@@ -46,7 +49,10 @@ class AsyncQueue(asyncio.Queue):
         self.watcher = loop.create_task(process_queue(loop))
 
 
-class StatusMixIn(object):
+Status_co = TypeVar("Status_co", bound=enum.Enum)
+
+
+class StatusMixIn(Generic[Status_co]):
     """A mixin that provides status tracking with callbacks.
 
     Provides a status property that executes a list of callbacks when
@@ -54,25 +60,29 @@ class StatusMixIn(object):
 
     Parameters
     ----------
-    maskbit_flags : class
+    maskbit_flags
         A class containing the available statuses as a series of maskbit
         flags. Usually as subclass of `enum.Flag`.
-    initial_status : str
+    initial_status
         The initial status.
-    callback_func : function
+    callback_func
         The function to call if the status changes.
-    call_now : bool
+    call_now
         Whether the callback function should be called when initialising.
 
     Attributes
     ----------
-    callbacks : list
+    callbacks
         A list of the callback functions to call.
 
     """
 
     def __init__(
-        self, maskbit_flags, initial_status=None, callback_func=None, call_now=False
+        self,
+        maskbit_flags: Type[Status_co],
+        initial_status: Optional[Status_co] = None,
+        callback_func: Optional[Callable] = None,
+        call_now: bool = False,
     ):
 
         self._flags = maskbit_flags
@@ -86,12 +96,12 @@ class StatusMixIn(object):
         if call_now is True:
             self.do_callbacks()
 
-    def add_callback(self, cb):
+    def add_callback(self, cb: Callable):
         """Adds a callback."""
 
         self.callbacks.append(cb)
 
-    def remove_callback(self, cb):
+    def remove_callback(self, cb: Callable):
         """Removes a callback."""
 
         self.callbacks.remove(cb)
@@ -107,13 +117,13 @@ class StatusMixIn(object):
             func()
 
     @property
-    def status(self):
+    def status(self) -> Status_co | None:
         """Returns the status."""
 
         return self._status
 
     @status.setter
-    def status(self, value):
+    def status(self, value: Status_co):
         """Sets the status."""
 
         if value != self._status:

@@ -42,7 +42,7 @@ modules:
         address: 40513
         description: "Power relays"
         devices:
-            "24V":
+            "PS1":
                 channel: 0
                 type: relay
                 category: relay
@@ -52,7 +52,7 @@ modules:
                 type: relay
                 category: relay
                 relay_type: NC
-            "CANnet":
+            "CM1":
                 channel: 2
                 type: relay
                 category: relay

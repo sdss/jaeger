@@ -18,6 +18,8 @@ __all__ = [
     "GoToDatumAlpha",
     "GoToDatumBeta",
     "GotoAbsolutePosition",
+    "GotoRelativePosition",
+    "SetActualPosition",
     "SetSpeed",
     "SetCurrent",
 ]

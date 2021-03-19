@@ -228,11 +228,24 @@ async def actor(fps_maker, no_tron):
     "-c",
     "--cycle",
     is_flag=True,
-    help="Power cycle positioners before upgrade",
+    help="Power cycle positioners before upgrade to set them to bootloader mode. "
+    "If --sextant not used, cycles all sextants",
+)
+@click.option(
+    "--sextant",
+    type=int,
+    help="The sextant to power cycle",
 )
 @pass_fps
 @cli_coro
-async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
+async def upgrade_firmware(
+    fps_maker,
+    firmware_file,
+    force,
+    positioners,
+    cycle,
+    sextant,
+):
     """Upgrades the firmaware."""
 
     if positioners is not None:
@@ -242,9 +255,14 @@ async def upgrade_firmware(fps_maker, firmware_file, force, positioners, cycle):
 
         if fps.ieb and cycle:
             log.info("power cycling positioners")
-            await fps.ieb.get_device("24V").open()
+            if sextant:
+                devs = [f"DO.PS{sextant}"]
+            else:
+                devs = [f"DO.PS{s}" for s in range(1, 7)]
+
+            await asyncio.gather(*[fps.ieb.get_device(dev).open() for dev in devs])
             await asyncio.sleep(5)
-            await fps.ieb.get_device("24V").close()
+            await asyncio.gather(*[fps.ieb.get_device(dev).close() for dev in devs])
             await asyncio.sleep(3)
             await fps.initialise()
 

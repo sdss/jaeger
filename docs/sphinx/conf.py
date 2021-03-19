@@ -6,7 +6,7 @@
 # @Filename: conf.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# isort:skip_file
+# type: ignore
 
 import os
 
@@ -122,6 +122,8 @@ intersphinx_mapping = {
 # 'astropy': ('http://docs.astropy.org/en/latest', None),
 # 'matplotlib': ('https://matplotlib.org/', None),
 # 'scipy': ('https://docs.scipy.org/doc/scipy/reference', None)}
+
+# autodoc_typehints = "description"
 
 autodoc_mock_imports = ["_tkinter"]
 autodoc_member_order = "groupwise"

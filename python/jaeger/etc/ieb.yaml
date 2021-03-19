@@ -233,7 +233,7 @@ modules:
                 category: relay
                 relay_type: NC
                 description: 24V power supply for CAN module 6
-            Sync:
+            SYNC:
                 channel: 12
                 type: relay
                 category: relay

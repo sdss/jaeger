@@ -52,6 +52,10 @@ jobs:
         run: |
           poetry run isort -c python/
 
+      - name: Lint with black
+        run: |
+          poetry run black --check .
+
       - name: Test with pytest
         run: |
           poetry run pytest

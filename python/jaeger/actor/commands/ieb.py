@@ -94,7 +94,7 @@ async def switch(command, fps, device, on, cycle):
         return command.fail(text=f"cannot find device {device!r}.")
 
     if device_obj.module.mode != "output":
-        return command.fail(text=f"device {dev_name!r} is not output.")
+        return command.fail(text=f"{dev_name!r} is not a relay.")
 
     if on is None:  # The --on/--off was not passed
         current_status = (await device_obj.read())[0]
@@ -104,7 +104,7 @@ async def switch(command, fps, device, on, cycle):
             on = True
         else:
             return command.fail(
-                text=f"invalid status for device {dev_name!r}: " f"{current_status!r}."
+                text=f"invalid status for device {dev_name!r}: {current_status!r}."
             )
 
     try:
