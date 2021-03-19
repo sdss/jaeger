@@ -10,6 +10,8 @@ import asyncio
 
 import pytest
 
+from drift import Relay
+
 import jaeger
 from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
@@ -90,3 +92,12 @@ async def test_pollers_delay(vfps, vpositioners):
 async def test_shutdown(vfps):
 
     await vfps.shutdown()
+
+
+async def test_ieb(vfps, mocker):
+
+    sync = vfps.ieb.get_device("DO.SYNC")
+    assert isinstance(sync, Relay)
+
+    mocker.patch.object(sync, "read", return_value=("open", None))
+    assert (await sync.read())[0] == "open"

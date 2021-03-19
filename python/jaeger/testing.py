@@ -9,6 +9,7 @@
 import asyncio
 import zlib
 from contextlib import suppress
+from unittest import mock
 
 from can import Message
 from can.interfaces.virtual import VirtualBus
@@ -53,7 +54,13 @@ class VirtualFPS(jaeger.FPS):
 
     def __init__(self, layout=None, **kwargs):
 
-        super().__init__(can_profile="virtual", layout=layout, ieb=False)
+        with mock.patch(
+            "drift.drift.AsyncioModbusTcpClient",
+            autospec=True,
+        ) as modbus_mock:
+            instance = modbus_mock.return_value
+            type(instance).connected = True
+            super().__init__(can_profile="virtual", layout=layout, ieb=True)
 
 
 class VirtualPositioner(StatusMixIn):
