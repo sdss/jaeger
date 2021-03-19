@@ -6,7 +6,7 @@
 # @Filename: conf.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# isort:skip_file
+# type: ignore
 
 import os
 

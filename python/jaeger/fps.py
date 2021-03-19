@@ -827,7 +827,7 @@ class FPS(BaseFPS):
                 update_position_commands.append(self[pid].update_position(position))
             except ValueError as ee:
                 raise JaegerError(
-                    "Failed updating position for " f"positioner {pid}: {ee}"
+                    f"Failed updating position for positioner {pid}: {ee}"
                 )
 
         await asyncio.gather(*update_position_commands)
