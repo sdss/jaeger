@@ -9,7 +9,6 @@
 import asyncio
 import zlib
 from contextlib import suppress
-from unittest import mock
 
 from can import Message
 from can.interfaces.virtual import VirtualBus
