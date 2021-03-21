@@ -13,6 +13,7 @@ import click
 from clu.parser import pass_args
 
 from jaeger.fps import IEB
+from jaeger.testing import VirtualFPS
 
 from . import jaeger_parser
 
@@ -133,6 +134,10 @@ async def switch(command, fps, device, on, cycle):
 async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
     """Applies the power on/off sequence."""
 
+    # To speed up tests
+    if isinstance(command.actor.fps, VirtualFPS):
+        delay = 0.01
+
     relay_result = "closed" if mode == "on" else "open"
 
     command.info(text=f"Running power {mode} sequence")
@@ -170,7 +175,8 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
 
-            for ii, res in enumerate(status.copy()):
+            keep = []
+            for ii, res in enumerate(status):
                 if res[0] == relay_result:
                     command.debug(
                         {
@@ -178,8 +184,11 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
                             devname[ii].lower(): relay_result,
                         }
                     )
-                    devs.pop(ii)
-                    devname.pop(ii)
+                    continue
+                keep.append(ii)
+
+            devs = [devs[ii] for ii in keep]
+            devname = [devname[ii] for ii in keep]
 
             command.debug(text=f"Powering {mode} {', '.join(devname)}")
 
@@ -201,6 +210,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
 
 
 @ieb.group()
+@pass_args()
 def power(command, fps):
     """Runs the power on/off sequences."""
 
