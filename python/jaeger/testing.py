@@ -54,13 +54,7 @@ class VirtualFPS(jaeger.FPS):
 
     def __init__(self, layout=None, **kwargs):
 
-        with mock.patch(
-            "drift.drift.AsyncioModbusTcpClient",
-            autospec=True,
-        ) as modbus_mock:
-            instance = modbus_mock.return_value
-            type(instance).connected = True
-            super().__init__(can_profile="virtual", layout=layout, ieb=True)
+        super().__init__(can_profile="virtual", layout=layout, ieb=True)
 
 
 class VirtualPositioner(StatusMixIn):
