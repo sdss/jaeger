@@ -94,10 +94,9 @@ async def test_shutdown(vfps):
     await vfps.shutdown()
 
 
-async def test_ieb(vfps, mocker):
+async def test_ieb(vfps):
 
     sync = vfps.ieb.get_device("DO.SYNC")
     assert isinstance(sync, Relay)
 
-    mocker.patch.object(sync, "read", return_value=("open", None))
     assert (await sync.read())[0] == "open"
