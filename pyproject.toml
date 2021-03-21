@@ -58,6 +58,7 @@ autopep8 = "^1.5.4"
 black = {version = "^20.8b1", allow-prereleases = true}
 rstcheck = "^3.3.1"
 pytest-mock = "^3.5.1"
+pyserial-asyncio = "^0.5"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
