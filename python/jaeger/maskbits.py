@@ -205,24 +205,23 @@ class BootloaderStatus(Maskbit):
 class ResponseCode(enum.IntFlag):
     """Maskbit for the status of the bootloader.
 
-    0   All OK
-    1   Received parameter is out of range
-    2   Trajectory not accepted
-    3   Already in motion, cannot accept command
-    4   Datum not initialized
-    5   Incorrect amount of data in packet
-    6   One of the calibration modes is active: MOTOR_CALIBRATION,
-        COGGING_CALIBRATION, DATUM_CALIBRATION, DATUM _INITIALIZATION
-    7   The motors are not calibrated and therefore
-        the hall sensors can't be used
-    8   A collision is detected, the flag has to be first cleared
-        with stop trajectory
-    9   Hall sensors are disabled and can therefore not be used
-    10  Broadcast command not valid
-    11  Command not supported by bootloader
-    12  Invalid command
-    13  Unknown command
-    14  Datum not calibrated
+    - 0: All OK
+    - 1: Received parameter is out of range
+    - 2: Trajectory not accepted
+    - 3: Already in motion, cannot accept command
+    - 4: Datum not initialized
+    - 5: Incorrect amount of data in packet
+    - 6: One of the calibration modes is active: ``MOTOR_CALIBRATION``,
+      ``COGGING_CALIBRATION``, ``DATUM_CALIBRATION``, ``DATUM _INITIALIZATION``
+    - 7: The motors are not calibrated and therefore the hall sensors can't be used
+    - 8: A collision is detected, the flag has to be first cleared with stop trajectory
+    - 9: Hall sensors are disabled and can therefore not be used
+    - 10: Broadcast command not valid
+    - 11: Command not supported by bootloader
+    - 12: Invalid command
+    - 13: Unknown command
+    - 14: Datum not calibrated
+    - 15: Halls sensors have been disabled
 
     """
 

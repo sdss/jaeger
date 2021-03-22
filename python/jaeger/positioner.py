@@ -6,12 +6,17 @@
 # @Filename: positioner.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from distutils.version import StrictVersion
 
+from typing import Optional
+
 import numpy.testing
 
+import jaeger
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
 from jaeger.exceptions import JaegerError, PositionerError
@@ -26,23 +31,32 @@ class Positioner(StatusMixIn):
 
     Parameters
     ----------
-    positioner_id : int
+    positioner_id
         The ID of the positioner
-    fps : `~jaeger.fps.FPS`
+    fps
         The `~jaeger.fps.FPS` instance to which this positioner is linked to.
-    centre : tuple
+    centre
         The :math:`(x_{\rm focal}, y_{\rm focal})` coordinates of the
         central axis of the positioner.
+    sextant
+        The id of the sextant to which this positioner is connected.
 
     """
 
-    def __init__(self, positioner_id, fps, centre=(None, None)):
+    def __init__(
+        self,
+        positioner_id: int,
+        fps: jaeger.FPS,
+        centre: tuple[Optional[float], Optional[float]] = (None, None),
+        sextant: Optional[int] = None,
+    ):
 
         self.fps = fps
 
         self.positioner_id = positioner_id
 
         self.centre = centre
+        self.sextant = sextant
 
         self.alpha = None
         self.beta = None

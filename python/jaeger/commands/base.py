@@ -6,13 +6,15 @@
 # @Filename: base.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import binascii
 import collections
 import logging
 import time
 
-from typing import List
+from typing import Callable, List, Optional
 
 import can
 
@@ -45,27 +47,27 @@ class Message(can.Message):
 
     Parameters
     ----------
-    command : `.Command`
+    command
         The command associated with this message.
-    data : list or bytearray
+    data
         Payload to pass to `can.Message`.
-    positioner_id : int
+    positioner_id
         The positioner to which the message will be sent (0 for broadcast).
-    uid : int
+    uid
         The unique identifier for this message.
-    extended_id : bool
+    extended_id
         Whether the id is an 11 bit (False) or 29 bit (True) address.
 
     """
 
     def __init__(
         self,
-        command,
-        data=[],
-        positioner_id=0,
-        uid=0,
-        response_code=0,
-        extended_id=True,
+        command: Command,
+        data: bytearray = bytearray([]),
+        positioner_id: int = 0,
+        uid: int = 0,
+        response_code: int = 0,
+        extended_id: bool = True,
     ):
 
         self.command = command
@@ -96,25 +98,14 @@ class Reply(object):
 
     Parameters
     ----------
-    message : `can.Message`
+    message
         The received message
-    command : `.Command`
+    command
         The `.Command` to which this message is replying.
-
-    Attributes
-    ----------
-    command_id : `.CommandID` flag
-        The flag with the command id.
-    data : bytearray
-        The data returned.
-    positioner_id : int
-        The positioner sending this command.
-    response_code : `~jaeger.maskbits.ResponseCode` flag
-        The response code associated to the reply.
 
     """
 
-    def __init__(self, message, command=None):
+    def __init__(self, message: can.Message, command: Optional[Command] = None):
 
         assert isinstance(message, can.Message), "invalid message"
 
@@ -157,7 +148,7 @@ class Reply(object):
         )
 
 
-class Command(StatusMixIn, asyncio.Future):
+class Command(StatusMixIn[CommandStatus], asyncio.Future):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
@@ -182,24 +173,24 @@ class Command(StatusMixIn, asyncio.Future):
 
     Parameters
     ----------
-    positioner_id : int or list
+    positioner_id
         The id or list of ids of the robot(s) to which this command will be
         sent. Use ``positioner_id=0`` to broadcast to all robots.
-    loop : event loop
+    loop
         The running event loop, or uses `~asyncio.get_event_loop`.
-    timeout : float
+    timeout
         Time after which the command will be marked done. Note that if the
         command is not a broadcast and it receives replies to each one of the
         messages it sends, the command will be marked done and the timer
         cancelled. If negative, the command runs forever or until all the
         replies have been received.
-    done_callback : function
+    done_callback
         A function to call when the command has been successfully completed.
-    n_positioners : int
+    n_positioners
         If the command is a broadcast, the number of positioners that should
         reply. If defined, the command will be done once as many positioners
         have replied. Otherwise it waits for the command to time out.
-    data : list
+    data
         The data to pass to the messages. It must be a list in which each
         element is the payload for a message. As many messages as data elements
         will be sent. If `None`, a single message without payload will be sent.
@@ -219,14 +210,17 @@ class Command(StatusMixIn, asyncio.Future):
     #: Whether the command is safe to be issues in bootloader mode.
     bootloader = False
 
+    _interface: Optional[can.BusABC]
+    _bus: Optional[int]
+
     def __init__(
         self,
-        positioner_id,
-        loop=None,
-        timeout=None,
-        done_callback=None,
-        n_positioners=None,
-        data=None,
+        positioner_id: int,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        timeout: Optional[float] = None,
+        done_callback: Optional[Callable] = None,
+        n_positioners: Optional[int] = None,
+        data: Optional[list[bytearray]] = None,
     ):
 
         global COMMAND_UID
@@ -286,7 +280,7 @@ class Command(StatusMixIn, asyncio.Future):
 
         self._timeout_handle = None
 
-        self.reply_queue = AsyncQueue(callback=self.process_reply, loop=self.loop)
+        self.reply_queue = AsyncQueue(callback=self.process_reply)
 
         StatusMixIn.__init__(
             self,
@@ -341,6 +335,8 @@ class Command(StatusMixIn, asyncio.Future):
         uids = sorted(self.message_uids)
         replies_uids = sorted([reply.uid for reply in self.replies])
         n_messages = self.n_messages
+
+        assert n_messages, "Number of messages not set."
 
         if self.is_broadcast:
 
@@ -433,16 +429,16 @@ class Command(StatusMixIn, asyncio.Future):
             else:
                 pass
 
-    def finish_command(self, status, silent=False):
+    def finish_command(self, status: CommandStatus, silent: bool = False):
         """Cancels the queue watcher and removes the running command.
 
         Parameters
         ----------
-        status : .CommandStatus
+        status
             The status to set the command to. If `None` the command will be set
             to `~.CommandStatus.DONE` if one reply for each message has been
             received, `~.CommandStatus.FAILED` otherwise.
-        silent : bool
+        silent
             If `True`, issues error log messages as debug.
 
         """
@@ -511,9 +507,9 @@ class Command(StatusMixIn, asyncio.Future):
                     self.timeout, self.finish_command, CommandStatus.TIMEDOUT
                 )
         elif self.status.is_done:
-            self.finish_command(self.status)
+            self.finish_command(self.status)  # type: ignore
 
-    def _generate_messages_internal(self, data=None):
+    def _generate_messages_internal(self, data: Optional[list[bytearray]] = None):
         """Generates the list of messages to send to the bus for this command.
 
         This method is called by `.get_messages` and can be overridden in
@@ -527,7 +523,7 @@ class Command(StatusMixIn, asyncio.Future):
         data = data or self.data
 
         if len(data) == 0:
-            data = [[]]
+            data = [bytearray([])]
 
         messages = []
 

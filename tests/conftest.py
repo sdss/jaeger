@@ -12,6 +12,12 @@ import os
 
 import pytest
 from can import Bus, Notifier
+from pymodbus.datastore import (
+    ModbusSequentialDataBlock,
+    ModbusServerContext,
+    ModbusSlaveContext,
+)
+from pymodbus.server.async_io import StartTcpServer
 
 import clu.testing
 from clu.testing import TestCommand
@@ -59,16 +65,48 @@ def notifier(test_config, event_loop):
 
 
 @pytest.fixture()
-async def vfps(event_loop):
+async def ieb_server(event_loop):
+
+    store = ModbusSlaveContext(
+        di=ModbusSequentialDataBlock(0, [0] * 100),
+        co=ModbusSequentialDataBlock(512, [0] * 100),
+        hr=ModbusSequentialDataBlock(512, [0] * 100),
+        ir=ModbusSequentialDataBlock(0, [0] * 100),
+    )
+
+    context = ModbusServerContext(slaves=store, single=True)
+
+    server = await StartTcpServer(
+        context,
+        address=("127.0.0.1", 5020),
+        loop=event_loop,
+        allow_reuse_address=True,
+        allow_reuse_port=True,
+    )
+    task = event_loop.create_task(server.serve_forever())
+
+    yield server
+
+    server.server_close()
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+@pytest.fixture()
+async def vfps(event_loop, ieb_server):
     """Sets up the virtual FPS."""
 
     # Make initialisation faster.
     jaeger.config["fps"]["initialise_timeouts"] = 0.05
 
     fps = VirtualFPS()
+    fps.ieb.client.host = "127.0.0.1"
+    fps.ieb.client.port = 5020
 
     yield fps
 
+    fps.ieb.client.stop()
     fps.can._command_queue_task.cancel()
 
     with contextlib.suppress(asyncio.CancelledError):

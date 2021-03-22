@@ -9,7 +9,7 @@ from sdsstools import get_config, get_logger, get_package_version
 
 NAME = "jaeger"
 
-__version__ = get_package_version(path="./", package_name=NAME)
+__version__ = get_package_version(path=__file__, package_name=NAME)
 
 
 log = get_logger("jaeger", log_level=logging.WARNING)

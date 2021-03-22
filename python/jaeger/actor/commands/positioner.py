@@ -303,7 +303,6 @@ async def unlock(command, fps):
 
     if not fps.locked:
         return command.finish("FPS is not locked")
-        return
 
     result = await fps.unlock()
 

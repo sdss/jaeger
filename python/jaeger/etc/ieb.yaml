@@ -1,0 +1,408 @@
+address: sdss-fps-ieb
+port: 502
+modules:
+    ANALOG1:
+        model: 750-497
+        mode: input_register
+        channels: 8
+        description: Temperature and humidity sensors
+        devices:
+            RH1:
+                address: 40005
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+                description: Ambient outside air humidity
+            T1:
+                address: 40006
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+                description: Ambient outside air temperature
+            RH2:
+                address: 40007
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+                description: Relative humidity sensor 2
+            T2:
+                address: 40008
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+                description: Air temperature sensor 2
+            RH3:
+                address: 40009
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+                description: FPS inside air humidity above wok
+            T3:
+                address: 40010
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+                description: FPS inside air temperature above wok
+    ANALOG2:
+        model: 750-497
+        mode: input_register
+        channels: 8
+        description: Positioner voltage and flow measurements
+        devices:
+            PV24-1:
+                address: 40013
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32764]
+                units: V
+                description: Sextant 1 Positioner Power 24V out
+            PV24-2:
+                address: 40014
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32764]
+                units: V
+                description: Sextant 2 Positioner Power 24V out
+            PV24-3:
+                address: 40015
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32764]
+                units: V
+                description: Sextant 3 Positioner Power 24V out
+            PV24-4:
+                address: 40016
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32764]
+                units: V
+                description: Sextant 4 Positioner Power 24V out
+            PV24-5:
+                address: 40017
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32764]
+                units: V
+                description: Sextant 5 Positioner Power 24V out
+            PV24-6:
+                address: 40018
+                category: voltage
+                adaptor: voltage
+                adaptor_extra_params: [0, 30, 32764]
+                units: V
+                description: Sextant 6 Positioner Power 24V out
+            FLOW1:
+                address: 40019
+                category: flow
+                adaptor: flow
+                adaptor_extra_params: [4]
+                units: l/min
+                description: FPS cold plate cooling loop flow rate
+            FLOW2:
+                address: 40020
+                category: flow
+                adaptor: flow
+                adaptor_extra_params: [1]
+                units: l/min
+                description: GFA camera cooling loop flow rate
+    ANALOG3:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pt RTD sensors
+        devices:
+            RTD1:
+                address: 40021
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: IEB inside air temperature
+            RTD2:
+                address: 40022
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Wok center air temperature
+            RTD3:
+                address: 40023
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Latch ring surface temperature adjacent to exterior cold plate
+            RTD4:
+                address: 40024
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Top octagon side panel conduction rail temperature
+    ANALOG4:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pt RTD sensors
+        devices:
+            RTD6:
+                address: 40026
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Bottom octagon conduction rail temperature
+            RTD7:
+                address: 40027
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Bottom center octagon ITEM rail temperature
+            RTD8:
+                address: 40028
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Octagon center air temperature
+    ANALOG5:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pt RTD sensors
+        devices:
+            RTD9:
+                address: 40029
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Glycol supply manifold coolant temperature
+            RTD10:
+                address: 40030
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Glycol return manifold coolant temperature
+            RTD12:
+                address: 40032
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: IEB inside air temperature (Lab Only)
+    ANALOG6:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pressure sensors
+        devices:
+            PRESSURE1:
+                address: 40033
+                category: pressure
+                adaptor: linear
+                adaptor_extra_params: [0, 50, 0, 32764]
+                units: psi
+            PRESSURE2:
+                address: 40034
+                category: pressure
+                adaptor: linear
+                adaptor_extra_params: [0, 50, 0, 32764]
+                units: psi
+    ANALOG_OUTPUT:
+        model: 750-511
+        mode: holding_register
+        channels: 2
+        description: Pulse Width Modulator (PWM) output module for LED control
+        devices:
+            LED1:
+                address: 40514
+                category: led
+                adaptor: pwd
+                units: percent
+                description: LED1 power
+            LED2:
+                address: 40516
+                category: led
+                adaptor: pwd
+                units: percent
+                description: LED2 power
+    DO1:
+        model: 750-530
+        mode: holding_register
+        channels: 16
+        description: Relays for AC power switching (Cards 1-2)
+        devices:
+            PS1:
+                address: 40517
+                channel: 0
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 1
+            PS2:
+                address: 40517
+                channel: 1
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 2
+            PS3:
+                address: 40517
+                channel: 2
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 3
+            PS4:
+                address: 40517
+                channel: 3
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 4
+            PS5:
+                address: 40517
+                channel: 4
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 5
+            PS6:
+                address: 40517
+                channel: 5
+                type: relay
+                category: relay
+                relay_type: NO
+                description: 24V power supply for sextant 6
+            CM1:
+                address: 40517
+                channel: 6
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 1
+            CM2:
+                address: 40517
+                channel: 7
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 2
+            CM3:
+                address: 40517
+                channel: 8
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 3
+            CM4:
+                address: 40517
+                channel: 9
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 4
+            CM5:
+                address: 40517
+                channel: 10
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 5
+            CM6:
+                address: 40517
+                channel: 11
+                type: relay
+                category: relay
+                relay_type: NC
+                description: 24V power supply for CAN module 6
+            SYNC:
+                address: 40517
+                channel: 12
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Sync line
+            GFA1:
+                address: 40517
+                channel: 13
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 1
+            GFA2:
+                address: 40517
+                channel: 14
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 2
+            GFA3:
+                address: 40517
+                channel: 15
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 3
+    DO2:
+        model: 750-530
+        mode: holding_register
+        channels: 16
+        description: Relays for AC power switching (Cards 3-4)
+        devices:
+            GFA4:
+                address: 40518
+                channel: 0
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 4
+            GFA5:
+                address: 40518
+                channel: 1
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 5
+            GFA6:
+                address: 40518
+                channel: 2
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 6
+            NUC1:
+                address: 40518
+                channel: 3
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 1
+            NUC2:
+                address: 40518
+                channel: 4
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 2
+            NUC3:
+                address: 40518
+                channel: 5
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 3
+            NUC4:
+                address: 40518
+                channel: 6
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 4
+            NUC5:
+                address: 40518
+                channel: 7
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 5
+            NUC6:
+                address: 40518
+                channel: 8
+                type: relay
+                category: relay
+                relay_type: NO
+                description: Guide camera 6

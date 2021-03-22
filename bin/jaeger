@@ -6,7 +6,7 @@
 # @Filename: jaeger
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from jaeger import cli
+from jaeger import __main__
 
 
-cli.jaeger()
+__main__.jaeger()

@@ -28,7 +28,7 @@ numpy = "^1.15.1"
 Click = "^7.0"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
-sdss-drift = ">=0.1.5"
+sdss-drift = "^0.2.0"
 sdss-clu = "^0.7.0"
 pyserial = "^3.4"
 sdssdb = ">=0.4.5"
@@ -57,6 +57,8 @@ ipdb = ">=0.13.3"
 autopep8 = "^1.5.4"
 black = {version = "^20.8b1", allow-prereleases = true}
 rstcheck = "^3.3.1"
+pytest-mock = "^3.5.1"
+pyserial-asyncio = "^0.5"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
@@ -77,11 +79,6 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
-filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore:.+unknown positioners.+",
-    "ignore:.+from the database.+"
-]
 
 [tool.coverage.run]
 branch = true
@@ -89,7 +86,10 @@ include = ["python/jaeger/*"]
 omit = [
     "*/__main__.py",
     "*/__init__.py",
-    "*/cannet.py"
+    "*/cannet.py",
+    "*/actor/commands/bootloader.py",
+    "*/commands/calibration.py",
+    "*/exceptions.py"
 ]
 
 [tool.coverage.report]
