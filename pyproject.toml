@@ -86,7 +86,10 @@ include = ["python/jaeger/*"]
 omit = [
     "*/__main__.py",
     "*/__init__.py",
-    "*/cannet.py"
+    "*/cannet.py",
+    "*/actor/commands/bootloader.py",
+    "*/commands/calibration.py",
+    "*/exceptions.py"
 ]
 
 [tool.coverage.report]
