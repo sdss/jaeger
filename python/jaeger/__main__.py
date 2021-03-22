@@ -256,9 +256,9 @@ async def upgrade_firmware(
         if fps.ieb and cycle:
             log.info("power cycling positioners")
             if sextant:
-                devs = [f"DO.PS{sextant}"]
+                devs = [f"PS{sextant}"]
             else:
-                devs = [f"DO.PS{s}" for s in range(1, 7)]
+                devs = [f"PS{s}" for s in range(1, 7)]
 
             await asyncio.gather(*[fps.ieb.get_device(dev).open() for dev in devs])
             await asyncio.sleep(5)
