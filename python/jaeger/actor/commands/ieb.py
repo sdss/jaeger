@@ -143,7 +143,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
     command.info(text=f"Running power {mode} sequence")
 
     # First check that the SYNC line is open.
-    sync = ieb.get_device("DO.SYNC")
+    sync = ieb.get_device("SYNC")
     if (await sync.read())[0] == "closed":
         command.debug(text="SYNC line is high. Opening it.")
         await sync.open()  # type: ignore
@@ -156,7 +156,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
 
     for devname in seq:
         if isinstance(devname, str):
-            dev = ieb.get_device(f"DO.{devname}")
+            dev = ieb.get_device(devname)
 
             if (await dev.read())[0] == relay_result:
                 command.debug(text=f"{devname} alredy powered {mode}.")
@@ -171,7 +171,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
 
         elif isinstance(devname, (tuple, list)):
             devname = list(devname)
-            devs = [ieb.get_device(f"DO.{dn}") for dn in devname]
+            devs = [ieb.get_device(dn) for dn in devname]
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
 

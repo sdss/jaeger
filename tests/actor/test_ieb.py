@@ -20,7 +20,7 @@ async def test_power_on(actor):
 async def test_power_on_fails(actor, mocker):
 
     # Open PS1 and make it do nothing when it closes.
-    ps1 = actor.fps.ieb.get_device("DO.PS1")
+    ps1 = actor.fps.ieb.get_device("DO1.PS1")
     await ps1.open()
     mocker.patch.object(ps1, "write")
 

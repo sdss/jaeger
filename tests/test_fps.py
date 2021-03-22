@@ -96,7 +96,7 @@ async def test_shutdown(vfps):
 
 async def test_ieb(vfps):
 
-    sync = vfps.ieb.get_device("DO.SYNC")
+    sync = vfps.ieb.get_device("DO1.SYNC")
     assert isinstance(sync, Relay)
 
     assert (await sync.read())[0] == "open"

@@ -70,7 +70,7 @@ async def ieb_server(event_loop):
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0] * 100),
         co=ModbusSequentialDataBlock(512, [0] * 100),
-        hr=ModbusSequentialDataBlock(0, [0] * 100),
+        hr=ModbusSequentialDataBlock(512, [0] * 100),
         ir=ModbusSequentialDataBlock(0, [0] * 100),
     )
 
