@@ -1,64 +1,61 @@
 address: 10.1.10.1
 port: 502
 modules:
-    RTD:
+    ANALOG_1:
         model: "750-450"
-        mode: input
+        mode: input_register
         channels: 4
-        address: 40009
         description: "Pt RTD sensors"
         devices:
             "RTD1":
-                channel: 0
+                address: 40009
                 category: temperature
                 adaptor: rtd
                 units: degC
             "RTD2":
-                channel: 1
+                address: 40010
                 category: temperature
                 adaptor: rtd
                 units: degC
-    EE:
+    ANALOG_2:
         model: "750-497"
-        mode: input
+        mode: input_register
         channels: 8
-        address: 40001
         description: "E+E temperature and humidity sensors"
         devices:
             "RH1":
-                channel: 0
+                address: 40001
                 category: humidity
                 adaptor: ee_rh
                 units: percent
             "T1":
-                channel: 1
+                address: 40002
                 category: temperature
                 adaptor: ee_temp
                 units: degC
     DO:
         model: "750-530"
-        mode: output
+        mode: coil
         channels: 8
-        address: 40513
         description: "Power relays"
         devices:
             "PS1":
-                channel: 0
+                address: 40513
                 type: relay
                 category: relay
                 relay_type: NC
             "5V":
-                channel: 1
+                address: 40514
                 type: relay
                 category: relay
                 relay_type: NC
             "CM1":
-                channel: 2
+                address: 40515
                 type: relay
                 category: relay
                 relay_type: NC
             "SYNC":
-                channel: 3
+                address: 40516
                 type: relay
                 category: relay
                 relay_type: "NO"
