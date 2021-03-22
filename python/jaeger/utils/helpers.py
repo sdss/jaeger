@@ -25,18 +25,17 @@ class AsyncQueue(asyncio.Queue):
 
     Parameters
     ----------
-    loop : event loop or `None`
-        The current event loop, or `asyncio.get_event_loop`.
-    callback : callable
+    callback
         A function to call when a new item is received from the queue. It can
         be a coroutine.
 
     """
 
-    def __init__(self, loop=None, callback=None):
-        async def process_queue(loop):
+    def __init__(self, callback: Optional[Callable] = None):
+        async def process_queue():
             """Waits for the next item and sends it to the cb function."""
 
+            loop = asyncio.get_running_loop()
             while True:
                 item = await self.get()
                 if callback:
@@ -44,9 +43,7 @@ class AsyncQueue(asyncio.Queue):
 
         super().__init__()
 
-        loop = loop or asyncio.get_event_loop()
-
-        self.watcher = loop.create_task(process_queue(loop))
+        self.watcher = asyncio.create_task(process_queue())
 
 
 Status_co = TypeVar("Status_co", bound=enum.Enum)
@@ -148,17 +145,13 @@ class StatusMixIn(Generic[Status_co]):
     async def wait_for_status(
         self,
         value,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
     ):
         """Awaits until the status matches ``value``."""
 
         if self.status == value:
             return
 
-        if loop is None:
-            loop = asyncio.get_event_loop()
-
-        self.watcher = asyncio.Event(loop=loop)
+        self.watcher = asyncio.Event()
 
         while self.status != value:
             await self.watcher.wait()

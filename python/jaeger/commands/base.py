@@ -280,7 +280,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
         self._timeout_handle = None
 
-        self.reply_queue = AsyncQueue(callback=self.process_reply, loop=self.loop)
+        self.reply_queue = AsyncQueue(callback=self.process_reply)
 
         StatusMixIn.__init__(
             self,
