@@ -94,15 +94,15 @@ modules:
             FLOW1:
                 address: 40019
                 category: flow
-                adaptor: linear
-                adaptor_extra_params: [2, 16, 3276, 16380]
+                adaptor: flow
+                adaptor_extra_params: [4]
                 units: l/min
                 description: FPS cold plate cooling loop flow rate
             FLOW2:
                 address: 40020
                 category: flow
-                adaptor: linear
-                adaptor_extra_params: [0.5, 4, 3276, 16380]
+                adaptor: flow
+                adaptor_extra_params: [1]
                 units: l/min
                 description: GFA camera cooling loop flow rate
     ANALOG3:
