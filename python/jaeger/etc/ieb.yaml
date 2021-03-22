@@ -16,8 +16,7 @@ modules:
             T1:
                 address: 40006
                 category: temperature
-                adaptor: linear
-                adaptor_extra_params: [-30, 70, 0, 32760]
+                adaptor: t_dwyer
                 units: degC
                 description: Ambient outside air temperature
             RH2:
@@ -29,8 +28,7 @@ modules:
             T2:
                 address: 40008
                 category: temperature
-                adaptor: linear
-                adaptor_extra_params: [-30, 70, 0, 32760]
+                adaptor: t_dwyer
                 units: degC
                 description: Air temperature sensor 2
             RH3:
@@ -42,8 +40,7 @@ modules:
             T3:
                 address: 40010
                 category: temperature
-                adaptor: linear
-                adaptor_extra_params: [-30, 70, 0, 32760]
+                adaptor: t_dwyer
                 units: degC
                 description: FPS inside air temperature above wok
     ANALOG2:
@@ -56,42 +53,42 @@ modules:
                 address: 40013
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32760]
+                adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 1 Positioner Power 24V out
             PV24-2:
                 address: 40014
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32760]
+                adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 2 Positioner Power 24V out
             PV24-3:
                 address: 40015
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32760]
+                adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 3 Positioner Power 24V out
             PV24-4:
                 address: 40016
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32760]
+                adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 4 Positioner Power 24V out
             PV24-5:
                 address: 40017
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32760]
+                adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 5 Positioner Power 24V out
             PV24-6:
                 address: 40018
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32760]
+                adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 6 Positioner Power 24V out
             FLOW1:
@@ -221,7 +218,7 @@ modules:
                 category: led
                 adaptor: pwd
                 units: percent
-                description: LED1 power
+                description: LED2 power
     DO1:
         model: 750-530
         mode: holding_register
