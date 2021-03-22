@@ -176,7 +176,7 @@ def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
         config_path = os.path.realpath(
             os.path.join(os.path.dirname(__file__), "etc/jaeger.yml")
         )
-    log.debug(f"Using configuration file {config_path}")
+    log.info(f"Using configuration file {config_path}")
 
     ctx.obj = FPSWrapper(profile, layout, ieb, danger)
 
