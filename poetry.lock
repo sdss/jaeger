@@ -992,23 +992,16 @@ sdsstools = ">=0.2.0"
 
 [[package]]
 name = "sdss-drift"
-version = "0.2.0-alpha.0"
+version = "0.2.0"
 description = "Modbus PLC control library"
 category = "main"
 optional = false
-python-versions = "^3.7"
-develop = false
+python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-pymodbus = "^2.5.0"
-pyyaml = "^5.3.1"
+pymodbus = ">=2.5.0,<3.0.0"
+pyyaml = ">=5.3.1,<6.0.0"
 sdsstools = ">=0.4.1"
-
-[package.source]
-type = "git"
-url = "https://github.com/sdss/drift"
-reference = "main"
-resolved_reference = "778af895f46e212d8519fa04a5ab9b22ad988f48"
 
 [[package]]
 name = "sdssdb"
@@ -1344,7 +1337,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "9aea377d8b285347e48cf610ec8282ddea7c98ce08c257db2d47e23418f38a00"
+content-hash = "4c5c86745ab2a18ff65905211125f72b956bf189b338bb67b4243b7b2e4d8379"
 
 [metadata.files]
 aenum = [
@@ -2069,7 +2062,10 @@ sdss-clu = [
     {file = "sdss-clu-0.7.3.tar.gz", hash = "sha256:616f309f0cda5bec3e05efc8540c8639e3a9720f6848dc6ebf2b6954412152c5"},
     {file = "sdss_clu-0.7.3-py3-none-any.whl", hash = "sha256:1538358516bfff0e62eb84687079e6778877bb9ffbcac86e9ce8574f6eb3347e"},
 ]
-sdss-drift = []
+sdss-drift = [
+    {file = "sdss-drift-0.2.0.tar.gz", hash = "sha256:f3b27c3dfbc9238e2fd5286f1f0314d1f68d567071bc70a331cc3d4e13f9ac9b"},
+    {file = "sdss_drift-0.2.0-py3-none-any.whl", hash = "sha256:4f4236ce3c2ab539d9e38df47d91b8ce0f4c5ee2c5cb70f75e57e7a444dead34"},
+]
 sdssdb = [
     {file = "sdssdb-0.4.8-py3-none-any.whl", hash = "sha256:bd1f7b5db5ba77514ad2a76a2810c79f26865af90fc6e40707f3b70cd63978e4"},
     {file = "sdssdb-0.4.8.tar.gz", hash = "sha256:3b56ec1ec370fd76f90bbfb2be8833ad08e022e8de73bf23a655deab592b4a55"},
