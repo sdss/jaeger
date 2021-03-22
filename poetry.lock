@@ -1008,7 +1008,7 @@ sdsstools = ">=0.4.1"
 type = "git"
 url = "https://github.com/sdss/drift"
 reference = "main"
-resolved_reference = "49adb1cb8c102a1c1f49732010ad57af851edd89"
+resolved_reference = "398cade987ffcc9f2b00ff82d74748f29ad40edc"
 
 [[package]]
 name = "sdssdb"

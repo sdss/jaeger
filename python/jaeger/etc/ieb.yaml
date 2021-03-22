@@ -204,6 +204,24 @@ modules:
                 adaptor: linear
                 adaptor_extra_params: [0, 50, 0, 32764]
                 units: psi
+    ANALOG_OUTPUT:
+        model: 750-511
+        mode: holding_register
+        channels: 2
+        description: Pulse Width Modulator (PWM) output module for LED control
+        devices:
+            LED1:
+                address: 40514
+                category: led
+                adaptor: pwd
+                units: percent
+                description: LED1 power
+            LED2:
+                address: 40516
+                category: led
+                adaptor: pwd
+                units: percent
+                description: LED1 power
     DO1:
         model: 750-530
         mode: holding_register
