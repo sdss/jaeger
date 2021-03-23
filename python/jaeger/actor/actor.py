@@ -55,7 +55,10 @@ class JaegerActor(clu.LegacyActor):
         """Starts a server that outputs the status as a JSON on a timer."""
 
         self.status_server = clu.protocol.TCPStreamPeriodicServer(
-            self.host, port, periodic_callback=self._report_status_cb, sleep_time=delay
+            self.host,
+            port,
+            periodic_callback=self._report_status_cb,
+            sleep_time=delay,
         )
 
         await self.status_server.start()
