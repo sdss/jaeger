@@ -1,2 +1,2 @@
-sphinx-click == "^2.*"
+sphinx-click~=2.6.0
 sphinx-jsonschema~=1.16.7
