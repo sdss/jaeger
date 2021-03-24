@@ -9,6 +9,7 @@ Changelog
 * :feature:`85` Raise error if sending a bootloader command while not in bootloader mode.
 * :feature:`109` Added JSON schema for the actor.
 * :feature:`97` Implement low temperature handling. When the air temperature is less than 0 degrees, the motor RPM is set to 3000. When the temperature is less than -10, the beta motor holding current is increased to 30%.
+* :feature:`15` Allow to disable a positioner. If the positioner is disabled, a non-safe command sent to the FPS will raise an error. In `.send_to_all`, a broadcast will be only sent to the non-disabled positioners. Trajectories that include disabled positioners will fail.
 
 * :release:`0.6.0 <2020-10-15>`
 * :bug:`-` Do not pass context to actor commands.
