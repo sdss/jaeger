@@ -119,7 +119,7 @@ class JaegerActor(clu.LegacyActor):
             try:
                 device = self.fps.ieb.get_device(sensor)
                 temp = (await device.read())[0]
-                print(temp)
+
                 if temp <= very_cold:
                     if self.low_temperature == LowTemperature.NORMAL:
                         await set_rpm(True)
