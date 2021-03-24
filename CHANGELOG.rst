@@ -8,6 +8,7 @@ Changelog
 * :support:`95` Support Python 3.9.
 * :feature:`85` Raise error if sending a bootloader command while not in bootloader mode.
 * :feature:`109` Added JSON schema for the actor.
+* :feature:`97` Implement low temperature handling. When the air temperature is less than 0 degrees, the motor RPM is set to 3000. When the temperature is less than -10, the beta motor holding current is increased to 30%.
 
 * :release:`0.6.0 <2020-10-15>`
 * :bug:`-` Do not pass context to actor commands.

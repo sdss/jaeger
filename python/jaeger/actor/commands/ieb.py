@@ -28,18 +28,20 @@ async def _get_category_data(command, category) -> list:
 
     items = schema["properties"][category]["items"]
     measured = []
-    for item in items:
-        name = item["title"]
-        type_ = item["type"]
-        device = ieb.get_device(name)
-        value = (await device.read())[0]
-        if type_ == "boolean" and device.__type__ == "relay":
-            value = True if value == "closed" else False
-        elif type_ == "integer":
-            value = int(value)
-        elif type_ == "number":
-            value = round(value, 3)
-        measured.append(value)
+
+    async with ieb:
+        for item in items:
+            name = item["title"]
+            type_ = item["type"]
+            device = ieb.get_device(name)
+            value = (await device.read(connect=False))[0]
+            if type_ == "boolean" and device.__type__ == "relay":
+                value = True if value == "closed" else False
+            elif type_ == "integer":
+                value = int(value)
+            elif type_ == "number":
+                value = round(value, 3)
+            measured.append(value)
 
     return measured
 
@@ -132,7 +134,7 @@ async def switch(command, fps, device, on, cycle):
     except Exception:
         return command.fail(error=f"failed to set status of device {dev_name!r}.")
 
-    command.debug(message={category: _get_category_data(command, category)})
+    command.debug(message={category: await _get_category_data(command, category)})
 
     if cycle:
         command.write("d", text="waiting 1 second before powering up.")
@@ -189,7 +191,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
                     command.fail(error=f"Failed powering {mode} {devname}.")
                     return False
 
-            command.debug(message={category: _get_category_data(command, category)})
+            command.debug({category: await _get_category_data(command, category)})
 
         elif isinstance(devname, (tuple, list)):
             devname = list(devname)
@@ -223,7 +225,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
                     command.fail(error=f"Failed powering {mode} {devname[ii]}.")
                     return False
 
-            command.debug(message={category: _get_category_data(command, category)})
+            command.debug({category: await _get_category_data(command, category)})
 
         else:
             command.fail(error=f"Invalid relay {devname!r}.")

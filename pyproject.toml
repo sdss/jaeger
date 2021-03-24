@@ -28,9 +28,8 @@ numpy = "^1.15.1"
 Click = "^7.0"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
-sdss-drift = "^0.2.0"
-# sdss-clu = "^0.7.0"
-sdss-clu = { git="https://github.com/sdss/clu", branch="main" }
+sdss-drift = "^0.2.1"
+sdss-clu = "^0.7.5"
 pyserial = "^3.4"
 sdssdb = ">=0.4.5"
 sdsstools = ">=0.4.2"
@@ -82,7 +81,12 @@ lines_after_imports = 2
 [tool.pytest.ini_options]
 addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
 filterwarnings = [
-    "ignore:.*The loop argument is deprecated since.*"
+    "ignore:.*The loop argument is deprecated since.*",
+    "ignore:.*Loading an empty FPS.*",
+    "ignore:.*They have been added to the.*",
+]
+markers = [
+    "rtd2: Temperature of the RTD2 sensor"
 ]
 
 [tool.coverage.run]

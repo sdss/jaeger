@@ -15,6 +15,7 @@ __all__ = [
     "CommandStatus",
     "ResponseCode",
     "BootloaderStatus",
+    "LowTemperature",
 ]
 
 
@@ -225,19 +226,27 @@ class ResponseCode(enum.IntFlag):
 
     """
 
-    COMMAND_ACCEPTED = (0,)
-    VALUE_OUT_OF_RANGE = (1,)
-    INVALID_TRAJECTORY = (2,)
-    ALREADY_IN_MOTION = (3,)
-    DATUM_NOT_INITIALIZED = (4,)
-    INCORRECT_AMOUNT_OF_DATA = (5,)
-    CALIBRATION_MODE_ACTIVE = (6,)
-    MOTOR_NOT_CALIBRATED = (7,)
-    COLLISION_DETECTED = (8,)
-    HALL_SENSOR_DISABLED = (9,)
-    INVALID_BROADCAST_COMMAND = (10,)
-    INVALID_BOOTLOADER_COMMAND = (11,)
-    INVALID_COMMAND = (12,)
-    UNKNOWN_COMMAND = (13,)
+    COMMAND_ACCEPTED = 0
+    VALUE_OUT_OF_RANGE = 1
+    INVALID_TRAJECTORY = 2
+    ALREADY_IN_MOTION = 3
+    DATUM_NOT_INITIALIZED = 4
+    INCORRECT_AMOUNT_OF_DATA = 5
+    CALIBRATION_MODE_ACTIVE = 6
+    MOTOR_NOT_CALIBRATED = 7
+    COLLISION_DETECTED = 8
+    HALL_SENSOR_DISABLED = 9
+    INVALID_BROADCAST_COMMAND = 10
+    INVALID_BOOTLOADER_COMMAND = 11
+    INVALID_COMMAND = 12
+    UNKNOWN_COMMAND = 13
     DATUM_NOT_CALIBRATED = 14
     HALL_SENSORS_DISABLED = 15
+
+
+class LowTemperature(enum.Enum):
+    """Low temperature mode."""
+
+    NORMAL = 0
+    COLD = 1
+    VERY_COLD = 2

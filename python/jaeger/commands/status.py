@@ -98,7 +98,6 @@ class GetCurrent(Command):
         ------
         ValueError
             If no reply has been received or the data cannot be parsed.
-
         """
 
         if len(self.replies) == 0:
@@ -110,3 +109,28 @@ class GetCurrent(Command):
         alpha = bytes_to_int(data[0:4], dtype="i4")
 
         return numpy.array([alpha, beta])
+
+
+class GetTemperature(Command):
+    """Gets the temperature from the board temperature sensor, in C."""
+
+    command_id = CommandID.GET_RAW_TEMPERATURE
+    broadcastable = False
+    safe = True
+
+    def get_temperature(self) -> int:
+        """Returns the temperature in Celsius.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError("no positioners have replied to this command.")
+
+        data = self.replies[0].data
+        rawT = bytes_to_int(data, dtype="u4")  # Raw temperature
+
+        return rawT

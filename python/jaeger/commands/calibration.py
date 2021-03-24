@@ -240,3 +240,47 @@ class HallOff(Command):
     broadcastable = False
     move_command = False
     safe = True
+
+
+class SetHoldingCurrents(Command):
+    """Sets the motors holding currents."""
+
+    command_id = CommandID.SET_HOLDING_CURRENT
+    broadcastable = False
+    safe = True
+    move_command = False
+
+    def __init__(self, alpha=0, beta=0, **kwargs):
+
+        data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
+        kwargs["data"] = data
+
+        super().__init__(**kwargs)
+
+
+class GetHoldingCurrents(Command):
+    """Gets the motor offsets."""
+
+    command_id = CommandID.GET_HOLDING_CURRENT
+    broadcastable = False
+    safe = True
+
+    def get_holding_currents(self):
+        """Returns the alpha and beta holding currents, in percent.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError("No positioners have replied to this command.")
+
+        data = self.replies[0].data
+
+        alpha = bytes_to_int(data[0:4], dtype="i4")
+        beta = bytes_to_int(data[4:], dtype="i4")
+
+        return numpy.array([alpha, beta])

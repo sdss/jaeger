@@ -984,30 +984,23 @@ docutils = ">=0.7"
 
 [[package]]
 name = "sdss-clu"
-version = "0.7.5-alpha.0"
+version = "0.7.5"
 description = "A new protocol for SDSS actors."
 category = "main"
 optional = false
-python-versions = "^3.7"
-develop = false
+python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
-aio_pika = "^6.4.1"
-aiormq = "^3.2.0"
-click = "^7.0"
-jsonschema = "^3.0.1"
-prompt_toolkit = "^3.0.6"
+aio_pika = ">=6.4.1,<7.0.0"
+aiormq = ">=3.2.0,<4.0.0"
+click = ">=7.0,<8.0"
+jsonschema = ">=3.0.1,<4.0.0"
+prompt_toolkit = ">=3.0.6,<4.0.0"
 sdsstools = ">=0.2.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/sdss/clu"
-reference = "main"
-resolved_reference = "4b3424a9b1ca11b1cdf0107cc3ca3230c70e61ab"
 
 [[package]]
 name = "sdss-drift"
-version = "0.2.0"
+version = "0.2.1"
 description = "Modbus PLC control library"
 category = "main"
 optional = false
@@ -1366,7 +1359,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "cc2a4acfbc24f59de039105d17ca67ce44e183075d7a4002a9f556e61a78d234"
+content-hash = "c9892cfd6c4a8ba99440be28412fd76fb835b86d195c9a34e6cf6e6aabb9fd2c"
 
 [metadata.files]
 aenum = [
@@ -2091,10 +2084,13 @@ restructuredtext-lint = [
 rstcheck = [
     {file = "rstcheck-3.3.1.tar.gz", hash = "sha256:92c4f79256a54270e0402ba16a2f92d0b3c15c8f4410cb9c57127067c215741f"},
 ]
-sdss-clu = []
+sdss-clu = [
+    {file = "sdss-clu-0.7.5.tar.gz", hash = "sha256:31029264fbee892cdceabdffad0b98c453eb7e818d0e00653c13693fa5342029"},
+    {file = "sdss_clu-0.7.5-py3-none-any.whl", hash = "sha256:4708bebb6b945c8df00f072169582d409234fb4cc75bec0fbd710639b90f419c"},
+]
 sdss-drift = [
-    {file = "sdss-drift-0.2.0.tar.gz", hash = "sha256:f3b27c3dfbc9238e2fd5286f1f0314d1f68d567071bc70a331cc3d4e13f9ac9b"},
-    {file = "sdss_drift-0.2.0-py3-none-any.whl", hash = "sha256:4f4236ce3c2ab539d9e38df47d91b8ce0f4c5ee2c5cb70f75e57e7a444dead34"},
+    {file = "sdss-drift-0.2.1.tar.gz", hash = "sha256:0de531f506059e6db1a141a844e1a67bd232f2f83c885549c798ae5752cc62a0"},
+    {file = "sdss_drift-0.2.1-py3-none-any.whl", hash = "sha256:75d6d4d3562c3514252ea99e8333dc4dd936cdb0414736ec48fcdd4a2339d255"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.8-py3-none-any.whl", hash = "sha256:bd1f7b5db5ba77514ad2a76a2810c79f26865af90fc6e40707f3b70cd63978e4"},
