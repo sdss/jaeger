@@ -14,27 +14,33 @@ from . import jaeger_parser
 
 
 @jaeger_parser.command()
+@click.argument("COMMAND_ID", nargs=1, type=int)
+@click.argument("POSITIONER_ID", nargs=1, type=int)
 @click.argument("PARAMS", nargs=-1)
-async def talk(command, fps, params):
+async def talk(command, fps, command_id, positioner_id, params):
     """Send a direct command to the CAN network and show the replies."""
 
-    command_id, *extra_args = params
     CommandClass = CommandID(command_id).get_command_class()
-    can_command = CommandClass(*extra_args)
+    can_command = CommandClass(*params, positioner_id=positioner_id)
 
     command.info(f"Running command {can_command.command_id.name}.")
-    await can_command
+
+    await fps.send_command(can_command)
 
     replies = can_command.replies
 
     for reply in replies:
+        data = '"'
+        for byte in reply.data:
+            data += f"\\x{byte:02x}"
+        data += '"'
         command.info(
             {
                 "raw": [
                     reply.command_id.value,
                     reply.uid,
                     reply.response_code.value,
-                    reply.data.decode(),
+                    data,
                 ]
             }
         )
