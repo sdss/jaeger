@@ -8,6 +8,7 @@
 
 import json
 import logging
+import os
 
 import clu
 import clu.protocol
@@ -25,6 +26,12 @@ class JaegerActor(clu.LegacyActor):
     def __init__(self, fps, *args, **kwargs):
 
         self.fps = fps
+
+        if "schema" not in kwargs:
+            kwargs["schema"] = os.path.join(
+                os.path.dirname(__file__),
+                "../etc/jaeger.json",
+            )
 
         # Pass the FPS instance as the second argument to each parser
         # command (the first argument is always the actor command).
