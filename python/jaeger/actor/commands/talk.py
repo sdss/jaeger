@@ -13,6 +13,9 @@ from jaeger.commands import CommandID
 from . import jaeger_parser
 
 
+__all__ = ["talk"]
+
+
 @jaeger_parser.command()
 @click.argument("COMMAND_ID", nargs=1, type=int)
 @click.argument("POSITIONER_ID", nargs=1, type=int)
