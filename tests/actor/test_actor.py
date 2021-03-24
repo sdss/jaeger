@@ -49,11 +49,11 @@ async def test_info(actor):
 async def test_low_temperature_cold(mock_rtd2, actor):
 
     await asyncio.sleep(0.1)  # Wait for the first handle_temperature to complete
-    assert actor.low_temperature == LowTemperature.COLD
+    assert actor.low_temperature.value == LowTemperature.COLD.value
 
 
 @pytest.mark.rtd2(-15)
 async def test_low_temperature_very_cold(mock_rtd2, actor):
 
     await asyncio.sleep(0.1)
-    assert actor.low_temperature == LowTemperature.VERY_COLD
+    assert actor.low_temperature.value == LowTemperature.VERY_COLD.value
