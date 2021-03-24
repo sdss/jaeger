@@ -28,18 +28,20 @@ async def _get_category_data(command, category) -> list:
 
     items = schema["properties"][category]["items"]
     measured = []
-    for item in items:
-        name = item["title"]
-        type_ = item["type"]
-        device = ieb.get_device(name)
-        value = (await device.read())[0]
-        if type_ == "boolean" and device.__type__ == "relay":
-            value = True if value == "closed" else False
-        elif type_ == "integer":
-            value = int(value)
-        elif type_ == "number":
-            value = round(value, 3)
-        measured.append(value)
+
+    async with ieb:
+        for item in items:
+            name = item["title"]
+            type_ = item["type"]
+            device = ieb.get_device(name)
+            value = (await device.read(connect=False))[0]
+            if type_ == "boolean" and device.__type__ == "relay":
+                value = True if value == "closed" else False
+            elif type_ == "integer":
+                value = int(value)
+            elif type_ == "number":
+                value = round(value, 3)
+            measured.append(value)
 
     return measured
 
