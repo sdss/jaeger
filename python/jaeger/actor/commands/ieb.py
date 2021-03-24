@@ -134,7 +134,7 @@ async def switch(command, fps, device, on, cycle):
     except Exception:
         return command.fail(error=f"failed to set status of device {dev_name!r}.")
 
-    command.debug(message={category: _get_category_data(command, category)})
+    command.debug(message={category: await _get_category_data(command, category)})
 
     if cycle:
         command.write("d", text="waiting 1 second before powering up.")
@@ -191,7 +191,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
                     command.fail(error=f"Failed powering {mode} {devname}.")
                     return False
 
-            command.debug(message={category: _get_category_data(command, category)})
+            command.debug({category: await _get_category_data(command, category)})
 
         elif isinstance(devname, (tuple, list)):
             devname = list(devname)
@@ -225,7 +225,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
                     command.fail(error=f"Failed powering {mode} {devname[ii]}.")
                     return False
 
-            command.debug(message={category: _get_category_data(command, category)})
+            command.debug({category: await _get_category_data(command, category)})
 
         else:
             command.fail(error=f"Invalid relay {devname!r}.")
