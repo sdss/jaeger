@@ -1,7 +1,7 @@
 ---
 actor:
     name: jaeger
-    host: sdss5-hub
+    host: 127.0.0.1
     port: 19990
     status:
         port: 19991
