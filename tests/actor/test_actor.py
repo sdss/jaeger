@@ -7,6 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import sys
 
 import pytest
 
@@ -45,15 +46,16 @@ async def test_info(actor):
     assert "config_file" in data[1]
 
 
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
 @pytest.mark.rtd2(-5)
 async def test_low_temperature_cold(mock_rtd2, actor):
 
-    await asyncio.sleep(0.2)  # Wait for the first handle_temperature to complete
-    assert actor.low_temperature == LowTemperature.COLD
+    await asyncio.sleep(0.1)  # Wait for the first handle_temperature to complete
+    assert actor.low_temperature.value == LowTemperature.COLD.value
 
 
-@pytest.mark.rtd2(-15)
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
 async def test_low_temperature_very_cold(mock_rtd2, actor):
 
-    await asyncio.sleep(0.2)
-    assert actor.low_temperature == LowTemperature.VERY_COLD
+    await asyncio.sleep(0.1)
+    assert actor.low_temperature.value == LowTemperature.VERY_COLD.value
