@@ -9,7 +9,7 @@ modules:
         devices:
             RH1:
                 address: 40005
-                category: humidity
+                category: rh
                 adaptor: rh_dwyer
                 units: percent
                 description: Ambient outside air humidity
@@ -21,7 +21,7 @@ modules:
                 description: Ambient outside air temperature
             RH2:
                 address: 40007
-                category: humidity
+                category: rh
                 adaptor: rh_dwyer
                 units: percent
                 description: Relative humidity sensor 2
@@ -33,7 +33,7 @@ modules:
                 description: Air temperature sensor 2
             RH3:
                 address: 40009
-                category: humidity
+                category: rh
                 adaptor: rh_dwyer
                 units: percent
                 description: FPS inside air humidity above wok
@@ -49,42 +49,42 @@ modules:
         channels: 8
         description: Positioner voltage and flow measurements
         devices:
-            PV24-1:
+            PV24_1:
                 address: 40013
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 1 Positioner Power 24V out
-            PV24-2:
+            PV24_2:
                 address: 40014
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 2 Positioner Power 24V out
-            PV24-3:
+            PV24_3:
                 address: 40015
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 3 Positioner Power 24V out
-            PV24-4:
+            PV24_4:
                 address: 40016
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 4 Positioner Power 24V out
-            PV24-5:
+            PV24_5:
                 address: 40017
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 30, 32764]
                 units: V
                 description: Sextant 5 Positioner Power 24V out
-            PV24-6:
+            PV24_6:
                 address: 40018
                 category: voltage
                 adaptor: voltage
@@ -229,112 +229,112 @@ modules:
                 address: 40517
                 channel: 0
                 type: relay
-                category: relay
+                category: ps
                 relay_type: NO
                 description: 24V power supply for sextant 1
             PS2:
                 address: 40517
                 channel: 1
                 type: relay
-                category: relay
+                category: ps
                 relay_type: NO
                 description: 24V power supply for sextant 2
             PS3:
                 address: 40517
                 channel: 2
                 type: relay
-                category: relay
+                category: ps
                 relay_type: NO
                 description: 24V power supply for sextant 3
             PS4:
                 address: 40517
                 channel: 3
                 type: relay
-                category: relay
+                category: ps
                 relay_type: NO
                 description: 24V power supply for sextant 4
             PS5:
                 address: 40517
                 channel: 4
                 type: relay
-                category: relay
+                category: ps
                 relay_type: NO
                 description: 24V power supply for sextant 5
             PS6:
                 address: 40517
                 channel: 5
                 type: relay
-                category: relay
+                category: ps
                 relay_type: NO
                 description: 24V power supply for sextant 6
             CM1:
                 address: 40517
                 channel: 6
                 type: relay
-                category: relay
+                category: cm
                 relay_type: NC
                 description: 24V power supply for CAN module 1
             CM2:
                 address: 40517
                 channel: 7
                 type: relay
-                category: relay
+                category: cm
                 relay_type: NC
                 description: 24V power supply for CAN module 2
             CM3:
                 address: 40517
                 channel: 8
                 type: relay
-                category: relay
+                category: cm
                 relay_type: NC
                 description: 24V power supply for CAN module 3
             CM4:
                 address: 40517
                 channel: 9
                 type: relay
-                category: relay
+                category: cm
                 relay_type: NC
                 description: 24V power supply for CAN module 4
             CM5:
                 address: 40517
                 channel: 10
                 type: relay
-                category: relay
+                category: cm
                 relay_type: NC
                 description: 24V power supply for CAN module 5
             CM6:
                 address: 40517
                 channel: 11
                 type: relay
-                category: relay
+                category: cm
                 relay_type: NC
                 description: 24V power supply for CAN module 6
             SYNC:
                 address: 40517
                 channel: 12
                 type: relay
-                category: relay
+                category: sync
                 relay_type: NO
                 description: Sync line
             GFA1:
                 address: 40517
                 channel: 13
                 type: relay
-                category: relay
+                category: gfa
                 relay_type: NO
                 description: Guide camera 1
             GFA2:
                 address: 40517
                 channel: 14
                 type: relay
-                category: relay
+                category: gfa
                 relay_type: NO
                 description: Guide camera 2
             GFA3:
                 address: 40517
                 channel: 15
                 type: relay
-                category: relay
+                category: gfa
                 relay_type: NO
                 description: Guide camera 3
     DO2:
@@ -347,62 +347,62 @@ modules:
                 address: 40518
                 channel: 0
                 type: relay
-                category: relay
+                category: gfa
                 relay_type: NO
                 description: Guide camera 4
             GFA5:
                 address: 40518
                 channel: 1
                 type: relay
-                category: relay
+                category: gfa
                 relay_type: NO
                 description: Guide camera 5
             GFA6:
                 address: 40518
                 channel: 2
                 type: relay
-                category: relay
+                category: gfa
                 relay_type: NO
                 description: Guide camera 6
             NUC1:
                 address: 40518
                 channel: 3
                 type: relay
-                category: relay
+                category: nuc
                 relay_type: NO
                 description: Guide camera 1
             NUC2:
                 address: 40518
                 channel: 4
                 type: relay
-                category: relay
+                category: nuc
                 relay_type: NO
                 description: Guide camera 2
             NUC3:
                 address: 40518
                 channel: 5
                 type: relay
-                category: relay
+                category: nuc
                 relay_type: NO
                 description: Guide camera 3
             NUC4:
                 address: 40518
                 channel: 6
                 type: relay
-                category: relay
+                category: nuc
                 relay_type: NO
                 description: Guide camera 4
             NUC5:
                 address: 40518
                 channel: 7
                 type: relay
-                category: relay
+                category: nuc
                 relay_type: NO
                 description: Guide camera 5
             NUC6:
                 address: 40518
                 channel: 8
                 type: relay
-                category: relay
+                category: nuc
                 relay_type: NO
                 description: Guide camera 6
