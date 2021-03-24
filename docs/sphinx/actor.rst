@@ -10,3 +10,11 @@ The following commands are available in the jaeger actor.
 .. click:: jaeger.actor:jaeger_parser
    :prog: jaeger-actor
    :show-nested:
+
+
+.. _actor-schema:
+
+Schema
+------
+
+.. jsonschema:: ../../python/jaeger/etc/jaeger.json

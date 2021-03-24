@@ -21,6 +21,29 @@ from . import jaeger_parser
 __all__ = ["ieb"]
 
 
+async def _get_category_data(command, category) -> list:
+
+    ieb = command.actor.fps.ieb
+    schema = command.actor.model.schema
+
+    items = schema["properties"][category]["items"]
+    measured = []
+    for item in items:
+        name = item["title"]
+        type_ = item["type"]
+        device = ieb.get_device(name)
+        value = (await device.read())[0]
+        if type_ == "boolean" and device.__type__ == "relay":
+            value = True if value == "closed" else False
+        elif type_ == "integer":
+            value = int(value)
+        elif type_ == "number":
+            value = round(value, 3)
+        measured.append(value)
+
+    return measured
+
+
 @jaeger_parser.group()
 @pass_args()
 def ieb(command, fps):
@@ -29,7 +52,7 @@ def ieb(command, fps):
     ieb = fps.ieb
 
     if not ieb or ieb.disabled:
-        command.fail(text="ieb not connected.")
+        command.fail(error="ieb not connected.")
         raise click.Abort()
 
     return
@@ -39,35 +62,25 @@ def ieb(command, fps):
 async def status(command, fps):
     """Outputs the status of the devices."""
 
-    ieb = fps.ieb
+    categories = [
+        "temperature",
+        "rh",
+        "voltage",
+        "flow",
+        "pressure",
+        "led",
+        "ps",
+        "cm",
+        "sync",
+        "gfa",
+        "nuc",
+    ]
 
-    categories = set()
-    for module in ieb.modules.values():
-        new_categories = set(
-            list(
-                dev.category
-                for dev in module.devices.values()
-                if dev.category is not None
-            )
-        )
-        categories = categories.union(new_categories)
-
+    status_data = {}
     for category in categories:
-        data = await ieb.read_category(category)
-        measured = []
-        for key, value in data.items():
-            dev_name = ieb.get_device(key).name
-            meas, units = value
-            meas = round(meas, 3) if not isinstance(meas, str) else meas
-            if meas == "closed":
-                meas = "on"
-            elif meas == "open":
-                meas = "off"
-            value_unit = f"{meas}" if not units else f"{meas} {units}"
-            measured.append(f"{dev_name.lower()}={value_unit}")
-        command.write("i", message="; ".join(measured))
+        status_data[category] = await _get_category_data(command, category)
 
-    return command.finish()
+    return command.finish(message=status_data, concatenate=True)
 
 
 @ieb.command()
@@ -93,11 +106,12 @@ async def switch(command, fps, device, on, cycle):
     try:
         device_obj = ieb.get_device(device)
         dev_name = device_obj.name
+        category = device_obj.category.lower()
     except ValueError:
-        return command.fail(text=f"cannot find device {device!r}.")
+        return command.fail(error=f"cannot find device {device!r}.")
 
-    if device_obj.module.mode != "output":
-        return command.fail(text=f"{dev_name!r} is not a relay.")
+    if device_obj.module.mode not in ["holding_register", "coil"]:
+        return command.fail(error=f"{dev_name!r} is not an output.")
 
     if on is None:  # The --on/--off was not passed
         current_status = (await device_obj.read())[0]
@@ -107,7 +121,7 @@ async def switch(command, fps, device, on, cycle):
             on = True
         else:
             return command.fail(
-                text=f"invalid status for device {dev_name!r}: {current_status!r}."
+                error=f"invalid status for device {dev_name!r}: {current_status!r}."
             )
 
     try:
@@ -116,7 +130,9 @@ async def switch(command, fps, device, on, cycle):
         elif on is False:
             await device_obj.open()
     except Exception:
-        return command.fail(text=f"failed to set status of device {dev_name!r}.")
+        return command.fail(error=f"failed to set status of device {dev_name!r}.")
+
+    command.debug(message={category: _get_category_data(command, category)})
 
     if cycle:
         command.write("d", text="waiting 1 second before powering up.")
@@ -124,11 +140,16 @@ async def switch(command, fps, device, on, cycle):
         try:
             await device_obj.close()
         except Exception:
-            return command.fail(text=f"failed to power device {dev_name!r} back on.")
+            return command.fail(error=f"failed to power device {dev_name!r} back on.")
 
     status = "on" if (await device_obj.read())[0] == "closed" else "off"
 
-    return command.finish(text=f"device {dev_name!r} is now {status!r}.")
+    return command.finish(
+        message={
+            "text": f"device {dev_name!r} is now {status!r}.",
+            category: await _get_category_data(command, category),
+        }
+    )
 
 
 async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
@@ -146,32 +167,34 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
     sync = ieb.get_device("SYNC")
     if (await sync.read())[0] == "closed":
         command.debug(text="SYNC line is high. Opening it.")
-        await sync.open()  # type: ignore
+        await sync.open()
 
     if (await sync.read())[0] != "open":
         command.fail(error="Failed opening SYNC line.")
         return False
 
-    command.debug(sync="off")
+    command.debug(sync=False)
 
     for devname in seq:
         if isinstance(devname, str):
             dev = ieb.get_device(devname)
+            category = dev.category.lower()
 
             if (await dev.read())[0] == relay_result:
                 command.debug(text=f"{devname} alredy powered {mode}.")
             else:
                 command.debug(text=f"Powering {mode} {devname}.")
-                await dev.close() if mode == "on" else dev.open()  # type: ignore
+                await dev.close() if mode == "on" else dev.open()
                 if (await dev.read())[0] != relay_result:
                     command.fail(error=f"Failed powering {mode} {devname}.")
                     return False
 
-            command.debug({devname.lower(): "on"})
+            command.debug(message={category: _get_category_data(command, category)})
 
         elif isinstance(devname, (tuple, list)):
             devname = list(devname)
             devs = [ieb.get_device(dn) for dn in devname]
+            category = devs[0].category.lower()
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
 
@@ -192,13 +215,15 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
 
             command.debug(text=f"Powering {mode} {', '.join(devname)}")
 
-            await asyncio.gather(*[dev.close() for dev in devs])  # type: ignore
+            await asyncio.gather(*[dev.close() for dev in devs])
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
             for ii, res in enumerate(status):
                 if res[0] != "closed":
                     command.fail(error=f"Failed powering {mode} {devname[ii]}.")
                     return False
+
+            command.debug(message={category: _get_category_data(command, category)})
 
         else:
             command.fail(error=f"Invalid relay {devname!r}.")

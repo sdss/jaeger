@@ -1,0 +1,131 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "text": { "type": "string" },
+        "error": { "type": "string" },
+        "version": { "type": "string" },
+        "config_file": { "type": "string" },
+        "temperature": {
+            "type": "array",
+            "items": [
+                { "title": "T1", "type": "number" },
+                { "title": "T2", "type": "number" },
+                { "title": "T3", "type": "number" },
+                { "title": "RTD1", "type": "number" },
+                { "title": "RTD2", "type": "number" },
+                { "title": "RTD3", "type": "number" },
+                { "title": "RTD4", "type": "number" },
+                { "title": "RTD6", "type": "number" },
+                { "title": "RTD7", "type": "number" },
+                { "title": "RTD8", "type": "number" },
+                { "title": "RTD9", "type": "number" },
+                { "title": "RTD10", "type": "number" },
+                { "title": "RTD12", "type": "number" }
+            ]
+        },
+        "rh": {
+            "type": "array",
+            "items": [
+                { "title": "RH1", "type": "number" },
+                { "title": "RH2", "type": "number" },
+                { "title": "RH3", "type": "number" }
+            ]
+        },
+        "voltage": {
+            "type": "array",
+            "items": [
+                { "title": "PV24_1", "type": "number" },
+                { "title": "PV24_2", "type": "number" },
+                { "title": "PV24_3", "type": "number" },
+                { "title": "PV24_4", "type": "number" },
+                { "title": "PV24_5", "type": "number" },
+                { "title": "PV24_6", "type": "number" }
+            ]
+        },
+        "flow": {
+            "type": "array",
+            "items": [
+                { "title": "FLOW1", "type": "number" },
+                { "title": "FLOW2", "type": "number" }
+            ]
+        },
+        "pressure": {
+            "type": "array",
+            "items": [
+                { "title": "PRESSURE1", "type": "number" },
+                { "title": "PRESSURE2", "type": "number" }
+            ]
+        },
+        "led": {
+            "type": "array",
+            "items": [
+                { "title": "LED1", "type": "integer" },
+                { "title": "LED2", "type": "integer" }
+            ]
+        },
+        "ps": {
+            "type": "array",
+            "items": [
+                { "title": "PS1", "type": "boolean" },
+                { "title": "PS2", "type": "boolean" },
+                { "title": "PS3", "type": "boolean" },
+                { "title": "PS4", "type": "boolean" },
+                { "title": "PS5", "type": "boolean" },
+                { "title": "PS6", "type": "boolean" }
+            ]
+        },
+        "cm": {
+            "type": "array",
+            "items": [
+                { "title": "CM1", "type": "boolean" },
+                { "title": "CM2", "type": "boolean" },
+                { "title": "CM3", "type": "boolean" },
+                { "title": "CM4", "type": "boolean" },
+                { "title": "CM5", "type": "boolean" },
+                { "title": "CM6", "type": "boolean" }
+            ]
+        },
+        "sync": {
+            "type": "array",
+            "items": [{ "title": "SYNC", "type": "boolean" }]
+        },
+        "gfa": {
+            "type": "array",
+            "items": [
+                { "title": "GFA1", "type": "boolean" },
+                { "title": "GFA2", "type": "boolean" },
+                { "title": "GFA3", "type": "boolean" },
+                { "title": "GFA4", "type": "boolean" },
+                { "title": "GFA5", "type": "boolean" },
+                { "title": "GFA6", "type": "boolean" }
+            ]
+        },
+        "nuc": {
+            "type": "array",
+            "items": [
+                { "title": "NUC1", "type": "boolean" },
+                { "title": "NUC2", "type": "boolean" },
+                { "title": "NUC3", "type": "boolean" },
+                { "title": "NUC4", "type": "boolean" },
+                { "title": "NUC5", "type": "boolean" },
+                { "title": "NUC6", "type": "boolean" }
+            ]
+        },
+        "move_time": { "type": "number" },
+        "engineering_mode": { "type": "boolean" },
+        "status": {
+            "type": "array",
+            "items": [
+                { "title": "positioner_id", "type": "integer" },
+                { "title": "alpha", "type": "number" },
+                { "title": "beta", "type": "number" },
+                { "title": "bits", "type": "integer" },
+                { "title": "initialised", "type": "boolean" },
+                { "title": "bootloader", "type": "boolean" },
+                { "title": "firmware", "type": "string" }
+            ]
+        }
+    },
+    "additionalProperties": false
+}

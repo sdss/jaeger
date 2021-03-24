@@ -50,7 +50,7 @@ async def upgrade(command, fps, firmware_file, positioners):
     else:
         positioner_id = fps.positioner_to_bus.keys()
 
-    command.debug("stopping pollers")
+    command.debug(text="stopping pollers")
     await fps.pollers.stop()
 
     await fps.update_firmware_version(positioner_id=positioner_id)
@@ -82,18 +82,18 @@ async def upgrade(command, fps, firmware_file, positioners):
         result = False
 
     if not result:
-        return command.fail("firmware upgrade failed.")
+        return command.fail(error="firmware upgrade failed.")
 
-    command.info("firmware loaded. Waiting 10 seconds to exit bootloader mode.")
+    command.info(text="firmware loaded. Waiting 10 seconds to exit bootloader mode.")
 
     await asyncio.sleep(11)
 
-    command.info("restarting FPS")
+    command.info(text="restarting FPS")
     await fps.initialise()
 
     # Check that we really are in normal mode
     for positioner in fps.positioners.values():
         if positioner.is_bootloader():
-            return command.fail("some positioner are still in bootloader mode.")
+            return command.fail(error="some positioner are still in bootloader mode.")
 
-    return command.finish("firmware load complete.")
+    return command.finish(text="firmware load complete.")

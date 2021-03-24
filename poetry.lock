@@ -448,6 +448,14 @@ MarkupSafe = ">=0.23"
 i18n = ["Babel (>=0.8)"]
 
 [[package]]
+name = "jsonpointer"
+version = "2.1"
+description = "Identify specific nodes in a JSON document (RFC 6901)"
+category = "dev"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
 name = "jsonschema"
 version = "3.2.0"
 description = "An implementation of JSON Schema validation for Python"
@@ -976,19 +984,26 @@ docutils = ">=0.7"
 
 [[package]]
 name = "sdss-clu"
-version = "0.7.3"
+version = "0.7.5-alpha.0"
 description = "A new protocol for SDSS actors."
 category = "main"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = "^3.7"
+develop = false
 
 [package.dependencies]
-aio_pika = ">=6.4.1,<7.0.0"
-aiormq = ">=3.2.0,<4.0.0"
-click = ">=7.0,<8.0"
-jsonschema = ">=3.0.1,<4.0.0"
-prompt_toolkit = ">=3.0.6,<4.0.0"
+aio_pika = "^6.4.1"
+aiormq = "^3.2.0"
+click = "^7.0"
+jsonschema = "^3.0.1"
+prompt_toolkit = "^3.0.6"
 sdsstools = ">=0.2.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/sdss/clu"
+reference = "main"
+resolved_reference = "4b3424a9b1ca11b1cdf0107cc3ca3230c70e61ab"
 
 [[package]]
 name = "sdss-drift"
@@ -1112,6 +1127,20 @@ python-versions = "*"
 click = ">=6.0,<8.0"
 docutils = "*"
 sphinx = ">=1.5,<4.0"
+
+[[package]]
+name = "sphinx-jsonschema"
+version = "1.16.8"
+description = "Sphinx extension to display JSON Schema"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+docutils = "*"
+jsonpointer = "*"
+pyyaml = "*"
+requests = "*"
 
 [[package]]
 name = "sphinxcontrib-applehelp"
@@ -1337,7 +1366,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "4c5c86745ab2a18ff65905211125f72b956bf189b338bb67b4243b7b2e4d8379"
+content-hash = "cc2a4acfbc24f59de039105d17ca67ce44e183075d7a4002a9f556e61a78d234"
 
 [metadata.files]
 aenum = [
@@ -1582,6 +1611,10 @@ jedi = [
 jinja2 = [
     {file = "Jinja2-2.11.3-py2.py3-none-any.whl", hash = "sha256:03e47ad063331dd6a3f04a43eddca8a966a26ba0c5b7207a9a9e4e08f1b29419"},
     {file = "Jinja2-2.11.3.tar.gz", hash = "sha256:a6d58433de0ae800347cab1fa3043cebbabe8baa9d29e668f1c768cb87a333c6"},
+]
+jsonpointer = [
+    {file = "jsonpointer-2.1-py2.py3-none-any.whl", hash = "sha256:150f80c5badd02c757da6644852f612f88e8b4bc2f9852dcbf557c8738919686"},
+    {file = "jsonpointer-2.1.tar.gz", hash = "sha256:5a34b698db1eb79ceac454159d3f7c12a451a91f6334a4f638454327b7a89962"},
 ]
 jsonschema = [
     {file = "jsonschema-3.2.0-py2.py3-none-any.whl", hash = "sha256:4e5b3cf8216f577bee9ce139cbe72eca3ea4f292ec60928ff24758ce626cd163"},
@@ -2058,10 +2091,7 @@ restructuredtext-lint = [
 rstcheck = [
     {file = "rstcheck-3.3.1.tar.gz", hash = "sha256:92c4f79256a54270e0402ba16a2f92d0b3c15c8f4410cb9c57127067c215741f"},
 ]
-sdss-clu = [
-    {file = "sdss-clu-0.7.3.tar.gz", hash = "sha256:616f309f0cda5bec3e05efc8540c8639e3a9720f6848dc6ebf2b6954412152c5"},
-    {file = "sdss_clu-0.7.3-py3-none-any.whl", hash = "sha256:1538358516bfff0e62eb84687079e6778877bb9ffbcac86e9ce8574f6eb3347e"},
-]
+sdss-clu = []
 sdss-drift = [
     {file = "sdss-drift-0.2.0.tar.gz", hash = "sha256:f3b27c3dfbc9238e2fd5286f1f0314d1f68d567071bc70a331cc3d4e13f9ac9b"},
     {file = "sdss_drift-0.2.0-py3-none-any.whl", hash = "sha256:4f4236ce3c2ab539d9e38df47d91b8ce0f4c5ee2c5cb70f75e57e7a444dead34"},
@@ -2093,6 +2123,9 @@ sphinx = [
 sphinx-click = [
     {file = "sphinx-click-2.7.1.tar.gz", hash = "sha256:1b6175df5392564fd3780000d4627e5a2c8c3b29d05ad311dbbe38fcf5f3327b"},
     {file = "sphinx_click-2.7.1-py2.py3-none-any.whl", hash = "sha256:e738a2c7a87f23e67da4a9e28ca6f085d3ca626f0e4164847f77ff3c36c65df1"},
+]
+sphinx-jsonschema = [
+    {file = "sphinx-jsonschema-1.16.8.tar.gz", hash = "sha256:5728b3ece1fe475c285d5ae16953242c51b4e6852f48f0bb734cd8408f3ac8b3"},
 ]
 sphinxcontrib-applehelp = [
     {file = "sphinxcontrib-applehelp-1.0.2.tar.gz", hash = "sha256:a072735ec80e7675e3f432fcae8610ecf509c5f1869d17e2eecff44389cdbc58"},
