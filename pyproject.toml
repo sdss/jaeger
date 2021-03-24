@@ -81,7 +81,12 @@ lines_after_imports = 2
 [tool.pytest.ini_options]
 addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
 filterwarnings = [
-    "ignore:.*The loop argument is deprecated since.*"
+    "ignore:.*The loop argument is deprecated since.*",
+    "ignore:.*Loading an empty FPS.*",
+    "ignore:.*They have been added to the.*",
+]
+markers = [
+    "rtd2: Temperature of the RTD2 sensor"
 ]
 
 [tool.coverage.run]

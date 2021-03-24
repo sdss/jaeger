@@ -6,6 +6,7 @@
         "error": { "type": "string" },
         "version": { "type": "string" },
         "config_file": { "type": "string" },
+        "low_temperature": { "type": "integer", "enum": [0, 1, 2] },
         "temperature": {
             "type": "array",
             "items": [

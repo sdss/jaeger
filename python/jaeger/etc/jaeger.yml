@@ -52,3 +52,13 @@ positioner:
 files:
     log_dir: /data/logs/jaeger
     ieb_config: etc/ieb.yaml
+
+low_temperature:
+    sensor: RTD2
+    cold_threshold: 0
+    very_cold_threshold: -10
+    interval: 60
+    rpm_normal: 5000
+    rpm_cold: 3000
+    holding_torque_normal: [0, 30]
+    holding_torque_very_cold: [45, 30]
