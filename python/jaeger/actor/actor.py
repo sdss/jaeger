@@ -157,5 +157,6 @@ class JaegerActor(clu.LegacyActor):
                     text=f"Cannot read device {sensor!r}. "
                     f"Low-temperature mode will not be engaged: {err}",
                 )
+                return
 
             await asyncio.sleep(interval)
