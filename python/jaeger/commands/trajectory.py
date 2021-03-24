@@ -186,7 +186,8 @@ class Trajectory(object):
         await self.abort_trajectory()
 
         if not await self.fps.update_status(
-            positioner_ids=list(self.trajectories.keys()), timeout=1.0
+            positioner_ids=list(self.trajectories.keys()),
+            timeout=1.0,
         ):
             self.failed = True
             raise TrajectoryError("some positioners did not respond.")
@@ -196,6 +197,13 @@ class Trajectory(object):
 
             positioner = self.fps.positioners[pos_id]
             status = positioner.status
+
+            if positioner.disabled:
+                self.failed = True
+                raise TrajectoryError(
+                    f"positioner_id={pos_id} is disabled but "
+                    "included in the trajectory."
+                )
 
             if (
                 positioner.flags.DATUM_ALPHA_INITIALIZED not in status
