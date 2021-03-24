@@ -52,6 +52,7 @@ async def status(command, fps):
         )
         categories = categories.union(new_categories)
 
+    status_data = {}
     for category in categories:
         data = await ieb.read_category(category)
         measured = []
