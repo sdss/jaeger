@@ -8,6 +8,8 @@
 
 import pytest
 
+from jaeger.exceptions import JaegerError
+
 
 # Need to mark all tests with positioners to make sure they are created,
 # and with asyncio to allow execution of coroutines.
@@ -19,7 +21,32 @@ async def test_send_trajectory(vfps):
     await vfps.initialise()
 
     await vfps.send_trajectory(
-        {1: {"alpha": [(1, 1), (2, 2)], "beta": [(1, 1), (2, 2)]}}, use_sync_line=False
+        {
+            1: {
+                "alpha": [(1, 1), (2, 2)],
+                "beta": [(1, 1), (2, 2)],
+            }
+        },
+        use_sync_line=False,
     )
 
     await vfps.update_position()
+
+
+async def test_disabled_positioner_fails(vfps):
+
+    await vfps.initialise()
+    vfps[1].disabled = True
+
+    with pytest.raises(JaegerError) as err:
+        await vfps.send_trajectory(
+            {
+                1: {
+                    "alpha": [(1, 1), (2, 2)],
+                    "beta": [(1, 1), (2, 2)],
+                }
+            },
+            use_sync_line=False,
+        )
+
+    assert "positioner_id=1 is disabled" in str(err)

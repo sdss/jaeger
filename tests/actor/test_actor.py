@@ -23,7 +23,8 @@ def mock_rtd2(request, mocker, vfps):
     temperature = request.node.get_closest_marker("rtd2").args[0]
 
     rtd2 = vfps.ieb.get_device("RTD2")
-    mocker.patch.object(rtd2, "read", return_value=(temperature, "degC"))
+
+    yield mocker.patch.object(rtd2, "read", return_value=(temperature, "degC"))
 
 
 async def test_status(actor):
