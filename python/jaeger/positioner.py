@@ -63,6 +63,8 @@ class Positioner(StatusMixIn):
         self.speed = (None, None)
         self.firmware = None
 
+        self.disabled = False
+
         self._move_time = None
 
         super().__init__(

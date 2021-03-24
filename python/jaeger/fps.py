@@ -412,6 +412,13 @@ class FPS(BaseFPS):
 
         assert isinstance(command, Command)
 
+        if broadcast:
+            if any([self[pos].disabled for pos in self]) and not command.safe:
+                raise JaegerError("Some positioners are disabled. Use send_to_all.")
+        else:
+            if self[positioner_id].disabled and not command.safe:
+                raise JaegerError(f"Positioner {positioner_id} is disabled.")
+
         if positioner_id != 0 and positioner_id not in self.positioners:
             raise JaegerError(f"Positioner {positioner_id} is not connected.")
 
@@ -962,7 +969,8 @@ class FPS(BaseFPS):
             or the `.CommandID` flag. Alternatively, the `.Command` to send.
         positioners
             The list of ``positioner_id`` of the positioners to command. If
-            `None`, sends the command to all the positioners in the FPS.
+            `None`, sends the command to all the positioners in the FPS that
+            are not disabled.
         data
             The payload to send. If `None`, no payload is sent. If the value
             is a list with a single value, the same payload is sent to all
@@ -978,7 +986,10 @@ class FPS(BaseFPS):
 
         """
 
-        positioners = positioners or list(self.positioners.keys())
+        if positioners is None or positioners == 0:
+            positioners = [pos for pos in self.keys() if not self[pos].disabled]
+        else:
+            assert isinstance(positioners, (list, tuple))
 
         if data is None or len(data) == 1:
             commands = [

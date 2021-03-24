@@ -13,6 +13,7 @@ import pytest
 from drift import Relay
 
 import jaeger
+from jaeger.exceptions import JaegerError
 from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
 
@@ -100,3 +101,34 @@ async def test_ieb(vfps):
     assert isinstance(sync, Relay)
 
     assert (await sync.read())[0] == "open"
+
+
+async def test_positioner_disabled_send_command_fails_broadcast(vfps):
+
+    await vfps.initialise()
+    vfps[2].disabled = True
+
+    with pytest.raises(JaegerError) as err:
+        await vfps.send_command("START_TRAJECTORY", positioner_id=0)
+
+    assert "Some positioners are disabled. Use send_to_all." in str(err)
+
+
+async def test_positioner_disabled_send_command_fails(vfps):
+
+    await vfps.initialise()
+    vfps[2].disabled = True
+
+    with pytest.raises(JaegerError) as err:
+        await vfps.send_command("GO_TO_ABSOLUTE_POSITION", positioner_id=2)
+
+    assert "Positioner 2 is disabled." in str(err)
+
+
+async def test_positioner_disabled_send_to_all(vfps):
+
+    await vfps.initialise()
+    vfps[2].disabled = True
+
+    results = await vfps.send_to_all("GET_ID", positioners=0)
+    assert len(results) == len(vfps) - 1
