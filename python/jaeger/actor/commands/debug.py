@@ -32,12 +32,12 @@ def debug(ctx, command, fps, danger):
     fps.engineering_mode = danger
 
     if fps.engineering_mode:
-        command.warning("you are now in engineering mode.")
+        command.warning(text="you are now in engineering mode.")
     else:
-        command.info("you are not in engineering mode.")
+        command.info(text="you are not in engineering mode.")
 
     if ctx.invoked_subcommand is None:
-        return command.finish()
+        return command.finish(engineering_mode=fps.engineering_mode)
 
     return
 

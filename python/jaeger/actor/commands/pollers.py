@@ -41,10 +41,10 @@ async def stop(command, fps, poller):
         await fps.pollers.stop()
     else:
         if poller not in fps.pollers.names:
-            command.fail("poller not found.")
+            command.fail(error="poller not found.")
         await fps.pollers[poller].stop()
 
-    command.finish("pollers stopped")
+    command.finish(text="pollers stopped")
 
 
 @pollers.command()
@@ -56,7 +56,7 @@ async def start(command, fps, poller):
         fps.pollers.start()
     else:
         if poller not in fps.pollers.names:
-            command.fail("poller not found.")
+            command.fail(error="poller not found.")
         fps.pollers[poller].start()
 
-    command.finish("pollers started")
+    command.finish(text="pollers started")
