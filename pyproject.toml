@@ -97,6 +97,7 @@ omit = [
     "*/__init__.py",
     "*/cannet.py",
     "*/actor/commands/bootloader.py",
+    "*/actor/commands/talk.py",
     "*/commands/calibration.py",
     "*/exceptions.py"
 ]

@@ -89,7 +89,10 @@ class Message(can.Message):
             arbitration_id = positioner_id
 
         can.Message.__init__(
-            self, data=data, arbitration_id=arbitration_id, is_extended_id=extended_id
+            self,
+            data=data,
+            arbitration_id=arbitration_id,
+            is_extended_id=extended_id,
         )
 
 

@@ -2,6 +2,9 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
+        "yourUserID": { "type": "integer" },
+        "UserInfo": { "type": "string" },
+        "num_users": { "type": "integer" },
         "text": { "type": "string" },
         "error": { "type": "string" },
         "version": { "type": "string" },
@@ -126,6 +129,15 @@
                 { "title": "initialised", "type": "boolean" },
                 { "title": "bootloader", "type": "boolean" },
                 { "title": "firmware", "type": "string" }
+            ]
+        },
+        "raw": {
+            "type": "array",
+            "items": [
+                { "title": "command_id", "type": "integer" },
+                { "title": "uid", "type": "integer" },
+                { "title": "response_code", "type": "integer" },
+                { "title": "data", "type": "string" }
             ]
         }
     },

@@ -6,13 +6,11 @@
 # @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# flake8: noqa
-# isort:skip_file
-
 from clu.parser import command_parser as jaeger_parser
 
 from .bootloader import *
 from .debug import *
-from .positioner import *
-from .pollers import *
 from .ieb import *
+from .pollers import *
+from .positioner import *
+from .talk import *
