@@ -59,6 +59,7 @@ black = {version = "^20.8b1", allow-prereleases = true}
 rstcheck = "^3.3.1"
 pytest-mock = "^3.5.1"
 pyserial-asyncio = "^0.5"
+sphinx-jsonschema = "^1.16.8"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
@@ -79,6 +80,9 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
+filterwarnings = [
+    "ignore:.*The loop argument is deprecated since.*"
+]
 
 [tool.coverage.run]
 branch = true

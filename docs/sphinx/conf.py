@@ -32,6 +32,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sdsstools.releases",
     "sphinx_click.ext",
+    "sphinx-jsonschema",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
