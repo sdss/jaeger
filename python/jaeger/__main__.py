@@ -146,8 +146,15 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     is_flag=True,
     help="Enables engineering mode. Most safety checks will be disabled.",
 )
+@click.option(
+    "-s",
+    "--sextant",
+    is_flag=True,
+    help="Use engineering sextant instead of IEB. "
+    "Modifies the internal configuration file.",
+)
 @click.pass_context
-def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
+def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger, sextant):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
@@ -171,6 +178,11 @@ def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger):
 
     if config_file:
         config.load(config_file)
+
+    if sextant:
+        sextant_file = os.path.join(os.path.dirname(__file__), "etc/sextant.yaml")
+        config["files"]["ieb_config"] = sextant_file
+        log.debug(f"Using internal IEB sextant onfiguration file {sextant_file}.")
 
     ctx.obj = FPSWrapper(profile, layout, ieb, danger)
 
