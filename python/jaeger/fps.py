@@ -270,7 +270,7 @@ class FPS(BaseFPS):
         self.ieb: IEB | None = None
 
         if ieb is None or ieb is True:
-            ieb = config["fps"]["ieb"]
+            ieb = config["files"]["ieb_config"]
 
         if isinstance(self.ieb, IEB):
             pass

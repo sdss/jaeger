@@ -39,7 +39,6 @@ fps:
     initialise_timeouts: 0.5
     status_poller_delay: 5
     position_poller_delay: 5
-    ieb: etc/ieb.yaml
 
 positioner:
     motor_speed: 3000
@@ -52,3 +51,4 @@ positioner:
 
 files:
     log_dir: /data/logs/jaeger
+    ieb_config: etc/ieb.yaml
