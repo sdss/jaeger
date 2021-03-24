@@ -240,6 +240,8 @@ class FPS(BaseFPS):
 
         if config.CONFIG_FILE:
             log.info(f"Using configuration from {config.CONFIG_FILE}")
+        else:
+            warnings.warn("Unknown configuration file", JaegerUserWarning)
 
         self.engineering_mode = engineering_mode
 
