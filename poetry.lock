@@ -984,19 +984,26 @@ docutils = ">=0.7"
 
 [[package]]
 name = "sdss-clu"
-version = "0.7.4"
+version = "0.7.5-alpha.0"
 description = "A new protocol for SDSS actors."
 category = "main"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = "^3.7"
+develop = false
 
 [package.dependencies]
-aio_pika = ">=6.4.1,<7.0.0"
-aiormq = ">=3.2.0,<4.0.0"
-click = ">=7.0,<8.0"
-jsonschema = ">=3.0.1,<4.0.0"
-prompt_toolkit = ">=3.0.6,<4.0.0"
+aio_pika = "^6.4.1"
+aiormq = "^3.2.0"
+click = "^7.0"
+jsonschema = "^3.0.1"
+prompt_toolkit = "^3.0.6"
 sdsstools = ">=0.2.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/sdss/clu"
+reference = "main"
+resolved_reference = "4b3424a9b1ca11b1cdf0107cc3ca3230c70e61ab"
 
 [[package]]
 name = "sdss-drift"
@@ -1359,7 +1366,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "025690bb6b56c3bc31cc3047a46707d7cab9c14bd48d04f14dd14b9e6d82b8cb"
+content-hash = "cc2a4acfbc24f59de039105d17ca67ce44e183075d7a4002a9f556e61a78d234"
 
 [metadata.files]
 aenum = [
@@ -2084,10 +2091,7 @@ restructuredtext-lint = [
 rstcheck = [
     {file = "rstcheck-3.3.1.tar.gz", hash = "sha256:92c4f79256a54270e0402ba16a2f92d0b3c15c8f4410cb9c57127067c215741f"},
 ]
-sdss-clu = [
-    {file = "sdss-clu-0.7.4.tar.gz", hash = "sha256:f1527ecf041a64e8688662a99a64382542e51b4070edd2de9af485720b108db3"},
-    {file = "sdss_clu-0.7.4-py3-none-any.whl", hash = "sha256:5a6237ee7195412d3e4bf3d17ee5cac6c86d827b8ede50837b87a9d9024950b1"},
-]
+sdss-clu = []
 sdss-drift = [
     {file = "sdss-drift-0.2.0.tar.gz", hash = "sha256:f3b27c3dfbc9238e2fd5286f1f0314d1f68d567071bc70a331cc3d4e13f9ac9b"},
     {file = "sdss_drift-0.2.0-py3-none-any.whl", hash = "sha256:4f4236ce3c2ab539d9e38df47d91b8ce0f4c5ee2c5cb70f75e57e7a444dead34"},
