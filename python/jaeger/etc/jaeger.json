@@ -114,6 +114,7 @@
         },
         "move_time": { "type": "number" },
         "engineering_mode": { "type": "boolean" },
+        "locked": { "type": "boolean" },
         "status": {
             "type": "array",
             "items": [
