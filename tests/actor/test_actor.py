@@ -55,6 +55,7 @@ async def test_low_temperature_cold(mock_rtd2, actor):
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
+@pytest.mark.rtd2(-15)
 async def test_low_temperature_very_cold(mock_rtd2, actor):
 
     await asyncio.sleep(0.1)
