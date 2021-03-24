@@ -31,3 +31,12 @@ async def test_power_on_fails(actor, mocker):
 async def test_power_off(actor):
     command = await actor.invoke_mock_command("ieb power off")
     assert command.status.did_succeed
+
+
+async def test_status(actor):
+
+    command = await actor.invoke_mock_command("ieb status")
+
+    assert command.status.did_succeed
+    assert actor.mock_replies[-1]["gfa"] == 'F,F,F,F,F,F'
+    assert actor.mock_replies[-1]["cm"] == 'T,T,T,T,T,T'
