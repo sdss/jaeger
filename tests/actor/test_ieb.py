@@ -38,5 +38,5 @@ async def test_status(actor):
     command = await actor.invoke_mock_command("ieb status")
 
     assert command.status.did_succeed
-    assert actor.mock_replies[-1]["gfa"] == 'F,F,F,F,F,F'
-    assert actor.mock_replies[-1]["cm"] == 'T,T,T,T,T,T'
+    assert actor.mock_replies[-1]["gfa"] == "F,F,F,F,F,F"
+    assert actor.mock_replies[-1]["cm"] == "T,T,T,T,T,T"
