@@ -33,7 +33,7 @@ class JaegerActor(clu.LegacyActor):
         if "schema" not in kwargs:
             kwargs["schema"] = os.path.join(
                 os.path.dirname(__file__),
-                "../etc/jaeger.json",
+                "../etc/schema.json",
             )
 
         # Pass the FPS instance as the second argument to each parser
