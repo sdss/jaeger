@@ -1,4 +1,4 @@
-address: sdss-fps-ieb
+address: sdss-fps-wago
 port: 502
 modules:
     ANALOG1:
