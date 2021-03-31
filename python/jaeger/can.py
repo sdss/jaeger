@@ -13,6 +13,7 @@ import pprint
 import re
 import socket
 import time
+import warnings
 
 import can
 from can.interfaces.slcan import slcanBus
@@ -20,6 +21,7 @@ from can.interfaces.socketcan import SocketcanBus
 from can.interfaces.virtual import VirtualBus
 
 import jaeger
+from jaeger.exceptions import JaegerUserWarning
 import jaeger.interfaces.cannet
 import jaeger.utils
 from jaeger import can_log, config, log, start_file_loggers
@@ -153,7 +155,7 @@ class JaegerCAN(object):
                 )
 
         if len(self.interfaces) == 0:
-            raise jaeger.JaegerError("cannot connect to any interface.")
+            warnings.warn("cannot connect to any interface.", JaegerUserWarning)
 
         self._start_notifier()
 
