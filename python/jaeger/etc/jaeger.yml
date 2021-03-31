@@ -25,6 +25,7 @@ profiles:
         port: 19228
         buses: [1, 2, 3, 4]
         bitrate: 1000000
+        timeout: 1
     slcan:
         interface: slcan
         channel: /dev/tty.usbserial-LW3HTDSY
