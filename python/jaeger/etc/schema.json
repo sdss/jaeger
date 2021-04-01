@@ -23,7 +23,7 @@
                 { "title": "RTD12", "type": "number" }
             ]
         },
-        "rh": {
+        "humidity": {
             "type": "array",
             "description": "Relative humidity measurements",
             "items": [
@@ -60,7 +60,7 @@
                 { "title": "PRESSURE2", "type": "number" }
             ]
         },
-        "led": {
+        "fbi_led": {
             "type": "array",
             "description": "Integration spheres LED power",
             "items": [
@@ -68,7 +68,7 @@
                 { "title": "LED2", "type": "integer" }
             ]
         },
-        "ps": {
+        "power_sextant": {
             "type": "array",
             "description": "Power supply relays",
             "items": [
@@ -80,7 +80,7 @@
                 { "title": "PS6", "type": "boolean" }
             ]
         },
-        "cm": {
+        "power_can": {
             "type": "array",
             "description": "CANNet module relays",
             "items": [
@@ -92,12 +92,12 @@
                 { "title": "CM6", "type": "boolean" }
             ]
         },
-        "sync": {
+        "power_sync": {
             "type": "array",
             "description": "SYNC line status",
             "items": [{ "title": "SYNC", "type": "boolean" }]
         },
-        "gfa": {
+        "power_gfa": {
             "type": "array",
             "description": "GFA power relays",
             "items": [
@@ -109,7 +109,7 @@
                 { "title": "GFA6", "type": "boolean" }
             ]
         },
-        "nuc": {
+        "power_nuc": {
             "type": "array",
             "description": "GFA NUC relays",
             "items": [

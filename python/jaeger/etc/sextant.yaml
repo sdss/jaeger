@@ -25,7 +25,7 @@ modules:
         devices:
             "RH1":
                 address: 40001
-                category: rh
+                category: humidity
                 adaptor: rh_dwyer
                 units: percent
             "T1":
@@ -41,21 +41,21 @@ modules:
         devices:
             "PS1":
                 address: 40513
-                type: ps
-                category: relay
+                type: relay
+                category: power_sextant
                 relay_type: NC
             "5V":
                 address: 40514
-                type: ps5
-                category: relay
+                type: relay
+                category: power_5v
                 relay_type: NC
             "CM1":
                 address: 40515
-                type: cm
-                category: relay
+                type: relay
+                category: power_can
                 relay_type: NC
             "SYNC":
                 address: 40516
-                type: sync
-                category: relay
+                type: relay
+                category: power_sync
                 relay_type: "NO"
