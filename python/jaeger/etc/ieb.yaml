@@ -215,7 +215,7 @@ modules:
                 description: LED1 power
             LED2:
                 address: 40516
-                category: fpi_led
+                category: fbi_led
                 adaptor: pwd
                 units: percent
                 description: LED2 power
