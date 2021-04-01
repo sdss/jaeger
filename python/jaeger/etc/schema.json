@@ -2,12 +2,6 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-        "yourUserID": { "type": "integer" },
-        "UserInfo": { "type": "string" },
-        "num_users": { "type": "integer" },
-        "text": { "type": "string" },
-        "error": { "type": "string" },
-        "version": { "type": "string" },
         "config_file": { "type": "string" },
         "low_temperature": { "type": "integer", "enum": [0, 1, 2] },
         "temperature": {
