@@ -6,6 +6,7 @@
         "low_temperature": { "type": "integer", "enum": [0, 1, 2] },
         "temperature": {
             "type": "array",
+            "description": "Temperature measurements",
             "items": [
                 { "title": "T1", "type": "number" },
                 { "title": "T2", "type": "number" },
@@ -24,6 +25,7 @@
         },
         "rh": {
             "type": "array",
+            "description": "Relative humidity measurements",
             "items": [
                 { "title": "RH1", "type": "number" },
                 { "title": "RH2", "type": "number" },
@@ -32,6 +34,7 @@
         },
         "voltage": {
             "type": "array",
+            "description": "Power supply voltage measurements",
             "items": [
                 { "title": "PV24_1", "type": "number" },
                 { "title": "PV24_2", "type": "number" },
@@ -43,6 +46,7 @@
         },
         "flow": {
             "type": "array",
+            "description": "Coolant flow measurements",
             "items": [
                 { "title": "FLOW1", "type": "number" },
                 { "title": "FLOW2", "type": "number" }
@@ -50,6 +54,7 @@
         },
         "pressure": {
             "type": "array",
+            "description": "Coolant pressure measurements",
             "items": [
                 { "title": "PRESSURE1", "type": "number" },
                 { "title": "PRESSURE2", "type": "number" }
@@ -57,6 +62,7 @@
         },
         "led": {
             "type": "array",
+            "description": "Integration spheres LED power",
             "items": [
                 { "title": "LED1", "type": "integer" },
                 { "title": "LED2", "type": "integer" }
@@ -64,6 +70,7 @@
         },
         "ps": {
             "type": "array",
+            "description": "Power supply relays",
             "items": [
                 { "title": "PS1", "type": "boolean" },
                 { "title": "PS2", "type": "boolean" },
@@ -75,6 +82,7 @@
         },
         "cm": {
             "type": "array",
+            "description": "CANNet module relays",
             "items": [
                 { "title": "CM1", "type": "boolean" },
                 { "title": "CM2", "type": "boolean" },
@@ -86,10 +94,12 @@
         },
         "sync": {
             "type": "array",
+            "description": "SYNC line status",
             "items": [{ "title": "SYNC", "type": "boolean" }]
         },
         "gfa": {
             "type": "array",
+            "description": "GFA power relays",
             "items": [
                 { "title": "GFA1", "type": "boolean" },
                 { "title": "GFA2", "type": "boolean" },
@@ -101,6 +111,7 @@
         },
         "nuc": {
             "type": "array",
+            "description": "GFA NUC relays",
             "items": [
                 { "title": "NUC1", "type": "boolean" },
                 { "title": "NUC2", "type": "boolean" },
