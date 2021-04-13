@@ -187,7 +187,7 @@ def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger, sexta
     ctx.obj = FPSWrapper(profile, layout, ieb, danger)
 
 
-@jaeger.group(cls=DaemonGroup, prog="actor", workdir=os.getcwd())
+@jaeger.group(cls=DaemonGroup, prog="jaeger_actor", workdir=os.getcwd())
 @click.option(
     "--no-tron",
     is_flag=True,
