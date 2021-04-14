@@ -8,7 +8,7 @@
 [jaeger](http://pacificrim.wikia.com/wiki/Jaeger>) provides high level control for the SDSS-V [Focal Plane System](https://wiki.sdss.org/display/FPS). Some of the features that jaeger provide are:
 
 - Wraps the low level CAN commands for simpler use.
-- Provides a framework that is independent of the CAN interface used (by using the python-can_ library).
+- Provides a framework that is independent of the CAN interface used (by using the [python-can](https://python-can.readthedocs.io/en/master/) library).
 - Interfaces with kaiju_ to provide anticollision path planning for trajectories.
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
