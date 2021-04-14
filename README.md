@@ -9,7 +9,7 @@
 
 - Wraps the low level CAN commands for simpler use.
 - Provides a framework that is independent of the CAN interface used (by using the [python-can](https://python-can.readthedocs.io/en/master/) library).
-- Interfaces with kaiju_ to provide anticollision path planning for trajectories.
+- Interfaces with [kaiju](https://github.com/sdss/kaiju) to provide anticollision path planning for trajectories.
 - Implements status and position update loops.
 - Provides implementations for commonly used tasks (e.g., go to position, send trajectory).
 - Interfaces with the Instrument Electronics Box modbus PLC controller.
