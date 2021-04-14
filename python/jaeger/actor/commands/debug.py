@@ -8,7 +8,7 @@
 
 import click
 
-from clu.parser import pass_args
+from clu.parsers.click import pass_args
 
 from jaeger import __version__, config
 
