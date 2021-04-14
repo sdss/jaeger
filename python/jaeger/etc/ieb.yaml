@@ -227,13 +227,13 @@ modules:
                 adaptor: pwd
                 units: percent
                 description: LED2 power
-            LED1:
+            LED3:
                 address: 40518
                 category: fbi_led
                 adaptor: pwd
                 units: percent
                 description: LED3 power
-            LED2:
+            LED4:
                 address: 40520
                 category: fbi_led
                 adaptor: pwd
