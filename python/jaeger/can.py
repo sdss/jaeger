@@ -21,11 +21,11 @@ from can.interfaces.socketcan import SocketcanBus
 from can.interfaces.virtual import VirtualBus
 
 import jaeger
-from jaeger.exceptions import JaegerUserWarning
 import jaeger.interfaces.cannet
 import jaeger.utils
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import CommandID, StopTrajectory
+from jaeger.exceptions import JaegerUserWarning
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller
 
