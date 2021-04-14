@@ -511,7 +511,8 @@ class CANnetInterface(JaegerCAN):
         )
         dev_event = re.match(r"^E (?P<bus>\d+) (?P<event>.+)$", message)
         can_status = re.match(
-            r"^R CAN (?P<bus>\d+) (?P<status>[-|\w]{5}) " r"(?P<buffer>\d+)$", message
+            r"^R CAN (?P<bus>\d+) (?P<status>[-|\w]{5}) (?P<buffer>\d+)$",
+            message,
         )
 
         if dev_identify:
