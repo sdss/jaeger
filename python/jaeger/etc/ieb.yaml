@@ -227,6 +227,18 @@ modules:
                 adaptor: pwd
                 units: percent
                 description: LED2 power
+            LED1:
+                address: 40518
+                category: fbi_led
+                adaptor: pwd
+                units: percent
+                description: LED3 power
+            LED2:
+                address: 40520
+                category: fbi_led
+                adaptor: pwd
+                units: percent
+                description: LED4 power
     DO1:
         model: 750-530
         mode: holding_register
