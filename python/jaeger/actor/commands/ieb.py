@@ -10,7 +10,7 @@ import asyncio
 
 import click
 
-from clu.parser import pass_args
+from clu.parsers.click import pass_args
 
 from jaeger.fps import IEB
 from jaeger.testing import VirtualFPS
@@ -66,16 +66,16 @@ async def status(command, fps):
 
     categories = [
         "temperature",
-        "rh",
+        "humidity",
         "voltage",
         "flow",
         "pressure",
-        "led",
-        "ps",
-        "cm",
-        "sync",
-        "gfa",
-        "nuc",
+        "fbi_led",
+        "power_sextant",
+        "power_can",
+        "power_sync",
+        "power_gfa",
+        "power_nuc",
     ]
 
     status_data = {}
