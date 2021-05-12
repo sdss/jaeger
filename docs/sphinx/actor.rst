@@ -17,4 +17,4 @@ The following commands are available in the jaeger actor.
 Schema
 ------
 
-.. jsonschema:: ../../python/jaeger/etc/jaeger.json
+.. jsonschema:: ../../python/jaeger/etc/schema.json
