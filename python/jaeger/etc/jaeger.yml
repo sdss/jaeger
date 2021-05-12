@@ -16,12 +16,12 @@ profiles:
     cannet:
         interface: cannet
         channels:
-            - sdss-cannet-1
-            - sdss-cannet-2
-            - sdss-cannet-3
-            - sdss-cannet-4
-            - sdss-cannet-5
-            - sdss-cannet-6
+            - sdss-cannet1
+            - sdss-cannet2
+            - sdss-cannet3
+            - sdss-cannet4
+            - sdss-cannet5
+            - sdss-cannet6
         port: 19228
         buses: [1, 2, 3, 4]
         bitrate: 1000000
