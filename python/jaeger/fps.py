@@ -986,12 +986,12 @@ class FPS(BaseFPS):
 
         return commands
 
-    def report_status(self) -> dict[int, dict[str, Any]]:
+    async def report_status(self) -> dict[str, Any]:
         """Returns a dict with the position and status of each positioner."""
 
         assert isinstance(self.can, CANnetInterface)
 
-        status = {}
+        status: dict[str, Any] = {"positioners": {}}
 
         for positioner in self.positioners.values():
 
@@ -1000,7 +1000,7 @@ class FPS(BaseFPS):
             pos_alpha = positioner.alpha
             pos_beta = positioner.beta
 
-            status[positioner.positioner_id] = {
+            status["positioners"][positioner.positioner_id] = {
                 "position": [pos_alpha, pos_beta],
                 "status": pos_status,
                 "firmware": pos_firmware,
@@ -1010,6 +1010,11 @@ class FPS(BaseFPS):
             status["devices"] = self.can.device_status
         except AttributeError:
             pass
+
+        if self.ieb.disabled:
+            status["ieb"] = False
+        else:
+            status["ieb"] = await self.ieb.get_status()
 
         return status
 

@@ -72,7 +72,7 @@ class JaegerActor(clu.LegacyActor):
     async def _report_status_cb(self, transport):
         """Reports the status to the status server."""
 
-        status = self.fps.report_status()
+        status = await self.fps.report_status()
         status_json = json.dumps(status)
 
         transport.write(status_json.encode() + "\n".encode())
