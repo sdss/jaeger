@@ -12,7 +12,7 @@ import asyncio
 import logging
 from distutils.version import StrictVersion
 
-from typing import Optional
+from typing import Optional, cast
 
 import numpy.testing
 
@@ -145,7 +145,7 @@ class Positioner(StatusMixIn):
 
         log.log(level, f"Positioner {self.positioner_id}: {message}")
 
-    async def send_command(self, command, error=None, **kwargs):
+    async def send_command(self, command, error: Optional[str] = None, **kwargs):
         """Sends and awaits a command to the FPS for this positioner."""
 
         if not self.fps:
@@ -160,7 +160,11 @@ class Positioner(StatusMixIn):
 
         return command
 
-    async def update_position(self, position=None, timeout=1):
+    async def update_position(
+        self,
+        position: tuple[float, float] = None,
+        timeout=1,
+    ):
         """Updates the position of the alpha and beta arms."""
 
         if position is None:
@@ -184,7 +188,11 @@ class Positioner(StatusMixIn):
 
         self._log(f"at position ({self.alpha:.2f}, {self.beta:.2f})")
 
-    async def update_status(self, status=None, timeout=1.0):
+    async def update_status(
+        self,
+        status: maskbits.PositionerStatus | int = None,
+        timeout=1.0,
+    ):
         """Updates the status of the positioner."""
 
         # Need to update the firmware to make sure we get the right flags.
@@ -220,23 +228,28 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def wait_for_status(self, status, delay=1, timeout=None):
+    async def wait_for_status(
+        self,
+        status: list[maskbits.PositionerStatus],
+        delay=1,
+        timeout: Optional[float] = None,
+    ) -> bool:
         """Polls the status until it reaches a certain value.
 
         Parameters
         ----------
-        status : `~jaeger.maskbits.PositionerStatus`
+        status
             The status to wait for. Can be a list in which case it will wait
             until all the statuses in the list have been reached.
-        delay : float
+        delay
             Time, in seconds, to wait between position updates.
-        timeout : float
+        timeout
             How many seconds to wait for the status to reach the desired value
             before aborting.
 
         Returns
         -------
-        result : `bool`
+        result
             Returns `True` if the status has been reached or `False` if the
             timeout limit was reached.
 
@@ -335,7 +348,7 @@ class Positioner(StatusMixIn):
 
         return self.firmware.split(".")[1] == "80"
 
-    async def set_position(self, alpha, beta):
+    async def set_position(self, alpha: float, beta: float):
         """Sets the internal position of the motors."""
 
         set_position_command = await self.send_command(
@@ -349,16 +362,16 @@ class Positioner(StatusMixIn):
 
         return set_position_command
 
-    async def set_speed(self, alpha, beta, force=False):
+    async def set_speed(self, alpha: float, beta: float, force=False):
         """Sets motor speeds.
 
         Parameters
         ----------
-        alpha : float
+        alpha
             The speed of the alpha arm, in RPM on the input.
-        beta : float
+        beta
             The speed of the beta arm, in RPM on the input.
-        force : bool
+        force
             Allows to set speed limits outside the normal range.
 
         """
@@ -390,7 +403,7 @@ class Positioner(StatusMixIn):
     def _can_move(self):
         """Returns `True` if the positioner can be moved."""
 
-        if self.moving or self.collision or not self.initialised:
+        if self.moving or self.collision or not self.initialised or not self.status:
             return False
 
         if self.flags == maskbits.PositionerStatusV4_0:
@@ -410,12 +423,13 @@ class Positioner(StatusMixIn):
                 or PS.CLOSED_LOOP_BETA not in self.status
             ):
                 self._log(
-                    "canot move; positioner not in closed loop mode.", logging.ERROR
+                    "canot move; positioner not in closed loop mode.",
+                    logging.ERROR,
                 )
                 return False
             return True
 
-    async def _goto_position(self, alpha, beta, relative=False):
+    async def _goto_position(self, alpha: float, beta: float, relative=False):
         """Go to a position."""
 
         if relative:
@@ -430,26 +444,33 @@ class Positioner(StatusMixIn):
             error="failed going to position.",
         )
 
-    async def goto(self, alpha, beta, speed=None, relative=False, force=False):
+    async def goto(
+        self,
+        alpha: float,
+        beta: float,
+        speed: tuple[float, float] = None,
+        relative=False,
+        force=False,
+    ) -> bool:
         """Moves positioner to a given position.
 
         Parameters
         ----------
-        alpha : float
+        alpha
             The position where to move the alpha arm, in degrees.
-        beta : float
+        beta
             The position where to move the beta arm, in degrees.
-        speed : tuple
+        speed
             The speed of the ``(alpha, beta)`` arms, in RPM on the input.
-        relative : bool
+        relative
             Whether the movement is absolute or relative to the current
             position.
-        force : bool
+        force
             Allows to set position and speed limits outside the normal range.
 
         Returns
         -------
-        result : `bool`
+        result
             `True` if both arms have reached the desired position, `False` if
             a problem was found.
 
@@ -484,7 +505,10 @@ class Positioner(StatusMixIn):
         if not self.initialised:
             raise PositionerError("not initialised.")
 
-        original_speed = self.speed
+        if None in self.speed:
+            raise PositionerError("speed has not been set.")
+
+        original_speed = cast(tuple[float, float], self.speed)
 
         try:  # Wrap in try-except to restore speed if something fails.
 
@@ -510,10 +534,14 @@ class Positioner(StatusMixIn):
 
             if not self.moving:
 
+                if not self.position or None in self.position:
+                    raise PositionerError("position is unknown.")
+
                 if not relative:
                     goto_position = (alpha, beta)
                 else:
-                    goto_position = (alpha + self.position[0], beta + self.position[1])
+                    position = cast(tuple[float, float], self.position)
+                    goto_position = (alpha + position[0], beta + position[1])
 
                 try:
 
@@ -583,12 +611,12 @@ class Positioner(StatusMixIn):
 
         Parameters
         ----------
-        motor : str
+        motor
             The motor to which these changes apply, either ``'alpha`'``,
             ``'beta'``, or ``'both'``.
-        loop : str
+        loop
             The type of control loop, either ``'open'`` or ``'closed'``.
-        collisions : bool
+        collisions
             Whether the firmware should automatically detect collisions and
             stop the positioner.
 

@@ -54,7 +54,13 @@ class CANNetBus(BusABC):
     LINE_TERMINATOR = b"\n"
 
     def __init__(
-        self, channel, port=None, bitrate=None, buses=[1], timeout=5, **kwargs
+        self,
+        channel,
+        port=None,
+        bitrate=None,
+        buses=[1],
+        timeout=5,
+        **kwargs,
     ):
 
         if not channel:  # if None or empty
@@ -154,7 +160,10 @@ class CANNetBus(BusABC):
         data = readStr.split(" ")
         if data[0] != "M":
             msg = CANNetMessage(
-                arbitration_id=0, timestamp=time.time(), dlc=0, data=msgStr
+                arbitration_id=0,
+                timestamp=time.time(),
+                dlc=0,
+                data=msgStr,
             )
             msg.interface = self
             msg.bus = None
