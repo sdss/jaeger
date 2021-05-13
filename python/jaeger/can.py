@@ -470,9 +470,12 @@ class CANnetInterface(JaegerCAN):
         # We use call_soon later to be sure the event loop is running when we start
         # the poller. This prevents problems when using the library in IPython.
         self.device_status_poller = Poller(
-            "cannet_device", self._get_device_status, delay=5, loop=self.loop
+            "cannet_device",
+            self._get_device_status,
+            delay=5,
+            loop=self.loop,
         )
-        self.loop.call_soon(self.device_status_poller.start)
+        self.device_status_poller.start()
 
     def _process_reply(self, msg):
         """Processes a message checking first if it comes from the device."""
@@ -504,12 +507,22 @@ class CANnetInterface(JaegerCAN):
         if message.lower() == "r ok":
             return
 
-        dev_identify = re.match(r"^R (?P<device>CAN@net \w+ \d+)$", message)
-        dev_version = re.match(r"^R V(?P<version>(\d+\.*)+)$", message)
-        dev_error = re.match(
-            r"^R ERR (?P<error_code>\d{1,2}) (?P<error_descr>\.+)$", message
+        dev_identify = re.match(
+            r"^R (?P<device>CAN@net \w+ \d+)$",
+            message,
         )
-        dev_event = re.match(r"^E (?P<bus>\d+) (?P<event>.+)$", message)
+        dev_version = re.match(
+            r"^R V(?P<version>(\d+\.*)+)$",
+            message,
+        )
+        dev_error = re.match(
+            r"^R ERR (?P<error_code>\d{1,2}) (?P<error_descr>\.+)$",
+            message,
+        )
+        dev_event = re.match(
+            r"^E (?P<bus>\d+) (?P<event>.+)$",
+            message,
+        )
         can_status = re.match(
             r"^R CAN (?P<bus>\d+) (?P<status>[-|\w]{5}) (?P<buffer>\d+)$",
             message,
