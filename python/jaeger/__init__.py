@@ -37,6 +37,7 @@ def start_file_loggers(start_log=True, start_can=True):
 from .can import *
 from .exceptions import *
 from .fps import *
+from .ieb import *
 from .maskbits import *
 from .positioner import *
 from .actor import *

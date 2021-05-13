@@ -19,8 +19,6 @@ from typing import Any, Optional, Type, Union
 import numpy
 from can import BusABC
 
-from drift import Drift, DriftError
-
 from jaeger import config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
 from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
@@ -30,43 +28,12 @@ from jaeger.exceptions import (
     JaegerUserWarning,
     TrajectoryError,
 )
+from jaeger.ieb import IEB
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int
 
 
-__all__ = ["BaseFPS", "FPS", "IEB"]
-
-
-class IEB(Drift):
-    """Thing wrapper around a :class:`~drift.drift.Drift` class.
-
-    Allows additional features such as disabling the interface.
-
-    """
-
-    def __init__(self, *args, **kwargs):
-
-        self.disabled = False
-
-        super().__init__(*args, **kwargs)
-
-    async def __aenter__(self):
-
-        if self.disabled:
-            raise DriftError("IEB is disabled.")
-
-        try:
-            await Drift.__aenter__(self)
-        except DriftError:
-            self.disabled = True
-            warnings.warn(
-                "Failed connecting to the IEB. Disabling it.",
-                JaegerUserWarning,
-            )
-
-    async def __aexit__(self, *args):
-
-        await Drift.__aexit__(self, *args)
+__all__ = ["BaseFPS", "FPS"]
 
 
 class BaseFPS(dict):
