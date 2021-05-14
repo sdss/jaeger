@@ -223,7 +223,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
         timeout: Optional[float] = None,
         done_callback: Optional[Callable] = None,
         n_positioners: Optional[int] = None,
-        data: Optional[list[bytearray]] = None,
+        data: Optional[List[bytearray]] = None,
     ):
 
         global COMMAND_UID
@@ -512,7 +512,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
         elif self.status.is_done:
             self.finish_command(self.status)  # type: ignore
 
-    def _generate_messages_internal(self, data: Optional[list[bytearray]] = None):
+    def _generate_messages_internal(self, data: Optional[List[bytearray]] = None):
         """Generates the list of messages to send to the bus for this command.
 
         This method is called by `.get_messages` and can be overridden in

@@ -64,22 +64,12 @@ def ieb(command, fps):
 async def status(command, fps):
     """Outputs the status of the devices."""
 
-    categories = [
-        "temperature",
-        "humidity",
-        "voltage",
-        "flow",
-        "pressure",
-        "fbi_led",
-        "power_sextant",
-        "power_can",
-        "power_sync",
-        "power_gfa",
-        "power_nuc",
-    ]
+    categories = fps.ieb.get_categories()
 
     status_data = {}
     for category in categories:
+        if category not in command.actor.model.schema["properties"]:
+            command.warning(f"Unknown device category {category!r}.")
         status_data[category] = await _get_category_data(command, category)
 
     return command.finish(message=status_data, concatenate=True)

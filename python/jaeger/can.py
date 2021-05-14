@@ -17,7 +17,7 @@ import socket
 import time
 import warnings
 
-from typing import Any, Callable, Generic, Optional, Type, TypeVar
+from typing import Any, Callable, Generic, List, Optional, Type, TypeVar
 
 import can
 from can.interfaces.slcan import slcanBus
@@ -148,7 +148,7 @@ class JaegerCAN(Generic[Bus_co]):
         self.fps = fps
 
         #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
-        self.interfaces: list[Bus_co] = []
+        self.interfaces: List[Bus_co] = []
         for channel in channels:
             log.info(
                 f"creating interface {interface_type}, "
@@ -278,7 +278,7 @@ class JaegerCAN(Generic[Bus_co]):
     def send_to_interface(
         self,
         message: Message,
-        interfaces: Optional[list[Bus_co]] = None,
+        interfaces: Optional[List[Bus_co]] = None,
         bus: Optional[Any] = None,
     ):
         """Sends the message to the appropriate interface and bus."""
@@ -424,7 +424,7 @@ class JaegerCAN(Generic[Bus_co]):
         return cls(interface, channels, **kwargs, **config_data)
 
     @staticmethod
-    def print_profiles() -> list[str]:
+    def print_profiles() -> List[str]:
         """Prints interface profiles and returns a list of profile names."""
 
         pprint.pprint(config["interfaces"])

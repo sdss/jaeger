@@ -14,12 +14,10 @@ import pathlib
 import warnings
 from contextlib import suppress
 
-from typing import Any, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy
 from can import BusABC
-
-from drift import Drift, DriftError
 
 from jaeger import config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
@@ -30,43 +28,12 @@ from jaeger.exceptions import (
     JaegerUserWarning,
     TrajectoryError,
 )
+from jaeger.ieb import IEB
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int
 
 
-__all__ = ["BaseFPS", "FPS", "IEB"]
-
-
-class IEB(Drift):
-    """Thing wrapper around a :class:`~drift.drift.Drift` class.
-
-    Allows additional features such as disabling the interface.
-
-    """
-
-    def __init__(self, *args, **kwargs):
-
-        self.disabled = False
-
-        super().__init__(*args, **kwargs)
-
-    async def __aenter__(self):
-
-        if self.disabled:
-            raise DriftError("IEB is disabled.")
-
-        try:
-            await Drift.__aenter__(self)
-        except DriftError:
-            self.disabled = True
-            warnings.warn(
-                "Failed connecting to the IEB. Disabling it.",
-                JaegerUserWarning,
-            )
-
-    async def __aexit__(self, *args):
-
-        await Drift.__aexit__(self, *args)
+__all__ = ["BaseFPS", "FPS"]
 
 
 class BaseFPS(dict):
@@ -255,7 +222,7 @@ class FPS(BaseFPS):
         self.loop.set_exception_handler(log.asyncio_exception_handler)
 
         #: The mapping between positioners and buses.
-        self.positioner_to_bus: dict[int, tuple[BusABC, int | None]] = {}
+        self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
         if isinstance(can, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
@@ -721,7 +688,7 @@ class FPS(BaseFPS):
 
     async def update_status(
         self,
-        positioner_ids: Optional[list[int]] = None,
+        positioner_ids: Optional[List[int]] = None,
         timeout: float = 1,
     ) -> bool:
         """Update statuses for all positioners.
@@ -782,7 +749,7 @@ class FPS(BaseFPS):
 
     async def update_position(
         self,
-        positioner_ids: Optional[list[int]] = None,
+        positioner_ids: Optional[List[int]] = None,
         timeout: float = 1,
     ) -> bool:
         """Updates positions.
@@ -845,7 +812,7 @@ class FPS(BaseFPS):
 
     async def update_firmware_version(
         self,
-        positioner_ids: Optional[list[int]] = None,
+        positioner_ids: Optional[List[int]] = None,
         timeout: float = 2,
     ) -> bool:
         """Updates the firmware version of connected positioners.
@@ -896,7 +863,7 @@ class FPS(BaseFPS):
 
     async def stop_trajectory(
         self,
-        positioners: Optional[list[int]] = None,
+        positioners: Optional[List[int]] = None,
         clear_flags: bool = True,
         timeout: float = 0,
     ):
@@ -958,10 +925,10 @@ class FPS(BaseFPS):
     async def send_to_all(
         self,
         command: str | int | CommandID | Command,
-        positioners: Optional[list[int]] = None,
-        data: Optional[list[bytearray]] = None,
+        positioners: Optional[List[int]] = None,
+        data: Optional[List[bytearray]] = None,
         **kwargs,
-    ) -> list[Command]:
+    ) -> List[Command]:
         """Sends a command to multiple positioners and awaits completion.
 
         Parameters
@@ -1019,12 +986,12 @@ class FPS(BaseFPS):
 
         return commands
 
-    def report_status(self) -> dict[int, dict[str, Any]]:
+    async def report_status(self) -> Dict[str, Any]:
         """Returns a dict with the position and status of each positioner."""
 
         assert isinstance(self.can, CANnetInterface)
 
-        status = {}
+        status: Dict[str, Any] = {"positioners": {}}
 
         for positioner in self.positioners.values():
 
@@ -1033,7 +1000,7 @@ class FPS(BaseFPS):
             pos_alpha = positioner.alpha
             pos_beta = positioner.beta
 
-            status[positioner.positioner_id] = {
+            status["positioners"][positioner.positioner_id] = {
                 "position": [pos_alpha, pos_beta],
                 "status": pos_status,
                 "firmware": pos_firmware,
@@ -1043,6 +1010,11 @@ class FPS(BaseFPS):
             status["devices"] = self.can.device_status
         except AttributeError:
             pass
+
+        if self.ieb.disabled:
+            status["ieb"] = False
+        else:
+            status["ieb"] = await self.ieb.get_status()
 
         return status
 
