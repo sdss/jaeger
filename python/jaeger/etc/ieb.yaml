@@ -395,40 +395,40 @@ modules:
                 channel: 3
                 type: relay
                 category: power_nuc
-                relay_type: NO
-                description: Guide camera 1
+                relay_type: NC
+                description: Guide camera NUC 1
             NUC2:
                 address: 40522
                 channel: 4
                 type: relay
                 category: power_nuc
-                relay_type: NO
-                description: Guide camera 2
+                relay_type: NC
+                description: Guide camera NUC 2
             NUC3:
                 address: 40522
                 channel: 5
                 type: relay
                 category: power_nuc
-                relay_type: NO
-                description: Guide camera 3
+                relay_type: NC
+                description: Guide camera NUC 3
             NUC4:
                 address: 40522
                 channel: 6
                 type: relay
                 category: power_nuc
-                relay_type: NO
-                description: Guide camera 4
+                relay_type: NC
+                description: Guide camera NUC 4
             NUC5:
                 address: 40522
                 channel: 7
                 type: relay
                 category: power_nuc
-                relay_type: NO
-                description: Guide camera 5
+                relay_type: NC
+                description: Guide camera NUC 5
             NUC6:
                 address: 40522
                 channel: 8
                 type: relay
                 category: power_nuc
-                relay_type: NO
-                description: Guide camera 6
+                relay_type: NC
+                description: Guide camera NUC 6
