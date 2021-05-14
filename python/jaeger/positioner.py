@@ -12,7 +12,7 @@ import asyncio
 import logging
 from distutils.version import StrictVersion
 
-from typing import Dict, List, Optional, Tuple, cast
+from typing import List, Optional, Tuple, cast
 
 import numpy.testing
 
