@@ -7,12 +7,14 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import math
 
 import click
 
 from clu.parsers.click import pass_args
 
-from jaeger.fps import IEB
+from jaeger.fps import FPS
+from jaeger.ieb import IEB
 from jaeger.testing import VirtualFPS
 
 from . import jaeger_parser
@@ -40,7 +42,11 @@ async def _get_category_data(command, category) -> list:
             elif type_ == "integer":
                 value = int(value)
             elif type_ == "number":
-                value = round(value, 3)
+                if "multipleOf" in item:
+                    precision = int(-math.log10(item["multipleOf"]))
+                else:
+                    precision = 3
+                value = round(value, precision)
             measured.append(value)
 
     return measured
@@ -309,3 +315,25 @@ async def off(command, fps, nucs):
         return
 
     return command.finish(text="Power off sequence complete.")
+
+
+@ieb.command()
+@click.argument("device_name", metavar="DEVICE", type=str)
+@click.argument("VALUE", type=click.FloatRange(0, 100))
+async def fbi(command, fps: FPS, device_name: str, value: float):
+    """Control the power output (0-100%) of the fibre back illuminator (FBI)."""
+
+    raw_value = 32 * int(1023 * (value / 100))
+
+    try:
+        device = fps.ieb.get_device(device_name)
+    except ValueError:
+        return command.fail(error=f"Cannot find device {device_name!r}.")
+
+    if device.mode != "holding_register":
+        return command.fail(
+            error=f"Invalid device mode for {device_name!r}: {device.__type__}."
+        )
+
+    await device.write(raw_value)
+    return command.finish()

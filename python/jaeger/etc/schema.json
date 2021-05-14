@@ -64,8 +64,8 @@
             "type": "array",
             "description": "Integration spheres LED power",
             "items": [
-                { "title": "LED1", "type": "integer" },
-                { "title": "LED2", "type": "integer" }
+                { "title": "LED1", "type": "number", "multipleOf": 0.1 },
+                { "title": "LED2", "type": "number", "multipleOf": 0.1 }
             ]
         },
         "power_sextant": {
