@@ -63,6 +63,12 @@ class IEB(Drift):
 
         status = {}
         for category in self.get_categories():
-            status[category] = await self.read_category(category)
+            data = await self.read_category(category)
+            for device in data:
+                if self.get_device(device).__type__ == "relay":
+                    value = False if data[device][0] == "open" else True
+                else:
+                    value = data[device][0]
+                status[device] = value
 
         return status
