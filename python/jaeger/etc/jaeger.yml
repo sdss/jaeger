@@ -3,6 +3,7 @@ actor:
     name: jaeger
     host: 127.0.0.1
     port: 19990
+    verbose: 20
     status:
         port: 19991
         delay: 5
