@@ -6,7 +6,7 @@
 # @Filename: ieb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from typing import Any
+from typing import Any, Dict
 
 from drift import Drift, DriftError
 
@@ -58,7 +58,7 @@ class IEB(Drift):
 
         await Drift.__aexit__(self, *args)
 
-    async def get_status(self) -> dict[str, Any]:
+    async def get_status(self) -> Dict[str, Any]:
         """Returns the status of the IEB components."""
 
         status = {}
