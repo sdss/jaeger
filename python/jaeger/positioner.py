@@ -12,7 +12,7 @@ import asyncio
 import logging
 from distutils.version import StrictVersion
 
-from typing import Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import numpy.testing
 
@@ -47,7 +47,7 @@ class Positioner(StatusMixIn):
         self,
         positioner_id: int,
         fps: jaeger.FPS,
-        centre: tuple[Optional[float], Optional[float]] = (None, None),
+        centre: Tuple[Optional[float], Optional[float]] = (None, None),
         sextant: Optional[int] = None,
     ):
 
@@ -162,7 +162,7 @@ class Positioner(StatusMixIn):
 
     async def update_position(
         self,
-        position: tuple[float, float] = None,
+        position: Tuple[float, float] = None,
         timeout=1,
     ):
         """Updates the position of the alpha and beta arms."""
@@ -230,7 +230,7 @@ class Positioner(StatusMixIn):
 
     async def wait_for_status(
         self,
-        status: list[maskbits.PositionerStatus],
+        status: List[maskbits.PositionerStatus],
         delay=1,
         timeout: Optional[float] = None,
     ) -> bool:
@@ -448,7 +448,7 @@ class Positioner(StatusMixIn):
         self,
         alpha: float,
         beta: float,
-        speed: tuple[float, float] = None,
+        speed: Tuple[float, float] = None,
         relative=False,
         force=False,
     ) -> bool:
@@ -508,7 +508,7 @@ class Positioner(StatusMixIn):
         if None in self.speed:
             raise PositionerError("speed has not been set.")
 
-        original_speed = cast(tuple[float, float], self.speed)
+        original_speed = cast(Tuple[float, float], self.speed)
 
         try:  # Wrap in try-except to restore speed if something fails.
 
@@ -540,7 +540,7 @@ class Positioner(StatusMixIn):
                 if not relative:
                     goto_position = (alpha, beta)
                 else:
-                    position = cast(tuple[float, float], self.position)
+                    position = cast(Tuple[float, float], self.position)
                     goto_position = (alpha + position[0], beta + position[1])
 
                 try:

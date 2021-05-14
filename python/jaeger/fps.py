@@ -14,7 +14,7 @@ import pathlib
 import warnings
 from contextlib import suppress
 
-from typing import Any, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy
 from can import BusABC
@@ -222,7 +222,7 @@ class FPS(BaseFPS):
         self.loop.set_exception_handler(log.asyncio_exception_handler)
 
         #: The mapping between positioners and buses.
-        self.positioner_to_bus: dict[int, tuple[BusABC, int | None]] = {}
+        self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
         if isinstance(can, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
@@ -688,7 +688,7 @@ class FPS(BaseFPS):
 
     async def update_status(
         self,
-        positioner_ids: Optional[list[int]] = None,
+        positioner_ids: Optional[List[int]] = None,
         timeout: float = 1,
     ) -> bool:
         """Update statuses for all positioners.
@@ -749,7 +749,7 @@ class FPS(BaseFPS):
 
     async def update_position(
         self,
-        positioner_ids: Optional[list[int]] = None,
+        positioner_ids: Optional[List[int]] = None,
         timeout: float = 1,
     ) -> bool:
         """Updates positions.
@@ -812,7 +812,7 @@ class FPS(BaseFPS):
 
     async def update_firmware_version(
         self,
-        positioner_ids: Optional[list[int]] = None,
+        positioner_ids: Optional[List[int]] = None,
         timeout: float = 2,
     ) -> bool:
         """Updates the firmware version of connected positioners.
@@ -863,7 +863,7 @@ class FPS(BaseFPS):
 
     async def stop_trajectory(
         self,
-        positioners: Optional[list[int]] = None,
+        positioners: Optional[List[int]] = None,
         clear_flags: bool = True,
         timeout: float = 0,
     ):
@@ -925,10 +925,10 @@ class FPS(BaseFPS):
     async def send_to_all(
         self,
         command: str | int | CommandID | Command,
-        positioners: Optional[list[int]] = None,
-        data: Optional[list[bytearray]] = None,
+        positioners: Optional[List[int]] = None,
+        data: Optional[List[bytearray]] = None,
         **kwargs,
-    ) -> list[Command]:
+    ) -> List[Command]:
         """Sends a command to multiple positioners and awaits completion.
 
         Parameters
@@ -986,12 +986,12 @@ class FPS(BaseFPS):
 
         return commands
 
-    async def report_status(self) -> dict[str, Any]:
+    async def report_status(self) -> Dict[str, Any]:
         """Returns a dict with the position and status of each positioner."""
 
         assert isinstance(self.can, CANnetInterface)
 
-        status: dict[str, Any] = {"positioners": {}}
+        status: Dict[str, Any] = {"positioners": {}}
 
         for positioner in self.positioners.values():
 
