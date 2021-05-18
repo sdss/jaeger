@@ -134,25 +134,26 @@ python-versions = "*"
 
 [[package]]
 name = "black"
-version = "20.8b1"
+version = "21.5b1"
 description = "The uncompromising code formatter."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.6.2"
 
 [package.dependencies]
 appdirs = "*"
 click = ">=7.1.2"
 mypy-extensions = ">=0.4.3"
-pathspec = ">=0.6,<1"
+pathspec = ">=0.8.1,<1"
 regex = ">=2020.1.8"
 toml = ">=0.10.1"
-typed-ast = ">=1.4.0"
-typing-extensions = ">=3.7.4"
+typed-ast = {version = ">=1.4.2", markers = "python_version < \"3.8\""}
+typing-extensions = {version = ">=3.7.4", markers = "python_version < \"3.8\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
-d = ["aiohttp (>=3.3.2)", "aiohttp-cors"]
+d = ["aiohttp (>=3.6.0)", "aiohttp-cors"]
+python2 = ["typed-ast (>=1.4.2)"]
 
 [[package]]
 name = "certifi"
@@ -254,7 +255,7 @@ test = ["coveralls", "flake8", "flake8-bugbear", "flake8-isort", "pytest", "pyte
 
 [[package]]
 name = "decorator"
-version = "5.0.7"
+version = "5.0.9"
 description = "Decorators for Humans"
 category = "dev"
 optional = false
@@ -999,7 +1000,7 @@ docutils = ">=0.7"
 
 [[package]]
 name = "sdss-clu"
-version = "1.0.0"
+version = "1.0.2"
 description = "A new protocol for SDSS actors."
 category = "main"
 optional = false
@@ -1015,7 +1016,7 @@ sdsstools = ">=0.2.0"
 
 [[package]]
 name = "sdss-drift"
-version = "0.2.1"
+version = "0.2.2"
 description = "Modbus PLC control library"
 category = "main"
 optional = false
@@ -1023,7 +1024,6 @@ python-versions = ">=3.7,<4.0"
 
 [package.dependencies]
 pymodbus = ">=2.5.0,<3.0.0"
-pyyaml = ">=5.3.1,<6.0.0"
 sdsstools = ">=0.4.1"
 
 [[package]]
@@ -1377,7 +1377,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "dda927815fbdeacf2e305814bbd0630fe47818b6049e835a54ff5c225c8dad73"
+content-hash = "2741a80fd80db7a7ac5f5d136cd4c039c5f07c601e36445172f121fb9e05d3d0"
 
 [metadata.files]
 aenum = [
@@ -1434,7 +1434,8 @@ backcall = [
     {file = "backcall-0.2.0.tar.gz", hash = "sha256:5cbdbf27be5e7cfadb448baf0aa95508f91f2bbc6c6437cd9cd06e2a4c215e1e"},
 ]
 black = [
-    {file = "black-20.8b1.tar.gz", hash = "sha256:1c02557aa099101b9d21496f8a914e9ed2222ef70336404eeeac8edba836fbea"},
+    {file = "black-21.5b1-py3-none-any.whl", hash = "sha256:8a60071a0043876a4ae96e6c69bd3a127dad2c1ca7c8083573eb82f92705d008"},
+    {file = "black-21.5b1.tar.gz", hash = "sha256:23695358dbcb3deafe7f0a3ad89feee5999a46be5fec21f4f1d108be0bcdb3b1"},
 ]
 certifi = [
     {file = "certifi-2020.12.5-py2.py3-none-any.whl", hash = "sha256:719a74fb9e33b9bd44cc7f3a8d94bc35e4049deebe19ba7d8e108280cfd59830"},
@@ -1522,8 +1523,8 @@ daemonocle = [
     {file = "daemonocle-1.2.3.tar.gz", hash = "sha256:741ce6abc37c85ca396379a0d45710ac27ab5f17eeaadbc64a0f5cc4c4f666ea"},
 ]
 decorator = [
-    {file = "decorator-5.0.7-py3-none-any.whl", hash = "sha256:945d84890bb20cc4a2f4a31fc4311c0c473af65ea318617f13a7257c9a58bc98"},
-    {file = "decorator-5.0.7.tar.gz", hash = "sha256:6f201a6c4dac3d187352661f508b9364ec8091217442c9478f1f83c003a0f060"},
+    {file = "decorator-5.0.9-py3-none-any.whl", hash = "sha256:6e5c199c16f7a9f0e3a61a4a54b3d27e7dad0dbdde92b944426cb20914376323"},
+    {file = "decorator-5.0.9.tar.gz", hash = "sha256:72ecfba4320a893c53f9706bebb2d55c270c1e51a28789361aa93e4a21319ed5"},
 ]
 doc8 = [
     {file = "doc8-0.8.1-py2.py3-none-any.whl", hash = "sha256:4d58a5c8c56cedd2b2c9d6e3153be5d956cf72f6051128f0f2255c66227df721"},
@@ -2137,12 +2138,12 @@ rstcheck = [
     {file = "rstcheck-3.3.1.tar.gz", hash = "sha256:92c4f79256a54270e0402ba16a2f92d0b3c15c8f4410cb9c57127067c215741f"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-1.0.0.tar.gz", hash = "sha256:7aafbe5835488b76d74d5ce0f442895e4b00dc06242666f9b0e5d8e36ac6c702"},
-    {file = "sdss_clu-1.0.0-py3-none-any.whl", hash = "sha256:18fbf157acdc7b534e786ee851bd2c5f27fa2ef03c7531d95690edd7bbe86656"},
+    {file = "sdss-clu-1.0.2.tar.gz", hash = "sha256:97a8e29255b0dc6e8887e0e2ea82f80392d59cb6dfc8f8f0022059d8a091e159"},
+    {file = "sdss_clu-1.0.2-py3-none-any.whl", hash = "sha256:036c44518466917c2f46f6b9854ba2b545cef90d7258d092b04628586b2e1e59"},
 ]
 sdss-drift = [
-    {file = "sdss-drift-0.2.1.tar.gz", hash = "sha256:0de531f506059e6db1a141a844e1a67bd232f2f83c885549c798ae5752cc62a0"},
-    {file = "sdss_drift-0.2.1-py3-none-any.whl", hash = "sha256:75d6d4d3562c3514252ea99e8333dc4dd936cdb0414736ec48fcdd4a2339d255"},
+    {file = "sdss-drift-0.2.2.tar.gz", hash = "sha256:2da2a9379dec09dd5933afa5c59890a442c629a6d10ca225e716e337dec4c4a5"},
+    {file = "sdss_drift-0.2.2-py3-none-any.whl", hash = "sha256:150815b48234386f6acaa9931f76ba5d8f8a2b2396ac003b2cfdeb82344f07a7"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.9-py3-none-any.whl", hash = "sha256:9e07babec17750c750e531269d839e1ffd05b76d34addbfa64ed5bb872463551"},

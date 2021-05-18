@@ -27,7 +27,7 @@ python = "^3.7"
 numpy = "^1.15.1"
 python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
-sdss-drift = "^0.2.1"
+sdss-drift = "^0.2.2"
 sdss-clu = "^1.0.0"
 sdssdb = ">=0.4.5"
 sdsstools = ">=0.4.2"
@@ -52,12 +52,12 @@ asyncmock = {version=">=0.4.2", python="~3.7"}
 Sphinx = {version = ">=3.0"}
 sphinx-click = {version = ">=2.3.0"}
 ipdb = ">=0.13.3"
-autopep8 = "^1.5.4"
-black = {version = "^20.8b1", allow-prereleases = true}
-rstcheck = "^3.3.1"
-pytest-mock = "^3.5.1"
-pyserial-asyncio = "^0.5"
-sphinx-jsonschema = "^1.16.8"
+autopep8 = ">=1.5.4"
+black = {version = ">=20.8b1", allow-prereleases = true}
+rstcheck = ">=3.3.1"
+pytest-mock = ">=3.5.1"
+pyserial-asyncio = ">=0.5"
+sphinx-jsonschema = ">=1.16.8"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
