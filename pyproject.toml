@@ -58,6 +58,7 @@ rstcheck = ">=3.3.1"
 pytest-mock = ">=3.5.1"
 pyserial-asyncio = ">=0.5"
 sphinx-jsonschema = ">=1.16.8"
+myst-parser = ">=0.14.0"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
