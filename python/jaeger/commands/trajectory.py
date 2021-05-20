@@ -12,17 +12,21 @@ import asyncio
 import pathlib
 import time
 
-from typing import Dict, List, Tuple, cast
+from typing import TYPE_CHECKING, Dict, List, Tuple, cast
 
 import numpy
 
 import drift
 from sdsstools import read_yaml_file
 
-from jaeger import FPS, config, log, maskbits
+from jaeger import config, log, maskbits
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, TrajectoryError
 from jaeger.utils import int_to_bytes
+
+
+if TYPE_CHECKING:
+    from jaeger import FPS
 
 
 __all__ = [
