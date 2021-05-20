@@ -1,0 +1,85 @@
+address: 140.254.79.159
+port: 502
+modules:
+    ANALOG_1:
+        model: "750-497"
+        mode: input_register
+        channels: 8
+        description: "E+E temperature and humidity sensors"
+        devices:
+            "RH1":
+                address: 40005
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+            "T1":
+                address: 40006
+                category: temperature
+                adaptor: ee_temp
+                units: degC
+    ANALOG2:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pt RTD sensors
+        devices:
+            RTD1:
+                address: 40013
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Inside the controller box
+            RTD2:
+                address: 40014
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description:
+    ANALOG_OUTPUT1:
+        model: 750-511
+        mode: holding_register
+        channels: 2
+        description: Pulse Width Modulator (PWM) output module for LED control
+        devices:
+            LED1:
+                address: 40514
+                category: fbi_led
+                adaptor: pwd
+                units: percent
+                description: LED1 power
+            LED2:
+                address: 40516
+                category: fbi_led
+                adaptor: pwd
+                units: percent
+                description: LED2 power
+    DO:
+        model: "750-530"
+        mode: holding_register
+        channels: 16
+        description: "Power relays"
+        devices:
+            PS1:
+                address: 40517
+                type: relay
+                channel: 0
+                category: power_sextant
+                relay_type: NO
+            PS5V:
+                address: 40517
+                type: relay
+                channel: 1
+                category: power_5v
+                relay_type: NO
+            CM1:
+                address: 40517
+                type: relay
+                channel: 2
+                category: power_can
+                relay_type: NC
+            SYNC:
+                address: 40517
+                type: relay
+                channel: 3
+                category: power_sync
+                relay_type: NO
