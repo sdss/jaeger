@@ -217,7 +217,7 @@ class JaegerCAN(Generic[Bus_co]):
                 return
 
             stop_trajectory_command = StopTrajectory(positioner_id=0)
-            self.send_to_interface(stop_trajectory_command.get_messages()[0])
+            self.send_to_interfaces(stop_trajectory_command.get_messages()[0])
 
             # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
@@ -275,7 +275,7 @@ class JaegerCAN(Generic[Bus_co]):
                 f"cannot find running command for reply UID={reply_uid}."
             )
 
-    def send_to_interface(
+    def send_to_interfaces(
         self,
         message: Message,
         interfaces: Optional[List[Bus_co]] = None,
@@ -365,7 +365,7 @@ class JaegerCAN(Generic[Bus_co]):
         for message in messages:
 
             # Get the interface and bus to which to send the message
-            interfaces = getattr(cmd, "_interface", None)
+            interfaces = getattr(cmd, "_interfaces", None)
             bus = getattr(cmd, "_bus", None)
 
             if cmd.status.failed:
@@ -377,7 +377,7 @@ class JaegerCAN(Generic[Bus_co]):
                 self.running_commands.remove(cmd)
                 break
 
-            self.send_to_interface(message, interfaces=interfaces, bus=bus)
+            self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
 
     @classmethod
     def from_profile(cls, profile: Optional[str] = None, **kwargs) -> JaegerCAN:

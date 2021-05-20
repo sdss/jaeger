@@ -470,7 +470,7 @@ class FPS(BaseFPS):
 
         interface, bus = self.positioner_to_bus[command.positioner_id]
 
-        command._interface = interface
+        command._interfaces = [interface]
         command._bus = bus
 
         return
