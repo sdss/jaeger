@@ -235,6 +235,8 @@ async def status(command, fps, positioner_id, full):
     else:
         command.info(engineering_mode=False)
 
+    command.info(n_positioners=len(fps.positioners))
+
     for pid in sorted(positioner_ids):
         positioner = fps[pid]
         alpha_pos = (
