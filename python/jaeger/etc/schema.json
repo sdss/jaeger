@@ -134,7 +134,9 @@
                 { "title": "bits", "type": "integer" },
                 { "title": "initialised", "type": "boolean" },
                 { "title": "bootloader", "type": "boolean" },
-                { "title": "firmware", "type": "string" }
+                { "title": "firmware", "type": "string" },
+                { "title": "interface", "type": "string" },
+                { "title": "bus", "type": "integer" }
             ]
         },
         "raw": {

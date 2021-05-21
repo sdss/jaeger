@@ -238,21 +238,30 @@ async def status(command, fps, positioner_id, full):
     command.info(n_positioners=len(fps.positioners))
 
     for pid in sorted(positioner_ids):
-        positioner = fps[pid]
-        alpha_pos = (
-            -999 if positioner.alpha is None else numpy.round(positioner.alpha, 4)
-        )
-        beta_pos = -999 if positioner.beta is None else numpy.round(positioner.beta, 4)
+        p = fps[pid]
+
+        alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
+        beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
+
+        if pid in fps.positioner_to_bus:
+            interface, bus = fps.positioner_to_bus[pid]
+            interface = fps.can.interfaces.index(interface) + 1
+        else:
+            interface = "NA"
+            bus = -1
+
         command.write(
             "i",
             status=[
-                positioner.positioner_id,
+                p.positioner_id,
                 alpha_pos,
                 beta_pos,
-                int(positioner.status),
-                positioner.initialised,
-                positioner.is_bootloader() or False,
-                positioner.firmware or "?",
+                int(p.status),
+                p.initialised,
+                p.is_bootloader() or False,
+                p.firmware or "?",
+                interface,
+                bus,
             ],
         )
 
