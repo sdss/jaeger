@@ -30,11 +30,12 @@ class JaegerActor(clu.LegacyActor):
 
         self.fps = fps
 
+        jaeger_base = os.path.join(os.path.dirname(__file__), "..")
         if "schema" not in kwargs:
-            kwargs["schema"] = os.path.join(
-                os.path.dirname(__file__),
-                "../etc/schema.json",
-            )
+            kwargs["schema"] = os.path.join(jaeger_base, "etc/schema.json")
+        else:
+            if not os.path.isabs(kwargs["schema"]):
+                kwargs["schema"] = os.path.join(jaeger_base, kwargs["schema"])
 
         # Pass the FPS instance as the second argument to each parser
         # command (the first argument is always the actor command).
