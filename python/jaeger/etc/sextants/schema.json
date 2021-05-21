@@ -2,8 +2,6 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-        "config_file": { "type": "string" },
-        "low_temperature": { "type": "integer", "enum": [0, 1, 2] },
         "temperature": {
             "type": "array",
             "description": "Temperature measurements",
@@ -59,30 +57,6 @@
             "type": "array",
             "description": "SYNC line status",
             "items": [{ "title": "SYNC", "type": "boolean" }]
-        },
-        "move_time": { "type": "number" },
-        "engineering_mode": { "type": "boolean" },
-        "locked": { "type": "boolean" },
-        "status": {
-            "type": "array",
-            "items": [
-                { "title": "positioner_id", "type": "integer" },
-                { "title": "alpha", "type": "number" },
-                { "title": "beta", "type": "number" },
-                { "title": "bits", "type": "integer" },
-                { "title": "initialised", "type": "boolean" },
-                { "title": "bootloader", "type": "boolean" },
-                { "title": "firmware", "type": "string" }
-            ]
-        },
-        "raw": {
-            "type": "array",
-            "items": [
-                { "title": "command_id", "type": "integer" },
-                { "title": "uid", "type": "integer" },
-                { "title": "response_code", "type": "integer" },
-                { "title": "data", "type": "string" }
-            ]
         }
     },
     "additionalProperties": true
