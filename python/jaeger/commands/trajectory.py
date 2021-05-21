@@ -185,6 +185,8 @@ class Trajectory(object):
         else:
             raise TrajectoryError("invalid trajectory data.")
 
+        self.validate()
+
         #: Number of points sent to each positioner as a tuple ``(alpha, beta)``.
         self.n_points = {}
 
@@ -197,6 +199,39 @@ class Trajectory(object):
         self.failed = False
 
         self._ready_to_start = False
+
+    def validate(self):
+        """Validates the trajectory."""
+
+        if len(self.trajectories) == 0:
+            raise TrajectoryError("trajectory is empty.")
+
+        if len(self.trajectories) != len(numpy.unique(list(self.trajectories.keys()))):
+            raise TrajectoryError("duplicate positioner trajectories.")
+
+        for pid in self.trajectories:
+            trajectory = self.trajectories[pid]
+
+            if "alpha" not in trajectory or "beta" not in trajectory:
+                raise TrajectoryError(f"positioner {pid} missing alpha or beta data.")
+
+            for arm in ["alpha", "beta"]:
+                data = numpy.array(list(zip(*trajectory[arm]))[0])
+
+                if numpy.any(data > 360) or numpy.any(data < 0):
+                    raise TrajectoryError(f"positioner {pid} has points out of range.")
+
+                if arm == "beta":
+                    if config.get("safe_mode", False):
+                        if config["safe_mode"] is True:
+                            min_beta = 160
+                        else:
+                            min_beta = config["safe_mode"]["min_beta"]
+                        if numpy.any(data < min_beta):
+                            raise TrajectoryError(
+                                f"positioner {pid}: safe mode is "
+                                f"on and beta < {min_beta}."
+                            )
 
     async def send(self):
         """Sends the trajectory but does not start it."""
