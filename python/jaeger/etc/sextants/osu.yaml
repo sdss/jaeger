@@ -15,7 +15,7 @@ modules:
             "T1":
                 address: 40006
                 category: temperature
-                adaptor: ee_temp
+                adaptor: t_dwyer
                 units: degC
     ANALOG2:
         model: 750-450
