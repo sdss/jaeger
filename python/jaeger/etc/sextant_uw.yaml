@@ -31,7 +31,7 @@ modules:
             "T1":
                 address: 40002
                 category: temperature
-                adaptor: ee_temp
+                adaptor: t_dwyer
                 units: degC
     DO:
         model: "750-530"
@@ -44,7 +44,7 @@ modules:
                 type: relay
                 category: power_sextant
                 relay_type: NC
-            "5V":
+            "PS5V":
                 address: 40514
                 type: relay
                 category: power_5v
