@@ -457,7 +457,7 @@ class FPS(BaseFPS):
             return
 
         if bus or interface:
-            command._interface = interface
+            command._interfaces = [interface] if interface else None
             command._bus = bus
             return
 

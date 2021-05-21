@@ -25,3 +25,16 @@ When jaeger is imported the default configuration is loaded. It then looks for u
 will update the ``cannet`` profile while modifying the remaining parameters.
 
 When running jaeger from the :ref:`CLI <cli>`, it is possible to pass a user configuration file by calling ``jaeger --config <CONFIG-FILE> ...``. If not provided, the configuration file discovery default to the above logic.
+
+To prevent the beta arms to take a value below 160 degrees (the point at which collisions are possible if the folded mode is :math:`\beta=180`) on can specify
+
+.. code-block:: yaml
+
+   safe_mode: true
+
+And to define the minimum value of the beta arm
+
+.. code-block:: yaml
+
+   safe_mode:
+      min_beta: 170

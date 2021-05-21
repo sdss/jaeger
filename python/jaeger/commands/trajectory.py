@@ -6,18 +6,27 @@
 # @Filename: trajectory.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import pathlib
 import time
 
+from typing import TYPE_CHECKING, Dict, List, Tuple, cast
+
 import numpy
 
+import drift
 from sdsstools import read_yaml_file
 
 from jaeger import config, log, maskbits
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, TrajectoryError
 from jaeger.utils import int_to_bytes
+
+
+if TYPE_CHECKING:
+    from jaeger import FPS
 
 
 __all__ = [
@@ -36,7 +45,14 @@ MOTOR_STEPS = config["positioner"]["motor_steps"]
 TIME_STEP = config["positioner"]["time_step"]
 
 
-async def send_trajectory(fps, trajectories, use_sync_line=True):
+TrajectoryDataType = Dict[int, Dict[str, List[Tuple[float, float]]]]
+
+
+async def send_trajectory(
+    fps: FPS,
+    trajectories: str | pathlib.Path | TrajectoryDataType,
+    use_sync_line=True,
+):
     """Sends a set of trajectories to the positioners.
 
     This is a low-level function that raises errors when a problem is
@@ -46,16 +62,16 @@ async def send_trajectory(fps, trajectories, use_sync_line=True):
 
     Parameters
     ----------
-    fps : .FPS
+    fps
         The instance of `.FPS` that will receive the trajectory.
-    trajectories : `str` or `dict`
+    trajectories
         Either a path to a YAML file to read or a dictionary with the
         trajectories. In either case the format must be a dictionary in
         which the keys are the ``positioner_ids`` and each value is a
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
-    use_sync_line : bool
+    use_sync_line
         If `True`, the SYNC line will be used to synchronise the beginning of
         all trajectories. Otherwise a `.START_TRAJECTORY` command will be sent
         over the CAN network.
@@ -147,10 +163,14 @@ class Trajectory(object):
 
     """
 
-    def __init__(self, fps, trajectories):
+    def __init__(
+        self,
+        fps: FPS,
+        trajectories: str | pathlib.Path | TrajectoryDataType,
+    ):
 
         self.fps = fps
-        self.trajectories = trajectories
+        self.trajectories: TrajectoryDataType
 
         if self.fps.locked:
             raise FPSLockedError("FPS is locked. Cannot send trajectories.")
@@ -158,12 +178,14 @@ class Trajectory(object):
         if self.fps.moving:
             raise TrajectoryError("the FPS is moving. Cannot send new trajectory.")
 
-        if isinstance(self.trajectories, (str, pathlib.Path)):
-            self.trajectories = read_yaml_file(self.trajectories)
-        elif isinstance(self.trajectories, dict):
-            pass
+        if isinstance(trajectories, (str, pathlib.Path)):
+            self.trajectories = cast(TrajectoryDataType, read_yaml_file(trajectories))
+        elif isinstance(trajectories, dict):
+            self.trajectories = trajectories
         else:
             raise TrajectoryError("invalid trajectory data.")
+
+        self.validate()
 
         #: Number of points sent to each positioner as a tuple ``(alpha, beta)``.
         self.n_points = {}
@@ -177,6 +199,39 @@ class Trajectory(object):
         self.failed = False
 
         self._ready_to_start = False
+
+    def validate(self):
+        """Validates the trajectory."""
+
+        if len(self.trajectories) == 0:
+            raise TrajectoryError("trajectory is empty.")
+
+        if len(self.trajectories) != len(numpy.unique(list(self.trajectories.keys()))):
+            raise TrajectoryError("duplicate positioner trajectories.")
+
+        for pid in self.trajectories:
+            trajectory = self.trajectories[pid]
+
+            if "alpha" not in trajectory or "beta" not in trajectory:
+                raise TrajectoryError(f"positioner {pid} missing alpha or beta data.")
+
+            for arm in ["alpha", "beta"]:
+                data = numpy.array(list(zip(*trajectory[arm]))[0])
+
+                if numpy.any(data > 360) or numpy.any(data < 0):
+                    raise TrajectoryError(f"positioner {pid} has points out of range.")
+
+                if arm == "beta":
+                    if config.get("safe_mode", False):
+                        if config["safe_mode"] is True:
+                            min_beta = 160
+                        else:
+                            min_beta = config["safe_mode"]["min_beta"]
+                        if numpy.any(data < min_beta):
+                            raise TrajectoryError(
+                                f"positioner {pid}: safe mode is "
+                                f"on and beta < {min_beta}."
+                            )
 
     async def send(self):
         """Sends the trajectory but does not start it."""
@@ -327,6 +382,7 @@ class Trajectory(object):
         if use_sync_line:
 
             sync = self.fps.ieb.get_device("sync")
+            assert isinstance(sync, drift.Relay)
 
             # Set SYNC line to high.
             await sync.close()

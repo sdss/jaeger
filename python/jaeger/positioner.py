@@ -508,6 +508,20 @@ class Positioner(StatusMixIn):
         if None in self.speed:
             raise PositionerError("speed has not been set.")
 
+        # Check if safe mode is enabled
+        if "safe_mode" in config and config["safe_mode"] is not False:
+            if isinstance(config["safe_mode"], bool):
+                min_beta = 160
+            else:
+                min_beta = config["safe_mode"]["min_beta"]
+
+            if (relative is False and beta < min_beta) or (
+                relative is True and (self.beta + beta) < min_beta
+            ):
+                raise PositionerError(
+                    "safe mode enabled. Cannot move beta arm that far."
+                )
+
         original_speed = cast(Tuple[float, float], self.speed)
 
         try:  # Wrap in try-except to restore speed if something fails.

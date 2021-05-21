@@ -8,6 +8,7 @@
 
 import pytest
 
+from jaeger import config
 from jaeger.exceptions import JaegerError
 
 
@@ -50,3 +51,40 @@ async def test_disabled_positioner_fails(vfps):
         )
 
     assert "positioner_id=1 is disabled" in str(err)
+
+
+async def test_validate_out_of_limits(vfps):
+
+    await vfps.initialise()
+
+    with pytest.raises(JaegerError) as err:
+        await vfps.send_trajectory(
+            {
+                1: {
+                    "alpha": [(1000, 1), (2, 2)],
+                    "beta": [(1, 1), (2, 2)],
+                }
+            }
+        )
+
+    assert "out of range" in str(err)
+
+
+@pytest.mark.parametrize("beta,safe_mode", [(150, True), (160, {"min_beta": 170})])
+async def test_validate_safe_mode(vfps, monkeypatch, beta, safe_mode):
+
+    monkeypatch.setitem(config, "safe_mode", safe_mode)
+
+    await vfps.initialise()
+
+    with pytest.raises(JaegerError) as err:
+        await vfps.send_trajectory(
+            {
+                1: {
+                    "alpha": [(beta, 1), (2, 2)],
+                    "beta": [(1, 1), (2, 2)],
+                }
+            }
+        )
+
+    assert "safe mode is on" in str(err)

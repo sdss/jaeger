@@ -64,3 +64,6 @@ low_temperature:
     rpm_cold: 3000
     holding_torque_normal: [0, 30]
     holding_torque_very_cold: [45, 30]
+
+safe_mode:
+    min_beta: 160

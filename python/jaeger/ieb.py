@@ -6,9 +6,13 @@
 # @Filename: ieb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import warnings
+
 from typing import Any, Dict
 
 from drift import Drift, DriftError
+
+from jaeger.exceptions import JaegerUserWarning
 
 
 __all__ = ["IEB"]
@@ -52,7 +56,10 @@ class IEB(Drift):
             await Drift.__aenter__(self)
         except DriftError:
             self.disabled = True
-            raise DriftError("Failed connecting to the IEB. Disabling it.")
+            warnings.warn(
+                "Failed connecting to the IEB. Disabling it.",
+                JaegerUserWarning,
+            )
 
     async def __aexit__(self, *args):
 

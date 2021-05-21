@@ -11,6 +11,9 @@ import logging
 
 import pytest
 
+from jaeger import config
+from jaeger.exceptions import PositionerError
+
 
 # Need to mark all tests with positioners to make sure they are created,
 # and with asyncio to allow execution of coroutines.
@@ -56,3 +59,21 @@ async def test_goto_relative(vfps, event_loop):
     await vfps.initialise()
 
     assert await vfps[1].goto(1, 1, relative=True)
+
+
+async def test_goto_safe_mode(vfps, monkeypatch):
+    monkeypatch.setitem(config, "safe_mode", True)
+
+    await vfps.initialise()
+
+    with pytest.raises(PositionerError):
+        await vfps[1].goto(100, 150)
+
+
+async def test_goto_safe_mode_custom_beta(vfps, monkeypatch):
+    monkeypatch.setitem(config, "safe_mode", {"min_beta": 170})
+
+    await vfps.initialise()
+
+    with pytest.raises(PositionerError):
+        await vfps[1].goto(100, 169)

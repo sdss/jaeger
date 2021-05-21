@@ -213,7 +213,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     #: Whether the command is safe to be issues in bootloader mode.
     bootloader = False
 
-    _interface: Optional[can.BusABC]
+    _interfaces: Optional[List[can.BusABC]]
     _bus: Optional[int]
 
     def __init__(

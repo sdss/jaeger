@@ -24,11 +24,13 @@ from clu.testing import TestCommand
 from sdsstools import read_yaml_file
 
 import jaeger
-from jaeger import JaegerActor
+from jaeger import JaegerActor, config
 from jaeger.testing import VirtualFPS, VirtualPositioner
 
 
 TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
+config["safe_mode"] = False
+
 
 # Disable logging to file.
 if jaeger.log.fh:

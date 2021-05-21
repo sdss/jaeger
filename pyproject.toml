@@ -103,9 +103,11 @@ omit = [
 
 [tool.coverage.report]
 exclude_lines = [
+    "pragma: no cover",
     "class AsyncioExecutor",
     "def convert_kaiju_trajectory",
-    "class CANnetInterface"
+    "class CANnetInterface",
+    "if TYPE_CHECKING:"
 ]
 
 [build-system]
