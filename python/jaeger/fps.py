@@ -678,6 +678,15 @@ class FPS(BaseFPS):
             else:
                 raise JaegerError("Some positioners failed to initialise.")
 
+        if config.get("safe_mode", False) is not False:
+            min_beta = 160
+            if isinstance(config["safe_mode"], dict):
+                min_beta = config["safe_mode"].get("min_beta", 160)
+            warnings.warn(
+                f"Safe mode enabled. Minimum beta is {min_beta}.",
+                JaegerUserWarning,
+            )
+
         await self.update_position()
 
         # Start the pollers
