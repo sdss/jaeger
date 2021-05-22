@@ -683,7 +683,7 @@ class FPS(BaseFPS):
             if isinstance(config["safe_mode"], dict):
                 min_beta = config["safe_mode"].get("min_beta", 160)
             warnings.warn(
-                f"Safe mode enabled. Minimum beta is {min_beta}.",
+                f"Safe mode enabled. Minimum beta is {min_beta} degrees.",
                 JaegerUserWarning,
             )
 
