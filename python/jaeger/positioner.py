@@ -46,9 +46,8 @@ class Positioner(StatusMixIn):
     def __init__(
         self,
         positioner_id: int,
-        fps: jaeger.FPS,
+        fps: jaeger.FPS | None = None,
         centre: Tuple[Optional[float], Optional[float]] = (None, None),
-        sextant: Optional[int] = None,
     ):
 
         self.fps = fps
@@ -56,7 +55,6 @@ class Positioner(StatusMixIn):
         self.positioner_id = positioner_id
 
         self.centre = centre
-        self.sextant = sextant
 
         self.alpha = None
         self.beta = None
