@@ -26,6 +26,7 @@ from jaeger.exceptions import (
     FPSLockedError,
     JaegerError,
     JaegerUserWarning,
+    PositionerError,
     TrajectoryError,
 )
 from jaeger.ieb import IEB
@@ -608,7 +609,11 @@ class FPS(BaseFPS):
         # Stop all positioners just in case.
         await self.stop_trajectory()
 
-        await self.update_status(timeout=config["fps"]["initialise_timeouts"])
+        try:
+            pos_initialise = [positioner.initialise() for positioner in self.values()]
+            await asyncio.gather(*pos_initialise)
+        except (JaegerError, PositionerError) as err:
+            raise JaegerError(f"Some positioners failed to initialise: {err}.")
 
         n_non_initialised = len(
             [
@@ -622,8 +627,6 @@ class FPS(BaseFPS):
             self._log_initialise_error(
                 f"{n_non_initialised} positioners failed to initialise."
             )
-
-        await self.update_position()
 
         if self.locked:
             log.info("FPS is locked. Trying to unlock it.")

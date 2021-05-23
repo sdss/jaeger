@@ -300,6 +300,9 @@ class Positioner(StatusMixIn):
         if not self.initialised:
             raise PositionerError("failed inisialising.")
 
+        # Update position only if it's not bootloader.
+        await self.update_position()
+
         # Sets the default speed
         await self.set_speed(
             alpha=config["positioner"]["motor_speed"],
