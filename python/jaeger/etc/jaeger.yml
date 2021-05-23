@@ -38,7 +38,8 @@ profiles:
         channel: test1
 
 fps:
-    default_layout: etc/fps_RTConfig.txt
+    use_database: true
+    allow_unknown: true
     initialise_timeouts: 0.5
     status_poller_delay: 5
     position_poller_delay: 5
@@ -68,3 +69,10 @@ low_temperature:
 
 safe_mode:
     min_beta: 160
+
+observatory: ${OBSERVATORY}
+
+database:
+    dbname: sdss5db
+    host: localhost
+    port: 5433
