@@ -263,6 +263,8 @@ async def upgrade_firmware(
     if positioners is not None:
         positioners = [int(positioner.strip()) for positioner in positioners.split(",")]
 
+    fps_maker.initialise = False
+
     async with fps_maker as fps:
 
         if fps.ieb and cycle:
@@ -275,8 +277,9 @@ async def upgrade_firmware(
             await asyncio.gather(*[fps.ieb.get_device(dev).open() for dev in devs])
             await asyncio.sleep(5)
             await asyncio.gather(*[fps.ieb.get_device(dev).close() for dev in devs])
-            await asyncio.sleep(3)
-            await fps.initialise()
+            await asyncio.sleep(5)
+
+            await fps.initialise(start_pollers=False)
 
         await load_firmware(
             fps,
