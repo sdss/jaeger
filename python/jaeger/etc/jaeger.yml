@@ -74,5 +74,5 @@ observatory: ${OBSERVATORY}
 
 database:
     dbname: sdss5db
-    host: localhost
+    host: null
     port: 5433
