@@ -96,11 +96,14 @@ async def ieb_server(event_loop):
 
 
 @pytest.fixture()
-async def vfps(event_loop, ieb_server):
+async def vfps(event_loop, ieb_server, monkeypatch):
     """Sets up the virtual FPS."""
 
     # Make initialisation faster.
-    jaeger.config["fps"]["initialise_timeouts"] = 0.05
+    monkeypatch.setitem(jaeger.config["fps"], "initialise_timeouts", 0.05)
+
+    # Do not use the DB
+    monkeypatch.setitem(jaeger.config["fps"], "use_database", False)
 
     fps = VirtualFPS()
     fps.ieb.client.host = "127.0.0.1"

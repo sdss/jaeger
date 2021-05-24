@@ -5,6 +5,7 @@ import logging
 import os
 
 from sdsstools import get_config, get_logger, get_package_version
+from sdsstools.configuration import __ENVVARS__
 
 
 NAME = "jaeger"
@@ -17,6 +18,7 @@ can_log = get_logger("jaeger_can", log_level=logging.ERROR, capture_warnings=Fal
 
 
 # Start by loading the internal configuration file.
+__ENVVARS__["OBSERVATORY"] = "?"
 config = get_config(NAME)
 
 

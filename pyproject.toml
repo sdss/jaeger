@@ -29,10 +29,11 @@ python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
 sdss-drift = "^0.2.2"
 sdss-clu = "^1.0.0"
-sdssdb = ">=0.4.5"
 sdsstools = ">=0.4.2"
 click_default_group = "^1.2.2"
 daemonocle = "^1.0.2"
+peewee = "^3.14.4"
+psycopg2-binary = "^2.8.6"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"
