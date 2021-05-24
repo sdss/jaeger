@@ -143,6 +143,20 @@ class Positioner(StatusMixIn):
 
         log.log(level, f"Positioner {self.positioner_id}: {message}")
 
+    def get_bus(self) -> Tuple[int, int | None]:
+        """Returns the interface index and bus."""
+
+        if self.fps is None:
+            raise PositionerError("FPS is not defined.")
+
+        if not self.fps._is_multibus:
+            return (0, None)
+
+        iface, bus = self.fps.positioner_to_bus[self.positioner_id]
+        iface_idx = self.fps.can.interfaces.index(iface)
+
+        return (iface_idx, bus)
+
     async def send_command(self, command, error: Optional[str] = None, **kwargs):
         """Sends and awaits a command to the FPS for this positioner."""
 

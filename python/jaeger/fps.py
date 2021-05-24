@@ -219,6 +219,7 @@ class FPS(BaseFPS):
             except ConnectionRefusedError:
                 raise
 
+        self._is_multibus = False
         self._locked = False
 
         #: .IEB: Connection to the instrument electronics box over Modbus.
@@ -280,7 +281,8 @@ class FPS(BaseFPS):
         self._is_multibus = True
 
         id_cmd = self.send_command(
-            CommandID.GET_ID, timeout=config["fps"]["initialise_timeouts"]
+            CommandID.GET_ID,
+            timeout=config["fps"]["initialise_timeouts"],
         )
         await id_cmd
 
