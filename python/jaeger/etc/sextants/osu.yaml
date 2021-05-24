@@ -64,13 +64,13 @@ modules:
                 type: relay
                 channel: 0
                 category: power_sextant
-                relay_type: NO
+                relay_type: NC
             PS5V:
                 address: 40517
                 type: relay
                 channel: 1
                 category: power_5v
-                relay_type: NO
+                relay_type: NC
             CM1:
                 address: 40517
                 type: relay
