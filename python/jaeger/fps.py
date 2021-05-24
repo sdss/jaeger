@@ -552,7 +552,7 @@ class FPS(BaseFPS):
 
         # Resets all positioners
         for positioner in self.positioners.values():
-            await positioner.reset()
+            positioner.reset()
 
         # Stop poller in case they are running
         await self.pollers.stop()
@@ -609,6 +609,18 @@ class FPS(BaseFPS):
                 JaegerUserWarning,
             )
 
+        if self.is_bootloader():
+            bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
+            warnings.warn(
+                f"Positioners in booloader mode: {bootlist!r}.", JaegerUserWarning
+            )
+            warnings.warn(
+                "Positioners found in bootloader mode. "
+                "Bailing out from initialisation early.",
+                JaegerUserWarning
+            )
+            return self
+
         # Stop all positioners just in case.
         await self.stop_trajectory()
 
@@ -648,7 +660,7 @@ class FPS(BaseFPS):
             )
 
         # Start the pollers
-        if start_pollers:
+        if start_pollers and not self.is_bootloader():
             self.pollers.start()
 
         return self
