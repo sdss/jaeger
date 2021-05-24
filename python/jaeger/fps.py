@@ -602,8 +602,9 @@ class FPS(BaseFPS):
             )
 
         if len(set([pos.firmware for pos in self.values()])) > 1:
-            self._log_initialise_error(
-                "Positioners with different firmware versions found."
+            warnings.warn(
+                "Positioners with different firmware versions found.",
+                JaegerUserWarning,
             )
 
         # Stop all positioners just in case.
