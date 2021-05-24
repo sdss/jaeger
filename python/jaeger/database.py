@@ -9,7 +9,6 @@
 import warnings
 
 import peewee
-import psycopg2
 from peewee import (
     AutoField,
     BooleanField,
@@ -26,6 +25,9 @@ from jaeger.exceptions import JaegerUserWarning
 __all__ = ["get_database_connection", "get_positioner_db_data"]
 
 
+database_proxy = peewee.DatabaseProxy()  # Create a proxy for our db.
+
+
 def get_database_connection(dbname: str, **kwargs):
     """Returns a database connection to ``targetdb``."""
 
@@ -33,7 +35,8 @@ def get_database_connection(dbname: str, **kwargs):
 
     try:
         conn.connect()
-    except psycopg2.OperationalError as err:
+        database_proxy.initialize(conn)
+    except peewee.OperationalError as err:
         warnings.warn(f"Failed connecting to the database: {err}.", JaegerUserWarning)
         return None
 
@@ -59,7 +62,7 @@ def get_positioner_db_data(conn: peewee.PostgresqlDatabase, observatory: str):
         .join(PositionerStatus)
         .switch(Positioner)
         .join(PositionerInfo)
-        .where(Observatory.label == observatory, PositionerInfo.fiducial << False)
+        .where(Observatory.label == observatory, PositionerInfo.fiducial >> False)
         .dicts()
     )
 
@@ -74,7 +77,7 @@ def get_positioner_db_data(conn: peewee.PostgresqlDatabase, observatory: str):
 class TargetdbBase(Model):
     class Meta:
         schema = "targetdb"
-        database = "sdss5db"
+        database = database_proxy
 
 
 class PositionerStatus(TargetdbBase):
