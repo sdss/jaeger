@@ -51,6 +51,7 @@ positioner:
     reduction_ratio: 1024
     uid_bits: 6
     trajectory_data_n_points: 3
+    firmware_messages_per_positioner: 4
     motor_steps: 1073741824
     time_step: 0.0005
 

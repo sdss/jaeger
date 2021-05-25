@@ -6,6 +6,8 @@
 # @Filename: bootloader.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import os
@@ -14,13 +16,19 @@ import time
 import warnings
 import zlib
 
+from typing import TYPE_CHECKING, Any, Callable, List, Optional
+
 import numpy
 
-from jaeger import log
+from jaeger import can_log, config, log
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.maskbits import BootloaderStatus
 from jaeger.utils import int_to_bytes
+
+
+if TYPE_CHECKING:
+    from jaeger import FPS
 
 
 __all__ = [
@@ -35,6 +43,7 @@ async def load_firmware(
     fps: FPS,
     firmware_file: str | pathlib.Path,
     positioners: Optional[List[int]] = None,
+    messages_per_positioner: Optional[int] = None,
     force: bool = False,
     show_progressbar: bool = False,
     progress_callback: Optional[Callable[[int, int], Any]] = None,
@@ -54,6 +63,11 @@ async def load_firmware(
     positioners
         A list of positioner ids whose firmware to update, or `None` to update
         all the positioners in ``fps``.
+    messages_per_positioner
+        How many messages to send to each positioner at once. This can improve the
+        performance but also overflow the CAN bus buffer. With the default value of
+        `None`, reverts to the configuration value
+        ``fps.firmware_messages_per_positioner``.
     force
         Forces the firmware load to continue even if some positioners are not
         responding or are not in bootloader mode.
@@ -175,25 +189,32 @@ async def load_firmware(
         else:
             bar = None
 
+        messages_default = config["fps"]["firmware_messages_per_positioner"]
+        messages_per_positioner = messages_per_positioner or messages_default
+        assert isinstance(messages_per_positioner, int)
+
         ii = 0
         while True:
+            cmds = []
+            stop = False
+            for __ in range(messages_per_positioner):
+                chunk = firmware_data.read(chunk_size)
+                packetdata = bytearray(chunk)
+                # packetdata.reverse()  # IMPORTANT! no longer needed for P1
 
-            chunk = firmware_data.read(chunk_size)
-            packetdata = bytearray(chunk)
-            # packetdata.reverse()  # IMPORTANT! no longer needed for P1
+                if len(packetdata) == 0:
+                    stop = True
+                    break
 
-            if len(packetdata) == 0:
-                break
-
-            cmds = [
-                fps.send_command(
-                    CommandID.SEND_FIRMWARE_DATA,
-                    positioner_id=positioner.positioner_id,
-                    data=packetdata,
-                    timeout=15,
-                )
-                for positioner in valid_positioners
-            ]
+                cmds += [
+                    fps.send_command(
+                        CommandID.SEND_FIRMWARE_DATA,
+                        positioner_id=positioner.positioner_id,
+                        data=packetdata,
+                        timeout=15,
+                    )
+                    for positioner in valid_positioners
+                ]
 
             await asyncio.gather(*cmds)
 
@@ -203,12 +224,17 @@ async def load_firmware(
                     can_log.addHandler(fh_handler)
                 return False
 
-            ii += 1
+            ii += messages_per_positioner
+
             if show_progressbar:
-                bar.update(ii)
+                if ii < n_chunks:
+                    bar.update(ii)
 
             if progress_callback:
                 progress_callback(ii, n_chunks)
+
+            if stop:
+                break
 
     log.info("firmware upgrade complete.")
 
