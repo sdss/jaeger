@@ -279,7 +279,7 @@ async def upgrade_firmware(
             await asyncio.gather(*[fps.ieb.get_device(dev).close() for dev in devs])
             await asyncio.sleep(5)
 
-            await fps.initialise(start_pollers=False)
+        await fps.initialise(start_pollers=False)
 
         await load_firmware(
             fps,

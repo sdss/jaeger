@@ -6,6 +6,10 @@
 
 * [#122](https://github.com/sdss/jaeger/issues/122) Precise moves can now be disabled for all positioners by setting the configuration parameter `positioner.disable_precise_moves`. Also implements the CAN commands `SWITCH_[ON|OFF]_PRECISE_MOVE_[ALPHA|BETA]`.
 
+### 🔧 Fixed
+
+* Bug preventing the FPS from being initialised when upgrading the firmware if one was not power cycling the electronics from software.
+
 ### ✨ Improved
 
 * Improved the performance when upgrading the firmware. When calling `load_firmware` one can specify how many ``messages_per_positioner`` to send at once. Too many messages at once will overflow the buffer, but the right number can optimise performance. By default, logging to the CAN log will be suspended during the firmware upgrade to boost performance.
