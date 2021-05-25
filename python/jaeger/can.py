@@ -285,7 +285,7 @@ class JaegerCAN(Generic[Bus_co]):
 
         log_header = (
             f"({message.command.command_id.name}, "
-            f"{message.command.positioner_id} "
+            f"{message.command.positioner_id}, "
             f"{message.command.command_uid!s}): "
         )
 
