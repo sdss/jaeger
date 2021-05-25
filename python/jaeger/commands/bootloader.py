@@ -38,6 +38,7 @@ async def load_firmware(
     force: bool = False,
     show_progressbar: bool = False,
     progress_callback: Optional[Callable[[int, int], Any]] = None,
+    stop_logging: bool = True,
 ):
     """Convenience function to run through the steps of loading a new firmware.
 
@@ -63,6 +64,8 @@ async def load_firmware(
         callback is called with ``(current_chunk, n_chuck)`` where
         ``current_chunk`` is the number of the data chunk being sent and
         ``n_chunk`` is the total number of chunks in the data package.
+    stop_logging
+        Disable logging to file for the CAN logger to improve performance.
 
     """
 
@@ -157,6 +160,11 @@ async def load_firmware(
 
     log.info("starting data send.")
 
+    if stop_logging and can_log.fh:
+        fh_handler = can_log.handlers.pop(can_log.handlers.index(can_log.fh))
+    else:
+        fh_handler = None
+
     chunk_size = 8
     n_chunks = int(numpy.ceil(filesize / chunk_size))
 
@@ -191,6 +199,8 @@ async def load_firmware(
 
             if any(cmd.status.failed or cmd.status.timed_out for cmd in cmds):
                 log.error("firmware upgrade failed.")
+                if fh_handler:
+                    can_log.addHandler(fh_handler)
                 return False
 
             ii += 1
@@ -201,6 +211,9 @@ async def load_firmware(
                 progress_callback(ii, n_chunks)
 
     log.info("firmware upgrade complete.")
+
+    if fh_handler:
+        can_log.addHandler(fh_handler)
 
     total_time = time.time() - start_time
     log.info(f"upgrading firmware took {total_time:.2f}")
