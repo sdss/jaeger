@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import warnings
 from distutils.version import StrictVersion
 
 from typing import List, Optional, Tuple, cast
@@ -19,7 +20,7 @@ import numpy.testing
 import jaeger
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
-from jaeger.exceptions import JaegerError, PositionerError
+from jaeger.exceptions import JaegerError, JaegerUserWarning, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
 
 
@@ -324,7 +325,13 @@ class Positioner(StatusMixIn):
         )
 
         if disable_precise_moves:
-            await self.set_precise_move(mode=False)
+            if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
+                warnings.warn(
+                    "Disabling precise moves requires >=04.01.17",
+                    JaegerUserWarning,
+                )
+            else:
+                await self.set_precise_move(mode=False)
 
         self._log("initialisation complete.")
 
