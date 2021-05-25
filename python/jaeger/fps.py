@@ -614,7 +614,11 @@ class FPS(BaseFPS):
             await self.stop_trajectory()
 
         try:
-            pos_initialise = [positioner.initialise() for positioner in self.values()]
+            disable_precise_moves = config["positioner"]["disable_precise_moves"]
+            pos_initialise = [
+                positioner.initialise(disable_precise_moves=disable_precise_moves)
+                for positioner in self.values()
+            ]
             await asyncio.gather(*pos_initialise)
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}.")
