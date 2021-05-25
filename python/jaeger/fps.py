@@ -609,20 +609,9 @@ class FPS(BaseFPS):
                 JaegerUserWarning,
             )
 
-        if self.is_bootloader():
-            bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
-            warnings.warn(
-                f"Positioners in booloader mode: {bootlist!r}.", JaegerUserWarning
-            )
-            warnings.warn(
-                "Positioners found in bootloader mode. "
-                "Bailing out from initialisation early.",
-                JaegerUserWarning
-            )
-            return self
-
         # Stop all positioners just in case.
-        await self.stop_trajectory()
+        if not self.is_bootloader():
+            await self.stop_trajectory()
 
         try:
             pos_initialise = [positioner.initialise() for positioner in self.values()]
@@ -642,6 +631,19 @@ class FPS(BaseFPS):
             self._log_initialise_error(
                 f"{n_non_initialised} positioners failed to initialise."
             )
+
+        if self.is_bootloader():
+            bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
+            warnings.warn(
+                f"Positioners in booloader mode: {bootlist!r}.",
+                JaegerUserWarning,
+            )
+            warnings.warn(
+                "Positioners found in bootloader mode. "
+                "Bailing out from initialisation early.",
+                JaegerUserWarning,
+            )
+            return self
 
         if self.locked:
             log.info("FPS is locked. Trying to unlock it.")
