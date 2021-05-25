@@ -615,6 +615,8 @@ class FPS(BaseFPS):
 
         try:
             disable_precise_moves = config["positioner"]["disable_precise_moves"]
+            if disable_precise_moves:
+                warnings.warn("Disabling precise moves.", JaegerUserWarning)
             pos_initialise = [
                 positioner.initialise(disable_precise_moves=disable_precise_moves)
                 for positioner in self.values()
