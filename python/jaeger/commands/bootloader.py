@@ -32,12 +32,12 @@ __all__ = [
 
 
 async def load_firmware(
-    fps,
-    firmware_file,
-    positioners=None,
-    force=False,
-    show_progressbar=False,
-    progress_callback=None,
+    fps: FPS,
+    firmware_file: str | pathlib.Path,
+    positioners: Optional[List[int]] = None,
+    force: bool = False,
+    show_progressbar: bool = False,
+    progress_callback: Optional[Callable[[int, int], Any]] = None,
 ):
     """Convenience function to run through the steps of loading a new firmware.
 
@@ -46,19 +46,19 @@ async def load_firmware(
 
     Parameters
     ----------
-    fps : `~jaeger.fps.FPS`
+    fps
         `~jaeger.fps.FPS` instance to which the commands will be sent.
-    firmware_file : str
+    firmware_file
         Binary file containing the firmware to load.
-    positioners : `list` or `None`
+    positioners
         A list of positioner ids whose firmware to update, or `None` to update
         all the positioners in ``fps``.
-    force : bool
+    force
         Forces the firmware load to continue even if some positioners are not
         responding or are not in bootloader mode.
-    show_progressbar : bool
+    show_progressbar
         Whether to show a progress bar.
-    progress_callback : bool
+    progress_callback
         A function to call as data gets transferred to the positioners. The
         callback is called with ``(current_chunk, n_chuck)`` where
         ``current_chunk`` is the number of the data chunk being sent and
