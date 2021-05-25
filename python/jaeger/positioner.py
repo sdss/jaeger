@@ -323,11 +323,10 @@ class Positioner(StatusMixIn):
             beta=config["positioner"]["motor_speed"],
         )
 
-        if disable_precise_moves:
-            if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
-                self._log("Disabling precise moves requires >=04.01.17", logging.ERROR)
-            else:
-                await self.set_precise_move(mode=False)
+        if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
+            self._log("Disabling precise moves requires >=04.01.17", logging.ERROR)
+        else:
+            await self.set_precise_move(mode=not disable_precise_moves)
 
         self._log("initialisation complete.")
 
