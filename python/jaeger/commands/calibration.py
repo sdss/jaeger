@@ -284,3 +284,39 @@ class GetHoldingCurrents(Command):
         beta = bytes_to_int(data[4:], dtype="i4")
 
         return numpy.array([alpha, beta])
+
+
+class PreciseMoveAlphaOn(Command):
+    """Turns precise move on alpha ON."""
+
+    command_id = CommandID.SWITCH_ON_PRECISE_MOVE_ALPHA
+    broadcastable = False
+    move_command = False
+    safe = False
+
+
+class PreciseMoveAlphaOff(Command):
+    """Turns precise move on alpha OFF."""
+
+    command_id = CommandID.SWITCH_OFF_PRECISE_MOVE_ALPHA
+    broadcastable = False
+    move_command = False
+    safe = False
+
+
+class PreciseMoveBetaOn(Command):
+    """Turns precise move on beta ON."""
+
+    command_id = CommandID.SWITCH_ON_PRECISE_MOVE_BETA
+    broadcastable = False
+    move_command = False
+    safe = False
+
+
+class PreciseMoveBetaOff(Command):
+    """Turns precise move on beta OFF."""
+
+    command_id = CommandID.SWITCH_OFF_PRECISE_MOVE_BETA
+    broadcastable = False
+    move_command = False
+    safe = False
