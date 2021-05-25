@@ -479,6 +479,8 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
 
     def __init__(self, *args, **kwargs):
 
+        status_interval = kwargs.pop("status_interval", 5)
+
         super().__init__(*args, **kwargs)
 
         self._device_status = collections.defaultdict(dict)
@@ -494,7 +496,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         self.device_status_poller = Poller(
             "cannet_device",
             self._get_device_status,
-            delay=5,
+            delay=status_interval,
         )
         self.device_status_poller.start()
 
