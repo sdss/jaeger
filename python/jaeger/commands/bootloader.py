@@ -67,7 +67,7 @@ async def load_firmware(
         How many messages to send to each positioner at once. This can improve the
         performance but also overflow the CAN bus buffer. With the default value of
         `None`, reverts to the configuration value
-        ``fps.firmware_messages_per_positioner``.
+        ``positioner.firmware_messages_per_positioner``.
     force
         Forces the firmware load to continue even if some positioners are not
         responding or are not in bootloader mode.
@@ -189,7 +189,7 @@ async def load_firmware(
         else:
             bar = None
 
-        messages_default = config["fps"]["firmware_messages_per_positioner"]
+        messages_default = config["positioner"]["firmware_messages_per_positioner"]
         messages_per_positioner = messages_per_positioner or messages_default
         assert isinstance(messages_per_positioner, int)
 
