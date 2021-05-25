@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import warnings
 from distutils.version import StrictVersion
 
 from typing import List, Optional, Tuple, cast
@@ -20,7 +19,7 @@ import numpy.testing
 import jaeger
 from jaeger import config, log, maskbits
 from jaeger.commands import CommandID
-from jaeger.exceptions import JaegerError, JaegerUserWarning, PositionerError
+from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
 
 
