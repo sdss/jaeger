@@ -298,7 +298,7 @@ class Positioner(StatusMixIn):
 
         return True
 
-    async def initialise(self):
+    async def initialise(self, disable_precise_moves=False):
         """Initialises the position watcher."""
 
         # Resets all.
@@ -322,6 +322,12 @@ class Positioner(StatusMixIn):
             alpha=config["positioner"]["motor_speed"],
             beta=config["positioner"]["motor_speed"],
         )
+
+        if disable_precise_moves:
+            if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
+                self._log("Disabling precise moves requires >=04.01.17", logging.ERROR)
+            else:
+                await self.set_precise_move(mode=False)
 
         self._log("initialisation complete.")
 
@@ -414,6 +420,33 @@ class Positioner(StatusMixIn):
         self._log(f"speed set to ({alpha:.2f}, {beta:.2f})")
 
         return speed_command
+
+    async def set_precise_move(self, mode, alpha=True, beta=True):
+        """Switches the precise moves on alpha and beta."""
+
+        cmds = []
+
+        if not alpha and not beta:
+            raise PositionerError("positioneralpha or beta need to be True.")
+
+        if alpha:
+            if mode is True:
+                cmds.append(self.send_command(CommandID.SWITCH_ON_PRECISE_MOVE_ALPHA))
+            else:
+                cmds.append(self.send_command(CommandID.SWITCH_OFF_PRECISE_MOVE_ALPHA))
+
+        if beta:
+            if mode is True:
+                cmds.append(self.send_command(CommandID.SWITCH_ON_PRECISE_MOVE_BETA))
+            else:
+                cmds.append(self.send_command(CommandID.SWITCH_OFF_PRECISE_MOVE_BETA))
+
+        cmds = await asyncio.gather(*cmds)
+
+        if any([cmd.status != maskbits.CommandStatus.DONE for cmd in cmds]):
+            raise PositionerError("failed switching precise moves.")
+
+        return True
 
     def _can_move(self):
         """Returns `True` if the positioner can be moved."""

@@ -46,14 +46,15 @@ fps:
     position_poller_delay: 5
 
 positioner:
+    reduction_ratio: 1024
+    motor_steps: 1073741824
+    time_step: 0.0005
     motor_speed: 3000
     initialise_datums_timeout: 300
-    reduction_ratio: 1024
+    disable_precise_moves: true
     uid_bits: 6
     trajectory_data_n_points: 3
     firmware_messages_per_positioner: 4
-    motor_steps: 1073741824
-    time_step: 0.0005
 
 files:
     log_dir: /data/logs/jaeger
