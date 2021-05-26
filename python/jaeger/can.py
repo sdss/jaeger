@@ -131,7 +131,8 @@ class JaegerCAN(Generic[Bus_co]):
     ):
 
         # Start can file logger
-        start_file_loggers(start_log=False, start_can=True)
+        if config["debug"] is True:
+            start_file_loggers(start_log=False, start_can=True)
 
         self.loop = asyncio.get_event_loop()
 
