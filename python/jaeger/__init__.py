@@ -3,6 +3,7 @@
 
 import logging
 import os
+import warnings
 
 from sdsstools import get_config, get_logger, get_package_version
 from sdsstools.configuration import __ENVVARS__
@@ -20,6 +21,15 @@ can_log = get_logger("jaeger_can", log_level=logging.ERROR, capture_warnings=Fal
 # Start by loading the internal configuration file.
 __ENVVARS__["OBSERVATORY"] = "?"
 config = get_config(NAME)
+
+
+# If we are not in debug mode, remove some possible warnings.
+if config["debug"] is False:
+    warnings.filterwarnings(
+        "ignore",
+        message=".+was never awaited.+",
+        category=RuntimeWarning,
+    )
 
 
 def start_file_loggers(start_log=True, start_can=True):

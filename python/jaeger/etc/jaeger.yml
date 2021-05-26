@@ -73,6 +73,8 @@ low_temperature:
 safe_mode:
     min_beta: 160
 
+debug: false
+
 observatory: ${OBSERVATORY}
 
 database:
