@@ -1,7 +1,7 @@
 address: 10.1.10.1
 port: 502
 modules:
-    ANALOG_1:
+    ANALOG1:
         model: "750-497"
         mode: input_register
         channels: 8
