@@ -9,28 +9,31 @@ Contents
 
 .. toctree::
   :maxdepth: 2
+  :caption: Guides
 
   intro
-
   shatterdome
-
   calibration
-
   maskbits
-
   actor
-
   testing
-
   config
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Reference
 
   api
   commands
-
   cli
 
-  changelog
+.. toctree::
+  :maxdepth: 2
+  :caption: Development
 
+  changelog
+  GitHub Repository <https://github.com/sdss/jaeger>
+  Issues <https://github.com/sdss/jaeger/issues>
 
 
 Indices and tables

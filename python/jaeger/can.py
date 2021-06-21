@@ -126,7 +126,7 @@ class JaegerCAN(Generic[Bus_co]):
         interface_type: str,
         channels: list | tuple,
         *args,
-        fps: Optional[jaeger.FPS] = None,
+        fps: Optional[jaeger.fps.FPS] = None,
         **kwargs,
     ):
 

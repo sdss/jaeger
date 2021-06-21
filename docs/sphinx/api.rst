@@ -1,8 +1,8 @@
 
 .. _api:
 
-API Reference
-=============
+Programmatic API
+================
 
 .. _api-can:
 
