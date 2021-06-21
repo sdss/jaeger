@@ -6,6 +6,7 @@
 
 * [#122](https://github.com/sdss/jaeger/issues/122) Precise moves can now be disabled for all positioners by setting the configuration parameter `positioner.disable_precise_moves`. Also implements the CAN commands `SWITCH_[ON|OFF]_PRECISE_MOVE_[ALPHA|BETA]`.
 * New `debug` parameter in the configuration file. If it is `false`, some warnings will be silenced and `JaegerCAN` will not log to `can.log`.
+* [#126](https://github.com/sdss/jaeger/issues/126) Use [furo](https://pradyunsg.me/furo/) Sphinx theme. Add `noxfile` for `sphinx-autobuild`.
 
 ### 🔧 Fixed
 
