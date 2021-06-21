@@ -1,4 +1,4 @@
-address: 140.254.79.159
+address: 10.25.1.128
 port: 502
 modules:
     ANALOG_1:
