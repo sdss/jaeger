@@ -418,3 +418,44 @@ async def off(command, fps, positioner_id):
     await fps.send_to_all("HALL_OFF", positioners=positioner_id)
 
     command.finish()
+
+
+@jaeger_parser.group()
+def led():
+    """Turns the positioner LED on/off."""
+
+    pass
+
+
+@led.command(name='on')
+@click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
+async def led_on(command, fps, positioner_id):
+    """Turns the LED on."""
+
+    if positioner_id is None:
+        positioner_id = list(fps.positioners.keys())
+
+    if not check_positioners(positioner_id, command, fps, initialised=False):
+        return
+
+    command.debug("Turning LED on")
+    await fps.send_to_all("SWITCH_LED_ON", positioners=positioner_id)
+
+    command.finish()
+
+
+@led.command(name='off')
+@click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
+async def led_off(command, fps, positioner_id):
+    """Turns the LED off."""
+
+    if positioner_id is None:
+        positioner_id = list(fps.positioners.keys())
+
+    if not check_positioners(positioner_id, command, fps, initialised=False):
+        return
+
+    command.debug("Turning LED off")
+    await fps.send_to_all("SWITCH_LED_OFF", positioners=positioner_id)
+
+    command.finish()
