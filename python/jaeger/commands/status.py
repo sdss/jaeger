@@ -134,3 +134,19 @@ class GetTemperature(Command):
         rawT = bytes_to_int(data, dtype="u4")  # Raw temperature
 
         return rawT
+
+
+class SwitchLEDOn(Command):
+    """Switched the positioner LED on."""
+
+    command_id = CommandID.SWITCH_LED_ON
+    broadcastable = False
+    safe = True
+
+
+class SwitchLEDOff(Command):
+    """Switched the positioner LED on."""
+
+    command_id = CommandID.SWITCH_LED_ON
+    broadcastable = False
+    safe = True
