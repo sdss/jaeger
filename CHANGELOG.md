@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🚀 New
+
+* [#127](https://github.com/sdss/jaeger/issues/127) Implemented positioner LED on/off commands.
+
+
 ## 0.8.0 - June 21, 2021
 
 ### 🚀 New
