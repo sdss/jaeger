@@ -28,7 +28,7 @@ profiles:
         buses: [1, 2, 3, 4]
         bitrate: 1000000
         timeout: 1
-        status_interval: 0.1
+        status_interval: 5
     slcan:
         interface: slcan
         channel: /dev/tty.usbserial-LW3HTDSY
