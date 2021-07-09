@@ -451,11 +451,10 @@ class FPS(BaseFPS):
             return
 
         if command.positioner_id not in self.positioner_to_bus:
+            command.finish_command(command.status.FAILED)
             raise JaegerError(
                 f"Positioner {command.positioner_id} has no assigned bus."
             )
-            command.finish_command(command.status.FAILED)
-            return
 
         interface, bus = self.positioner_to_bus[command.positioner_id]
 
@@ -638,6 +637,9 @@ class FPS(BaseFPS):
             self._log_initialise_error(
                 f"{n_non_initialised} positioners failed to initialise."
             )
+
+        if len(self.positioners) == 0:
+            warnings.warn("No positioners connected.", JaegerUserWarning)
 
         if self.is_bootloader():
             bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
