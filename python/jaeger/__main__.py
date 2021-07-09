@@ -98,6 +98,7 @@ class FPSWrapper(object):
         return self.fps
 
     async def __aexit__(self, *excinfo):
+        assert self.fps
         await self.fps.shutdown()
 
 

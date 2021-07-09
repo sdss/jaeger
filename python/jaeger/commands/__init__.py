@@ -6,9 +6,11 @@
 # @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import enum
 
-from typing import Type, Union
+from typing import Dict, Type, Union
 
 
 class TypesEnumMeta(enum.EnumMeta):
@@ -75,11 +77,13 @@ class CommandID(enum.IntEnum, metaclass=TypesEnumMeta):
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
 
-    def get_command_class(self):
+    def get_command_class(self) -> Type[Command]:
         """Returns the class associated with this command."""
 
         if self in COMMAND_LIST:
             return COMMAND_LIST[self]
+
+        raise ValueError("The command does not have an associated class.")
 
 
 from .base import *
@@ -100,7 +104,7 @@ def all_subclasses(cls):
 
 
 # Generate a dictionary of commands
-COMMAND_LIST = {
+COMMAND_LIST: Dict[int, Type[Command]] = {
     cclass.command_id: cclass
     for cclass in all_subclasses(Command)
     if cclass.command_id in CommandID

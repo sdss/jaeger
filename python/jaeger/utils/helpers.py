@@ -84,7 +84,7 @@ class StatusMixIn(Generic[Status_co]):
 
         self._flags = maskbit_flags
         self.callbacks = []
-        self._status = initial_status
+        self._status: Optional[Status_co] = initial_status
         self.watcher = None
 
         if callback_func is not None:
@@ -114,8 +114,11 @@ class StatusMixIn(Generic[Status_co]):
             func()
 
     @property
-    def status(self) -> Status_co | None:
+    def status(self) -> Status_co:
         """Returns the status."""
+
+        if self._status is None:
+            raise ValueError("status not set.")
 
         return self._status
 
@@ -136,7 +139,7 @@ class StatusMixIn(Generic[Status_co]):
         return self._flags
 
     @flags.setter
-    def flags(self, value):
+    def flags(self, value: Type[Status_co]):
         """Sets the flags associated to this status."""
 
         self._flags = value
@@ -288,6 +291,9 @@ class Poller(object):
     async def poller(self):
         """The polling loop."""
 
+        if self._task is None:
+            raise RuntimeError("Task is not running.")
+
         while True:
 
             try:
@@ -357,7 +363,7 @@ class Poller(object):
     async def stop(self):
         """Cancel the poller."""
 
-        if not self.running:
+        if self._task is None or not self.running:
             return
 
         self._task.cancel()

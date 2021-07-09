@@ -118,6 +118,7 @@ class JaegerActor(clu.LegacyActor):
 
         while True:
             try:
+                assert self.fps.ieb
                 device = self.fps.ieb.get_device(sensor)
                 temp = (await device.read())[0]
 

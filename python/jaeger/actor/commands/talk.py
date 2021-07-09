@@ -24,6 +24,8 @@ async def talk(command, fps, command_id, positioner_id, params):
     """Send a direct command to the CAN network and show the replies."""
 
     CommandClass = CommandID(command_id).get_command_class()
+    assert CommandClass
+
     can_command = CommandClass(*params, positioner_id=positioner_id)
 
     command.info(f"Running command {can_command.command_id.name}.")

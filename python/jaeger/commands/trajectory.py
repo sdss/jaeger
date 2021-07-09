@@ -370,16 +370,15 @@ class Trajectory(object):
         if not self._ready_to_start or self.failed:
             raise TrajectoryError("the trajectory has not been sent.")
 
-        if use_sync_line:
-            if not self.fps.ieb or self.fps.ieb.disabled:
-                raise TrajectoryError("IEB is not connected. Cannot use SYNC line.")
-            if (await self.fps.ieb.get_device("sync").read())[0] == "closed":
-                raise TrajectoryError("The SYNC line is on high.")
-
         for positioner_id in list(self.trajectories.keys()):
             self.fps[positioner_id].move_time = self.move_time
 
         if use_sync_line:
+
+            if not self.fps.ieb or self.fps.ieb.disabled:
+                raise TrajectoryError("IEB is not connected. Cannot use SYNC line.")
+            if (await self.fps.ieb.get_device("sync").read())[0] == "closed":
+                raise TrajectoryError("The SYNC line is on high.")
 
             sync = self.fps.ieb.get_device("sync")
             assert isinstance(sync, drift.Relay)

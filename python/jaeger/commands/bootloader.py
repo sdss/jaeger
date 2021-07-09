@@ -158,7 +158,7 @@ async def load_firmware(
         fps.send_command(
             CommandID.START_FIRMWARE_UPGRADE,
             positioner_id=positioner.positioner_id,
-            data=start_firmware_payload,
+            data=[start_firmware_payload],
         )
         for positioner in valid_positioners
     ]
@@ -184,7 +184,7 @@ async def load_firmware(
 
     with contextlib.ExitStack() as stack:
 
-        if show_progressbar:
+        if show_progressbar and progressbar:
             bar = stack.enter_context(progressbar.ProgressBar(max_value=n_chunks))
         else:
             bar = None
@@ -210,7 +210,7 @@ async def load_firmware(
                     fps.send_command(
                         CommandID.SEND_FIRMWARE_DATA,
                         positioner_id=positioner.positioner_id,
-                        data=packetdata,
+                        data=[packetdata],
                         timeout=15,
                     )
                     for positioner in valid_positioners
@@ -226,7 +226,7 @@ async def load_firmware(
 
             ii += messages_per_positioner
 
-            if show_progressbar:
+            if show_progressbar and bar:
                 if ii < n_chunks:
                     bar.update(ii)
 

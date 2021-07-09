@@ -328,6 +328,8 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
 
     raw_value = 32 * int(1023 * (value / 100))
 
+    assert fps.ieb
+
     try:
         device = fps.ieb.get_device(device_name)
     except ValueError:

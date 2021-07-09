@@ -178,7 +178,7 @@ class VirtualPositioner(StatusMixIn):
                 self.reply(command_id, uid)
 
             elif command_id == CommandID.GET_FIRMWARE_VERSION:
-                data_firmware = command.encode(self.firmware)
+                data_firmware = command.encode(self.firmware)  # type: ignore
                 self.reply(command_id, uid, data=data_firmware)
 
             elif command_id == CommandID.GET_STATUS:
@@ -192,11 +192,11 @@ class VirtualPositioner(StatusMixIn):
                 self.loop.create_task(self.process_goto(msg))
 
             elif command_id == CommandID.GET_ACTUAL_POSITION:
-                data_position = command.encode(*self.position)
+                data_position = command.encode(*self.position)  # type: ignore
                 self.reply(command_id, uid, data=data_position)
 
             elif command_id == CommandID.SET_SPEED:
-                data_speed = command.encode(*self.speed)
+                data_speed = command.encode(*self.speed)  # type: ignore
                 self.reply(command_id, uid, data=data_speed)
 
             elif command_id == CommandID.START_FIRMWARE_UPGRADE:
@@ -247,7 +247,8 @@ class VirtualPositioner(StatusMixIn):
             message = Message(
                 arbitration_id=reply_id, is_extended_id=True, data=data_chunk
             )
-            self.notifier.bus.send(message)
+            if self.notifier:
+                self.notifier.bus.send(message)
 
     def process_firmware_data(self, uid, data):
         """Processes ``SEND_FIRMWARE_DATA`` commands."""
@@ -283,7 +284,7 @@ class VirtualPositioner(StatusMixIn):
         command = command_id.get_command_class()
 
         data = message.data
-        alpha_move, beta_move = command.decode(data)
+        alpha_move, beta_move = command.decode(data)  # type: ignore
 
         if command_id == CommandID.GO_TO_RELATIVE_POSITION:
             alpha_move += self.position[0]

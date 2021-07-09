@@ -58,7 +58,7 @@ def get_positioner_db_data(conn: peewee.PostgresqlDatabase, observatory: str):
             PositionerStatus.label.alias("status"),
         )
         .join(Observatory)
-        .switch(Positioner)
+        .switch(Positioner)  # type: ignore
         .join(PositionerStatus)
         .switch(Positioner)
         .join(PositionerInfo)

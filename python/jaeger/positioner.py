@@ -207,6 +207,8 @@ class Positioner(StatusMixIn):
     ):
         """Updates the status of the positioner."""
 
+        assert self.fps, "FPS is not set."
+
         # Need to update the firmware to make sure we get the right flags.
         await self.update_firmware_version()
 
@@ -554,6 +556,12 @@ class Positioner(StatusMixIn):
 
         if None in self.speed:
             raise PositionerError("speed has not been set.")
+
+        # Update position
+        await self.update_position()
+        assert (
+            self.alpha is not None and self.beta is not None
+        ), "alpha or beta positions unknown."
 
         # Check if safe mode is enabled
         if "safe_mode" in config and config["safe_mode"] is not False:

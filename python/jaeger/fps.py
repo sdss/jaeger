@@ -302,7 +302,7 @@ class FPS(BaseFPS):
         self,
         command: str | int | CommandID | Command,
         positioner_id: int = 0,
-        data: bytearray = bytearray([]),
+        data: List[bytearray] = [bytearray([])],
         interface: Optional[BusABC] = None,
         bus: Optional[int] = None,
         broadcast: bool = False,
@@ -359,6 +359,7 @@ class FPS(BaseFPS):
         if not isinstance(command, Command):
             command_flag = CommandID(command)
             CommandClass = command_flag.get_command_class()
+            assert CommandClass, "CommandClass not defined"
 
             command = CommandClass(
                 positioner_id=positioner_id,
@@ -955,7 +956,7 @@ class FPS(BaseFPS):
                 self.send_command(
                     command,
                     positioner_id=positioner_id,
-                    data=data[ii],
+                    data=[data[ii]],
                     **kwargs,
                 )
                 for ii, positioner_id in enumerate(positioners)
@@ -996,7 +997,7 @@ class FPS(BaseFPS):
         except AttributeError:
             pass
 
-        if self.ieb.disabled:
+        if self.ieb is None or self.ieb.disabled:
             status["ieb"] = False
         else:
             status["ieb"] = await self.ieb.get_status()
