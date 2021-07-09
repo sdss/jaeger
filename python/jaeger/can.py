@@ -241,6 +241,8 @@ class JaegerCAN(Generic[Bus_co]):
         # This is important for timed out broadcast still in the list while
         # another instance of the same command is running. We want replies to
         # be sent to the running command first.
+        # TODO: this can probably be optimised by doing it some kind of
+        # mapping of positioner_id, command_id, and uid.
         self.running_commands = sorted(
             [
                 rcmd
