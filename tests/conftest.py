@@ -106,6 +106,8 @@ async def vfps(event_loop, ieb_server, monkeypatch):
     monkeypatch.setitem(jaeger.config["fps"], "use_database", False)
 
     fps = VirtualFPS()
+
+    assert fps.ieb
     fps.ieb.client.host = "127.0.0.1"
     fps.ieb.client.port = 5020
 
