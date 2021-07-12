@@ -21,7 +21,7 @@ import can
 from jaeger import can_log, config, log, maskbits
 from jaeger.exceptions import CommandError, JaegerError
 from jaeger.maskbits import CommandStatus, ResponseCode
-from jaeger.utils import AsyncQueue, StatusMixIn, get_identifier, parse_identifier
+from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
 
 from . import CommandID
 
@@ -283,8 +283,6 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
         self._timeout_handle = None
 
-        self.reply_queue = AsyncQueue(callback=self.process_reply)
-
         StatusMixIn.__init__(
             self,
             maskbit_flags=CommandStatus,
@@ -453,9 +451,21 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
         self._status = status
 
-        self.reply_queue.watcher.cancel()
-
         if not self.done():
+
+            if pid != 0 and self.status == CommandStatus.TIMEDOUT:
+                level = logging.WARNING if not silent else logging.DEBUG
+                self._log("this command timed out and it is not a broadcast.", level)
+            elif self.status == CommandStatus.CANCELLED:
+                self._log("command has been cancelled.", logging.DEBUG)
+            elif self.status.failed:
+                level = logging.ERROR if not silent else logging.DEBUG
+                self._log(f"command finished with status {self.status.name!r}", level)
+
+            # For good measure we return all the UIDs
+            if pid != 0:
+                for uid in self.message_uids:
+                    UID_POOL[self.command_id][pid].add(uid)
 
             self.set_result(self)
 
@@ -468,24 +478,6 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
                     asyncio.create_task(self._done_callback())
                 else:
                     self._done_callback()
-
-            if pid != 0 and self.status == CommandStatus.TIMEDOUT:
-                level = logging.WARNING if not silent else logging.DEBUG
-                self._log(
-                    "this command timed out and it is not a broadcast.", level=level
-                )
-            elif self.status == CommandStatus.CANCELLED:
-                self._log("command has been cancelled.", logging.DEBUG)
-            elif self.status.failed:
-                level = logging.ERROR if not silent else logging.DEBUG
-                self._log(
-                    f"command finished with status {self.status.name!r}", level=level
-                )
-
-            # For good measure we return all the UIDs
-            if pid != 0:
-                for uid in self.message_uids:
-                    UID_POOL[self.command_id][pid].add(uid)
 
             self._log(f"finished command with status {self.status.name!r}")
 
@@ -507,10 +499,12 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
                 self.finish_command(CommandStatus.TIMEDOUT)
             else:
                 self._timeout_handle = self.loop.call_later(
-                    self.timeout, self.finish_command, CommandStatus.TIMEDOUT
+                    self.timeout,
+                    self.finish_command,
+                    CommandStatus.TIMEDOUT,
                 )
         elif self.status.is_done:
-            self.finish_command(self.status)  # type: ignore
+            self.finish_command(self.status)
 
     def _generate_messages_internal(self, data: Optional[List[bytearray]] = None):
         """Generates the list of messages to send to the bus for this command.
