@@ -17,7 +17,7 @@ import socket
 import time
 import warnings
 
-from typing import Any, Callable, Generic, List, Optional, Type, TypeVar
+from typing import Any, Generic, List, Optional, Type, TypeVar
 
 import can
 from can.interfaces.slcan import slcanBus
@@ -35,7 +35,7 @@ from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller
 
 
-__all__ = ["JaegerCAN", "CANnetInterface", "JaegerReaderCallback", "INTERFACES"]
+__all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
 
 
 LOG_HEADER = "({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}):"
@@ -47,37 +47,6 @@ INTERFACES = {
     "virtual": {"class": VirtualBus, "multibus": False},
     "cannet": {"class": CANNetBus, "multibus": True},
 }
-
-
-class JaegerReaderCallback(can.Listener):
-    """A message reader that triggers a callback on message received.
-
-    Parameters
-    ----------
-    callback
-        The function to run when a new message is received.
-    loop
-        If an asyncio event loop, the callback will be called with
-        ``call_soon``, otherwise it will be called immediately.
-
-    """
-
-    def __init__(
-        self,
-        callback: Callable[[can.Message], Any],
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-    ):
-
-        self.callback = callback
-        self.loop = loop
-
-    def on_message_received(self, msg):
-        """Calls the callback with the received message."""
-
-        if self.loop:
-            self.loop.call_soon(self.callback, msg)
-        else:
-            self.callback(msg)
 
 
 Bus_co = TypeVar("Bus_co", bound="can.BusABC", covariant=True)
@@ -182,21 +151,28 @@ class JaegerCAN(Generic[Bus_co]):
 
         self.command_queue: asyncio.Queue[Command] = asyncio.Queue()
         self._command_queue_task = self.loop.create_task(self._process_queue())
+        self.loop.create_task(self._process_reply_queue())
 
     def _start_notifier(self):
         """Starts the listener and notifiers."""
 
-        self.listener = JaegerReaderCallback(self._process_reply, loop=self.loop)
+        self.reader = can.AsyncBufferedReader()
         self.notifier = can.notifier.Notifier(
             self.interfaces,
-            [self.listener],
+            [self.reader],
             loop=self.loop,
         )
 
         log.debug("started JaegerReaderCallback listener and notifiers")
 
-    def _process_reply(self, msg: can.Message):
+    async def _process_reply_queue(self):
         """Processes replies from the bus."""
+
+        async for msg in self.reader:
+            await self._process_reply(msg)
+
+    async def _process_reply(self, msg: can.Message):
+        """Processes one reply message."""
 
         positioner_id, command_id, reply_uid, __ = jaeger.utils.parse_identifier(
             msg.arbitration_id
@@ -271,7 +247,7 @@ class JaegerCAN(Generic[Bus_co]):
                 f"queuing reply UID={reply_uid} "
                 f"to command {found_cmd.command_uid}."
             )
-            found_cmd.reply_queue.put_nowait(msg)
+            found_cmd.process_reply(msg)
         else:
             can_log.debug(
                 f"({command_id_flag.name}, {positioner_id}): "
@@ -345,11 +321,8 @@ class JaegerCAN(Generic[Bus_co]):
 
             can_log.debug(log_header + " sending messages to CAN bus.")
 
-            cmd.status = CommandStatus.RUNNING
-
             try:
                 self._send_messages(cmd)
-                self.running_commands.append(cmd)
             except jaeger.JaegerError as ee:
                 can_log.error(f"found error while getting messages: {ee}")
                 continue
@@ -361,6 +334,22 @@ class JaegerCAN(Generic[Bus_co]):
         to send command messages to the interface synchronously.
 
         """
+
+        log_header = LOG_HEADER.format(cmd=cmd)
+
+        if cmd.status != CommandStatus.READY:
+            if cmd.status != CommandStatus.CANCELLED:
+                can_log.error(
+                    f"{log_header} command is not ready "
+                    f"(status={cmd.status.name!r})"
+                )
+                cmd.cancel()
+            return
+
+        can_log.debug(log_header + " sending messages to CAN bus.")
+
+        cmd.status = CommandStatus.RUNNING
+        self.running_commands.append(cmd)
 
         log_header = LOG_HEADER.format(cmd=cmd)
         messages = cmd.get_messages()
@@ -503,13 +492,13 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         )
         self.device_status_poller.start()
 
-    def _process_reply(self, msg: can.Message):
+    async def _process_reply(self, msg: can.Message):
         """Processes a message checking first if it comes from the device."""
 
         if msg.arbitration_id == 0:
             return self.handle_device_message(msg)
 
-        super()._process_reply(msg)
+        await super()._process_reply(msg)
 
     @property
     def device_status(self):

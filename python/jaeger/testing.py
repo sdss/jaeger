@@ -153,9 +153,7 @@ class VirtualPositioner(StatusMixIn):
     async def process_message(self):
         """Processes incoming commands from the bus."""
 
-        while True:
-
-            msg = await self.listener.get_message()
+        async for msg in self.listener:
 
             arbitration_id = msg.arbitration_id
             positioner_id, command_id, uid, __ = utils.parse_identifier(arbitration_id)
@@ -240,12 +238,17 @@ class VirtualPositioner(StatusMixIn):
             data = [None]
 
         reply_id = utils.get_identifier(
-            self.positioner_id, command_id, uid=uid, response_code=response_code
+            self.positioner_id,
+            command_id,
+            uid=uid,
+            response_code=response_code,
         )
 
         for data_chunk in data:
             message = Message(
-                arbitration_id=reply_id, is_extended_id=True, data=data_chunk
+                arbitration_id=reply_id,
+                is_extended_id=True,
+                data=data_chunk,
             )
             if self.notifier:
                 self.notifier.bus.send(message)
