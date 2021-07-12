@@ -6,6 +6,8 @@
 # @Filename: utils.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from typing import Tuple
+
 import numpy
 
 from jaeger import config
@@ -201,7 +203,7 @@ def get_identifier(positioner_id, command_id, uid=0, response_code=0):
     return int(identifier, 2)
 
 
-def parse_identifier(identifier):
+def parse_identifier(identifier: int) -> Tuple[int, int, int, ResponseCode]:
     """Parses an extended frame identifier and returns its components.
 
     The 29-bit extended frame identifier is composed of a positioner id,
@@ -210,12 +212,12 @@ def parse_identifier(identifier):
 
     Parameters
     ----------
-    identifier : `int`
+    identifier
         The identifier returned by the CAN bus.
 
     Returns
     -------
-    components : tuple
+    components
         A tuple with the components of the identifier. The first element is
         the positioner id, the second the command id, the third is the command
         UID, and the last one is the response flag as an instance of
@@ -232,12 +234,16 @@ def parse_identifier(identifier):
 
     """
 
-    identifier_bin = format(identifier, "029b")
+    def last(k, n):
+        return (k) & ((1 << (n)) - 1)
 
-    positioner_id = int(identifier_bin[0:11], 2)
-    command_id = int(identifier_bin[11:19], 2)
-    command_uid = int(identifier_bin[19:25], 2)
-    response_code = int(identifier_bin[25:], 2)
+    def mid(k, m, n):
+        return last((k) >> (m), ((n) - (m)))
+
+    positioner_id = mid(identifier, 18, 28)
+    command_id = mid(identifier, 10, 17)
+    command_uid = mid(identifier, 4, 9)
+    response_code = mid(identifier, 0, 3)
 
     response_flag = ResponseCode(response_code)
 
