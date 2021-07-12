@@ -14,7 +14,6 @@ import collections
 import pprint
 import re
 import socket
-import time
 import warnings
 
 from typing import Any, Generic, List, Optional, Type, TypeVar
@@ -29,7 +28,7 @@ import jaeger.utils
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import Command, CommandID, Message, StopTrajectory
 from jaeger.exceptions import JaegerUserWarning
-from jaeger.interfaces import CANNetBus, Notifier, VirtualBus
+from jaeger.interfaces import CANNetBus, VirtualBus
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller
 
@@ -104,12 +103,10 @@ class JaegerCAN(Generic[Bus_co]):
 
         self.loop = asyncio.get_event_loop()
 
-        # self.notifier = Notifier()
-
         assert interface_type in INTERFACES, f"invalid interface {interface_type}."
         self.interface_type = interface_type
 
-        InterfaceClass: Type[Bus_co] = INTERFACES[interface_type]["class"]
+        InterfaceClass: Type = INTERFACES[interface_type]["class"]
 
         self.multibus = INTERFACES[interface_type]["multibus"]
 
@@ -119,7 +116,7 @@ class JaegerCAN(Generic[Bus_co]):
         self.fps = fps
 
         #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
-        self.interfaces: List[Bus_co] = []
+        self.interfaces: List = []
         for channel in channels:
             log.info(
                 f"creating interface {interface_type}, "
@@ -145,13 +142,13 @@ class JaegerCAN(Generic[Bus_co]):
         if len(self.interfaces) == 0:
             warnings.warn("cannot connect to any interface.", JaegerUserWarning)
 
-        #: list: Currently running commands.
-        self.running_commands = []
+        #: dict: Currently running commands.
+        self.running_commands = {}
 
         self.command_queue: asyncio.Queue[Command] = asyncio.Queue()
+
         self._command_queue_task = self.loop.create_task(self._process_queue())
-        self.loop.create_task(self._process_reply())
-        # self.notifier.add_listener(self._process_reply)
+        self._process_reply_task = self.loop.create_task(self._process_reply())
 
     async def _process_reply(self):
         """Processes one reply message."""
@@ -197,48 +194,40 @@ class JaegerCAN(Generic[Bus_co]):
 
             command_id_flag = CommandID(command_id)
 
-            # Remove done running command. Leave the failed and cancelled ones in
-            # the list for 60 seconds to be able to catch delayed replies. We
-            # also sort them so that the most recent commands are found first.
-            # This is important for timed out broadcast still in the list while
-            # another instance of the same command is running. We want replies to
-            # be sent to the running command first.
-            # TODO: this can probably be optimised by doing it some kind of
-            # mapping of positioner_id, command_id, and uid.
-            self.running_commands = sorted(
-                [
-                    rcmd
-                    for rcmd in self.running_commands
-                    if not rcmd.status == rcmd.status.DONE
-                    and (time.time() - rcmd.start_time) < 60
-                ],
-                key=lambda cmd: cmd.start_time,
-                reverse=True,
-            )
+            runnning_cmd_key = command_id << 15 + positioner_id
 
-            found_cmd = False
-            for r_cmd in self.running_commands:
-                if r_cmd.command_id == command_id:
-                    if (reply_uid == 0 and r_cmd.positioner_id == 0) or (
-                        reply_uid in r_cmd.message_uids
-                        and positioner_id == r_cmd.positioner_id
-                    ):
-                        found_cmd = r_cmd
-                        break
-
-            if found_cmd:
-                can_log.debug(
-                    f"({command_id_flag.name}, "
-                    f"{positioner_id}, {found_cmd.command_uid}): "
-                    f"queuing reply UID={reply_uid} "
-                    f"to command {found_cmd.command_uid}."
-                )
-                found_cmd.process_reply(msg)
+            if runnning_cmd_key in self.running_commands:
+                running_cmd = self.running_commands[runnning_cmd_key]
+            elif (command_id << 15) in self.running_commands:
+                # Checks if the reply corresponds to a broadcast.
+                runnning_cmd_key = command_id << 15
+                running_cmd = self.running_commands[runnning_cmd_key]
             else:
                 can_log.debug(
                     f"({command_id_flag.name}, {positioner_id}): "
-                    f"cannot find running command for reply UID={reply_uid}."
+                    f"cannot find a matching running command."
                 )
+                continue
+
+            if running_cmd.positioner_id != 0:
+                if reply_uid not in running_cmd.message_uids:
+                    can_log.debug(
+                        f"({command_id_flag.name}, {positioner_id}): "
+                        f"matching command does not contain reply UID={reply_uid}."
+                    )
+                    continue
+
+            can_log.debug(
+                f"({command_id_flag.name}, "
+                f"{positioner_id}, {running_cmd.command_uid}): "
+                f"queuing reply UID={reply_uid} "
+                f"to command {running_cmd.command_uid}."
+            )
+
+            running_cmd.process_reply(msg)
+
+            if running_cmd.done():
+                self.running_commands.pop(runnning_cmd_key)
 
     def send_to_interfaces(
         self,
@@ -253,17 +242,6 @@ class JaegerCAN(Generic[Bus_co]):
             f"{message.command.positioner_id}, "
             f"{message.command.command_uid!s}): "
         )
-
-        if len(self.interfaces) == 1 and not self.multibus:
-            data_hex = binascii.hexlify(message.data).decode()
-            can_log.debug(
-                log_header + "sending message with "
-                f"arbitration_id={message.arbitration_id}, "
-                f"UID={message.uid}, "
-                f"and data={data_hex!r} to interface."
-            )
-            self.interfaces[0].send(message)
-            return
 
         # If not interface, send the message to all interfaces.
         if interfaces is None:
@@ -335,7 +313,9 @@ class JaegerCAN(Generic[Bus_co]):
         can_log.debug(log_header + " sending messages to CAN bus.")
 
         cmd.status = CommandStatus.RUNNING
-        self.running_commands.append(cmd)
+
+        cmd_key = (cmd.command_id.value << 15) + cmd.positioner_id
+        self.running_commands[cmd_key] = cmd
 
         log_header = LOG_HEADER.format(cmd=cmd)
         messages = cmd.get_messages()
@@ -352,7 +332,7 @@ class JaegerCAN(Generic[Bus_co]):
                     + " not sending more messages "
                     + "since this command has failed."
                 )
-                self.running_commands.remove(cmd)
+                self.running_commands.pop(cmd_key)
                 break
 
             self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
