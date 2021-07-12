@@ -623,7 +623,7 @@ class FPS(BaseFPS):
             ]
             await asyncio.gather(*pos_initialise)
         except (JaegerError, PositionerError) as err:
-            raise JaegerError(f"Some positioners failed to initialise: {err}.")
+            raise JaegerError(f"Some positioners failed to initialise: {err}")
 
         n_non_initialised = len(
             [
