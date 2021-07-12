@@ -22,7 +22,6 @@ from typing import Any, Generic, List, Optional, Type, TypeVar
 import can
 from can.interfaces.slcan import slcanBus
 from can.interfaces.socketcan import SocketcanBus
-from can.interfaces.virtual import VirtualBus
 
 import jaeger
 import jaeger.interfaces.cannet
@@ -30,7 +29,7 @@ import jaeger.utils
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import Command, CommandID, Message, StopTrajectory
 from jaeger.exceptions import JaegerUserWarning
-from jaeger.interfaces.cannet import CANNetBus
+from jaeger.interfaces import CANNetBus, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller
 
@@ -105,6 +104,8 @@ class JaegerCAN(Generic[Bus_co]):
 
         self.loop = asyncio.get_event_loop()
 
+        # self.notifier = Notifier()
+
         assert interface_type in INTERFACES, f"invalid interface {interface_type}."
         self.interface_type = interface_type
 
@@ -144,115 +145,100 @@ class JaegerCAN(Generic[Bus_co]):
         if len(self.interfaces) == 0:
             warnings.warn("cannot connect to any interface.", JaegerUserWarning)
 
-        self._start_notifier()
-
         #: list: Currently running commands.
         self.running_commands = []
 
         self.command_queue: asyncio.Queue[Command] = asyncio.Queue()
         self._command_queue_task = self.loop.create_task(self._process_queue())
-        self.loop.create_task(self._process_reply_queue())
+        self.loop.create_task(self._process_reply())
+        # self.notifier.add_listener(self._process_reply)
 
-    def _start_notifier(self):
-        """Starts the listener and notifiers."""
-
-        self.reader = can.AsyncBufferedReader()
-        self.notifier = can.notifier.Notifier(
-            self.interfaces,
-            [self.reader],
-            loop=self.loop,
-        )
-
-        log.debug("started JaegerReaderCallback listener and notifiers")
-
-    async def _process_reply_queue(self):
-        """Processes replies from the bus."""
-
-        async for msg in self.reader:
-            await self._process_reply(msg)
-
-    async def _process_reply(self, msg: can.Message):
+    async def _process_reply(self):
         """Processes one reply message."""
 
-        positioner_id, command_id, reply_uid, __ = jaeger.utils.parse_identifier(
-            msg.arbitration_id
-        )
+        while True:
 
-        if command_id == CommandID.COLLISION_DETECTED:
+            msg = await self.interfaces[0].receive()
 
-            log.error(
-                f"a collision was detected in positioner {positioner_id}. "
-                "Sending STOP_TRAJECTORIES and locking the FPS."
+            positioner_id, command_id, reply_uid, __ = jaeger.utils.parse_identifier(
+                msg.arbitration_id
             )
 
-            # Manually send the stop trajectory to be sure it has
-            # priority over other messages. No need to do it if the FPS
-            # has been locked, which means that we have already stopped
-            # trajectories.
+            if command_id == CommandID.COLLISION_DETECTED:
 
-            if self.fps and self.fps.locked:
+                log.error(
+                    f"a collision was detected in positioner {positioner_id}. "
+                    "Sending STOP_TRAJECTORIES and locking the FPS."
+                )
+
+                # Manually send the stop trajectory to be sure it has
+                # priority over other messages. No need to do it if the FPS
+                # has been locked, which means that we have already stopped
+                # trajectories.
+
+                if self.fps and self.fps.locked:
+                    return
+
+                stop_trajectory_command = StopTrajectory(positioner_id=0)
+                self.send_to_interfaces(stop_trajectory_command.get_messages()[0])
+
+                # Now lock the FPS. No need to abort trajectories because we just did.
+                if self.fps:
+                    self.loop.create_task(self.fps.lock(stop_trajectories=False))
+                    return
+
+            if command_id == 0:
+                can_log.warning(
+                    "invalid command with command_id=0, "
+                    f"arbitration_id={msg.arbitration_id} received. "
+                    "Ignoring it."
+                )
                 return
 
-            stop_trajectory_command = StopTrajectory(positioner_id=0)
-            self.send_to_interfaces(stop_trajectory_command.get_messages()[0])
+            command_id_flag = CommandID(command_id)
 
-            # Now lock the FPS. No need to abort trajectories because we just did.
-            if self.fps:
-                self.loop.create_task(self.fps.lock(stop_trajectories=False))
-                return
-
-        if command_id == 0:
-            can_log.warning(
-                "invalid command with command_id=0, "
-                f"arbitration_id={msg.arbitration_id} received. "
-                "Ignoring it."
+            # Remove done running command. Leave the failed and cancelled ones in
+            # the list for 60 seconds to be able to catch delayed replies. We
+            # also sort them so that the most recent commands are found first.
+            # This is important for timed out broadcast still in the list while
+            # another instance of the same command is running. We want replies to
+            # be sent to the running command first.
+            # TODO: this can probably be optimised by doing it some kind of
+            # mapping of positioner_id, command_id, and uid.
+            self.running_commands = sorted(
+                [
+                    rcmd
+                    for rcmd in self.running_commands
+                    if not rcmd.status == rcmd.status.DONE
+                    and (time.time() - rcmd.start_time) < 60
+                ],
+                key=lambda cmd: cmd.start_time,
+                reverse=True,
             )
-            return
 
-        command_id_flag = CommandID(command_id)
+            found_cmd = False
+            for r_cmd in self.running_commands:
+                if r_cmd.command_id == command_id:
+                    if (reply_uid == 0 and r_cmd.positioner_id == 0) or (
+                        reply_uid in r_cmd.message_uids
+                        and positioner_id == r_cmd.positioner_id
+                    ):
+                        found_cmd = r_cmd
+                        break
 
-        # Remove done running command. Leave the failed and cancelled ones in
-        # the list for 60 seconds to be able to catch delayed replies. We
-        # also sort them so that the most recent commands are found first.
-        # This is important for timed out broadcast still in the list while
-        # another instance of the same command is running. We want replies to
-        # be sent to the running command first.
-        # TODO: this can probably be optimised by doing it some kind of
-        # mapping of positioner_id, command_id, and uid.
-        self.running_commands = sorted(
-            [
-                rcmd
-                for rcmd in self.running_commands
-                if not rcmd.status == rcmd.status.DONE
-                and (time.time() - rcmd.start_time) < 60
-            ],
-            key=lambda cmd: cmd.start_time,
-            reverse=True,
-        )
-
-        found_cmd = False
-        for r_cmd in self.running_commands:
-            if r_cmd.command_id == command_id:
-                if (reply_uid == 0 and r_cmd.positioner_id == 0) or (
-                    reply_uid in r_cmd.message_uids
-                    and positioner_id == r_cmd.positioner_id
-                ):
-                    found_cmd = r_cmd
-                    break
-
-        if found_cmd:
-            can_log.debug(
-                f"({command_id_flag.name}, "
-                f"{positioner_id}, {found_cmd.command_uid}): "
-                f"queuing reply UID={reply_uid} "
-                f"to command {found_cmd.command_uid}."
-            )
-            found_cmd.process_reply(msg)
-        else:
-            can_log.debug(
-                f"({command_id_flag.name}, {positioner_id}): "
-                f"cannot find running command for reply UID={reply_uid}."
-            )
+            if found_cmd:
+                can_log.debug(
+                    f"({command_id_flag.name}, "
+                    f"{positioner_id}, {found_cmd.command_uid}): "
+                    f"queuing reply UID={reply_uid} "
+                    f"to command {found_cmd.command_uid}."
+                )
+                found_cmd.process_reply(msg)
+            else:
+                can_log.debug(
+                    f"({command_id_flag.name}, {positioner_id}): "
+                    f"cannot find running command for reply UID={reply_uid}."
+                )
 
     def send_to_interfaces(
         self,

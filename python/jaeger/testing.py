@@ -8,15 +8,13 @@
 
 import asyncio
 import zlib
-from contextlib import suppress
 
 from can import Message
-from can.interfaces.virtual import VirtualBus
-from can.listener import AsyncBufferedReader
 
 import jaeger
 from jaeger import config, utils
 from jaeger.commands import CommandID
+from jaeger.interfaces.virtual import VirtualBus
 from jaeger.maskbits import BootloaderStatus, PositionerStatus, ResponseCode
 from jaeger.utils.helpers import StatusMixIn
 
@@ -54,6 +52,38 @@ class VirtualFPS(jaeger.FPS):
     def __init__(self, layout=None, **kwargs):
 
         super().__init__(can_profile="virtual", layout=layout, ieb=True)
+
+        self._vpositioner_bus = VirtualBus("")
+        self._vpositioners = {}
+
+        asyncio.create_task(self.process_messages())
+
+    def add_virtual_positioner(self, pid: int):
+
+        self._vpositioners[pid] = VirtualPositioner(pid, bus=self._vpositioner_bus)
+
+    async def process_messages(self):
+
+        while True:
+
+            msg = await self._vpositioner_bus.receive()
+
+            arbitration_id = msg.arbitration_id
+            positioner_id, command_id, uid, __ = utils.parse_identifier(arbitration_id)
+
+            if positioner_id != 0 and positioner_id not in self._vpositioners:
+                continue
+
+            if positioner_id == 0:
+                await asyncio.gather(
+                    *[
+                        vp.process_message(msg, positioner_id, command_id, uid)
+                        for vp in self._vpositioners.values()
+                    ]
+                )
+            else:
+                vp = self._vpositioners[positioner_id]
+                await vp.process_message(msg, positioner_id, command_id, uid)
 
 
 class VirtualPositioner(StatusMixIn):
@@ -107,12 +137,11 @@ class VirtualPositioner(StatusMixIn):
     def __init__(
         self,
         positioner_id,
+        bus=None,
         centre=None,
         position=(0.0, 0.0),
         speed=None,
-        channel=None,
         loop=None,
-        notifier=None,
         firmware="10.11.12",
     ):
 
@@ -133,100 +162,93 @@ class VirtualPositioner(StatusMixIn):
         self._firmware_size = 0
         self._firmware_received = b""
 
-        self.channel = channel or config["profiles"]["virtual"]["channel"]
-        self.interface = VirtualBus(self.channel)
-
         self.loop = loop or asyncio.get_event_loop()
+        self.bus = bus
 
-        self.notifier = notifier
-        self.listener = AsyncBufferedReader(loop=self.loop)
-        self._listener_task = None
+        # self.notifier = notifier
 
-        if self.notifier:
-            self.notifier.add_listener(self.listener)
-            self._listener_task = self.loop.create_task(self.process_message())
+        # if self.notifier:
+        #     self.notifier.add_listener(self.process_message)
 
         StatusMixIn.__init__(
-            self, PositionerStatus, initial_status=self._initial_status
+            self,
+            PositionerStatus,
+            initial_status=self._initial_status,
         )
 
-    async def process_message(self):
+    async def process_message(self, msg, positioner_id, command_id, uid):
         """Processes incoming commands from the bus."""
 
-        async for msg in self.listener:
+        command_id = CommandID(command_id)
+        command = command_id.get_command_class()
 
-            arbitration_id = msg.arbitration_id
-            positioner_id, command_id, uid, __ = utils.parse_identifier(arbitration_id)
+        if positioner_id == 0 and not command.broadcastable:
+            self.reply(
+                command_id,
+                uid,
+                response_code=ResponseCode.INVALID_BROADCAST_COMMAND,
+            )
+            return
 
-            if positioner_id not in [0, self.positioner_id]:
-                continue
+        if command_id == CommandID.GET_ID:
+            self.reply(command_id, uid)
 
-            command_id = CommandID(command_id)
-            command = command_id.get_command_class()
+        elif command_id == CommandID.GET_FIRMWARE_VERSION:
+            data_firmware = command.encode(self.firmware)  # type: ignore
+            self.reply(command_id, uid, data=data_firmware)
 
-            if positioner_id == 0 and not command.broadcastable:
+        elif command_id == CommandID.GET_STATUS:
+            data_status = utils.int_to_bytes(self.status)
+            self.reply(command_id, uid, data=data_status)
+
+        elif command_id in [
+            CommandID.GO_TO_ABSOLUTE_POSITION,
+            CommandID.GO_TO_RELATIVE_POSITION,
+        ]:
+            await self.process_goto(msg)
+
+        elif command_id == CommandID.GET_ACTUAL_POSITION:
+            data_position = command.encode(*self.position)  # type: ignore
+            self.reply(command_id, uid, data=data_position)
+
+        elif command_id == CommandID.SET_SPEED:
+            data_speed = command.encode(*self.speed)  # type: ignore
+            self.reply(command_id, uid, data=data_speed)
+
+        elif command_id == CommandID.START_FIRMWARE_UPGRADE:
+            if not self.is_bootloader():
                 self.reply(
                     command_id,
                     uid,
-                    response_code=ResponseCode.INVALID_BROADCAST_COMMAND,
+                    response_code=ResponseCode.INVALID_COMMAND,
                 )
-                continue
+                return
 
-            if command_id == CommandID.GET_ID:
-                self.reply(command_id, uid)
+            try:
+                data = msg.data
+                firmware_size = utils.bytes_to_int(data[0:4], "u4")
+                crc32 = utils.bytes_to_int(data[4:9], "u4")
+            except Exception:
+                self.reply(
+                    command_id,
+                    uid,
+                    response_code=ResponseCode.INVALID_COMMAND,
+                )
+                return
 
-            elif command_id == CommandID.GET_FIRMWARE_VERSION:
-                data_firmware = command.encode(self.firmware)  # type: ignore
-                self.reply(command_id, uid, data=data_firmware)
+            self._firmware_size = firmware_size
+            self._crc32 = crc32
+            self._firmware_received = b""
 
-            elif command_id == CommandID.GET_STATUS:
-                data_status = utils.int_to_bytes(self.status)
-                self.reply(command_id, uid, data=data_status)
+            self.reply(command_id, uid)
 
-            elif command_id in [
-                CommandID.GO_TO_ABSOLUTE_POSITION,
-                CommandID.GO_TO_RELATIVE_POSITION,
-            ]:
-                self.loop.create_task(self.process_goto(msg))
+        elif command_id == CommandID.SEND_FIRMWARE_DATA:
+            await self.process_firmware_data(uid, msg.data)
 
-            elif command_id == CommandID.GET_ACTUAL_POSITION:
-                data_position = command.encode(*self.position)  # type: ignore
-                self.reply(command_id, uid, data=data_position)
-
-            elif command_id == CommandID.SET_SPEED:
-                data_speed = command.encode(*self.speed)  # type: ignore
-                self.reply(command_id, uid, data=data_speed)
-
-            elif command_id == CommandID.START_FIRMWARE_UPGRADE:
-                if not self.is_bootloader():
-                    self.reply(
-                        command_id, uid, response_code=ResponseCode.INVALID_COMMAND
-                    )
-                    continue
-
-                try:
-                    data = msg.data
-                    firmware_size = utils.bytes_to_int(data[0:4], "u4")
-                    crc32 = utils.bytes_to_int(data[4:9], "u4")
-                except Exception:
-                    self.reply(
-                        command_id, uid, response_code=ResponseCode.INVALID_COMMAND
-                    )
-                    continue
-
-                self._firmware_size = firmware_size
-                self._crc32 = crc32
-                self._firmware_received = b""
-
-                self.reply(command_id, uid)
-
-            elif command_id == CommandID.SEND_FIRMWARE_DATA:
-                self.process_firmware_data(uid, msg.data)
-
-            else:
-                # Should be a valid command or CommandID(command_id) would
-                # have failed. Just return OK.
-                self.reply(command_id, uid)
+        else:
+            # Should be a valid command or CommandID(command_id) would
+            # have failed. Just return OK.
+            self.reply(command_id, uid)
 
     def reply(self, command_id, uid, response_code=None, data=None):
 
@@ -250,16 +272,22 @@ class VirtualPositioner(StatusMixIn):
                 is_extended_id=True,
                 data=data_chunk,
             )
-            if self.notifier:
-                self.notifier.bus.send(message)
+            # if self.notifier:
+            #     self.notifier.bus.send(message)
+            assert self.bus
+            self.bus.send(message)
 
-    def process_firmware_data(self, uid, data):
+    async def process_firmware_data(self, uid, data):
         """Processes ``SEND_FIRMWARE_DATA`` commands."""
 
         command_id = CommandID.SEND_FIRMWARE_DATA
 
         if len(data) > 8:
-            self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+            self.reply(
+                command_id,
+                uid,
+                response_code=ResponseCode.VALUE_OUT_OF_RANGE,
+            )
             return
 
         self._firmware_received += data
@@ -267,11 +295,17 @@ class VirtualPositioner(StatusMixIn):
         fw_size = len(self._firmware_received)
 
         if fw_size > self._firmware_size:
-            self.reply(command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE)
+            self.reply(
+                command_id,
+                uid,
+                response_code=ResponseCode.VALUE_OUT_OF_RANGE,
+            )
         elif fw_size == self._firmware_size:
             if not zlib.crc32(self._firmware_received) == self._crc32:
                 self.reply(
-                    command_id, uid, response_code=ResponseCode.VALUE_OUT_OF_RANGE
+                    command_id,
+                    uid,
+                    response_code=ResponseCode.VALUE_OUT_OF_RANGE,
                 )
             else:
                 self.firmware = self._firmware_received.decode("utf-8")[-8:]
@@ -374,12 +408,3 @@ class VirtualPositioner(StatusMixIn):
             self.status = self._initial_status
 
         self.firmware = ".".join(firmware_chunks)
-
-    async def shutdown(self):
-        """Stops the command queue."""
-
-        if self._listener_task:
-            self._listener_task.cancel()
-
-            with suppress(asyncio.CancelledError):
-                await self._listener_task

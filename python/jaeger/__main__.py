@@ -93,24 +93,12 @@ class FPSWrapper(object):
 
         global __FPS__
 
-        loop = asyncio.get_running_loop()
-
         # If profile is test we start a VirtualFPS first so that it can respond
         # to the FPS class.
         if self.profile == "virtual":
             self.fps = VirtualFPS(layout=self.layout)
-            channel = config["profiles"]["virtual"]["channel"]
-            notifier = Notifier(Bus(channel, bustype="virtual"), [], loop=loop)
-            self.vpositioners = [
-                VirtualPositioner(
-                    pid + 1,
-                    notifier=notifier,
-                    centre=[0.0, 0.0],
-                    position=[0.0, 0.0],
-                    loop=loop,
-                )
-                for pid in range(self.npositioners)
-            ]
+            for pid in range(self.npositioners):
+                self.fps.add_virtual_positioner(pid + 1)
         else:
             self.fps = FPS(
                 can_profile=self.profile,
