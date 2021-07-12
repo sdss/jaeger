@@ -240,10 +240,10 @@ def parse_identifier(identifier: int) -> Tuple[int, int, int, ResponseCode]:
     def mid(k, m, n):
         return last((k) >> (m), ((n) - (m)))
 
-    positioner_id = mid(identifier, 18, 28)
-    command_id = mid(identifier, 10, 17)
-    command_uid = mid(identifier, 4, 9)
-    response_code = mid(identifier, 0, 3)
+    positioner_id = mid(identifier, 18, 29)
+    command_id = mid(identifier, 10, 18)
+    command_uid = mid(identifier, 4, 10)
+    response_code = mid(identifier, 0, 4)
 
     response_flag = ResponseCode(response_code)
 
