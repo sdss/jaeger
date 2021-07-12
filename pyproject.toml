@@ -34,6 +34,7 @@ click_default_group = "^1.2.2"
 daemonocle = "^1.0.2"
 peewee = "^3.14.4"
 psycopg2-binary = "^2.8.6"
+uvloop = "^0.15.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"

@@ -18,6 +18,8 @@ from typing import Any
 
 import click
 import numpy
+import uvloop
+from can import Bus, Notifier
 from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
@@ -26,10 +28,12 @@ from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.fps import FPS
-from jaeger.testing import VirtualFPS
+from jaeger.testing import VirtualFPS, VirtualPositioner
 
 
 __FPS__ = None
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def shutdown(sign):
@@ -61,7 +65,15 @@ def cli_coro(f):
 class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
-    def __init__(self, profile, layout, ieb=None, danger=None, initialise=True):
+    def __init__(
+        self,
+        profile,
+        layout,
+        ieb=None,
+        danger=None,
+        initialise=True,
+        npositioners=10,
+    ):
 
         self.profile = profile
         if self.profile in ["test", "virtual"]:
@@ -72,16 +84,33 @@ class FPSWrapper(object):
         self.danger = danger
         self.initialise = initialise
 
+        self.vpositioners = []
+        self.npositioners = npositioners
+
         self.fps = None
 
     async def __aenter__(self):
 
         global __FPS__
 
+        loop = asyncio.get_running_loop()
+
         # If profile is test we start a VirtualFPS first so that it can respond
         # to the FPS class.
         if self.profile == "virtual":
             self.fps = VirtualFPS(layout=self.layout)
+            channel = config["profiles"]["virtual"]["channel"]
+            notifier = Notifier(Bus(channel, bustype="virtual"), [], loop=loop)
+            self.vpositioners = [
+                VirtualPositioner(
+                    pid + 1,
+                    notifier=notifier,
+                    centre=[0.0, 0.0],
+                    position=[0.0, 0.0],
+                    loop=loop,
+                )
+                for pid in range(self.npositioners)
+            ]
         else:
             self.fps = FPS(
                 can_profile=self.profile,
@@ -126,6 +155,18 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     help="The FPS layout.",
 )
 @click.option(
+    "--virtual",
+    is_flag=True,
+    help="Runs a virtual FPS with virtual positioners. Same as --profile=virtual.",
+)
+@click.option(
+    "-n",
+    "--npositioners",
+    type=int,
+    default=10,
+    help="How many virtual positioners must be connected to the virtual FPS.",
+)
+@click.option(
     "-v",
     "--verbose",
     count=True,
@@ -155,7 +196,19 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     "Modifies the internal configuration file.",
 )
 @click.pass_context
-def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger, sextant):
+def jaeger(
+    ctx,
+    config_file,
+    layout,
+    profile,
+    verbose,
+    quiet,
+    ieb,
+    danger,
+    sextant,
+    virtual,
+    npositioners,
+):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
@@ -185,7 +238,16 @@ def jaeger(ctx, config_file, layout, profile, verbose, quiet, ieb, danger, sexta
         config["files"]["ieb_config"] = sextant_file
         log.debug(f"Using internal IEB sextant onfiguration file {sextant_file}.")
 
-    ctx.obj = FPSWrapper(profile, layout, ieb, danger)
+    if virtual is True:
+        profile = "virtual"
+
+    ctx.obj = FPSWrapper(
+        profile,
+        layout,
+        ieb=ieb,
+        danger=danger,
+        npositioners=npositioners,
+    )
 
 
 @jaeger.group(cls=DaemonGroup, prog="jaeger_actor", workdir=os.getcwd())
@@ -512,3 +574,7 @@ async def home(fps_maker, positioner_id):
         await asyncio.gather(*[positioner.home() for positioner in valid_positioners])
 
     return
+
+
+if __name__ == "__main__":
+    jaeger()
