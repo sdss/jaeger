@@ -194,13 +194,13 @@ class JaegerCAN(Generic[Bus_co]):
 
         self.refresh_running_commands()
 
-        cmd_key = (command_id << 15) + positioner_id
+        cmd_key = (positioner_id << 25) + (command_id << 15) + reply_uid
 
         if cmd_key in self.running_commands:
             running_cmd = self.running_commands[cmd_key]
-        elif (command_id << 15) in self.running_commands:
+        elif (command_id << 15) + reply_uid in self.running_commands:
             # Checks if the reply corresponds to a broadcast.
-            cmd_key = command_id << 15
+            cmd_key = (command_id << 15) + reply_uid
             running_cmd = self.running_commands[cmd_key]
         else:
             can_log.debug(
@@ -243,6 +243,12 @@ class JaegerCAN(Generic[Bus_co]):
         # If not interface, send the message to all interfaces.
         if interfaces is None:
             interfaces = self.interfaces
+
+        cmd_key = message.command.positioner_id << 25
+        cmd_key += message.command.command_id << 15
+        cmd_key += message.uid
+
+        self.running_commands[cmd_key] = message.command
 
         for iface in interfaces:
 
@@ -311,9 +317,6 @@ class JaegerCAN(Generic[Bus_co]):
 
         cmd.status = CommandStatus.RUNNING
 
-        cmd_key = (cmd.command_id.value << 15) + cmd.positioner_id
-        self.running_commands[cmd_key] = cmd
-
         log_header = LOG_HEADER.format(cmd=cmd)
         messages = cmd.get_messages()
 
@@ -329,7 +332,6 @@ class JaegerCAN(Generic[Bus_co]):
                     + " not sending more messages "
                     + "since this command has failed."
                 )
-                self.running_commands.pop(cmd_key)
                 break
 
             self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
