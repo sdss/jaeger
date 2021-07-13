@@ -194,7 +194,7 @@ class VirtualPositioner(StatusMixIn):
             CommandID.GO_TO_ABSOLUTE_POSITION,
             CommandID.GO_TO_RELATIVE_POSITION,
         ]:
-            await self.process_goto(msg)
+            asyncio.create_task(self.process_goto(msg))
 
         elif command_id == CommandID.GET_ACTUAL_POSITION:
             data_position = command.encode(*self.position)  # type: ignore
@@ -232,7 +232,7 @@ class VirtualPositioner(StatusMixIn):
             self.reply(command_id, uid)
 
         elif command_id == CommandID.SEND_FIRMWARE_DATA:
-            await self.process_firmware_data(uid, msg.data)
+            asyncio.create_task(self.process_firmware_data(uid, msg.data))
 
         else:
             # Should be a valid command or CommandID(command_id) would
@@ -363,6 +363,8 @@ class VirtualPositioner(StatusMixIn):
         )
 
         await asyncio.sleep(max(alpha_move * TIME_STEP, beta_move_time * TIME_STEP))
+
+        self.position = (target_alpha, target_beta)
 
         self.status |= (
             PositionerStatus.DISPLACEMENT_COMPLETED

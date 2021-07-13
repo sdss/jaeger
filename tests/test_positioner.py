@@ -22,14 +22,14 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 async def test_get_position(vfps, vpositioners):
 
-    vpositioners[0].position = (90, 90)
+    vpositioners[1].position = (90, 90)
 
     await vfps.initialise()
     await asyncio.sleep(0.1)
 
     assert vfps[1].position == (90.0, 90.0)
 
-    vpositioners[0].position = (180, 180)
+    vpositioners[1].position = (180, 180)
 
     await vfps[1].update_position()
 

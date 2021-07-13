@@ -611,75 +611,69 @@ class FPS(BaseFPS):
             )
 
         # Stop all positioners just in case.
-        # if not self.is_bootloader():
-        #     await self.stop_trajectory()
+        if not self.is_bootloader():
+            await self.stop_trajectory()
 
-        # try:
-        #     disable_precise_moves = config["positioner"]["disable_precise_moves"]
-        #     if disable_precise_moves:
-        #         warnings.warn("Disabling precise moves.", JaegerUserWarning)
-        #     pos_initialise = [
-        #         positioner.initialise(disable_precise_moves=disable_precise_moves)
-        #         for positioner in self.values()
-        #     ]
-        #     await asyncio.gather(*pos_initialise)
-        # except (JaegerError, PositionerError) as err:
-        #     raise JaegerError(f"Some positioners failed to initialise: {err}")
+        try:
+            disable_precise_moves = config["positioner"]["disable_precise_moves"]
+            if disable_precise_moves:
+                warnings.warn("Disabling precise moves.", JaegerUserWarning)
+            pos_initialise = [
+                positioner.initialise(disable_precise_moves=disable_precise_moves)
+                for positioner in self.values()
+            ]
+            await asyncio.gather(*pos_initialise)
+        except (JaegerError, PositionerError) as err:
+            raise JaegerError(f"Some positioners failed to initialise: {err}")
 
-        # n_non_initialised = len(
-        #     [
-        #         pos
-        #         for pos in self.positioners.values()
-        #         if (pos.status == pos.flags.UNKNOWN or not pos.initialised)
-        #     ]
-        # )
+        n_non_initialised = len(
+            [
+                pos
+                for pos in self.positioners.values()
+                if (pos.status == pos.flags.UNKNOWN or not pos.initialised)
+            ]
+        )
 
-        # if n_non_initialised > 0:
-        #     self._log_initialise_error(
-        #         f"{n_non_initialised} positioners failed to initialise."
-        #     )
+        if n_non_initialised > 0:
+            self._log_initialise_error(
+                f"{n_non_initialised} positioners failed to initialise."
+            )
 
-        # if len(self.positioners) == 0:
-        #     warnings.warn("No positioners connected.", JaegerUserWarning)
+        if len(self.positioners) == 0:
+            warnings.warn("No positioners connected.", JaegerUserWarning)
 
-        # if self.is_bootloader():
-        #     bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
-        #     warnings.warn(
-        #         f"Positioners in booloader mode: {bootlist!r}.",
-        #         JaegerUserWarning,
-        #     )
-        #     warnings.warn(
-        #         "Positioners found in bootloader mode. "
-        #         "Bailing out from initialisation early.",
-        #         JaegerUserWarning,
-        #     )
-        #     return self
+        if self.is_bootloader():
+            bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
+            warnings.warn(
+                f"Positioners in booloader mode: {bootlist!r}.",
+                JaegerUserWarning,
+            )
+            warnings.warn(
+                "Positioners found in bootloader mode. "
+                "Bailing out from initialisation early.",
+                JaegerUserWarning,
+            )
+            return self
 
-        # if self.locked:
-        #     log.info("FPS is locked. Trying to unlock it.")
-        #     if not await self.unlock():
-        #         raise JaegerError("FPS cannot be unlocked. Initialisation failed.")
-        #     else:
-        #         log.info("FPS unlocked successfully.")
+        if self.locked:
+            log.info("FPS is locked. Trying to unlock it.")
+            if not await self.unlock():
+                raise JaegerError("FPS cannot be unlocked. Initialisation failed.")
+            else:
+                log.info("FPS unlocked successfully.")
 
-        # if config.get("safe_mode", False) is not False:
-        #     min_beta = 160
-        #     if isinstance(config["safe_mode"], dict):
-        #         min_beta = config["safe_mode"].get("min_beta", 160)
-        #     warnings.warn(
-        #         f"Safe mode enabled. Minimum beta is {min_beta} degrees.",
-        #         JaegerUserWarning,
-        #     )
+        if config.get("safe_mode", False) is not False:
+            min_beta = 160
+            if isinstance(config["safe_mode"], dict):
+                min_beta = config["safe_mode"].get("min_beta", 160)
+            warnings.warn(
+                f"Safe mode enabled. Minimum beta is {min_beta} degrees.",
+                JaegerUserWarning,
+            )
 
-        # # Start the pollers
-        # if start_pollers and not self.is_bootloader():
-        #     self.pollers.start()
-
-        while True:
-            cmds = await self.send_to_all(CommandID.GET_ACTUAL_POSITION, timeout=1)
-            # print([cmd.status for cmd in cmds])
-            times = [cmd.end_time - cmd.start_time for cmd in cmds]
-            print(sum(times) / len(times))
+        # Start the pollers
+        if start_pollers and not self.is_bootloader():
+            self.pollers.start()
 
         return self
 

@@ -121,24 +121,13 @@ async def vfps(event_loop, ieb_server, monkeypatch):
 
 
 @pytest.fixture()
-async def vpositioners(test_config, notifier, event_loop):
+async def vpositioners(test_config, vfps, event_loop):
     """Yields positioners."""
 
-    vpositioners = []
     for pid in test_config["positioners"]:
-        vpositioners.append(
-            VirtualPositioner(
-                pid,
-                notifier=notifier,
-                loop=event_loop,
-                **test_config["positioners"][pid],
-            )
-        )
+        vfps.add_virtual_positioner(pid)
 
-    yield vpositioners
-
-    for vpositioner in vpositioners:
-        await vpositioner.shutdown()
+    yield vfps._vpositioners
 
 
 @pytest.fixture
