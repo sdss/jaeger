@@ -11,10 +11,13 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Coroutine
 
-from typing import Any, Callable, List
+from typing import TYPE_CHECKING, Any, Callable, List
 
 from can import Message
 
+
+if TYPE_CHECKING:
+    from .bus import BusABC
 
 __all__ = ["Notifier"]
 
@@ -23,24 +26,33 @@ Listener_co = Callable[..., Coroutine[Message, Any, Any]]
 
 
 class Notifier:
-    def __init__(self):
+    """Notifier class to report bus messages to multiple listeners."""
+
+    def __init__(self, listeners: List[Listener_co] = [], buses: List[BusABC] = []):
 
         self.loop = asyncio.get_running_loop()
 
-        self.listeners: List[Listener_co] = []
-        self.buses = []
+        self.listeners = listeners
+
+        self.buses: List[BusABC] = []
+        for bus in buses:
+            self.add_bus(bus)
 
     def add_listener(self, callback: Listener_co):
+        """Adds a listener."""
 
         self.listeners.append(callback)
 
     def add_bus(self, bus):
+        """Adds a bus to monitor."""
 
         self.buses.append(bus)
         asyncio.create_task(self._monitor_bus(bus))
 
-    async def _monitor_bus(self, bus):
+    async def _monitor_bus(self, bus: BusABC):
+        """Monitors buses and calls the listeners when a message is received."""
 
         while True:
-            msg = await bus.receive()
-            await asyncio.gather(*[lstn(msg) for lstn in self.listeners])
+            msg = await bus.get()
+            for listener in self.listeners:
+                asyncio.create_task(listener(msg))

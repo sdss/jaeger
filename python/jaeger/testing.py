@@ -40,20 +40,14 @@ class VirtualFPS(jaeger.FPS):
         If `None`, the default layout will be used. Can be either a layout name
         to be recovered from the database, or a file path to the layout
         configuration.
-    loop : event loop or `None`
-        The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
-        get a valid loop.
-    engineering_mode : bool
-        If `True`, disables most safety checks to enable debugging. This may
-        result in hardware damage so it must not be used lightly.
 
     """
 
-    def __init__(self, layout=None, **kwargs):
+    def __init__(self, layout=None):
 
         super().__init__(can_profile="virtual", layout=layout, ieb=True)
 
-        self._vpositioner_bus = VirtualBus("")
+        self._vpositioner_bus = VirtualBus(config["profiles"]["virtual"]["channel"])
         self._vpositioners = {}
 
         asyncio.create_task(self.process_messages())
@@ -66,7 +60,7 @@ class VirtualFPS(jaeger.FPS):
 
         while True:
 
-            msg = await self._vpositioner_bus.receive()
+            msg = await self._vpositioner_bus.get()
 
             arbitration_id = msg.arbitration_id
             positioner_id, command_id, uid, __ = utils.parse_identifier(arbitration_id)
@@ -164,11 +158,6 @@ class VirtualPositioner(StatusMixIn):
 
         self.loop = loop or asyncio.get_event_loop()
         self.bus = bus
-
-        # self.notifier = notifier
-
-        # if self.notifier:
-        #     self.notifier.add_listener(self.process_message)
 
         StatusMixIn.__init__(
             self,

@@ -10,32 +10,42 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Dict, List
+
+from jaeger.interfaces.bus import BusABC
 
 
 if TYPE_CHECKING:
     from can import Message
 
 
-queues: List[asyncio.Queue] = []
+queues: Dict[str, List[asyncio.Queue]] = {}
 
 
-class VirtualBus:
-    def __init__(self, channel: str, /, **kwargs):
+class VirtualBus(BusABC):
+    """A class implementing a virtual CAN bus that listens to messages on a channel."""
+
+    def __init__(self, channel: str):
 
         self.channel = channel
 
         self.queue: asyncio.Queue[Message] = asyncio.Queue()
-        queues.append(self.queue)
+
+        if self.channel not in queues:
+            queues[self.channel] = [self.queue]
+        else:
+            queues[self.channel].append(self.queue)
 
     def send(self, msg: Message):
+        """Send message to the virtual bus (self does not receive a copy)."""
 
-        for queue in queues:
+        for queue in queues[self.channel]:
             if queue is self.queue:
                 continue
             queue.put_nowait(msg)
 
-    async def receive(self):
+    async def get(self):
+        """Get messages from the bus."""
 
         msg = await self.queue.get()
 

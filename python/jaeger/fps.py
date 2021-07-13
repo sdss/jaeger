@@ -216,7 +216,7 @@ class FPS(BaseFPS):
             self.can = can
         else:
             try:
-                self.can = JaegerCAN.from_profile(can_profile, fps=self, loop=loop)
+                self.can = JaegerCAN.from_profile(can_profile, fps=self)
             except ConnectionRefusedError:
                 raise
 
@@ -676,9 +676,10 @@ class FPS(BaseFPS):
         #     self.pollers.start()
 
         while True:
-            t = time()
-            await self.send_to_all(CommandID.GET_ACTUAL_POSITION, timeout=1)
-            print(time() - t)
+            cmds = await self.send_to_all(CommandID.GET_ACTUAL_POSITION, timeout=1)
+            # print([cmd.status for cmd in cmds])
+            times = [cmd.end_time - cmd.start_time for cmd in cmds]
+            print(sum(times) / len(times))
 
         return self
 

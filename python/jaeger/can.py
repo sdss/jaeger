@@ -24,13 +24,12 @@ from can.interfaces.socketcan import SocketcanBus
 
 import jaeger
 import jaeger.interfaces.cannet
-import jaeger.utils
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import Command, CommandID, Message, StopTrajectory
 from jaeger.exceptions import JaegerUserWarning
-from jaeger.interfaces import CANNetBus, VirtualBus
+from jaeger.interfaces import BusABC, CANNetBus, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
-from jaeger.utils import Poller
+from jaeger.utils import Poller, parse_identifier
 
 
 __all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
@@ -47,7 +46,7 @@ INTERFACES = {
 }
 
 
-Bus_co = TypeVar("Bus_co", bound="can.BusABC", covariant=True)
+Bus_co = TypeVar("Bus_co", bound=BusABC, covariant=True)
 
 
 class JaegerCAN(Generic[Bus_co]):
@@ -101,12 +100,10 @@ class JaegerCAN(Generic[Bus_co]):
         if config["debug"] is True:
             start_file_loggers(start_log=False, start_can=True)
 
-        self.loop = asyncio.get_event_loop()
-
         assert interface_type in INTERFACES, f"invalid interface {interface_type}."
         self.interface_type = interface_type
 
-        InterfaceClass: Type = INTERFACES[interface_type]["class"]
+        InterfaceClass: Type[Bus_co] = INTERFACES[interface_type]["class"]
 
         self.multibus = INTERFACES[interface_type]["multibus"]
 
@@ -116,7 +113,7 @@ class JaegerCAN(Generic[Bus_co]):
         self.fps = fps
 
         #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
-        self.interfaces: List = []
+        self.interfaces: List[Bus_co] = []
         for channel in channels:
             log.info(
                 f"creating interface {interface_type}, "
@@ -146,88 +143,88 @@ class JaegerCAN(Generic[Bus_co]):
         self.running_commands = {}
 
         self.command_queue: asyncio.Queue[Command] = asyncio.Queue()
+        self._command_queue_task = asyncio.create_task(self._process_queue())
 
-        self._command_queue_task = self.loop.create_task(self._process_queue())
-        self._process_reply_task = self.loop.create_task(self._process_reply())
+        self.notifier = Notifier(listeners=[self._process_reply], buses=self.interfaces)
 
-    async def _process_reply(self):
+    def refresh_running_commands(self):
+        """Clears completed commands."""
+
+        self.running_commands = {
+            key: cmd for key, cmd in self.running_commands.items() if not cmd.done()
+        }
+
+    async def _process_reply(self, msg: can.Message):
         """Processes one reply message."""
 
-        while True:
+        positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
 
-            msg = await self.interfaces[0].receive()
+        if command_id == CommandID.COLLISION_DETECTED:
 
-            positioner_id, command_id, reply_uid, __ = jaeger.utils.parse_identifier(
-                msg.arbitration_id
+            log.error(
+                f"a collision was detected in positioner {positioner_id}. "
+                "Sending STOP_TRAJECTORIES and locking the FPS."
             )
 
-            if command_id == CommandID.COLLISION_DETECTED:
+            # Manually send the stop trajectory to be sure it has
+            # priority over other messages. No need to do it if the FPS
+            # has been locked, which means that we have already stopped
+            # trajectories.
 
-                log.error(
-                    f"a collision was detected in positioner {positioner_id}. "
-                    "Sending STOP_TRAJECTORIES and locking the FPS."
-                )
+            if self.fps and self.fps.locked:
+                return
 
-                # Manually send the stop trajectory to be sure it has
-                # priority over other messages. No need to do it if the FPS
-                # has been locked, which means that we have already stopped
-                # trajectories.
+            stop_trajectory_command = StopTrajectory(positioner_id=0)
+            self._send_messages(stop_trajectory_command)
 
-                if self.fps and self.fps.locked:
-                    return
+            # Now lock the FPS. No need to abort trajectories because we just did.
+            if self.fps:
+                asyncio.create_task(self.fps.lock(stop_trajectories=False))
+                return
 
-                stop_trajectory_command = StopTrajectory(positioner_id=0)
-                self._send_messages(stop_trajectory_command)
+        if command_id == 0:
+            can_log.warning(
+                "invalid command with command_id=0, "
+                f"arbitration_id={msg.arbitration_id} received. "
+                "Ignoring it."
+            )
+            return
 
-                # Now lock the FPS. No need to abort trajectories because we just did.
-                if self.fps:
-                    self.loop.create_task(self.fps.lock(stop_trajectories=False))
-                    return
+        command_id_flag = CommandID(command_id)
 
-            if command_id == 0:
-                can_log.warning(
-                    "invalid command with command_id=0, "
-                    f"arbitration_id={msg.arbitration_id} received. "
-                    "Ignoring it."
+        self.refresh_running_commands()
+
+        cmd_key = (command_id << 15) + positioner_id
+
+        if cmd_key in self.running_commands:
+            running_cmd = self.running_commands[cmd_key]
+        elif (command_id << 15) in self.running_commands:
+            # Checks if the reply corresponds to a broadcast.
+            cmd_key = command_id << 15
+            running_cmd = self.running_commands[cmd_key]
+        else:
+            can_log.debug(
+                f"({command_id_flag.name}, {positioner_id}): "
+                f"cannot find a matching running command."
+            )
+            return
+
+        if running_cmd.positioner_id != 0:
+            if reply_uid not in running_cmd.message_uids:
+                can_log.debug(
+                    f"({command_id_flag.name}, {positioner_id}): "
+                    f"matching command does not contain reply UID={reply_uid}."
                 )
                 return
 
-            command_id_flag = CommandID(command_id)
+        can_log.debug(
+            f"({command_id_flag.name}, "
+            f"{positioner_id}, {running_cmd.command_uid}): "
+            f"queuing reply UID={reply_uid} "
+            f"to command {running_cmd.command_uid}."
+        )
 
-            runnning_cmd_key = command_id << 15 + positioner_id
-
-            if runnning_cmd_key in self.running_commands:
-                running_cmd = self.running_commands[runnning_cmd_key]
-            elif (command_id << 15) in self.running_commands:
-                # Checks if the reply corresponds to a broadcast.
-                runnning_cmd_key = command_id << 15
-                running_cmd = self.running_commands[runnning_cmd_key]
-            else:
-                can_log.debug(
-                    f"({command_id_flag.name}, {positioner_id}): "
-                    f"cannot find a matching running command."
-                )
-                continue
-
-            if running_cmd.positioner_id != 0:
-                if reply_uid not in running_cmd.message_uids:
-                    can_log.debug(
-                        f"({command_id_flag.name}, {positioner_id}): "
-                        f"matching command does not contain reply UID={reply_uid}."
-                    )
-                    continue
-
-            can_log.debug(
-                f"({command_id_flag.name}, "
-                f"{positioner_id}, {running_cmd.command_uid}): "
-                f"queuing reply UID={reply_uid} "
-                f"to command {running_cmd.command_uid}."
-            )
-
-            running_cmd.process_reply(msg)
-
-            if running_cmd.done():
-                self.running_commands.pop(runnning_cmd_key)
+        running_cmd.process_reply(msg)
 
     def send_to_interfaces(
         self,
