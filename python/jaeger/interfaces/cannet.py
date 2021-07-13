@@ -84,8 +84,6 @@ class CANNetBus(BusABC):
         self.writer: asyncio.StreamWriter | None = None
         self.connected = False
 
-        asyncio.create_task(self.open(timeout=timeout))
-
         self.channel_info = f"CAN@net channel={channel!r}, buses={self.buses!r}"
 
         super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
@@ -121,11 +119,9 @@ class CANNetBus(BusABC):
             return False
 
         if self.bitrate in self._BITRATES:
-            self._write_to_buses(
-                "CAN {bus} " + f"INIT STD {self._BITRATES[self.bitrate]}"
-            )
-            self._write_to_buses("CAN {bus} " + "FILTER CLEAR")
-            self._write_to_buses("CAN {bus} " + "FILTER ADD EXT 00000000 00000000")
+            self._write_to_buses(f"CAN {{bus}} INIT STD {self._BITRATES[self.bitrate]}")
+            self._write_to_buses("CAN {bus} FILTER CLEAR")
+            self._write_to_buses("CAN {bus} FILTER ADD EXT 00000000 00000000")
         else:
             raise ValueError(
                 "Invalid bitrate, choose one of "

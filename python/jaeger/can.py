@@ -436,11 +436,18 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
 
     def __init__(self, *args, **kwargs):
 
-        status_interval = kwargs.pop("status_interval", 5)
+        self._status_interval = kwargs.pop("status_interval", 5)
 
         super().__init__(*args, **kwargs)
 
         self._device_status = collections.defaultdict(dict)
+
+        asyncio.create_task(self.start())
+
+    async def start(self):
+
+        for interface in self.interfaces:
+            await interface.open()
 
         # Get ID and version of interfaces. No need to ask for this in each
         # status poll.
@@ -453,7 +460,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         self.device_status_poller = Poller(
             "cannet_device",
             self._get_device_status,
-            delay=status_interval,
+            delay=self._status_interval,
         )
         self.device_status_poller.start()
 
