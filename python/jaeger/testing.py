@@ -62,6 +62,9 @@ class VirtualFPS(jaeger.FPS):
 
             msg = await self._vpositioner_bus.get()
 
+            if msg is None:
+                continue
+
             arbitration_id = msg.arbitration_id
             positioner_id, command_id, uid, __ = utils.parse_identifier(arbitration_id)
 

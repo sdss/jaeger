@@ -54,5 +54,6 @@ class Notifier:
 
         while True:
             msg = await bus.get()
-            for listener in self.listeners:
-                asyncio.create_task(listener(msg))
+            if msg is not None:
+                for listener in self.listeners:
+                    asyncio.create_task(listener(msg))
