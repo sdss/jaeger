@@ -137,7 +137,7 @@ class CANNetBus(BusABC):
         # await self.writer.drain()
 
         # Clear buffer
-        rec = await self.reader.read(8192)
+        await self.reader.read(8192)
 
         return True
 
