@@ -281,7 +281,6 @@ class FPS(BaseFPS):
 
         if not isinstance(self.can, JaegerCAN):
             can_profile = can_profile or self._can_profile
-            assert can_profile, "can_profile not defined."
             try:
                 self.can = await JaegerCAN.from_profile(can_profile, fps=self)
             except ConnectionRefusedError:
