@@ -134,10 +134,8 @@ async def load_firmware(
         raise JaegerError(
             "no positioners found in bootloader mode or with valid status."
         )
-        return
 
     if n_bad > 0:
-
         msg = f"{n_bad} positioners not in bootloader mode or state is invalid."
         if force:
             warnings.warn(msg + " Proceeding becasuse force=True.", JaegerUserWarning)
