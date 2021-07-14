@@ -13,15 +13,15 @@ import os
 import pathlib
 import warnings
 from contextlib import suppress
+from dataclasses import dataclass
 
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from can import BusABC
 
 from jaeger import config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
 from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
-from jaeger.database import get_database_connection, get_positioner_db_data
 from jaeger.exceptions import (
     FPSLockedError,
     JaegerError,
@@ -37,6 +37,7 @@ from jaeger.utils import Poller, PollerList, bytes_to_int
 __all__ = ["BaseFPS", "FPS"]
 
 
+@dataclass
 class BaseFPS(dict):
     """A class describing the Focal Plane System.
 
@@ -46,9 +47,6 @@ class BaseFPS(dict):
 
     Parameters
     ----------
-    layout
-        The path to the layout describing the position of the robots on the focal
-        plane.
     positioner_class
         The class to be used to create a new positioner. In principle this will
         be `.Positioner` but it may be different if the positioners are created
@@ -56,21 +54,10 @@ class BaseFPS(dict):
 
     """
 
-    def __init__(
-        self,
-        layout: Optional[str | pathlib.Path] = None,
-        positioner_class: Type[Any] = Positioner,
-    ):
+    positioner_class: Type[Any] = Positioner
 
-        self._class_name = self.__class__.__name__
-
+    def __post_init__(self):
         dict.__init__(self, {})
-
-        self._positioner_class: Type[Positioner] = positioner_class
-
-        # Loads the positioners from the database
-        if config["fps"].get("use_database", False):
-            self._load_from_database()
 
     @property
     def positioners(self):
@@ -83,49 +70,17 @@ class BaseFPS(dict):
 
         return self
 
-    def _load_from_database(self):
-        """Loads positioner information from the DB."""
-
-        if "database" not in config:
-            warnings.warn(
-                "Configuration file is missing 'database' section.", JaegerUserWarning
-            )
-
-        dbconfig = config["database"].copy()
-        dbname = dbconfig.pop("dbname")
-
-        conn = get_database_connection(dbname, **dbconfig)
-
-        if conn is None:
-            return
-
-        if config["observatory"] == "?":
-            warnings.warn(
-                "Unknown observatory. Set the configuration "
-                "parameter or the $OBSERVATORY variable.",
-                JaegerUserWarning,
-            )
-            return
-
-        data = get_positioner_db_data(conn, config["observatory"])
-        for pid in data:
-            positioner = self.add_positioner(
-                pid, (data[pid]["xcen"], data["pid"]["ycen"])
-            )
-            positioner.disabled = True if data["pid"]["status"] == "KO" else False
-            self[pid] = positioner
-
     def add_positioner(self, positioner_id, centre=(None, None)) -> Positioner:
         """Adds a new positioner to the list, and checks for duplicates."""
 
         if positioner_id in self.positioners:
             raise JaegerError(
-                f"{self._class_name}: there is already a "
+                f"{self.__class__.__name__}: there is already a "
                 f"positioner in the list with positioner_id "
                 f"{positioner_id}."
             )
 
-        self.positioners[positioner_id] = self._positioner_class(
+        self.positioners[positioner_id] = self.positioner_class(
             positioner_id,
             None,
             centre=centre,
@@ -134,7 +89,7 @@ class BaseFPS(dict):
         return self.positioners[positioner_id]
 
 
-IEBArg = Union[bool, IEB, dict, None, str, pathlib.Path]
+T = TypeVar("T", bound="FPS")
 
 
 class FPS(BaseFPS):
@@ -144,9 +99,6 @@ class FPS(BaseFPS):
     ----------
     can
         The CAN bus to use.
-    layout
-        The file path to the layout describing the position of the robots on
-        the focal plane. If `None`, the default layout will be used.
     can_profile
         The configuration profile for the CAN interface, or `None` to use the
         default one. Ignored if ``can`` is passed.
@@ -155,9 +107,6 @@ class FPS(BaseFPS):
         using the path to the IEB configuration file stored in jaeger's configuration.
         Can also be an `.IEB` instance, the path to a custom configuration file used
         to load one, or a dictionary with the configuration itself.
-    loop
-        The asyncio event loop. If `None`, uses `asyncio.get_event_loop` to
-        get a valid loop.
     engineering_mode
         If `True`, disables most safety checks to enable debugging. This may
         result in hardware damage so it must not be used lightly.
@@ -181,10 +130,8 @@ class FPS(BaseFPS):
     def __init__(
         self,
         can: str | JaegerCAN = None,
-        layout: Optional[str] = None,
         can_profile: Optional[str] = None,
-        ieb: IEBArg = True,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
+        ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = True,
         engineering_mode: bool = False,
     ):
 
@@ -192,9 +139,9 @@ class FPS(BaseFPS):
         start_file_loggers(start_log=True, start_can=False)
 
         if config.CONFIG_FILE:
-            log.info(f"Using configuration from {config.CONFIG_FILE}")
+            log.debug(f"Using configuration from {config.CONFIG_FILE}")
         else:
-            warnings.warn("Unknown configuration file", JaegerUserWarning)
+            warnings.warn("Unknown configuration file.", JaegerUserWarning)
 
         self.engineering_mode = engineering_mode
 
@@ -204,7 +151,7 @@ class FPS(BaseFPS):
                 JaegerUserWarning,
             )
 
-        self.loop = loop or asyncio.get_event_loop()
+        self.loop = asyncio.get_event_loop()
         self.loop.set_exception_handler(log.asyncio_exception_handler)
 
         self.connected: bool = False
@@ -248,7 +195,7 @@ class FPS(BaseFPS):
         else:
             raise ValueError(f"Invalid input value for ieb {ieb!r}.")
 
-        super().__init__(layout=layout)
+        super().__init__()
 
         #: Position and status pollers
         self.pollers = PollerList(
@@ -538,29 +485,11 @@ class FPS(BaseFPS):
             [pos.moving for pos in self.values() if pos.status != pos.flags.UNKNOWN]
         )
 
-    def _log_initialise_error(self, message):
-        """Logs an error or warning depending on whether the engineering mode is on."""
-
-        if self.engineering_mode:
-            warnings.warn(
-                message + " Continuing because engineering mode is active.",
-                JaegerUserWarning,
-            )
-        else:
-            raise JaegerError(message)
-
-    async def initialise(
-        self,
-        allow_unknown: bool = True,
-        start_pollers: bool = True,
-    ) -> FPS:
+    async def initialise(self: T, start_pollers: bool = True) -> T:
         """Initialises all positioners with status and firmware version.
 
         Parameters
         ----------
-        allow_unknown
-            If `True`, allows to add positioners that are connected but not
-            in the layout.
         start_pollers
             Whether to initialise the pollers.
 
@@ -571,9 +500,6 @@ class FPS(BaseFPS):
             await self.start()
             if not self.connected:
                 raise RuntimeError("Failed connecting to CAN.")
-
-        known_positioners = list(self.keys())
-        unknwon_positioners = []
 
         # Test IEB connection. This will issue a warning and set
         # self.ieb.disabled=True if the connection fails.
@@ -591,55 +517,39 @@ class FPS(BaseFPS):
         # Stop poller in case they are running
         await self.pollers.stop()
 
-        if len(self.positioners) > 0 and allow_unknown is False:
-            n_expected_positioners = len(self.positioners)
-        else:
-            n_expected_positioners = None
-
         get_firmware_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
             positioner_id=0,
             timeout=config["fps"]["initialise_timeouts"],
-            n_positioners=n_expected_positioners,
         )
 
         assert isinstance(get_firmware_command, GetFirmwareVersion)
         await get_firmware_command
 
         if get_firmware_command.status.failed:
-            self._log_initialise_error("Failed retrieving firmware version.")
-
-        # Check that all positioners that are not disabled have replied.
-        non_disabled = [pid for pid in known_positioners if not self[pid].disabled]
-        replied_pids = [reply.positioner_id for reply in get_firmware_command.replies]
-        if len(set(non_disabled) - set(replied_pids)) > 0:
-            raise JaegerError("Some non-disabled positioners have not replied.")
+            raise JaegerError("Failed retrieving firmware version.")
 
         # Loops over each reply and set the positioner status to OK. If the
-        # positioner was not in the list, adds it. Checks how many positioner
-        # did not reply.
+        # positioner was not in the list, adds it.
+        replied_pids = [reply.positioner_id for reply in get_firmware_command.replies]
         for pid in replied_pids:
             if pid not in self.positioners:
-                if allow_unknown:
-                    unknwon_positioners.append(pid)
-                    self.add_positioner(pid)
-                else:
-                    raise JaegerError(f"Positioner {pid} is not in the layout.")
+                self.add_positioner(pid)
 
             positioner = self.positioners[pid]
             positioner.fps = self
             positioner.firmware = get_firmware_command.get_firmware(pid)
 
-        if len(unknwon_positioners) > 0:
-            warnings.warn(
-                f"Added {len(unknwon_positioners)} unknown positioners to the layout: "
-                f"{sorted(unknwon_positioners)!r}. ",
-                JaegerUserWarning,
-            )
+        pids = sorted(list(self.keys()))
+        if len(pids) > 0:
+            log.info(f"Found {len(pids)} connected positioners: {pids!r}.")
+        else:
+            warnings.warn("No positioners found.", JaegerUserWarning)
+            return self
 
         if len(set([pos.firmware for pos in self.values()])) > 1:
             warnings.warn(
-                "Positioners with different firmware versions found.",
+                "Found positioners with different firmware versions.",
                 JaegerUserWarning,
             )
 
@@ -647,6 +557,7 @@ class FPS(BaseFPS):
         if not self.is_bootloader():
             await self.stop_trajectory()
 
+        # Initialise positioners
         try:
             disable_precise_moves = config["positioner"]["disable_precise_moves"]
             if disable_precise_moves:
@@ -661,19 +572,17 @@ class FPS(BaseFPS):
 
         n_non_initialised = len(
             [
-                pos
-                for pos in self.positioners.values()
-                if (pos.status == pos.flags.UNKNOWN or not pos.initialised)
+                positioner
+                for positioner in self.positioners.values()
+                if (
+                    positioner.status == positioner.flags.UNKNOWN
+                    or not positioner.initialised
+                )
             ]
         )
 
         if n_non_initialised > 0:
-            self._log_initialise_error(
-                f"{n_non_initialised} positioners failed to initialise."
-            )
-
-        if len(self.positioners) == 0:
-            warnings.warn("No positioners connected.", JaegerUserWarning)
+            raise JaegerError(f"{n_non_initialised} positioners failed to initialise.")
 
         if self.is_bootloader():
             bootlist = [p.positioner_id for p in self.values() if p.is_bootloader()]
@@ -681,15 +590,10 @@ class FPS(BaseFPS):
                 f"Positioners in booloader mode: {bootlist!r}.",
                 JaegerUserWarning,
             )
-            warnings.warn(
-                "Positioners found in bootloader mode. "
-                "Bailing out from initialisation early.",
-                JaegerUserWarning,
-            )
             return self
 
         if self.locked:
-            log.info("FPS is locked. Trying to unlock it.")
+            warnings.warn("FPS is locked. Trying to unlock it.", JaegerUserWarning)
             if not await self.unlock():
                 raise JaegerError("FPS cannot be unlocked. Initialisation failed.")
             else:

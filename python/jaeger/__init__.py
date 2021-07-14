@@ -14,7 +14,7 @@ NAME = "jaeger"
 __version__ = get_package_version(path=__file__, package_name=NAME)
 
 
-log = get_logger("jaeger", log_level=logging.WARNING)
+log = get_logger("jaeger", log_level=logging.INFO)
 can_log = get_logger("jaeger_can", log_level=logging.ERROR, capture_warnings=False)
 
 

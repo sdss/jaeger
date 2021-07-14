@@ -33,19 +33,11 @@ class VirtualFPS(jaeger.FPS):
     virtual bus and responds as if real positioners were plugged into the
     system.
 
-    Parameters
-    ----------
-    layout : str
-        The layout describing the position of the robots on the focal plane.
-        If `None`, the default layout will be used. Can be either a layout name
-        to be recovered from the database, or a file path to the layout
-        configuration.
-
     """
 
-    def __init__(self, layout=None):
+    def __init__(self):
 
-        super().__init__(can_profile="virtual", layout=layout, ieb=True)
+        super().__init__(can_profile="virtual", ieb=True)
 
         self._vpositioner_bus = VirtualBus(config["profiles"]["virtual"]["channel"])
         self._vpositioners = {}
