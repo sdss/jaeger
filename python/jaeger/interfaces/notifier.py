@@ -9,9 +9,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Coroutine
 
-from typing import TYPE_CHECKING, Any, Callable, List
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List
 
 from can import Message
 
