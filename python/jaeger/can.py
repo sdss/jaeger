@@ -58,17 +58,8 @@ class JaegerCAN(Generic[Bus_co]):
 
     Parameters
     ----------
-    interface_type
-        One of `~jaeger.can.INTERFACES`. Defines the
-        `python-can <https://python-can.readthedocs.io/en/stable/>`_ interface
-        to use.
-    channels
-        A list of channels to be used to instantiate the interfaces.
     fps
         The focal plane system.
-    args,kwargs
-        Arguments and keyword arguments to pass to the interfaces when
-        initialising it (e.g., port, baudrate, etc).
 
     Attributes
     ----------
@@ -76,9 +67,6 @@ class JaegerCAN(Generic[Bus_co]):
         Queue of messages to be sent to the bus. The messages are sent as
         soon as the bus has finished processing any commands with the same
         ``command_id`` and ``positioner_id``.
-    listener : JaegerReaderCallback
-        A `.JaegerReaderCallback` instance that runs a callback when
-        a new message is received from the bus.
     multibus : bool
         Whether the interfaces are multibus.
     notifier : can.Notifier
@@ -87,21 +75,46 @@ class JaegerCAN(Generic[Bus_co]):
 
     """
 
-    def __init__(
-        self,
-        interface_type: str,
-        channels: list | tuple,
-        *args,
-        fps: Optional[jaeger.fps.FPS] = None,
-        **kwargs,
-    ):
+    def __init__(self, fps: Optional[jaeger.fps.FPS] = None):
 
         # Start can file logger
         if config["debug"] is True:
             start_file_loggers(start_log=False, start_can=True)
 
+        self.fps = fps
+
+        #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
+        self.interfaces: List[Bus_co] = []
+
+        self.channels = []
+        self.multibus: bool = False
+
+        #: dict: Currently running commands.
+        self.running_commands = {}
+
+        self.command_queue: asyncio.Queue[Command] | None = None
+        self._command_queue_task: asyncio.Task | None = None
+
+        self.notifier: Notifier | None = None
+
+    async def start(self, interface_type: str, channels: list | tuple, *args, **kwargs):
+        """Connects the interfaces and starts bus listening.
+
+        Parameters
+        ----------
+        interface_type
+            One of `~jaeger.can.INTERFACES`. Defines the
+            `python-can <https://python-can.readthedocs.io/en/stable/>`_ interface
+            to use.
+        channels
+            A list of channels to be used to instantiate the interfaces.
+        args,kwargs
+            Arguments and keyword arguments to pass to the interfaces when
+            initialising it (e.g., port, baudrate, etc).
+
+        """
+
         assert interface_type in INTERFACES, f"invalid interface {interface_type}."
-        self.interface_type = interface_type
 
         InterfaceClass: Type[Bus_co] = INTERFACES[interface_type]["class"]
 
@@ -110,23 +123,25 @@ class JaegerCAN(Generic[Bus_co]):
         if not isinstance(channels, (list, tuple)):
             channels = [channels]
 
-        self.fps = fps
+        self.channels = channels
 
-        #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
-        self.interfaces: List[Bus_co] = []
-        for channel in channels:
+        for channel in self.channels:
             log.info(
                 f"creating interface {interface_type}, "
                 f"channel={channel!r}, args={args}, kwargs={kwargs}."
             )
             try:
-                self.interfaces.append(InterfaceClass(channel, *args, **kwargs))
+                interface = InterfaceClass(channel, *args, **kwargs)
+                result = await interface.open()
+                if result is False:
+                    raise ConnectionError()
+                self.interfaces.append(interface)
             except ConnectionResetError:
                 log.error(
                     f"connection to {interface_type}:{channel} failed. "
                     "Possibly another instance is connected to the device."
                 )
-            except (socket.timeout, ConnectionRefusedError, OSError):
+            except (socket.timeout, ConnectionError, ConnectionRefusedError, OSError):
                 log.error(
                     f"connection to {interface_type}:{channel} failed. "
                     "The device is not responding."
@@ -139,13 +154,12 @@ class JaegerCAN(Generic[Bus_co]):
         if len(self.interfaces) == 0:
             warnings.warn("cannot connect to any interface.", JaegerUserWarning)
 
-        #: dict: Currently running commands.
-        self.running_commands = {}
-
-        self.command_queue: asyncio.Queue[Command] = asyncio.Queue()
+        self.command_queue = asyncio.Queue()
         self._command_queue_task = asyncio.create_task(self._process_queue())
 
         self.notifier = Notifier(listeners=[self._process_reply], buses=self.interfaces)
+
+        return self
 
     def refresh_running_commands(self):
         """Clears completed commands."""
@@ -271,6 +285,8 @@ class JaegerCAN(Generic[Bus_co]):
     async def _process_queue(self):
         """Processes messages in the command queue."""
 
+        assert self.command_queue
+
         while True:
 
             cmd = await self.command_queue.get()
@@ -337,7 +353,7 @@ class JaegerCAN(Generic[Bus_co]):
             self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
 
     @classmethod
-    def from_profile(cls, profile: Optional[str] = None, **kwargs) -> JaegerCAN:
+    async def from_profile(cls, profile: Optional[str] = None, **kwargs) -> JaegerCAN:
         """Creates a new bus interface from a configuration profile.
 
         Parameters
@@ -376,9 +392,12 @@ class JaegerCAN(Generic[Bus_co]):
             raise KeyError("channel or channels key not found.")
 
         if interface == "cannet":
-            return CANnetInterface(interface, channels, **kwargs, **config_data)
+            cls = CANnetInterface
 
-        return cls(interface, channels, **kwargs, **config_data)
+        instance = cls()
+        await instance.start(interface, channels, **kwargs, **config_data)
+
+        return instance
 
     @staticmethod
     def print_profiles() -> List[str]:
@@ -442,12 +461,13 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
 
         self._device_status = collections.defaultdict(dict)
 
-        asyncio.create_task(self.start())
+    async def start(self, *args, **kwargs):
+        r"""Starts CAN\@net connection."""
 
-    async def start(self):
+        await super().start(*args, **kwargs)
 
-        for interface in self.interfaces:
-            await interface.open()
+        if len(self.interfaces) == 0:
+            return
 
         # Get ID and version of interfaces. No need to ask for this in each
         # status poll.

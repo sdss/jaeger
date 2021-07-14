@@ -103,6 +103,8 @@ class FPSWrapper(object):
                 engineering_mode=self.danger,
             )
 
+        await self.fps.start()
+
         __FPS__ = self.fps
 
         if self.initialise:

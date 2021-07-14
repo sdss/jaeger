@@ -84,6 +84,8 @@ class CANNetBus(BusABC):
         self.writer: asyncio.StreamWriter | None = None
         self.connected = False
 
+        self._timeout = timeout
+
         self.channel_info = f"CAN@net channel={channel!r}, buses={self.buses!r}"
 
         super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
@@ -106,45 +108,47 @@ class CANNetBus(BusABC):
         for bus in buses:
             self.write(string.format(bus=bus))
 
-    async def open(self, timeout=1):
+    async def _open_internal(self, timeout=None):
+
+        timeout = timeout or self._timeout
 
         self.close()
 
         try:
-            self.reader, self.writer = await asyncio.wait_for(
-                asyncio.open_connection(self.channel, self.port), timeout
-            )
+            open_conn = asyncio.open_connection(self.channel, self.port)
+            self.reader, self.writer = await asyncio.wait_for(open_conn, timeout)
         except asyncio.TimeoutError:
             self.connected = False
             return False
 
+        self.connected = True
+
         if self.bitrate in self._BITRATES:
+            self._write_to_buses("CAN {bus} STOP")
             self._write_to_buses(f"CAN {{bus}} INIT STD {self._BITRATES[self.bitrate]}")
             self._write_to_buses("CAN {bus} FILTER CLEAR")
             self._write_to_buses("CAN {bus} FILTER ADD EXT 00000000 00000000")
         else:
-            raise ValueError(
-                "Invalid bitrate, choose one of "
-                + (", ".join(map(str, self._BITRATES)))
-                + "."
-            )
+            bitrates = ", ".join(map(str, self._BITRATES))
+            raise ValueError(f"Invalid bitrate, choose one of {bitrates}.")
 
         self._write_to_buses("CAN {bus} START")
 
-        await self.writer.drain()
+        # await self.writer.drain()
 
         # Clear buffer
-        await self.reader.read(8192)
+        rec = await self.reader.read(8192)
+
+        return True
 
     def close(self, buses=None):
 
         if self.writer and not self.writer.is_closing():
-            self._write_to_buses("CAN {bus} STOP", buses=buses)
             self.writer.close()
 
         self.connected = False
 
-    async def get(self, timeout):
+    async def get(self):
 
         canId = None
         remote = False
@@ -154,11 +158,8 @@ class CANNetBus(BusABC):
         if not self.reader:
             raise ConnectionError(f"Interface {self.channel} is not connected.")
 
-        buffer = await self.reader.readuntil(self.LINE_TERMINATOR)
-
-        msgStr, _, self._buffer = self._buffer.partition(self.LINE_TERMINATOR)
-
-        readStr = buffer.strip(self.LINE_TERMINATOR).decode()
+        msgStr = await self.reader.readuntil(self.LINE_TERMINATOR)
+        readStr = msgStr.strip(self.LINE_TERMINATOR).decode()
         if not readStr:
             return None
 
