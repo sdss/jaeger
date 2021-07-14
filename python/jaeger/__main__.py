@@ -64,7 +64,6 @@ class FPSWrapper(object):
     def __init__(
         self,
         profile,
-        layout,
         ieb=None,
         danger=None,
         initialise=True,
@@ -75,7 +74,6 @@ class FPSWrapper(object):
         if self.profile in ["test", "virtual"]:
             self.profile = "virtual"
 
-        self.layout = layout
         self.ieb = ieb
         self.danger = danger
         self.initialise = initialise
@@ -92,13 +90,12 @@ class FPSWrapper(object):
         # If profile is test we start a VirtualFPS first so that it can respond
         # to the FPS class.
         if self.profile == "virtual":
-            self.fps = VirtualFPS(layout=self.layout)
+            self.fps = VirtualFPS()
             for pid in range(self.npositioners):
                 self.fps.add_virtual_positioner(pid + 1)
         else:
             self.fps = FPS(
                 can_profile=self.profile,
-                layout=self.layout,
                 ieb=self.ieb,
                 engineering_mode=self.danger,
             )
@@ -133,12 +130,6 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     "--profile",
     type=str,
     help="The bus interface profile.",
-)
-@click.option(
-    "-l",
-    "--layout",
-    type=str,
-    help="The FPS layout.",
 )
 @click.option(
     "--virtual",
@@ -185,7 +176,6 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 def jaeger(
     ctx,
     config_file,
-    layout,
     profile,
     verbose,
     quiet,
@@ -205,10 +195,8 @@ def jaeger(
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
 
     if verbose == 1:
-        log.sh.setLevel(logging.INFO)
-    elif verbose == 2:
         log.sh.setLevel(logging.DEBUG)
-    elif verbose >= 3:
+    elif verbose >= 2:
         log.sh.setLevel(logging.DEBUG)
         can_log.sh.setLevel(logging.DEBUG)
 
@@ -229,7 +217,6 @@ def jaeger(
 
     ctx.obj = FPSWrapper(
         profile,
-        layout,
         ieb=ieb,
         danger=danger,
         npositioners=npositioners,
