@@ -21,7 +21,7 @@ async def test_bootloader(vfps, vpositioners):
 
     await vfps.initialise()
 
-    for vpositioner in vpositioners:
+    for vpositioner in vpositioners.values():
         vpositioner.set_bootloader()
 
     await vfps.update_status()
@@ -33,7 +33,7 @@ async def test_bootloader(vfps, vpositioners):
 
 async def test_load_firmware(vfps, vpositioners):
 
-    for vpositioner in vpositioners:
+    for vpositioner in vpositioners.values():
         vpositioner.set_bootloader()
 
     await vfps.initialise()
@@ -43,7 +43,7 @@ async def test_load_firmware(vfps, vpositioners):
 
     await load_firmware(vfps, firmware_file, positioners=[1], force=True)
 
-    for vpositioner in vpositioners:
+    for vpositioner in vpositioners.values():
         vpositioner.set_bootloader(False)
 
     await vfps[1].update_status()

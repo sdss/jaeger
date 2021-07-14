@@ -164,7 +164,9 @@ class Positioner(StatusMixIn):
             raise PositionerError("FPS is not set.")
 
         command = await self.fps.send_command(
-            command, positioner_id=self.positioner_id, **kwargs
+            command,
+            positioner_id=self.positioner_id,
+            **kwargs,
         )
 
         if error and (command.status.failed or command.status.timed_out):

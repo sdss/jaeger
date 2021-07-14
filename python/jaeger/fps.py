@@ -180,7 +180,7 @@ class FPS(BaseFPS):
 
     def __init__(
         self,
-        can: Optional[str] = None,
+        can: str | JaegerCAN = None,
         layout: Optional[str] = None,
         can_profile: Optional[str] = None,
         ieb: IEBArg = True,
@@ -207,17 +207,18 @@ class FPS(BaseFPS):
         self.loop = loop or asyncio.get_event_loop()
         self.loop.set_exception_handler(log.asyncio_exception_handler)
 
+        self.connected: bool = False
+        self._can_profile = can_profile
+
         #: The mapping between positioners and buses.
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
+
+        self.can: JaegerCAN | None = None
 
         if isinstance(can, JaegerCAN):
             #: The `.JaegerCAN` instance that serves as a CAN bus interface.
             self.can = can
-        else:
-            try:
-                self.can = JaegerCAN.from_profile(can_profile, fps=self, loop=loop)
-            except ConnectionRefusedError:
-                raise
+            self.connected = True
 
         self._is_multibus = False
         self._locked = False
@@ -267,12 +268,37 @@ class FPS(BaseFPS):
             ]
         )
 
+    async def start(self, can_profile: Optional[str] = None):
+        """Starts the CAN bus and .
+
+        Parameters
+        ----------
+        can_profile
+            The CAN profile. If not specified, will use the CAN profile passed during
+            the instance initialisation.
+
+        """
+
+        if not isinstance(self.can, JaegerCAN):
+            can_profile = can_profile or self._can_profile
+            assert can_profile, "can_profile not defined."
+            try:
+                self.can = await JaegerCAN.from_profile(can_profile, fps=self)
+            except ConnectionRefusedError:
+                raise
+
+        self.connected = True
+
+        return self
+
     async def _get_positioner_bus_map(self):
         """Creates the positioner-to-bus map.
 
         Only relevant if the bus interface is multichannel/multibus.
 
         """
+
+        assert self.can and self.connected, "CAN connection not established."
 
         if len(self.can.interfaces) == 1 and not self.can.multibus:
             self._is_multibus = False
@@ -353,6 +379,8 @@ class FPS(BaseFPS):
 
         """
 
+        assert self.can and self.connected, "CAN connection not established."
+
         if positioner_id == 0:
             broadcast = True
 
@@ -425,6 +453,7 @@ class FPS(BaseFPS):
                 return command
 
         if not synchronous:
+            assert self.can.command_queue
             self.can.command_queue.put_nowait(command)
             log.debug(header + "added command to CAN processing queue.")
         else:
@@ -537,6 +566,12 @@ class FPS(BaseFPS):
             Whether to initialise the pollers.
 
         """
+
+        if not self.connected:
+            warnings.warn("CAN connection not established. Trying now.")
+            await self.start()
+            if not self.connected:
+                raise RuntimeError("Failed connecting to CAN.")
 
         known_positioners = list(self.keys())
         unknwon_positioners = []
@@ -1018,7 +1053,8 @@ class FPS(BaseFPS):
             await self.stop_trajectory()
 
         log.info("Stopping all pollers.")
-        await self.pollers.stop()
+        if self.pollers:
+            await self.pollers.stop()
 
         await asyncio.sleep(1)
 

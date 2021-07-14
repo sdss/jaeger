@@ -5,10 +5,14 @@
 # @Filename: cannet.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import socket
+from __future__ import annotations
+
+import asyncio
 import time
 
-from can import BusABC, Message
+from can import Message
+
+from .bus import BusABC
 
 
 class CANNetMessage(Message):
@@ -66,24 +70,21 @@ class CANNetBus(BusABC):
         if not channel:  # if None or empty
             raise TypeError("Must specify a TCP address.")
 
+        self.channel = channel
+
         if not bitrate:
             raise TypeError("Must specify a bitrate.")
 
-        port = port or self._REMOTE_PORT
-
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._serverAddress = (channel, port)
-
-        self._socket.settimeout(timeout)
-        self._socket.connect(self._serverAddress)
-        self._socket.settimeout(None)
-
-        self._buffer = bytearray()
+        self.port = port or self._REMOTE_PORT
 
         self.bitrate = bitrate
         self.buses = buses
 
-        self.open()
+        self.reader: asyncio.StreamReader | None = None
+        self.writer: asyncio.StreamWriter | None = None
+        self.connected = False
+
+        self._timeout = timeout
 
         self.channel_info = f"CAN@net channel={channel!r}, buses={self.buses!r}"
 
@@ -91,7 +92,10 @@ class CANNetBus(BusABC):
 
     def write(self, string):
 
-        self._socket.send(string.encode() + self.LINE_TERMINATOR)
+        if not self.connected or not self.writer:
+            raise ConnectionError(f"Interface {self.channel} is not connected.")
+
+        self.writer.write(string.encode() + self.LINE_TERMINATOR)
 
     def _write_to_buses(self, string, buses=None):
         """Writes a string to the correct bus."""
@@ -104,55 +108,60 @@ class CANNetBus(BusABC):
         for bus in buses:
             self.write(string.format(bus=bus))
 
-    def open(self):
+    async def _open_internal(self, timeout=None):
+
+        timeout = timeout or self._timeout
 
         self.close()
 
+        try:
+            open_conn = asyncio.open_connection(self.channel, self.port)
+            self.reader, self.writer = await asyncio.wait_for(open_conn, timeout)
+        except asyncio.TimeoutError:
+            self.connected = False
+            return False
+
+        self.connected = True
+
         if self.bitrate in self._BITRATES:
-            self._write_to_buses(
-                "CAN {bus} " + f"INIT STD {self._BITRATES[self.bitrate]}"
-            )
-            self._write_to_buses("CAN {bus} " + "FILTER CLEAR")
-            self._write_to_buses("CAN {bus} " + "FILTER ADD EXT 00000000 00000000")
+            self._write_to_buses("CAN {bus} STOP")
+            self._write_to_buses(f"CAN {{bus}} INIT STD {self._BITRATES[self.bitrate]}")
+            self._write_to_buses("CAN {bus} FILTER CLEAR")
+            self._write_to_buses("CAN {bus} FILTER ADD EXT 00000000 00000000")
         else:
-            raise ValueError(
-                "Invalid bitrate, choose one of "
-                + (", ".join(map(str, self._BITRATES)))
-                + "."
-            )
+            bitrates = ", ".join(map(str, self._BITRATES))
+            raise ValueError(f"Invalid bitrate, choose one of {bitrates}.")
 
         self._write_to_buses("CAN {bus} START")
 
+        # await self.writer.drain()
+
         # Clear buffer
-        self._socket.recv(8192)
+        await self.reader.read(8192)
+
+        return True
 
     def close(self, buses=None):
 
-        self._write_to_buses("CAN {bus} STOP", buses=buses)
+        if self.writer and not self.writer.is_closing():
+            self.writer.close()
 
-    def _recv_internal(self, timeout):
+        self.connected = False
 
-        if timeout != self._socket.gettimeout():
-            self._socket.settimeout(timeout)
+    async def get(self):
 
         canId = None
         remote = False
         extended = False
         frame = []
 
-        # Check that we don't have already a message
-        while self.LINE_TERMINATOR not in self._buffer:
-            self._buffer += self._socket.recv(1)
+        if not self.reader:
+            raise ConnectionError(f"Interface {self.channel} is not connected.")
 
-        if self.LINE_TERMINATOR not in self._buffer:
-            # Timed out
-            return None, False
-
-        msgStr, _, self._buffer = self._buffer.partition(self.LINE_TERMINATOR)
-
-        readStr = msgStr.decode()
+        msgStr = await self.reader.readuntil(self.LINE_TERMINATOR)
+        readStr = msgStr.strip(self.LINE_TERMINATOR).decode()
         if not readStr:
-            return None, False
+            return None
 
         # Message is M 1 CSD 100 55 AA 55 AA or M 2 CED 18FE0201 01 02 03 04 05 06 07 08
         # Check if we have a message from the CAN network. Otherwise this is a message
@@ -167,16 +176,16 @@ class CANNetBus(BusABC):
             )
             msg.interface = self
             msg.bus = None
-            return msg, False
+            return msg
 
         # check if it is the proper CAN bus
         bus = int(data[1])
         if bus not in self.buses:
-            return None, False
+            return None
 
         # check if standard packet, FD not supported
         if data[2][0] != "C":
-            return None, False
+            return None
 
         # check if remote frame
         if data[2][2] == "D":
@@ -190,7 +199,7 @@ class CANNetBus(BusABC):
         elif data[2][1] == "E":
             extended = True
         else:
-            return None, False
+            return None
 
         # get canId
         canId = int(data[3], 16)
@@ -212,11 +221,11 @@ class CANNetBus(BusABC):
             )
             msg.interface = self
             msg.bus = bus
-            return msg, False
+            return msg
 
-        return None, False
+        return None
 
-    def send(self, msg, bus=None, timeout=None):
+    def send(self, msg, bus=None):
 
         buses = bus or self.buses
         if not isinstance(buses, (list, tuple)):
@@ -243,9 +252,3 @@ class CANNetBus(BusABC):
 
     def shutdown(self):
         self.close()
-        self._socket.close()
-
-    def fileno(self):
-        if hasattr(self._socket, "fileno"):
-            return self._socket.fileno()
-        return -1

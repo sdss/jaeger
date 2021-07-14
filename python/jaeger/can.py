@@ -14,25 +14,26 @@ import collections
 import pprint
 import re
 import socket
-import time
 import warnings
 
-from typing import Any, Generic, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar
 
 import can
 from can.interfaces.slcan import slcanBus
 from can.interfaces.socketcan import SocketcanBus
-from can.interfaces.virtual import VirtualBus
 
 import jaeger
 import jaeger.interfaces.cannet
-import jaeger.utils
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import Command, CommandID, Message, StopTrajectory
 from jaeger.exceptions import JaegerUserWarning
-from jaeger.interfaces.cannet import CANNetBus
+from jaeger.interfaces import BusABC, CANNetBus, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
-from jaeger.utils import Poller
+from jaeger.utils import Poller, parse_identifier
+
+
+if TYPE_CHECKING:
+    from .fps import FPS
 
 
 __all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
@@ -49,7 +50,7 @@ INTERFACES = {
 }
 
 
-Bus_co = TypeVar("Bus_co", bound="can.BusABC", covariant=True)
+Bus_co = TypeVar("Bus_co", bound=BusABC, covariant=True)
 
 
 class JaegerCAN(Generic[Bus_co]):
@@ -61,17 +62,8 @@ class JaegerCAN(Generic[Bus_co]):
 
     Parameters
     ----------
-    interface_type
-        One of `~jaeger.can.INTERFACES`. Defines the
-        `python-can <https://python-can.readthedocs.io/en/stable/>`_ interface
-        to use.
-    channels
-        A list of channels to be used to instantiate the interfaces.
     fps
         The focal plane system.
-    args,kwargs
-        Arguments and keyword arguments to pass to the interfaces when
-        initialising it (e.g., port, baudrate, etc).
 
     Attributes
     ----------
@@ -79,9 +71,6 @@ class JaegerCAN(Generic[Bus_co]):
         Queue of messages to be sent to the bus. The messages are sent as
         soon as the bus has finished processing any commands with the same
         ``command_id`` and ``positioner_id``.
-    listener : JaegerReaderCallback
-        A `.JaegerReaderCallback` instance that runs a callback when
-        a new message is received from the bus.
     multibus : bool
         Whether the interfaces are multibus.
     notifier : can.Notifier
@@ -90,23 +79,46 @@ class JaegerCAN(Generic[Bus_co]):
 
     """
 
-    def __init__(
-        self,
-        interface_type: str,
-        channels: list | tuple,
-        *args,
-        fps: Optional[jaeger.fps.FPS] = None,
-        **kwargs,
-    ):
+    def __init__(self, fps: Optional[jaeger.fps.FPS] = None):
 
         # Start can file logger
         if config["debug"] is True:
             start_file_loggers(start_log=False, start_can=True)
 
-        self.loop = asyncio.get_event_loop()
+        self.fps = fps
+
+        #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
+        self.interfaces: List[Bus_co] = []
+
+        self.channels = []
+        self.multibus: bool = False
+
+        #: dict: Currently running commands.
+        self.running_commands = {}
+
+        self.command_queue: asyncio.Queue[Command] | None = None
+        self._command_queue_task: asyncio.Task | None = None
+
+        self.notifier: Notifier | None = None
+
+    async def start(self, interface_type: str, channels: list | tuple, *args, **kwargs):
+        """Connects the interfaces and starts bus listening.
+
+        Parameters
+        ----------
+        interface_type
+            One of `~jaeger.can.INTERFACES`. Defines the
+            `python-can <https://python-can.readthedocs.io/en/stable/>`_ interface
+            to use.
+        channels
+            A list of channels to be used to instantiate the interfaces.
+        args,kwargs
+            Arguments and keyword arguments to pass to the interfaces when
+            initialising it (e.g., port, baudrate, etc).
+
+        """
 
         assert interface_type in INTERFACES, f"invalid interface {interface_type}."
-        self.interface_type = interface_type
 
         InterfaceClass: Type[Bus_co] = INTERFACES[interface_type]["class"]
 
@@ -115,23 +127,25 @@ class JaegerCAN(Generic[Bus_co]):
         if not isinstance(channels, (list, tuple)):
             channels = [channels]
 
-        self.fps = fps
+        self.channels = channels
 
-        #: list: A list of `python-can`_ interfaces, one for each of the ``channels``.
-        self.interfaces: List[Bus_co] = []
-        for channel in channels:
+        for channel in self.channels:
             log.info(
                 f"creating interface {interface_type}, "
                 f"channel={channel!r}, args={args}, kwargs={kwargs}."
             )
             try:
-                self.interfaces.append(InterfaceClass(channel, *args, **kwargs))
+                interface = InterfaceClass(channel, *args, **kwargs)
+                result = await interface.open()
+                if result is False:
+                    raise ConnectionError()
+                self.interfaces.append(interface)
             except ConnectionResetError:
                 log.error(
                     f"connection to {interface_type}:{channel} failed. "
                     "Possibly another instance is connected to the device."
                 )
-            except (socket.timeout, ConnectionRefusedError, OSError):
+            except (socket.timeout, ConnectionError, ConnectionRefusedError, OSError):
                 log.error(
                     f"connection to {interface_type}:{channel} failed. "
                     "The device is not responding."
@@ -144,39 +158,24 @@ class JaegerCAN(Generic[Bus_co]):
         if len(self.interfaces) == 0:
             warnings.warn("cannot connect to any interface.", JaegerUserWarning)
 
-        self._start_notifier()
+        self.command_queue = asyncio.Queue()
+        self._command_queue_task = asyncio.create_task(self._process_queue())
 
-        #: list: Currently running commands.
-        self.running_commands = []
+        self.notifier = Notifier(listeners=[self._process_reply], buses=self.interfaces)
 
-        self.command_queue: asyncio.Queue[Command] = asyncio.Queue()
-        self._command_queue_task = self.loop.create_task(self._process_queue())
-        self.loop.create_task(self._process_reply_queue())
+        return self
 
-    def _start_notifier(self):
-        """Starts the listener and notifiers."""
+    def refresh_running_commands(self):
+        """Clears completed commands."""
 
-        self.reader = can.AsyncBufferedReader()
-        self.notifier = can.notifier.Notifier(
-            self.interfaces,
-            [self.reader],
-            loop=self.loop,
-        )
-
-        log.debug("started JaegerReaderCallback listener and notifiers")
-
-    async def _process_reply_queue(self):
-        """Processes replies from the bus."""
-
-        async for msg in self.reader:
-            await self._process_reply(msg)
+        self.running_commands = {
+            key: cmd for key, cmd in self.running_commands.items() if not cmd.done()
+        }
 
     async def _process_reply(self, msg: can.Message):
         """Processes one reply message."""
 
-        positioner_id, command_id, reply_uid, __ = jaeger.utils.parse_identifier(
-            msg.arbitration_id
-        )
+        positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
 
         if command_id == CommandID.COLLISION_DETECTED:
 
@@ -194,11 +193,11 @@ class JaegerCAN(Generic[Bus_co]):
                 return
 
             stop_trajectory_command = StopTrajectory(positioner_id=0)
-            self.send_to_interfaces(stop_trajectory_command.get_messages()[0])
+            self._send_messages(stop_trajectory_command)
 
             # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                self.loop.create_task(self.fps.lock(stop_trajectories=False))
+                asyncio.create_task(self.fps.lock(stop_trajectories=False))
                 return
 
         if command_id == 0:
@@ -211,48 +210,39 @@ class JaegerCAN(Generic[Bus_co]):
 
         command_id_flag = CommandID(command_id)
 
-        # Remove done running command. Leave the failed and cancelled ones in
-        # the list for 60 seconds to be able to catch delayed replies. We
-        # also sort them so that the most recent commands are found first.
-        # This is important for timed out broadcast still in the list while
-        # another instance of the same command is running. We want replies to
-        # be sent to the running command first.
-        # TODO: this can probably be optimised by doing it some kind of
-        # mapping of positioner_id, command_id, and uid.
-        self.running_commands = sorted(
-            [
-                rcmd
-                for rcmd in self.running_commands
-                if not rcmd.status == rcmd.status.DONE
-                and (time.time() - rcmd.start_time) < 60
-            ],
-            key=lambda cmd: cmd.start_time,
-            reverse=True,
-        )
+        self.refresh_running_commands()
 
-        found_cmd = False
-        for r_cmd in self.running_commands:
-            if r_cmd.command_id == command_id:
-                if (reply_uid == 0 and r_cmd.positioner_id == 0) or (
-                    reply_uid in r_cmd.message_uids
-                    and positioner_id == r_cmd.positioner_id
-                ):
-                    found_cmd = r_cmd
-                    break
+        cmd_key = (positioner_id << 25) + (command_id << 15) + reply_uid
 
-        if found_cmd:
-            can_log.debug(
-                f"({command_id_flag.name}, "
-                f"{positioner_id}, {found_cmd.command_uid}): "
-                f"queuing reply UID={reply_uid} "
-                f"to command {found_cmd.command_uid}."
-            )
-            found_cmd.process_reply(msg)
+        if cmd_key in self.running_commands:
+            running_cmd = self.running_commands[cmd_key]
+        elif (command_id << 15) + reply_uid in self.running_commands:
+            # Checks if the reply corresponds to a broadcast.
+            cmd_key = (command_id << 15) + reply_uid
+            running_cmd = self.running_commands[cmd_key]
         else:
             can_log.debug(
                 f"({command_id_flag.name}, {positioner_id}): "
-                f"cannot find running command for reply UID={reply_uid}."
+                f"cannot find a matching running command."
             )
+            return
+
+        if running_cmd.positioner_id != 0:
+            if reply_uid not in running_cmd.message_uids:
+                can_log.debug(
+                    f"({command_id_flag.name}, {positioner_id}): "
+                    f"matching command does not contain reply UID={reply_uid}."
+                )
+                return
+
+        can_log.debug(
+            f"({command_id_flag.name}, "
+            f"{positioner_id}, {running_cmd.command_uid}): "
+            f"queuing reply UID={reply_uid} "
+            f"to command {running_cmd.command_uid}."
+        )
+
+        running_cmd.process_reply(msg)
 
     def send_to_interfaces(
         self,
@@ -268,20 +258,15 @@ class JaegerCAN(Generic[Bus_co]):
             f"{message.command.command_uid!s}): "
         )
 
-        if len(self.interfaces) == 1 and not self.multibus:
-            data_hex = binascii.hexlify(message.data).decode()
-            can_log.debug(
-                log_header + "sending message with "
-                f"arbitration_id={message.arbitration_id}, "
-                f"UID={message.uid}, "
-                f"and data={data_hex!r} to interface."
-            )
-            self.interfaces[0].send(message)
-            return
-
         # If not interface, send the message to all interfaces.
         if interfaces is None:
             interfaces = self.interfaces
+
+        cmd_key = message.command.positioner_id << 25
+        cmd_key += message.command.command_id << 15
+        cmd_key += message.uid
+
+        self.running_commands[cmd_key] = message.command
 
         for iface in interfaces:
 
@@ -303,6 +288,8 @@ class JaegerCAN(Generic[Bus_co]):
 
     async def _process_queue(self):
         """Processes messages in the command queue."""
+
+        assert self.command_queue
 
         while True:
 
@@ -349,7 +336,6 @@ class JaegerCAN(Generic[Bus_co]):
         can_log.debug(log_header + " sending messages to CAN bus.")
 
         cmd.status = CommandStatus.RUNNING
-        self.running_commands.append(cmd)
 
         log_header = LOG_HEADER.format(cmd=cmd)
         messages = cmd.get_messages()
@@ -366,13 +352,17 @@ class JaegerCAN(Generic[Bus_co]):
                     + " not sending more messages "
                     + "since this command has failed."
                 )
-                self.running_commands.remove(cmd)
                 break
 
             self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
 
     @classmethod
-    def from_profile(cls, profile: Optional[str] = None, **kwargs) -> JaegerCAN:
+    async def from_profile(
+        cls,
+        profile: Optional[str] = None,
+        fps: FPS = None,
+        **kwargs,
+    ) -> JaegerCAN:
         """Creates a new bus interface from a configuration profile.
 
         Parameters
@@ -411,9 +401,12 @@ class JaegerCAN(Generic[Bus_co]):
             raise KeyError("channel or channels key not found.")
 
         if interface == "cannet":
-            return CANnetInterface(interface, channels, **kwargs, **config_data)
+            cls = CANnetInterface
 
-        return cls(interface, channels, **kwargs, **config_data)
+        instance = cls(fps=fps)
+        await instance.start(interface, channels, **kwargs, **config_data)
+
+        return instance
 
     @staticmethod
     def print_profiles() -> List[str]:
@@ -471,11 +464,19 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
 
     def __init__(self, *args, **kwargs):
 
-        status_interval = kwargs.pop("status_interval", 5)
+        self._status_interval = kwargs.pop("status_interval", 5)
 
         super().__init__(*args, **kwargs)
 
         self._device_status = collections.defaultdict(dict)
+
+    async def start(self, *args, **kwargs):
+        r"""Starts CAN\@net connection."""
+
+        await super().start(*args, **kwargs)
+
+        if len(self.interfaces) == 0:
+            return
 
         # Get ID and version of interfaces. No need to ask for this in each
         # status poll.
@@ -488,7 +489,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         self.device_status_poller = Poller(
             "cannet_device",
             self._get_device_status,
-            delay=status_interval,
+            delay=self._status_interval,
         )
         self.device_status_poller.start()
 

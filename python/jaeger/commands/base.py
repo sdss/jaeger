@@ -255,6 +255,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
         # Starting time
         self.start_time = None
+        self.end_time = None
 
         # Stores the UIDs of the messages sent for them to be compared with
         # the replies.
@@ -431,7 +432,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
                 pass
 
     def finish_command(self, status: CommandStatus, silent: bool = False):
-        """Cancels the queue watcher and removes the running command.
+        """Finishes a command, marking the Future as done.
 
         Parameters
         ----------
@@ -468,6 +469,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
                     UID_POOL[self.command_id][pid].add(uid)
 
             self.set_result(self)
+            self.end_time = time.time()
 
             is_done = self.status == CommandStatus.DONE or (
                 pid == 0 and self.status == CommandStatus.TIMEDOUT

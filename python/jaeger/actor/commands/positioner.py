@@ -427,7 +427,7 @@ def led():
     pass
 
 
-@led.command(name='on')
+@led.command(name="on")
 @click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
 async def led_on(command, fps, positioner_id):
     """Turns the LED on."""
@@ -444,7 +444,7 @@ async def led_on(command, fps, positioner_id):
     command.finish()
 
 
-@led.command(name='off')
+@led.command(name="off")
 @click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
 async def led_off(command, fps, positioner_id):
     """Turns the LED off."""

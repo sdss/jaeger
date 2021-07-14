@@ -79,13 +79,13 @@ async def test_pollers_delay(vfps, vpositioners):
     await vfps.initialise()
     await vfps.pollers.set_delay(0.01, immediate=True)
 
-    vpositioners[0].status |= PositionerStatus.HALL_ALPHA_DISABLE
-    vpositioners[0].position = (180.0, 180.0)
+    vpositioners[1].status |= PositionerStatus.HALL_ALPHA_DISABLE
+    vpositioners[1].position = (180.0, 180.0)
 
     await asyncio.sleep(0.1)
 
     assert vfps[1].position == (180.0, 180.0)
-    assert PositionerStatus.HALL_ALPHA_DISABLE in vpositioners[0].status
+    assert PositionerStatus.HALL_ALPHA_DISABLE in vpositioners[1].status
 
     await vfps.pollers.stop()
 
