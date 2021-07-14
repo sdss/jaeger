@@ -30,6 +30,7 @@ from jaeger.exceptions import (
     TrajectoryError,
 )
 from jaeger.ieb import IEB
+from jaeger.maskbits import CommandStatus
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int
 

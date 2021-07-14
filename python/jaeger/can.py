@@ -16,7 +16,7 @@ import re
 import socket
 import warnings
 
-from typing import Any, Generic, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar
 
 import can
 from can.interfaces.slcan import slcanBus
@@ -30,6 +30,10 @@ from jaeger.exceptions import JaegerUserWarning
 from jaeger.interfaces import BusABC, CANNetBus, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller, parse_identifier
+
+
+if TYPE_CHECKING:
+    from .fps import FPS
 
 
 __all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
@@ -353,7 +357,12 @@ class JaegerCAN(Generic[Bus_co]):
             self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
 
     @classmethod
-    async def from_profile(cls, profile: Optional[str] = None, **kwargs) -> JaegerCAN:
+    async def from_profile(
+        cls,
+        profile: Optional[str] = None,
+        fps: FPS = None,
+        **kwargs,
+    ) -> JaegerCAN:
         """Creates a new bus interface from a configuration profile.
 
         Parameters
@@ -394,7 +403,7 @@ class JaegerCAN(Generic[Bus_co]):
         if interface == "cannet":
             cls = CANnetInterface
 
-        instance = cls()
+        instance = cls(fps=fps)
         await instance.start(interface, channels, **kwargs, **config_data)
 
         return instance
