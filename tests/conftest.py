@@ -25,11 +25,13 @@ from sdsstools import read_yaml_file
 
 import jaeger
 from jaeger import JaegerActor, config
-from jaeger.testing import VirtualFPS, VirtualPositioner
+from jaeger.testing import VirtualFPS
 
 
 TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
+
 config["safe_mode"] = False
+config["files"]["ieb_config"] = "etc/ieb.yaml"
 
 
 # Disable logging to file.
@@ -105,13 +107,15 @@ async def vfps(event_loop, ieb_server, monkeypatch):
     # Do not use the DB
     monkeypatch.setitem(jaeger.config["fps"], "use_database", False)
 
-    fps = VirtualFPS()
+    fps = await VirtualFPS().start()
 
     assert fps.ieb
     fps.ieb.client.host = "127.0.0.1"
     fps.ieb.client.port = 5020
 
     yield fps
+
+    assert fps.can and fps.can._command_queue_task
 
     fps.ieb.client.stop()
     fps.can._command_queue_task.cancel()
