@@ -250,18 +250,6 @@ class FPS(BaseFPS):
 
         super().__init__(layout=layout)
 
-    async def start(self, can_profile=None):
-        """ "Starts the CAN bus."""
-
-        if not isinstance(self.can, JaegerCAN):
-            can_profile = can_profile or self._can_profile
-            try:
-                self.can = await JaegerCAN.from_profile(can_profile, fps=self)
-            except ConnectionRefusedError:
-                raise
-
-        self.connected = True
-
         #: Position and status pollers
         self.pollers = PollerList(
             [
@@ -279,6 +267,27 @@ class FPS(BaseFPS):
                 ),
             ]
         )
+
+    async def start(self, can_profile: Optional[str] = None):
+        """Starts the CAN bus and .
+
+        Parameters
+        ----------
+        can_profile
+            The CAN profile. If not specified, will use the CAN profile passed during
+            the instance initialisation.
+
+        """
+
+        if not isinstance(self.can, JaegerCAN):
+            can_profile = can_profile or self._can_profile
+            assert can_profile, "can_profile not defined."
+            try:
+                self.can = await JaegerCAN.from_profile(can_profile, fps=self)
+            except ConnectionRefusedError:
+                raise
+
+        self.connected = True
 
         return self
 

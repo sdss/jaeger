@@ -42,6 +42,7 @@ A simple jaeger program
 
         # Initialise the FPS instance.
         fps = FPS()
+        await fps.start()
         await fps.initialise()
 
         # Print the status of positioner 4
@@ -55,7 +56,7 @@ A simple jaeger program
 
     asyncio.run(main())
 
-This code runs the `coroutine <https://docs.python.org/3/library/asyncio-task.html#coroutines>`__ ``main()`` until it completes. First we create an instance of `~jaeger.fps.FPS` , the main jaeger class that contains information about all the positioners and the `CAN bus <jaeger.can.JaegerCAN>`. When called without extra parameters, `~jaeger.fps.FPS` loads the default CAN interface and positioner layout. The real initialisation happens when calling `fps.initialise <jaeger.fps.FPS.initialise>`. Note that `~jaeger.fps.FPS.initialise` is a coroutine and needs to be awaited until completion. During initialisation, all the robots in the layout are queried by their status and firmware, and `~jaeger.positioner.Positioner` instances are added to `fps <jaeger.fps.FPS>` (which is a dictionary of positioners).
+This code runs the `coroutine <https://docs.python.org/3/library/asyncio-task.html#coroutines>`__ ``main()`` until it completes. First we create an instance of `~jaeger.fps.FPS` , the main jaeger class that contains information about all the positioners and the `CAN bus <jaeger.can.JaegerCAN>`. When called without extra parameters, `~jaeger.fps.FPS` loads the default CAN interface and positioner layout. We then call `~jaeger.fps.FPS.start` to open the CAN interface (this step can be skipped for some CAN interfaces. Otherwise it will be executed when calling `~jaeger.fps.FPS.initialise` but a warning will be issued). The real positioner initialisation happens when calling `fps.initialise <jaeger.fps.FPS.initialise>`. Note that `~jaeger.fps.FPS.initialise` is a coroutine and needs to be awaited until completion. During initialisation, all the robots in the layout are queried by their status and firmware, and `~jaeger.positioner.Positioner` instances are added to `fps <jaeger.fps.FPS>` (which is a dictionary of positioners).
 
 Once the initialisation is complete we command the positioner to go to a certain position in alpha and beta. The `Positioner.goto <jaeger.positioner.Positioner.goto>` coroutine finishes once the move has been completed and the status reaches `~jaeger.maskbits.PositionerStatusV4_1.DISPLACEMENT_COMPLETED`.
 
@@ -71,7 +72,8 @@ Scheduling commands
 
 To schedule a command you must use the `.FPS.send_command` method, which returns a `.Command` instance. Note that the command does *not* get executed until `~.FPS.send_command` is awaited ::
 
-    >>> fps = FPS()
+    >>> fps = await FPS().start()
+    # We don't need to initialise the FPS to send low-level commands.
     >>> cmd = fps.send_command('GO_TO_ABSOLUTE_POSITION', positioner_id=4, alpha=100, beta=30)
     >>> cmd
     <Command GO_TO_ABSOLUTE_POSITION (positioner_id=4, status='READY')>
@@ -98,6 +100,7 @@ Moving positioners can be done either by using the `.Positioner.goto` method for
 
 To move positioner 8 to :math:`\alpha=85,\,\beta=30` at a speed of 1500 RPM, you can do ::
 
+    >>> await fps.initialise()
     >>> positioner = fps.positioners[8]
     >>> positioner
     <Positioner (id=8, status='DATUM_INITIALIZED|BETA_DISPLACEMENT_COMPLETED|ALPHA_DISPLACEMENT_COMPLETED|DISPLACEMENT_COMPLETED|DATUM_BETA_INITIALIZED|DATUM_ALPHA_INITIALIZED|SYSTEM_INITIALIZED', initialised=False)>
