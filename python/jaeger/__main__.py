@@ -18,8 +18,6 @@ from typing import Any
 
 import click
 import numpy
-import uvloop
-from can import Bus, Notifier
 from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
@@ -28,12 +26,10 @@ from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.fps import FPS
-from jaeger.testing import VirtualFPS, VirtualPositioner
+from jaeger.testing import VirtualFPS
 
 
 __FPS__ = None
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 def shutdown(sign):
