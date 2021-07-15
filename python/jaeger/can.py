@@ -14,7 +14,6 @@ import collections
 import pprint
 import re
 import socket
-import warnings
 from dataclasses import dataclass, field
 
 from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, TypeVar
@@ -22,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, Type
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import Command, CommandID, StopTrajectory
-from jaeger.exceptions import JaegerCANError, JaegerUserWarning
+from jaeger.exceptions import JaegerCANError
 from jaeger.interfaces import BusABC, CANNetBus, Message, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller, parse_identifier
