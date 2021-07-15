@@ -230,11 +230,6 @@ async def status(command, fps, positioner_id, full):
 
     command.info(locked=fps.locked)
 
-    if fps.engineering_mode:
-        command.warning(engineering_mode=True)
-    else:
-        command.info(engineering_mode=False)
-
     command.info(n_positioners=len(fps.positioners))
 
     for pid in sorted(positioner_ids):

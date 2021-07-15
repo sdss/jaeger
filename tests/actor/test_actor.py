@@ -33,8 +33,8 @@ async def test_status(actor):
 
     assert command.status.did_succeed
 
-    # cmd running + engineering mode + locked + n_positioners + 5 positioners + done
-    assert len(actor.mock_replies) == 11
+    # cmd running + locked + n_positioners + 5 positioners + done
+    assert len(actor.mock_replies) == 10
 
 
 async def test_info(actor):

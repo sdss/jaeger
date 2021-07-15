@@ -10,8 +10,8 @@
 ### 🧹 Cleaned
 
 * [#129](https://github.com/sdss/jaeger/issues/129) Removed the use of the database and predefined layouts for the FPS. Default mode is that positioners are always auto-discovered.
-
 * [#133](https://github.com/sdss/jaeger/issues/133) Completely removed the use of `python-can`. A conditional import is done for the `slcan` and `socketcan` interfaces for which `python-can` does need to be installed.
+* [#130](https://github.com/sdss/jaeger/issues/130) Removed engineering mode.
 
 
 ## 0.8.0 - June 21, 2021

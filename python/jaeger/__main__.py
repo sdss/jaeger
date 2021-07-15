@@ -61,21 +61,13 @@ def cli_coro(f):
 class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
-    def __init__(
-        self,
-        profile,
-        ieb=None,
-        danger=None,
-        initialise=True,
-        npositioners=10,
-    ):
+    def __init__(self, profile, ieb=None, initialise=True, npositioners=10):
 
         self.profile = profile
         if self.profile in ["test", "virtual"]:
             self.profile = "virtual"
 
         self.ieb = ieb
-        self.danger = danger
         self.initialise = initialise
 
         self.vpositioners = []
@@ -94,11 +86,7 @@ class FPSWrapper(object):
             for pid in range(self.npositioners):
                 self.fps.add_virtual_positioner(pid + 1)
         else:
-            self.fps = FPS(
-                can_profile=self.profile,
-                ieb=self.ieb,
-                engineering_mode=self.danger,
-            )
+            self.fps = FPS(can_profile=self.profile, ieb=self.ieb)
 
         await self.fps.start()
 
@@ -161,11 +149,6 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     help="Does not connect to the IEB.",
 )
 @click.option(
-    "--danger",
-    is_flag=True,
-    help="Enables engineering mode. Most safety checks will be disabled.",
-)
-@click.option(
     "-s",
     "--sextant",
     is_flag=True,
@@ -180,7 +163,6 @@ def jaeger(
     verbose,
     quiet,
     ieb,
-    danger,
     sextant,
     virtual,
     npositioners,
@@ -218,7 +200,6 @@ def jaeger(
     ctx.obj = FPSWrapper(
         profile,
         ieb=ieb,
-        danger=danger,
         npositioners=npositioners,
     )
 
