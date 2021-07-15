@@ -6,10 +6,6 @@
 # @Filename: debug.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-import click
-
-from clu.parsers.click import pass_args
-
 from jaeger import __version__, config
 
 from . import jaeger_parser
