@@ -122,7 +122,6 @@
             ]
         },
         "move_time": { "type": "number" },
-        "engineering_mode": { "type": "boolean" },
         "locked": { "type": "boolean" },
         "n_positioners": { "type": "integer" },
         "status": {

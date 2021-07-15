@@ -106,9 +106,6 @@ class FPS(BaseFPS):
         using the path to the IEB configuration file stored in jaeger's configuration.
         Can also be an `.IEB` instance, the path to a custom configuration file used
         to load one, or a dictionary with the configuration itself.
-    engineering_mode
-        If `True`, disables most safety checks to enable debugging. This may
-        result in hardware damage so it must not be used lightly.
 
     Examples
     --------
@@ -131,7 +128,6 @@ class FPS(BaseFPS):
         can: str | JaegerCAN = None,
         can_profile: Optional[str] = None,
         ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = True,
-        engineering_mode: bool = False,
     ):
 
         # Start file logger
@@ -141,14 +137,6 @@ class FPS(BaseFPS):
             log.debug(f"Using configuration from {config.CONFIG_FILE}")
         else:
             warnings.warn("Unknown configuration file.", JaegerUserWarning)
-
-        self.engineering_mode = engineering_mode
-
-        if engineering_mode:
-            warnings.warn(
-                "Engineering mode enable. Please don't break anything.",
-                JaegerUserWarning,
-            )
 
         self.loop = asyncio.get_event_loop()
         self.loop.set_exception_handler(log.asyncio_exception_handler)
@@ -367,7 +355,7 @@ class FPS(BaseFPS):
         command_uid = command.command_uid
         header = f"({command_name}, {positioner_id}, {command_uid}): "
 
-        if not self.engineering_mode and self.locked:
+        if self.locked:
             if command.safe or safe:
                 log.debug(f"FPS is locked but {command_name} is safe.")
             else:
@@ -376,7 +364,7 @@ class FPS(BaseFPS):
                     "Solve the problem and unlock the FPS before sending commands."
                 )
 
-        elif not self.engineering_mode and command.move_command and self.moving:
+        elif command.move_command and self.moving:
             command.cancel(silent=True)
             raise JaegerError(
                 "Cannot send move command while the "
@@ -465,7 +453,7 @@ class FPS(BaseFPS):
         await self.update_status(timeout=0.1)
 
         for positioner in self.positioners.values():
-            if positioner.collision and not self.engineering_mode:
+            if positioner.collision:
                 self._locked = True
                 raise JaegerError(
                     "Cannot unlock the FPS until all "
