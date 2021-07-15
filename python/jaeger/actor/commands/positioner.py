@@ -454,3 +454,15 @@ async def led_off(command, fps, positioner_id):
     await fps.send_to_all("SWITCH_LED_OFF", positioners=positioner_id)
 
     command.finish()
+
+
+@jaeger_parser.command()
+async def reload(command, fps):
+    """Reinitialise the FPS."""
+
+    try:
+        await fps.initialise(start_pollers=fps.pollers.running)
+    except BaseException as err:
+        return command.fail(error=f"Initialisation failed: {err}")
+
+    return command.finish(text="FPS was reinitialised.")

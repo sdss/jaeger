@@ -254,6 +254,10 @@ class FPS(BaseFPS):
 
         """
 
+        # Clear all robots
+        dict.__init__(self, {})
+
+        # Make sure CAN buses are connected.
         await self._start_can()
 
         # Test IEB connection.
