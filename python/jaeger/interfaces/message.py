@@ -9,6 +9,9 @@ from copy import deepcopy
 from math import isinf, isnan
 
 
+__all__ = ["Message"]
+
+
 class Message(object):
     """
     The ``Message`` object is used to represent CAN messages for
@@ -19,12 +22,15 @@ class Message(object):
     data and may be associated to a channel.
 
     Messages are always compared by identity and never by value, because that
-    may introduce unexpected behaviour. See also :meth:`~.Message.equals`.
+    may introduce unexpected behaviour. See also :meth:`.equals`.
 
     :func:`~copy.copy`/:func:`~copy.deepcopy` is supported as well.
 
     Messages do not support "dynamic" attributes, meaning any others than the
     documented ones, since it uses :attr:`~object.__slots__`.
+
+    This class is copied directly from ``python-can``.
+
     """
 
     __slots__ = (
@@ -344,7 +350,7 @@ class Message(object):
         """
         Compares a given message with this one.
 
-        :param can.Message other: the message to compare with
+        :param .Message other: the message to compare with
 
         :type timestamp_delta: float or int or None
         :param timestamp_delta: the maximum difference at which two timestamps are

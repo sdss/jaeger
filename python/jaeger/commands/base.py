@@ -25,7 +25,7 @@ from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
 from . import CommandID
 
 
-__all__ = ["Message", "Command"]
+__all__ = ["SuperMessage", "Command"]
 
 
 # A pool of UIDs that can be assigned to each command for a given command_id.

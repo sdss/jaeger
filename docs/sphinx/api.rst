@@ -48,5 +48,5 @@ jaeger.interfaces
 -----------------
 
 .. automodule:: jaeger.interfaces
-   :members:
+   :imported-members:
    :show-inheritance:

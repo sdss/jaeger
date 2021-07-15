@@ -111,7 +111,6 @@ todo_include_todos = False
 # Intersphinx mappings
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.7", None),
-    "can": ("https://python-can.readthedocs.io/en/develop/", None),
     "numpy": ("http://docs.scipy.org/doc/numpy/", None),
     "drift": ("https://sdss-drift.readthedocs.io/en/latest/", None),
 }

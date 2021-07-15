@@ -17,7 +17,7 @@ The `.JaegerCAN` class provides the lowest level access to the positioners via t
     >>> isinstance(bus.interfaces[0], CANNetBus)
     True
 
-Note that some interfaces require having python-can_ installed. The main interfaces (`CANNetBus` and `.VirtualBus`) do not require ``python-can`` and are in fact reimplemented to optimise how they behave with asyncio.
+Note that some interfaces require having python-can_ installed. The main interfaces (`.CANNetBus` and `.VirtualBus`) do not require ``python-can`` and are in fact reimplemented to optimise how they behave with asyncio.
 
 Loading from a profile
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -235,7 +235,7 @@ This is what happens when you execute the above snippet:
 
 - When created, the command has status `~.maskbits.CommandStatus.READY` and is prepared to be sent to the bus.
 - When we `~.FPS.send_command` the command, it gets put in the `bus queue <can-queue>`_.
-- Shortly after, the bus processes the command from the queue and checks that no other command with the same ``(command_id, positioner_id)`` is running. If that's the case the command status is changed to `~.maskbits.CommandStatus.RUNNING` and all the `~.commands.base.Message` that compose the command are sent to the bus. A `~.commands.base.Message` is just a wrapper that contains the ``arbitration_id`` and the data to send as bytes. Most command will issue just a message but some such as `~.commands.SendTrajectoryData` can send multiple messages.
+- Shortly after, the bus processes the command from the queue and checks that no other command with the same ``(command_id, positioner_id)`` is running. If that's the case the command status is changed to `~.maskbits.CommandStatus.RUNNING` and all the `~.commands.base.SuperMessage` that compose the command are sent to the bus. A `~.commands.base.SuperMessage` is just a wrapper that contains the ``arbitration_id`` and the data to send as bytes. Most command will issue just a message but some such as `~.commands.SendTrajectoryData` can send multiple messages.
 - The bus listens to replies from the bus and redirects them to the command with the matching ``(command_id, positioner_id)`` where they are processed.
 - Once the expected replies have been received, or when the command times out, the command is marked `~.maskbits.CommandStatus.DONE` or `~.maskbits.CommandStatus.FAILED`. See the :ref:`command-done` section for more details.
 - When the command is marked done, the ``result`` of the `~asyncio.Future` is set and the event loop returns.
