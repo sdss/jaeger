@@ -490,13 +490,13 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         )
         self.device_status_poller.start()
 
-    async def _process_reply(self, msg: Message):
+    async def _process_reply_queue(self, msg: Message):
         """Processes a message checking first if it comes from the device."""
 
         if msg.arbitration_id == 0:
             return self.handle_device_message(msg)
 
-        await super()._process_reply(msg)
+        await super()._process_reply_queue(msg)
 
     @property
     def device_status(self):
