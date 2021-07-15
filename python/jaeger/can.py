@@ -165,7 +165,7 @@ class JaegerCAN(Generic[Bus_co]):
         """Create and initialise a new bus interface from a configuration profile.
 
         This is the preferred method to initialise a new `.JaegerCAN` instance and is
-        equivalent to calling ``JaegerCAN`` and then `.start`.
+        equivalent to calling ``JaegerCAN`` and then `~.JaegerCAN.start`.
 
         Parameters
         ----------
