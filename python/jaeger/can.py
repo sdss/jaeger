@@ -15,22 +15,25 @@ import pprint
 import re
 import socket
 import warnings
+from ast import Import
 
 from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar
 
-import can
-from can.interfaces.slcan import slcanBus
-from can.interfaces.socketcan import SocketcanBus
-
 import jaeger
-import jaeger.interfaces.cannet
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.commands import Command, CommandID, Message, StopTrajectory
+from jaeger.commands import Command, CommandID, StopTrajectory
 from jaeger.exceptions import JaegerUserWarning
-from jaeger.interfaces import BusABC, CANNetBus, Notifier, VirtualBus
+from jaeger.interfaces import BusABC, CANNetBus, Message, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller, parse_identifier
 
+
+try:
+    from can.interfaces.slcan import slcanBus  # type: ignore
+    from can.interfaces.socketcan import SocketcanBus  # type: ignore
+except ImportError:
+    SocketcanBus = None
+    slcanBus = None
 
 if TYPE_CHECKING:
     from .fps import FPS
@@ -172,7 +175,7 @@ class JaegerCAN(Generic[Bus_co]):
             key: cmd for key, cmd in self.running_commands.items() if not cmd.done()
         }
 
-    async def _process_reply(self, msg: can.Message):
+    async def _process_reply(self, msg: Message):
         """Processes one reply message."""
 
         positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
@@ -493,7 +496,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         )
         self.device_status_poller.start()
 
-    async def _process_reply(self, msg: can.Message):
+    async def _process_reply(self, msg: Message):
         """Processes a message checking first if it comes from the device."""
 
         if msg.arbitration_id == 0:
@@ -510,7 +513,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
 
         return self._device_status
 
-    def handle_device_message(self, msg: can.Message):
+    def handle_device_message(self, msg: Message):
         """Handles a reply from the device (i.e., not from the CAN network)."""
 
         device_status = self._device_status

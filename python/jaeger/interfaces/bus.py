@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from can import Message
+    from .message import Message
 
 
 class BusABC(object, metaclass=abc.ABCMeta):

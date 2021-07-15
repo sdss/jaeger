@@ -9,12 +9,12 @@
 import asyncio
 import zlib
 
-from can import Message
+from typing import Optional
 
 import jaeger
 from jaeger import config, utils
 from jaeger.commands import CommandID
-from jaeger.interfaces.virtual import VirtualBus
+from jaeger.interfaces import Message, VirtualBus
 from jaeger.maskbits import BootloaderStatus, PositionerStatus, ResponseCode
 from jaeger.utils.helpers import StatusMixIn
 
@@ -28,10 +28,8 @@ TIME_STEP = config["positioner"]["time_step"]
 class VirtualFPS(jaeger.FPS):
     """A mock Focal Plane System for testing and development.
 
-    This class listens to the
-    `python-can <https://python-can.readthedocs.io/en/stable/>`__
-    virtual bus and responds as if real positioners were plugged into the
-    system.
+    This class listens to a virtual bus and responds as if real positioners were
+    plugged into the system.
 
     """
 
@@ -84,25 +82,17 @@ class VirtualPositioner(StatusMixIn):
     Parameters
     ----------
 
-    positioner_id : int
+    positioner_id
         The ID of the positioner.
-    centre : tuple
+    centre
         A tuple of two floats indicating where on the focal plane the
         positioner is located.
-    position : tuple
+    position
         A tuple of two floats indicating the angles of the alpha and beta arms.
-    speed : tuple
+    speed
         A tuple of two float indicating the RPM on the input for alpha and
         beta.
-    channel : str
-        The channel on which to listen to the virtual CAN bus. Defaults to
-        ``config['profiles']['virtual']['channel']``.
-    loop
-        The event loop.
-    notifier : ~can.Notifier
-        The `python-can <https://python-can.readthedocs.io/en/stable/>`_
-        `~can.Notifier` instance that informs of new messages in the bus.
-    firmware : str
+    firmware
         The firmware version, as a string with the format `AB.CD.EF`.
 
     """
@@ -125,13 +115,12 @@ class VirtualPositioner(StatusMixIn):
 
     def __init__(
         self,
-        positioner_id,
-        bus=None,
-        centre=None,
-        position=(0.0, 0.0),
-        speed=None,
-        loop=None,
-        firmware="10.11.12",
+        positioner_id: int,
+        bus: Optional[VirtualBus] = None,
+        centre: Optional[tuple] = None,
+        position: tuple[float, float] = (0.0, 0.0),
+        speed: Optional[tuple] = None,
+        firmware: str = "10.11.12",
     ):
 
         self.positioner_id = positioner_id
@@ -151,7 +140,6 @@ class VirtualPositioner(StatusMixIn):
         self._firmware_size = 0
         self._firmware_received = b""
 
-        self.loop = loop or asyncio.get_event_loop()
         self.bus = bus
 
         StatusMixIn.__init__(

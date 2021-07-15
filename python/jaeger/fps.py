@@ -17,8 +17,6 @@ from dataclasses import dataclass
 
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-from can import BusABC
-
 from jaeger import config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
 from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
@@ -30,6 +28,7 @@ from jaeger.exceptions import (
     TrajectoryError,
 )
 from jaeger.ieb import IEB
+from jaeger.interfaces import BusABC
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList, bytes_to_int
 

@@ -9,13 +9,15 @@ In the `shatterdome <http://pacificrim.wikia.com/wiki/Shatterdome>`__ we'll have
 The `CAN bus <.JaegerCAN>`
 --------------------------
 
-The `.JaegerCAN` class provides the lowest level access to the positioners via the `CAN <https://en.wikipedia.org/wiki/CAN_bus>`__ bus. `.JaegerCAN` provides access to the appropriate python-can_ `~can.BusABC` subclass, while also adding including jaeger functionality. Normally `.JaegerCAN` is instantiated when `.FPS` is and you won't have to use it unless you want to access the bus directly.
+The `.JaegerCAN` class provides the lowest level access to the positioners via the `CAN <https://en.wikipedia.org/wiki/CAN_bus>`__ bus. `.JaegerCAN` provides access to the appropriate bus subclass, while also adding including jaeger functionality. Normally `.JaegerCAN` is instantiated when `.FPS` is and you won't have to use it unless you want to access the bus directly.
 
-`.JaegerCAN` can be instantiated by passing it an ``interface`` and the parameters necessary to instantiate the corresponding python-can_ bus. ``interface`` must be one of `~.can.INTERFACES`, which defines the correlation between interfaces and python-can buses. For instance, to create a `slcan <can.interfaces.slcan.slcanBus>` bus we do ::
+`.JaegerCAN` can be instantiated by passing it an ``interface`` and the parameters necessary to instantiate the corresponding CAN bus. ``interface`` must be one of `~.can.INTERFACES`, which defines the correlation between interfaces and CAN buses. For instance, to create a `CAN\@net <.CANNetBus>` bus we do ::
 
-    >>> can = JaegerCAN('slcan', channel='/dev/tty.usbserial-LW1FJ8ZR', ttyBaudrate=1000000 bitrate=1000000)
-    >>> isinstance(bus.interfaces[0], slcanBus)
+    >>> can = JaegerCAN('cannet', channel='10.1.25.100', bitrate=1000000)
+    >>> isinstance(bus.interfaces[0], CANNetBus)
     True
+
+Note that some interfaces require having python-can_ installed. The main interfaces (`CANNetBus` and `.VirtualBus`) do not require ``python-can`` and are in fact reimplemented to optimise how they behave with asyncio.
 
 Loading from a profile
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -68,7 +70,7 @@ Some CAN devices provide multiple buses (for example, the `Ixxat CAN\@net device
 
 In jaeger, the `.JaegerCAN` instance represents the entirety of the CAN network, even when it's composed of multiple interfaces with several buses each. The attribute `~.JaegerCAN.interfaces` contains a list of all the loaded interfaces. At this point, jaeger does not support mixing interfaces of different types.
 
-Whether an interface is multibus or not is defined in `.INTERFACES`. The buses to be used can be defined to `.JaegerCAN` via the ``buses`` argument. An example of a multibus, python-can_ interface is `.CANNetBus`.
+Whether an interface is multibus or not is defined in `.INTERFACES`. The buses to be used can be defined to `.JaegerCAN` via the ``buses`` argument. An example of a multibus interface is `.CANNetBus`.
 
 The mapping between positioners and buses is done in the :ref:`FPS class <fps>`. When `.FPS` is instantiated using multibus interfaces (or multiple single bus interfaces), a `.GET_ID` command is broadcast to all the available interfaces and buses. The replies from the positioners are used to create a `.positioner_to_bus` mapping. Because we need to know from what interface and bus the messages originate from, it is assumed that a multibus interface appends ``interface`` and ``bus`` attributes to the returned messages.
 

@@ -25,7 +25,6 @@ include = ["python/jaeger/etc/*"]
 [tool.poetry.dependencies]
 python = "^3.7"
 numpy = "^1.15.1"
-python-can = "^3.1.1"
 progressbar2 = "^3.39.3"
 sdss-drift = "^0.2.2"
 sdss-clu = "^1.0.0"

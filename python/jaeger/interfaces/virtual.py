@@ -16,7 +16,7 @@ from jaeger.interfaces.bus import BusABC
 
 
 if TYPE_CHECKING:
-    from can import Message
+    from .message import Message
 
 
 queues: Dict[str, List[asyncio.Queue]] = {}
