@@ -174,18 +174,26 @@ def jaeger(
     if verbose > 0 and quiet:
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
 
-    if verbose == 1:
-        log.sh.setLevel(logging.DEBUG)
-    elif verbose >= 2:
-        log.sh.setLevel(logging.DEBUG)
-        can_log.sh.setLevel(logging.DEBUG)
-
-    if quiet:
-        log.sh.propagate = False  # type: ignore
-        warnings.simplefilter("ignore")
-
     if config_file:
         config.load(config_file)
+
+    actor_config = config.get("actor", {})
+
+    if verbose == 1:
+        log.sh.setLevel(logging.INFO)
+        actor_config["verbose"] = logging.INFO
+    elif verbose == 2:
+        log.sh.setLevel(logging.DEBUG)
+        actor_config["verbose"] = logging.DEBUG
+    elif verbose >= 3:
+        log.sh.setLevel(logging.DEBUG)
+        can_log.sh.setLevel(logging.DEBUG)
+        actor_config["verbose"] = logging.DEBUG
+
+    if quiet:
+        log.handlers.remove(log.sh)
+        warnings.simplefilter("ignore")
+        actor_config["verbose"] = 100
 
     if sextant:
         sextant_file = os.path.join(os.path.dirname(__file__), "etc/sextant.yaml")
