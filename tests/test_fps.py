@@ -14,7 +14,6 @@ from drift import Relay
 
 import jaeger
 from jaeger.exceptions import JaegerError
-from jaeger.ieb import IEB
 from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
 
