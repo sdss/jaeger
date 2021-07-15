@@ -14,7 +14,6 @@ import collections
 import pprint
 import re
 import socket
-import warnings
 from dataclasses import dataclass, field
 
 from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, TypeVar
@@ -22,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, Type
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.commands import Command, CommandID, StopTrajectory
-from jaeger.exceptions import JaegerCANError, JaegerUserWarning
+from jaeger.exceptions import JaegerCANError
 from jaeger.interfaces import BusABC, CANNetBus, Message, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
 from jaeger.utils import Poller, parse_identifier
@@ -145,9 +144,12 @@ class JaegerCAN(Generic[Bus_co]):
                 raise ee.__class__(f"connection to {itype}:{channel} failed: {ee}.")
 
         self.command_queue = asyncio.Queue()
-        self._command_queue_task = asyncio.create_task(self._process_queue())
+        self._command_queue_task = asyncio.create_task(self._process_command_queue())
 
-        self.notifier = Notifier(listeners=[self._process_reply], buses=self.interfaces)
+        self.notifier = Notifier(
+            listeners=[self._process_reply_queue],
+            buses=self.interfaces,
+        )
 
         self._started = True
 
@@ -237,7 +239,35 @@ class JaegerCAN(Generic[Bus_co]):
         rc = self.running_commands
         self.running_commands = {key: cmd for key, cmd in rc.items() if not cmd.done()}
 
-    async def _process_reply(self, msg: Message):
+    async def _process_command_queue(self):
+        """Processes messages in the command queue."""
+
+        assert self.command_queue
+
+        while True:
+
+            cmd = await self.command_queue.get()
+
+            log_header = LOG_HEADER.format(cmd=cmd)
+
+            if cmd.status != CommandStatus.READY:
+                if cmd.status != CommandStatus.CANCELLED:
+                    can_log.error(
+                        f"{log_header} command is not ready "
+                        f"(status={cmd.status.name!r})"
+                    )
+                    cmd.cancel()
+                continue
+
+            can_log.debug(log_header + " sending messages to CAN bus.")
+
+            try:
+                self.send_messages(cmd)
+            except jaeger.JaegerError as ee:
+                can_log.error(f"found error while getting messages: {ee}")
+                continue
+
+    async def _process_reply_queue(self, msg: Message):
         """Processes one reply message."""
 
         positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
@@ -258,7 +288,7 @@ class JaegerCAN(Generic[Bus_co]):
                 return
 
             stop_trajectory_command = StopTrajectory(positioner_id=0)
-            self._send_messages(stop_trajectory_command)
+            self.send_messages(stop_trajectory_command)
 
             # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
@@ -309,77 +339,7 @@ class JaegerCAN(Generic[Bus_co]):
 
         running_cmd.process_reply(msg)
 
-    def send_to_interfaces(
-        self,
-        message: Message,
-        interfaces: Optional[List[Bus_co]] = None,
-        bus: Optional[Any] = None,
-    ):
-        """Sends the message to the appropriate interface and bus."""
-
-        log_header = (
-            f"({message.command.command_id.name}, "
-            f"{message.command.positioner_id}, "
-            f"{message.command.command_uid!s}): "
-        )
-
-        # If not interface, send the message to all interfaces.
-        if interfaces is None:
-            interfaces = self.interfaces
-
-        cmd_key = message.command.positioner_id << 25
-        cmd_key += message.command.command_id << 15
-        cmd_key += message.uid
-
-        self.running_commands[cmd_key] = message.command
-
-        for iface in interfaces:
-
-            iface_idx = self.interfaces.index(iface)
-            data_hex = binascii.hexlify(message.data).decode()
-            can_log.debug(
-                log_header + "sending message with "
-                f"arbitration_id={message.arbitration_id}, "
-                f"UID={message.uid}, "
-                f"and data={data_hex!r} to "
-                f"interface {iface_idx}, "
-                f"bus={0 if not bus else bus!r}."
-            )
-
-            if bus:
-                iface.send(message, bus=bus)  # type: ignore
-            else:
-                iface.send(message)
-
-    async def _process_queue(self):
-        """Processes messages in the command queue."""
-
-        assert self.command_queue
-
-        while True:
-
-            cmd = await self.command_queue.get()
-
-            log_header = LOG_HEADER.format(cmd=cmd)
-
-            if cmd.status != CommandStatus.READY:
-                if cmd.status != CommandStatus.CANCELLED:
-                    can_log.error(
-                        f"{log_header} command is not ready "
-                        f"(status={cmd.status.name!r})"
-                    )
-                    cmd.cancel()
-                continue
-
-            can_log.debug(log_header + " sending messages to CAN bus.")
-
-            try:
-                self._send_messages(cmd)
-            except jaeger.JaegerError as ee:
-                can_log.error(f"found error while getting messages: {ee}")
-                continue
-
-    def _send_messages(self, cmd: Command):
+    def send_messages(self, cmd: Command):
         """Sends messages to the interface.
 
         This method exists separate from _process_queue so that it can be used
@@ -402,24 +362,49 @@ class JaegerCAN(Generic[Bus_co]):
 
         cmd.status = CommandStatus.RUNNING
 
+        # Get the interface and bus to which to send the message
+        interfaces: List[Bus_co] | None = getattr(cmd, "_interfaces", None)
+        bus: int | None = getattr(cmd, "_bus", None)
+
+        # If not interface, send the message to all interfaces.
+        if interfaces is None:
+            interfaces = self.interfaces
+
         log_header = LOG_HEADER.format(cmd=cmd)
         messages = cmd.get_messages()
 
         for message in messages:
 
-            # Get the interface and bus to which to send the message
-            interfaces = getattr(cmd, "_interfaces", None)
-            bus = getattr(cmd, "_bus", None)
-
             if cmd.status.failed:
                 can_log.debug(
-                    log_header
-                    + " not sending more messages "
-                    + "since this command has failed."
+                    f"{log_header} not sending more messages "
+                    "since this command has failed."
                 )
                 break
 
-            self.send_to_interfaces(message, interfaces=interfaces, bus=bus)
+            cmd_key = message.command.positioner_id << 25
+            cmd_key += message.command.command_id << 15
+            cmd_key += message.uid
+
+            self.running_commands[cmd_key] = message.command
+
+            for iface in interfaces:
+
+                iface_idx = self.interfaces.index(iface)
+                data_hex = binascii.hexlify(message.data).decode()
+                can_log.debug(
+                    log_header + "sending message with "
+                    f"arbitration_id={message.arbitration_id}, "
+                    f"UID={message.uid}, "
+                    f"and data={data_hex!r} to "
+                    f"interface {iface_idx}, "
+                    f"bus={0 if not bus else bus!r}."
+                )
+
+                if bus:
+                    iface.send(message, bus=bus)  # type: ignore
+                else:
+                    iface.send(message)
 
     @staticmethod
     def print_profiles() -> List[str]:

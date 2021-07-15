@@ -257,7 +257,7 @@ class Trajectory(object):
             if positioner.disabled:
                 self.failed = True
                 raise TrajectoryError(
-                    f"Positioner_id={pos_id} is disabled but "
+                    f"positioner_id={pos_id} is disabled but "
                     "included in the trajectory."
                 )
 
@@ -268,7 +268,7 @@ class Trajectory(object):
             ):
                 self.failed = True
                 raise TrajectoryError(
-                    f"Positioner_id={pos_id} is not ready to receive a trajectory."
+                    f"positioner_id={pos_id} is not ready to receive a trajectory."
                 )
 
             traj_pos = self.trajectories[pos_id]
