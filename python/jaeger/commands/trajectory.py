@@ -109,17 +109,17 @@ async def send_trajectory(
     await traj.send()
 
     if traj.failed:
-        raise TrajectoryError("something went wrong sending the trajectory.")
+        raise TrajectoryError("Something went wrong sending the trajectory.")
 
-    log.info(f"trajectory successfully sent in {traj.data_send_time:1f} seconds.")
-    log.info(f"expected time to complete trajectory: {traj.move_time:.2f} seconds.")
+    log.info(f"Trajectory successfully sent in {traj.data_send_time:1f} seconds.")
+    log.info(f"Expected time to complete trajectory: {traj.move_time:.2f} seconds.")
 
     log.info("starting trajectory ...")
     result = await traj.start(use_sync_line=use_sync_line)
     if traj.failed or not result:
-        raise TrajectoryError("something went wrong starting the trajectory.")
+        raise TrajectoryError("Something went wrong starting the trajectory.")
 
-    log.info("all positioners have successfully reached their positions.")
+    log.info("All positioners have successfully reached their positions.")
 
     return True
 
@@ -177,7 +177,7 @@ class Trajectory(object):
             raise FPSLockedError("FPS is locked. Cannot send trajectories.")
 
         if self.fps.moving:
-            raise TrajectoryError("the FPS is moving. Cannot send new trajectory.")
+            raise TrajectoryError("The FPS is moving. Cannot send new trajectory.")
 
         if isinstance(trajectories, (str, pathlib.Path)):
             self.trajectories = cast(TrajectoryDataType, read_yaml_file(trajectories))
@@ -208,19 +208,19 @@ class Trajectory(object):
             raise TrajectoryError("trajectory is empty.")
 
         if len(self.trajectories) != len(numpy.unique(list(self.trajectories.keys()))):
-            raise TrajectoryError("duplicate positioner trajectories.")
+            raise TrajectoryError("Duplicate positioner trajectories.")
 
         for pid in self.trajectories:
             trajectory = self.trajectories[pid]
 
             if "alpha" not in trajectory or "beta" not in trajectory:
-                raise TrajectoryError(f"positioner {pid} missing alpha or beta data.")
+                raise TrajectoryError(f"Positioner {pid} missing alpha or beta data.")
 
             for arm in ["alpha", "beta"]:
                 data = numpy.array(list(zip(*trajectory[arm]))[0])
 
                 if numpy.any(data > 360) or numpy.any(data < 0):
-                    raise TrajectoryError(f"positioner {pid} has points out of range.")
+                    raise TrajectoryError(f"Positioner {pid} has points out of range.")
 
                 if arm == "beta":
                     if config.get("safe_mode", False):
@@ -230,7 +230,7 @@ class Trajectory(object):
                             min_beta = config["safe_mode"]["min_beta"]
                         if numpy.any(data < min_beta):
                             raise TrajectoryError(
-                                f"positioner {pid}: safe mode is "
+                                f"Oositioner {pid}: safe mode is "
                                 f"on and beta < {min_beta}."
                             )
 
@@ -257,7 +257,7 @@ class Trajectory(object):
             if positioner.disabled:
                 self.failed = True
                 raise TrajectoryError(
-                    f"positioner_id={pos_id} is disabled but "
+                    f"Positioner_id={pos_id} is disabled but "
                     "included in the trajectory."
                 )
 
@@ -268,7 +268,7 @@ class Trajectory(object):
             ):
                 self.failed = True
                 raise TrajectoryError(
-                    f"positioner_id={pos_id} is not ready to receive a trajectory."
+                    f"Positioner_id={pos_id} is not ready to receive a trajectory."
                 )
 
             traj_pos = self.trajectories[pos_id]
@@ -337,7 +337,7 @@ class Trajectory(object):
                     if cmd.status.failed or cmd.status.timed_out:
                         self.failed = True
                         raise TrajectoryError(
-                            "at least one SEND_TRAJECTORY_COMMAND failed."
+                            "At least one SEND_TRAJECTORY_COMMAND failed."
                         )
 
         # Finalise the trajectories
@@ -369,7 +369,7 @@ class Trajectory(object):
         """Starts the trajectory."""
 
         if not self._ready_to_start or self.failed:
-            raise TrajectoryError("the trajectory has not been sent.")
+            raise TrajectoryError("The trajectory has not been sent.")
 
         for positioner_id in list(self.trajectories.keys()):
             self.fps[positioner_id].move_time = self.move_time
@@ -412,7 +412,7 @@ class Trajectory(object):
             use_pollers = True
         except Exception as ee:
             use_pollers = False
-            log.error(f"failed setting poller delay: {ee}.")
+            log.error(f"Failed setting poller delay: {ee}.")
 
         assert self.move_time is not None, "move_time not set."
 
@@ -436,7 +436,7 @@ class Trajectory(object):
             if use_pollers:
                 await self.fps.pollers.set_delay()
             self.failed = True
-            raise TrajectoryError("some positioners did not complete the move.")
+            raise TrajectoryError("Some positioners did not complete the move.")
 
         # Restore default polling time
         if use_pollers:
@@ -450,7 +450,7 @@ class Trajectory(object):
         if not await self.fps.send_to_all(
             "TRAJECTORY_TRANSMISSION_ABORT", positioners=list(self.trajectories.keys())
         ):
-            raise TrajectoryError("cannot abort trajectory transmission.")
+            raise TrajectoryError("Cannot abort trajectory transmission.")
 
 
 class SendNewTrajectory(Command):
