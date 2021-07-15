@@ -22,6 +22,7 @@ from sdsstools import read_yaml_file
 from jaeger import config, log, maskbits
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, TrajectoryError
+from jaeger.ieb import IEB
 from jaeger.utils import int_to_bytes
 
 
@@ -99,7 +100,7 @@ async def send_trajectory(
     traj = Trajectory(fps, trajectories)
 
     if use_sync_line:
-        if not fps.ieb or fps.ieb.disabled:
+        if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
             raise TrajectoryError("IEB is not connected. Cannot use SYNC line.")
         if (await fps.ieb.get_device("sync").read())[0] == "closed":
             raise TrajectoryError("The SYNC line is on high.")
@@ -375,7 +376,7 @@ class Trajectory(object):
 
         if use_sync_line:
 
-            if not self.fps.ieb or self.fps.ieb.disabled:
+            if not isinstance(self.fps.ieb, IEB) or self.fps.ieb.disabled:
                 raise TrajectoryError("IEB is not connected. Cannot use SYNC line.")
             if (await self.fps.ieb.get_device("sync").read())[0] == "closed":
                 raise TrajectoryError("The SYNC line is on high.")

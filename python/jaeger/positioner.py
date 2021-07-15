@@ -18,6 +18,7 @@ import numpy.testing
 
 import jaeger
 from jaeger import config, log, maskbits
+from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
@@ -148,6 +149,9 @@ class Positioner(StatusMixIn):
 
         if self.fps is None:
             raise PositionerError("FPS is not defined.")
+
+        if not isinstance(self.fps.can, JaegerCAN):
+            raise PositionerError("CAN bus not found.")
 
         if not self.fps._is_multibus:
             return (0, None)

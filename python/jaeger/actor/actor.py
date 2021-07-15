@@ -17,6 +17,7 @@ from clu.tools import ActorHandler
 
 from jaeger import FPS, __version__, config, log
 from jaeger.commands import CommandID
+from jaeger.ieb import IEB
 from jaeger.maskbits import LowTemperature
 
 
@@ -52,7 +53,7 @@ class JaegerActor(clu.LegacyActor):
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.INFO)
 
-        if fps.ieb and not fps.ieb.disabled:
+        if isinstance(fps.ieb, IEB) and not fps.ieb.disabled:
             self.timed_commands.add_command("ieb status", delay=ieb_status_delay)
             asyncio.create_task(self.handle_temperature())
 
@@ -118,7 +119,7 @@ class JaegerActor(clu.LegacyActor):
 
         while True:
             try:
-                assert self.fps.ieb
+                assert isinstance(self.fps.ieb, IEB) and self.fps.ieb.disabled is False
                 device = self.fps.ieb.get_device(sensor)
                 temp = (await device.read())[0]
 
