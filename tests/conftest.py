@@ -24,6 +24,8 @@ from sdsstools import read_yaml_file
 
 import jaeger
 from jaeger import JaegerActor, config
+from jaeger.can import JaegerCAN
+from jaeger.ieb import IEB
 from jaeger.testing import VirtualFPS
 
 
@@ -74,6 +76,7 @@ async def ieb_server(event_loop):
         allow_reuse_address=True,
         allow_reuse_port=True,
     )
+
     task = event_loop.create_task(server.serve_forever())
 
     yield server
@@ -91,18 +94,19 @@ async def vfps(event_loop, ieb_server, monkeypatch):
     # Make initialisation faster.
     monkeypatch.setitem(jaeger.config["fps"], "initialise_timeouts", 0.05)
 
-    # Do not use the DB
-    monkeypatch.setitem(jaeger.config["fps"], "use_database", False)
+    fps = VirtualFPS()
 
-    fps = await VirtualFPS().start()
-
-    assert fps.ieb
+    assert isinstance(fps.ieb, IEB)
     fps.ieb.client.host = "127.0.0.1"
     fps.ieb.client.port = 5020
 
+    await asyncio.sleep(0.001)  # Give time to the IEB server to serve.
+
+    await fps.initialise()
+
     yield fps
 
-    assert fps.can and fps.can._command_queue_task
+    assert isinstance(fps.can, JaegerCAN) and fps.can._command_queue_task
 
     fps.ieb.client.stop()
     fps.can._command_queue_task.cancel()

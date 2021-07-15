@@ -15,7 +15,7 @@ import warnings
 from contextlib import suppress
 from dataclasses import dataclass
 
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from jaeger import config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
@@ -36,7 +36,9 @@ from jaeger.utils import Poller, PollerList, bytes_to_int
 __all__ = ["BaseFPS", "FPS"]
 
 
-@dataclass
+MIN_BETA = 160
+
+
 class BaseFPS(dict):
     """A class describing the Focal Plane System.
 
@@ -53,9 +55,9 @@ class BaseFPS(dict):
 
     """
 
-    positioner_class: Type[Any] = Positioner
+    positioner_class: ClassVar[Type[Any]] = Positioner
 
-    def __post_init__(self):
+    def __init__(self):
         dict.__init__(self, {})
 
     @property
@@ -91,16 +93,25 @@ class BaseFPS(dict):
 T = TypeVar("T", bound="FPS")
 
 
+@dataclass
 class FPS(BaseFPS):
     """A class describing the Focal Plane System.
+
+    The recommended way to instantiate a new `.FPS` object is to use the `.create`
+    classmethod ::
+
+        fps = await FPS.create(...)
+
+    which is equivalent to ::
+
+        fps = FPS(...)
+        await fps.initialise()
 
     Parameters
     ----------
     can
-        The CAN bus to use.
-    can_profile
-        The configuration profile for the CAN interface, or `None` to use the
-        default one. Ignored if ``can`` is passed.
+        A `.JaegerCAN` instance to use to communicate with the CAN network, or the CAN
+        profile from the configuration to use, or `None` to use the default one.
     ieb
         If `True` or `None`, connects the Instrument Electronics Box PLC controller
         using the path to the IEB configuration file stored in jaeger's configuration.
@@ -114,7 +125,7 @@ class FPS(BaseFPS):
     the connected positioners. Note that `~.FPS.initialise` is a coroutine
     which needs to be awaited ::
 
-        >>> fps = FPS(can_profile='default')
+        >>> fps = FPS(can='default')
         >>> await fps.initialise()
         >>> fps.positioners[4].status
         <Positioner (id=4, status='SYSTEM_INITIALIZED|
@@ -123,12 +134,12 @@ class FPS(BaseFPS):
 
     """
 
-    def __init__(
-        self,
-        can: str | JaegerCAN = None,
-        can_profile: Optional[str] = None,
-        ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = True,
-    ):
+    can: JaegerCAN | str | None = None
+    ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
+
+    def __post_init__(self):
+
+        super().__init__()
 
         # Start file logger
         start_file_loggers(start_log=True, start_can=False)
@@ -141,50 +152,40 @@ class FPS(BaseFPS):
         self.loop = asyncio.get_event_loop()
         self.loop.set_exception_handler(log.asyncio_exception_handler)
 
-        self.connected: bool = False
-        self._can_profile = can_profile
-
-        #: The mapping between positioners and buses.
+        # The mapping between positioners and buses.
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
-        self.can: JaegerCAN | None = None
-
-        if isinstance(can, JaegerCAN):
-            #: The `.JaegerCAN` instance that serves as a CAN bus interface.
-            self.can = can
-            self.connected = True
-
         self._is_multibus = False
+
         self._locked = False
 
-        #: .IEB: Connection to the instrument electronics box over Modbus.
-        self.ieb: IEB | None = None
+        if self.ieb is None or self.ieb is True:
+            self.ieb = config["files"]["ieb_config"]
 
-        if ieb is None or ieb is True:
-            ieb = config["files"]["ieb_config"]
+        if isinstance(self.ieb, pathlib.Path):
+            self.ieb = str(self.ieb)
 
-        if isinstance(self.ieb, IEB):
-            pass
-        elif isinstance(ieb, (str, dict)):
-            if isinstance(ieb, str):
-                ieb = os.path.expanduser(os.path.expandvars(ieb))
-                if not os.path.isabs(ieb):
-                    ieb = os.path.join(os.path.dirname(__file__), ieb)
+        if isinstance(self.ieb, (str, dict)):
+            if isinstance(self.ieb, str):
+                self.ieb = os.path.expanduser(os.path.expandvars(self.ieb))
+                if not os.path.isabs(self.ieb):
+                    self.ieb = os.path.join(os.path.dirname(__file__), self.ieb)
             try:
-                self.ieb = IEB.from_config(ieb)
+                self.ieb = IEB.from_config(self.ieb)
             except FileNotFoundError:
                 warnings.warn(
-                    f"IEB configuration file {ieb} cannot be loaded.",
+                    f"IEB configuration file {self.ieb} cannot be loaded.",
                     JaegerUserWarning,
                 )
-        elif ieb is False:
+                self.ieb = None
+        elif self.ieb is False:
             self.ieb = None
         else:
-            raise ValueError(f"Invalid input value for ieb {ieb!r}.")
+            raise ValueError(f"Invalid input value for ieb {self.ieb!r}.")
 
-        super().__init__()
+        assert isinstance(self.ieb, IEB) or self.ieb is None
 
-        #: Position and status pollers
+        # Position and status pollers
         self.pollers = PollerList(
             [
                 Poller(
@@ -202,275 +203,46 @@ class FPS(BaseFPS):
             ]
         )
 
-    async def start(self, can_profile: Optional[str] = None):
+    @classmethod
+    async def create(
+        cls,
+        can=None,
+        ieb=None,
+        initialise=True,
+        start_pollers=True,
+    ) -> FPS:
         """Starts the CAN bus and .
 
         Parameters
         ----------
-        can_profile
-            The CAN profile. If not specified, will use the CAN profile passed during
-            the instance initialisation.
-
-        """
-
-        if not isinstance(self.can, JaegerCAN):
-            can_profile = can_profile or self._can_profile
-            try:
-                self.can = await JaegerCAN.from_profile(can_profile, fps=self)
-            except ConnectionRefusedError:
-                raise
-
-        self.connected = True
-
-        return self
-
-    async def _get_positioner_bus_map(self):
-        """Creates the positioner-to-bus map.
-
-        Only relevant if the bus interface is multichannel/multibus.
-
-        """
-
-        assert self.can and self.connected, "CAN connection not established."
-
-        if len(self.can.interfaces) == 1 and not self.can.multibus:
-            self._is_multibus = False
-            return
-
-        self._is_multibus = True
-
-        id_cmd = self.send_command(
-            CommandID.GET_ID,
-            timeout=config["fps"]["initialise_timeouts"],
-        )
-        await id_cmd
-
-        # Parse the replies
-        for reply in id_cmd.replies:
-            self.positioner_to_bus[reply.positioner_id] = (
-                reply.message.interface,
-                reply.message.bus,
-            )
-
-    def is_bootloader(self):
-        """Returns `True` if any positioner is in bootloader mode."""
-
-        return any([pos.is_bootloader() is not False for pos in self.values()])
-
-    def send_command(
-        self,
-        command: str | int | CommandID | Command,
-        positioner_id: int = 0,
-        data: List[bytearray] = [bytearray([])],
-        interface: Optional[BusABC] = None,
-        bus: Optional[int] = None,
-        broadcast: bool = False,
-        override: bool = False,
-        safe: bool = False,
-        synchronous: bool = False,
-        **kwargs,
-    ) -> Command:
-        """Sends a command to the bus.
-
-        Parameters
-        ----------
-        command
-            The ID of the command, either as the integer value, a string,
-            or the `.CommandID` flag. Alternatively, the `.Command` to send.
-        positioner_id
-            The positioner ID to command, or zero for broadcast.
-        data
-            The bytes to send.
-        interface
-            The index in the interface list for the interface to use. Only
-            relevant in case of a multibus interface. If `None`, the positioner
-            to bus map will be used.
-        bus
-            The bus within the interface to be used. Only relevant in case of
-            a multibus interface. If `None`, the positioner to bus map will
-            be used.
-        broadcast
-            If `True`, sends the command to all the buses.
-        override
-            If another instance of this command_id with the same positioner_id
-            is running, cancels it and schedules this one immediately.
-            Otherwise the command is queued until the first one finishes.
-        safe
-            Whether the command is safe to send to a locked `.FPS`.
-        synchronous
-            If `True`, the command is sent to the CAN network immediately,
-            skipping the command queue. No tracking is done for this command.
-            It should only be used for shutdown commands.
+        initialise
+            Whether to initialise the FPS.
+        start_pollers
+            Whether to initialise the pollers.
         kwargs
-            Extra arguments to be passed to the command.
-
-        Returns
-        -------
-        command
-            The command sent to the bus. The command needs to be awaited
-            before it is considered done.
+            Parameters to pass to `.FPS`.
 
         """
 
-        assert self.can and self.connected, "CAN connection not established."
+        instance = cls(can=can, ieb=ieb)
+        await instance._start_can()
 
-        if positioner_id == 0:
-            broadcast = True
+        if initialise:
+            await instance.initialise(start_pollers=start_pollers)
 
-        if not isinstance(command, Command):
-            command_flag = CommandID(command)
-            CommandClass = command_flag.get_command_class()
-            assert CommandClass, "CommandClass not defined"
+        return instance
 
-            command = CommandClass(
-                positioner_id=positioner_id,
-                loop=self.loop,
-                data=data,
-                **kwargs,
-            )
+    async def _start_can(self):
+        """Starts the JaegerCAN interface."""
 
-        assert isinstance(command, Command)
-
-        if broadcast:
-            if any([self[pos].disabled for pos in self]) and not command.safe:
-                raise JaegerError("Some positioners are disabled. Use send_to_all.")
-        else:
-            if self[positioner_id].disabled and not command.safe:
-                raise JaegerError(f"Positioner {positioner_id} is disabled.")
-
-        if positioner_id != 0 and positioner_id not in self.positioners:
-            raise JaegerError(f"Positioner {positioner_id} is not connected.")
-
-        # Check if we are in bootloader mode.
-        if (broadcast and self.is_bootloader()) or (
-            not broadcast and self[positioner_id].is_bootloader() is not False
-        ):
-            if not command.bootloader:
-                raise JaegerError(
-                    f"Cannot send command {command.command_id.name!r} "
-                    "while in bootloader mode."
-                )
-
-        command_name = command.name
-        command_uid = command.command_uid
-        header = f"({command_name}, {positioner_id}, {command_uid}): "
-
-        if self.locked:
-            if command.safe or safe:
-                log.debug(f"FPS is locked but {command_name} is safe.")
+        if isinstance(self.can, JaegerCAN):
+            if self.can._started:
+                return
             else:
-                command.cancel(silent=True)
-                raise FPSLockedError(
-                    "Solve the problem and unlock the FPS before sending commands."
-                )
+                await self.can.start()
+                return
 
-        elif command.move_command and self.moving:
-            command.cancel(silent=True)
-            raise JaegerError(
-                "Cannot send move command while the "
-                "FPS is moving. Use FPS.stop_trajectory() "
-                "to stop the FPS."
-            )
-
-        if command.status.is_done:
-            raise JaegerError(header + "trying to send a done command.")
-
-        command._override = override
-
-        # By default a command will be sent to all interfaces and buses.
-        # Normally we want to set the interface and bus to which the command
-        # will be sent.
-        if not broadcast:
-            self.set_interface(command, bus=bus, interface=interface)
-            if command.status == command.status.FAILED:
-                return command
-
-        if not synchronous:
-            assert self.can.command_queue
-            self.can.command_queue.put_nowait(command)
-            log.debug(header + "added command to CAN processing queue.")
-        else:
-            self.can._send_messages(command)
-            log.debug(header + "sent command to CAN synchronously.")
-
-        return command
-
-    def set_interface(
-        self,
-        command: Command,
-        interface: Optional[BusABC] = None,
-        bus: Optional[int] = None,
-    ):
-        """Sets the interface and bus to which to send a command."""
-
-        # Don't do anything if the interface is not multibus
-        if not self._is_multibus or command.positioner_id == 0:
-            return
-
-        if bus or interface:
-            command._interfaces = [interface] if interface else None
-            command._bus = bus
-            return
-
-        if command.positioner_id not in self.positioner_to_bus:
-            command.finish_command(command.status.FAILED)
-            raise JaegerError(
-                f"Positioner {command.positioner_id} has no assigned bus."
-            )
-
-        interface, bus = self.positioner_to_bus[command.positioner_id]
-
-        command._interfaces = [interface]
-        command._bus = bus
-
-        return
-
-    @property
-    def locked(self):
-        """Returns `True` if the `.FPS` is locked."""
-
-        return self._locked
-
-    async def lock(self, stop_trajectories: bool = True):
-        """Locks the `.FPS` and prevents commands to be sent.
-
-        Parameters
-        ----------
-        stop_trajectories
-            Whether to stop trajectories when locking.
-
-        """
-
-        warnings.warn("Locking FPS.", JaegerUserWarning)
-        self._locked = True
-
-        if stop_trajectories:
-            await self.stop_trajectory()
-
-    async def unlock(self, force=False):
-        """Unlocks the `.FPS` if all collisions have been resolved."""
-
-        await self.update_status(timeout=0.1)
-
-        for positioner in self.positioners.values():
-            if positioner.collision:
-                self._locked = True
-                raise JaegerError(
-                    "Cannot unlock the FPS until all "
-                    "the collisions have been cleared."
-                )
-
-        self._locked = False
-
-        return True
-
-    @property
-    def moving(self):
-        """Returns `True` if any of the positioners is moving."""
-
-        return any(
-            [pos.moving for pos in self.values() if pos.status != pos.flags.UNKNOWN]
-        )
+        self.can = await JaegerCAN.create(self.can, fps=self)
 
     async def initialise(self: T, start_pollers: bool = True) -> T:
         """Initialises all positioners with status and firmware version.
@@ -482,17 +254,21 @@ class FPS(BaseFPS):
 
         """
 
-        if not self.connected:
-            warnings.warn("CAN connection not established. Trying now.")
-            await self.start()
-            if not self.connected:
-                raise RuntimeError("Failed connecting to CAN.")
+        await self._start_can()
 
-        # Test IEB connection. This will issue a warning and set
-        # self.ieb.disabled=True if the connection fails.
+        # Test IEB connection.
         if isinstance(self.ieb, IEB):
-            async with self.ieb:
-                pass
+            try:
+                async with self.ieb:
+                    pass
+            except BaseException as err:
+                warnings.warn(str(err), JaegerUserWarning)
+
+        assert isinstance(self.can, JaegerCAN), "CAN connection not established."
+
+        if len(self.can.interfaces) == 0:
+            warnings.warn("CAN interfaces not found.", JaegerUserWarning)
+            return self
 
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
@@ -587,9 +363,9 @@ class FPS(BaseFPS):
                 log.info("FPS unlocked successfully.")
 
         if config.get("safe_mode", False) is not False:
-            min_beta = 160
+            min_beta = MIN_BETA
             if isinstance(config["safe_mode"], dict):
-                min_beta = config["safe_mode"].get("min_beta", 160)
+                min_beta = config["safe_mode"].get("min_beta", MIN_BETA)
             warnings.warn(
                 f"Safe mode enabled. Minimum beta is {min_beta} degrees.",
                 JaegerUserWarning,
@@ -600,6 +376,240 @@ class FPS(BaseFPS):
             self.pollers.start()
 
         return self
+
+    async def _get_positioner_bus_map(self):
+        """Creates the positioner-to-bus map.
+
+        Only relevant if the bus interface is multichannel/multibus.
+
+        """
+
+        assert isinstance(self.can, JaegerCAN), "CAN connection not established."
+
+        if len(self.can.interfaces) == 1 and not self.can.multibus:
+            self._is_multibus = False
+            return
+
+        self._is_multibus = True
+
+        timeout = config["fps"]["initialise_timeouts"]
+        id_cmd = self.send_command(CommandID.GET_ID, timeout=timeout)
+        await id_cmd
+
+        # Parse the replies
+        for reply in id_cmd.replies:
+            iface = reply.message.interface
+            bus = reply.message.bus
+            self.positioner_to_bus[reply.positioner_id] = (iface, bus)
+
+    @property
+    def locked(self):
+        """Returns `True` if the `.FPS` is locked."""
+
+        return self._locked
+
+    @property
+    def moving(self):
+        """Returns `True` if any of the positioners is moving."""
+
+        return any(
+            [pos.moving for pos in self.values() if pos.status != pos.flags.UNKNOWN]
+        )
+
+    def is_bootloader(self):
+        """Returns `True` if any positioner is in bootloader mode."""
+
+        return any([pos.is_bootloader() is not False for pos in self.values()])
+
+    def send_command(
+        self,
+        command: str | int | CommandID | Command,
+        positioner_id: int = 0,
+        data: List[bytearray] = [bytearray([])],
+        interface: Optional[BusABC] = None,
+        bus: Optional[int] = None,
+        broadcast: bool = False,
+        synchronous: bool = False,
+        **kwargs,
+    ) -> Command:
+        """Sends a command to the bus.
+
+        Parameters
+        ----------
+        command
+            The ID of the command, either as the integer value, a string,
+            or the `.CommandID` flag. Alternatively, the `.Command` to send.
+        positioner_id
+            The positioner ID to command, or zero for broadcast.
+        data
+            The bytes to send.
+        interface
+            The index in the interface list for the interface to use. Only
+            relevant in case of a multibus interface. If `None`, the positioner
+            to bus map will be used.
+        bus
+            The bus within the interface to be used. Only relevant in case of
+            a multibus interface. If `None`, the positioner to bus map will
+            be used.
+        broadcast
+            If `True`, sends the command to all the buses.
+        synchronous
+            If `True`, the command is sent to the CAN network immediately,
+            skipping the command queue. No tracking is done for this command.
+            It should only be used for shutdown commands.
+        kwargs
+            Extra arguments to be passed to the command.
+
+        Returns
+        -------
+        command
+            The command sent to the bus. The command needs to be awaited
+            before it is considered done.
+
+        """
+
+        assert isinstance(self.can, JaegerCAN), "CAN connection not established."
+
+        if positioner_id == 0:
+            broadcast = True
+
+        if not isinstance(command, Command):
+            command_flag = CommandID(command)
+            CommandClass = command_flag.get_command_class()
+            assert CommandClass, "CommandClass not defined"
+
+            command = CommandClass(
+                positioner_id=positioner_id,
+                loop=self.loop,
+                data=data,
+                **kwargs,
+            )
+
+        assert isinstance(command, Command)
+
+        if broadcast:
+            if any([self[pos].disabled for pos in self]) and not command.safe:
+                raise JaegerError("Some positioners are disabled. Use send_to_all.")
+        else:
+            if self[positioner_id].disabled and not command.safe:
+                raise JaegerError(f"Positioner {positioner_id} is disabled.")
+
+        if positioner_id != 0 and positioner_id not in self.positioners:
+            raise JaegerError(f"Positioner {positioner_id} is not connected.")
+
+        # Check if we are in bootloader mode.
+        if (broadcast and self.is_bootloader()) or (
+            not broadcast and self[positioner_id].is_bootloader() is not False
+        ):
+            if not command.bootloader:
+                raise JaegerError(
+                    f"Cannot send command {command.command_id.name!r} "
+                    "while in bootloader mode."
+                )
+
+        command_name = command.name
+        command_uid = command.command_uid
+        header = f"({command_name}, {positioner_id}, {command_uid}): "
+
+        if self.locked:
+            if command.safe:
+                log.debug(f"FPS is locked but {command_name} is safe.")
+            else:
+                command.cancel(silent=True)
+                raise FPSLockedError(
+                    "Solve the problem and unlock the FPS before sending commands."
+                )
+
+        elif command.move_command and self.moving:
+            command.cancel(silent=True)
+            raise JaegerError(
+                "Cannot send move command while the "
+                "FPS is moving. Use FPS.stop_trajectory() "
+                "to stop the FPS."
+            )
+
+        if command.status.is_done:
+            raise JaegerError(header + "trying to send a done command.")
+
+        # By default a command will be sent to all interfaces and buses.
+        # Normally we want to set the interface and bus to which the command
+        # will be sent.
+        if not broadcast:
+            self._set_interface(command, bus=bus, interface=interface)
+            if command.status == command.status.FAILED:
+                return command
+
+        if not synchronous:
+            assert self.can.command_queue
+            self.can.command_queue.put_nowait(command)
+            log.debug(header + "added command to CAN processing queue.")
+        else:
+            self.can._send_messages(command)
+            log.debug(header + "sent command to CAN synchronously.")
+
+        return command
+
+    def _set_interface(
+        self,
+        command: Command,
+        interface: Optional[BusABC] = None,
+        bus: Optional[int] = None,
+    ):
+        """Sets the interface and bus to which to send a command."""
+
+        # Don't do anything if the interface is not multibus
+        if not self._is_multibus or command.positioner_id == 0:
+            return
+
+        if bus or interface:
+            command._interfaces = [interface] if interface else None
+            command._bus = bus
+            return
+
+        positioner_id = command.positioner_id
+
+        if positioner_id not in self.positioner_to_bus:
+            command.finish_command(command.status.FAILED)
+            raise JaegerError(f"Positioner {positioner_id} has no assigned bus.")
+
+        interface, bus = self.positioner_to_bus[positioner_id]
+
+        command._interfaces = [interface]
+        command._bus = bus
+
+        return
+
+    async def lock(self, stop_trajectories: bool = True):
+        """Locks the `.FPS` and prevents commands to be sent.
+
+        Parameters
+        ----------
+        stop_trajectories
+            Whether to stop trajectories when locking.
+
+        """
+
+        warnings.warn("Locking FPS.", JaegerUserWarning)
+        self._locked = True
+
+        if stop_trajectories:
+            await self.stop_trajectory()
+
+    async def unlock(self, force=False):
+        """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        await self.update_status(timeout=0.1)
+
+        for positioner in self.positioners.values():
+            if positioner.collision:
+                self._locked = True
+                raise JaegerError(
+                    "Cannot unlock the FPS until all the collisions have been cleared."
+                )
+
+        self._locked = False
+
+        return True
 
     async def update_status(
         self,
@@ -633,7 +643,6 @@ class FPS(BaseFPS):
             positioner_id=0,
             n_positioners=n_positioners,
             timeout=timeout,
-            override=True,
         )
         await command
 
@@ -888,6 +897,7 @@ class FPS(BaseFPS):
                 )
                 for ii, positioner_id in enumerate(positioners)
             ]
+
         try:
             await asyncio.gather(*commands)
         except (JaegerError, FPSLockedError):
@@ -924,10 +934,13 @@ class FPS(BaseFPS):
         except AttributeError:
             pass
 
-        if self.ieb is None or self.ieb.disabled:
+        if not isinstance(self.ieb, IEB):
             status["ieb"] = False
         else:
-            status["ieb"] = await self.ieb.get_status()
+            if self.ieb.disabled:
+                status["ieb"] = False
+            else:
+                status["ieb"] = await self.ieb.get_status()
 
         return status
 
