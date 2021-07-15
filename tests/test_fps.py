@@ -112,7 +112,7 @@ async def test_positioner_disabled_send_command_fails_broadcast(vfps):
     with pytest.raises(JaegerError) as err:
         await vfps.send_command("START_TRAJECTORY", positioner_id=0)
 
-    assert "Some positioners are disabled. Use send_to_all." in str(err)
+    assert "Some positioners are disabled." in str(err)
 
 
 async def test_positioner_disabled_send_command_fails(vfps):
