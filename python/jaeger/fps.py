@@ -429,7 +429,7 @@ class FPS(BaseFPS):
         interface: Optional[BusABC] = None,
         bus: Optional[int] = None,
         broadcast: bool = False,
-        synchronous: bool = False,
+        now: bool = False,
         **kwargs,
     ) -> Command:
         """Sends a command to the bus.
@@ -453,10 +453,10 @@ class FPS(BaseFPS):
             be used.
         broadcast
             If `True`, sends the command to all the buses.
-        synchronous
+        now
             If `True`, the command is sent to the CAN network immediately,
             skipping the command queue. No tracking is done for this command.
-            It should only be used for shutdown commands.
+            It should only be used for emergency and shutdown commands.
         kwargs
             Extra arguments to be passed to the command.
 
@@ -489,7 +489,10 @@ class FPS(BaseFPS):
 
         if broadcast:
             if any([self[pos].disabled for pos in self]) and not command.safe:
-                raise JaegerError("Some positioners are disabled. Use send_to_all.")
+                raise JaegerError(
+                    "Some positioners are disabled. "
+                    "Use send_to_all with a list of valid positioners."
+                )
         else:
             if self[positioner_id].disabled and not command.safe:
                 raise JaegerError(f"Positioner {positioner_id} is disabled.")
@@ -539,13 +542,13 @@ class FPS(BaseFPS):
             if command.status == command.status.FAILED:
                 return command
 
-        if not synchronous:
+        if not now:
             assert self.can.command_queue
             self.can.command_queue.put_nowait(command)
             log.debug(header + "added command to CAN processing queue.")
         else:
-            self.can._send_messages(command)
-            log.debug(header + "sent command to CAN synchronously.")
+            self.can.send_messages(command)
+            log.debug(header + "sent command to CAN immediately.")
 
         return command
 
