@@ -244,10 +244,15 @@ def power(command, fps):
 
 
 @power.command()
-async def on(command, fps):
+async def on(command, fps: FPS):
     """Powers on all the FPS IEB components."""
 
-    ieb: IEB = fps.ieb
+    command.info(text="Turning pollers off.")
+    await fps.pollers.stop()
+
+    ieb = fps.ieb
+    if not isinstance(ieb, IEB) or ieb.disabled:
+        return command.fail(error="IEB is not conencted or is disabled.")
 
     # Sequence of relays to power on. Tuples indicate relays that can be powered
     # on concurrently.
@@ -284,7 +289,12 @@ async def on(command, fps):
 async def off(command, fps, nucs):
     """Powers off all the FPS IEB components."""
 
-    ieb: IEB = fps.ieb
+    command.info(text="Turning pollers off.")
+    await fps.pollers.stop()
+
+    ieb = fps.ieb
+    if not isinstance(ieb, IEB) or ieb.disabled:
+        return command.fail(error="IEB is not conencted or is disabled.")
 
     # Sequence of relays to power off. Tuples indicate relays that can be powered
     # off concurrently.
@@ -328,7 +338,8 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
 
     raw_value = 32 * int(1023 * (value / 100))
 
-    assert fps.ieb
+    if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
+        return command.fail(error="IEB is not conencted or is disabled.")
 
     try:
         device = fps.ieb.get_device(device_name)

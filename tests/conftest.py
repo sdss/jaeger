@@ -129,7 +129,7 @@ async def vpositioners(test_config, vfps, event_loop):
 async def actor(vfps):
 
     await vfps.initialise()
-    await asyncio.sleep(0.1)
+    await asyncio.sleep(0.001)
 
     jaeger_actor = JaegerActor(
         vfps,
