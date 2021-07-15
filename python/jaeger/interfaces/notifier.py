@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, List
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, TypeVar
 
 from .message import Message
 
@@ -22,12 +22,13 @@ __all__ = ["Notifier"]
 
 
 Listener_co = Callable[..., Coroutine[Message, Any, Any]]
+Bus_co = TypeVar("Bus_co", bound="BusABC")
 
 
 class Notifier:
     """Notifier class to report bus messages to multiple listeners."""
 
-    def __init__(self, listeners: List[Listener_co] = [], buses: List[BusABC] = []):
+    def __init__(self, listeners: List[Listener_co] = [], buses: List[Bus_co] = []):
 
         self.loop = asyncio.get_running_loop()
 

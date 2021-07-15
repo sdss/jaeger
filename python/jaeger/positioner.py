@@ -186,7 +186,6 @@ class Positioner(StatusMixIn):
             command = await self.send_command(
                 CommandID.GET_ACTUAL_POSITION,
                 timeout=timeout,
-                override=True,
             )
 
             if command.status.failed:

@@ -33,9 +33,12 @@ class VirtualFPS(jaeger.FPS):
 
     """
 
-    def __init__(self):
+    def __post_init__(self):
 
-        super().__init__(can_profile="virtual", ieb=True)
+        self.can = "virtual"
+        self.ieb = True
+
+        super().__post_init__()
 
         self._vpositioner_bus = VirtualBus(config["profiles"]["virtual"]["channel"])
         self._vpositioners = {}

@@ -42,7 +42,6 @@ A simple jaeger program
 
         # Initialise the FPS instance.
         fps = FPS()
-        await fps.start()
         await fps.initialise()
 
         # Print the status of positioner 4

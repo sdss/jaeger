@@ -86,9 +86,7 @@ class FPSWrapper(object):
             for pid in range(self.npositioners):
                 self.fps.add_virtual_positioner(pid + 1)
         else:
-            self.fps = FPS(can_profile=self.profile, ieb=self.ieb)
-
-        await self.fps.start()
+            self.fps = FPS(can=self.profile, ieb=self.ieb)
 
         __FPS__ = self.fps
 

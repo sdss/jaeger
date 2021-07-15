@@ -279,8 +279,6 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
         self._done_callback = done_callback
 
-        self._override = False
-
         self._timeout_handle = None
 
         StatusMixIn.__init__(
