@@ -7,6 +7,10 @@
 * [#127](https://github.com/sdss/jaeger/issues/127) Implemented positioner LED on/off commands.
 * [#128](https://github.com/sdss/jaeger/issues/128) Deprecated the use of `python-can` buses since they block in a non-asynchronous way. This caused significant inefficiencies when controller >200 robots, especially on computers with old CPUs. This PR implements the major changes, including refacting `JaegerCAN` and `FPS` to initialise the buses asynchronously, and a reimplementation of `CANNetBus`, `VirtualBus`, and `Notifier`. This PR also includes some general performance gains such as a better implementation of `parse_identifier`.
 
+### ✨ Improved
+
+* [#135](https://github.com/sdss/jaeger/issues/135) Cleaned up initialisation methods for `JaegerCAN` and `FPS`. Objects can now be instantiated and initialised at the same time using the async classmethod `.create()`.
+
 ### 🧹 Cleaned
 
 * [#129](https://github.com/sdss/jaeger/issues/129) Removed the use of the database and predefined layouts for the FPS. Default mode is that positioners are always auto-discovered.
