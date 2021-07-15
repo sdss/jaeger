@@ -9,7 +9,7 @@
 import asyncio
 import zlib
 
-from typing import Optional
+from typing import Optional, Tuple
 
 import jaeger
 from jaeger import config, utils
@@ -121,7 +121,7 @@ class VirtualPositioner(StatusMixIn):
         positioner_id: int,
         bus: Optional[VirtualBus] = None,
         centre: Optional[tuple] = None,
-        position: tuple[float, float] = (0.0, 0.0),
+        position: Tuple[float, float] = (0.0, 0.0),
         speed: Optional[tuple] = None,
         firmware: str = "10.11.12",
     ):
