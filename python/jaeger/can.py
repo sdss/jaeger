@@ -144,9 +144,6 @@ class JaegerCAN(Generic[Bus_co]):
             except Exception as ee:
                 raise ee.__class__(f"connection to {itype}:{channel} failed: {ee}.")
 
-        if len(self.interfaces) == 0:
-            warnings.warn("cannot connect to any interface.", JaegerUserWarning)
-
         self.command_queue = asyncio.Queue()
         self._command_queue_task = asyncio.create_task(self._process_queue())
 
