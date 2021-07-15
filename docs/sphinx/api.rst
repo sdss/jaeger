@@ -47,6 +47,6 @@ jaeger.utils
 jaeger.interfaces
 -----------------
 
-.. automodule:: jaeger.interfaces.cannet
-   :members:
+.. automodule:: jaeger.interfaces
+   :imported-members:
    :show-inheritance:

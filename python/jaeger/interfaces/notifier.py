@@ -12,7 +12,7 @@ import asyncio
 
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, List
 
-from can import Message
+from .message import Message
 
 
 if TYPE_CHECKING:

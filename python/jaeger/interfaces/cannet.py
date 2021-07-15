@@ -10,9 +10,8 @@ from __future__ import annotations
 import asyncio
 import time
 
-from can import Message
-
 from .bus import BusABC
+from .message import Message
 
 
 class CANNetMessage(Message):

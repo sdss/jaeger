@@ -16,17 +16,16 @@ import time
 
 from typing import Callable, List, Optional
 
-import can
-
 from jaeger import can_log, config, log, maskbits
 from jaeger.exceptions import CommandError, JaegerError
+from jaeger.interfaces import BusABC, Message
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
 
 from . import CommandID
 
 
-__all__ = ["Message", "Command"]
+__all__ = ["SuperMessage", "Command"]
 
 
 # A pool of UIDs that can be assigned to each command for a given command_id.
@@ -39,10 +38,10 @@ UID_POOL = collections.defaultdict(dict)
 COMMAND_UID = 0
 
 
-class Message(can.Message):
-    """An extended `can.Message` class.
+class SuperMessage(Message):
+    """An extended CAN ``Message`` class.
 
-    Expands the `can.Message` class to handle custom arbitration IDs for
+    Expands the ``Message`` class to handle custom arbitration IDs for
     extended frames.
 
     Parameters
@@ -50,7 +49,7 @@ class Message(can.Message):
     command
         The command associated with this message.
     data
-        Payload to pass to `can.Message`.
+        Payload to pass to ``Message``.
     positioner_id
         The positioner to which the message will be sent (0 for broadcast).
     uid
@@ -88,7 +87,7 @@ class Message(can.Message):
         else:
             arbitration_id = positioner_id
 
-        can.Message.__init__(
+        Message.__init__(
             self,
             data=data,
             arbitration_id=arbitration_id,
@@ -108,14 +107,14 @@ class Reply(object):
 
     """
 
-    def __init__(self, message: can.Message, command: Optional[Command] = None):
+    def __init__(self, message: Message, command: Optional[Command] = None):
 
-        assert isinstance(message, can.Message), "invalid message"
+        assert isinstance(message, Message), "invalid message"
 
         #: The command for which this reply is intended.
         self.command = command
 
-        #: The raw `~can.Message`.
+        #: The raw ``Message``.
         self.message = message
 
         #: The data from the message.
@@ -213,7 +212,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     #: Whether the command is safe to be issues in bootloader mode.
     bootloader = False
 
-    _interfaces: Optional[List[can.BusABC]]
+    _interfaces: Optional[List[BusABC]]
     _bus: Optional[int]
 
     def __init__(
@@ -524,7 +523,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
         if len(data) == 0:
             data = [bytearray([])]
 
-        messages = []
+        messages: List[SuperMessage] = []
 
         for ii, data_chunk in enumerate(data):
 
@@ -544,7 +543,14 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
                 raise CommandError("no UIDs left in the pool.")
 
-            messages.append(Message(self, positioner_id=pid, uid=uid, data=data_chunk))
+            messages.append(
+                SuperMessage(
+                    self,
+                    positioner_id=pid,
+                    uid=uid,
+                    data=data_chunk,
+                )
+            )
 
         return messages
 

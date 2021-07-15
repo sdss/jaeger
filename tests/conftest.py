@@ -11,7 +11,6 @@ import contextlib
 import os
 
 import pytest
-from can import Bus, Notifier
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
     ModbusServerContext,
@@ -54,18 +53,6 @@ def test_config():
     """Yield the test configuration as a dictionary."""
 
     yield read_yaml_file(TEST_CONFIG_FILE)
-
-
-@pytest.fixture()
-def notifier(test_config, event_loop):
-    """Yields a CAN notifier."""
-
-    channel = jaeger.config["profiles"]["virtual"]["channel"]
-    notifier = Notifier(Bus(channel, bustype="virtual"), [], loop=event_loop)
-
-    yield notifier
-
-    notifier.stop()
 
 
 @pytest.fixture()
