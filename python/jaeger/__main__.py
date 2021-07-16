@@ -25,6 +25,7 @@ from sdsstools.daemonizer import DaemonGroup
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
+from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.fps import FPS
 from jaeger.testing import VirtualFPS
 
@@ -96,8 +97,11 @@ class FPSWrapper(object):
         return self.fps
 
     async def __aexit__(self, *excinfo):
-        assert self.fps
-        await self.fps.shutdown()
+        try:
+            assert self.fps
+            await self.fps.shutdown()
+        except JaegerError as err:
+            warnings.warn(f"Failed shutting down FPS: {err}", JaegerUserWarning)
 
 
 pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
