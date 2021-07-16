@@ -9,14 +9,18 @@
 import asyncio
 import math
 
+from typing import TYPE_CHECKING
+
 import click
 
+from clu.command import Command
 from clu.parsers.click import pass_args
 
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.testing import VirtualFPS
 
+from .. import JaegerActor
 from . import jaeger_parser
 
 
@@ -344,3 +348,29 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
 
     await device.write(raw_value)
     return command.finish()
+
+
+@ieb.command()
+@click.option("-v", "--verbose", is_flag=True, help="Shows extra information.")
+async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
+    """Shows information about the IEB layout."""
+
+    ieb = fps.ieb
+
+    if not isinstance(ieb, IEB) or ieb.disabled:
+        return command.fail(error="IEB is not conencted or is disabled.")
+
+    modules = sorted(ieb.modules.keys())
+
+    command.info(text="Modules:")
+
+    for module in modules:
+        command.info(text=f"  {module}:")
+        command.info(text="    Devices:")
+        for dev_name in ieb[module].devices:
+            dev = ieb[module][dev_name]
+            command.info(text=f"      {dev_name}:")
+            if dev.category != "":
+                command.info(text=f"        category: {dev.category}")
+            if dev.description != "":
+                command.info(text=f"        description: {dev.description}")
