@@ -11,6 +11,7 @@
 ### ✨ Improved
 
 * [#135](https://github.com/sdss/jaeger/issues/135) Cleaned up initialisation methods for `JaegerCAN` and `FPS`. Objects can now be instantiated and initialised at the same time using the async classmethod `.create()`.
+* [#141](https://github.com/sdss/jaeger/issues/141) The `jaeger upgrade-firmware` command will now upgrade the firmware of one sextant at a time to avoid powering on too many power supplies at the same time.
 
 ### 🧹 Cleaned
 
