@@ -8,6 +8,7 @@
 * [#128](https://github.com/sdss/jaeger/issues/128) Deprecated the use of `python-can` buses since they block in a non-asynchronous way. This caused significant inefficiencies when controller >200 robots, especially on computers with old CPUs. This PR implements the major changes, including refacting `JaegerCAN` and `FPS` to initialise the buses asynchronously, and a reimplementation of `CANNetBus`, `VirtualBus`, and `Notifier`. This PR also includes some general performance gains such as a better implementation of `parse_identifier`.
 * [#134](https://github.com/sdss/jaeger/issues/134) Added a new actor command `reload` that will reinitialise the `FPS` instance and reload any new robots after a sextant power cycle.
 * [#142](https://github.com/sdss/jaeger/issues/142) Added an `ieb info` actor command to show information about the IEB layout to users.
+* [#119](https://github.com/sdss/jaeger/issues/119) Allow to manually add and initialise a single positioner.
 
 ### ✨ Improved
 
