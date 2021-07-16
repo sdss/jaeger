@@ -133,8 +133,6 @@ async def switch(command, fps, device, on, cycle):
     except Exception:
         return command.fail(error=f"failed to set status of device {dev_name!r}.")
 
-    command.debug(message={category: await _get_category_data(command, category)})
-
     if cycle:
         command.write("d", text="waiting 1 second before powering up.")
         await asyncio.sleep(1)
@@ -315,14 +313,7 @@ async def off(command, fps, nucs):
     ]
 
     if nucs:
-        off_seq += [
-            "NUC1",
-            "NUC2",
-            "NUC3",
-            "NUC4",
-            "NUC5",
-            "NUC6",
-        ]
+        off_seq += ["NUC1", "NUC2", "NUC3", "NUC4", "NUC5", "NUC6"]
 
     if not (await _power_sequence(command, ieb, off_seq, mode="off")):
         return
