@@ -86,7 +86,7 @@ async def status(command, fps):
 @click.option(
     "--on/--off",
     default=None,
-    help="the value of the device. If not provided, switches the current status.",
+    help="the desired state of the device. If not passed, switches the current state.",
 )
 @click.option(
     "--cycle",
