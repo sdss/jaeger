@@ -353,14 +353,15 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
 @ieb.command()
 @click.option("-v", "--verbose", is_flag=True, help="Shows extra information.")
 async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
-    """Shows information about the IEB layout."""
+    """Shows information about the IEB layout in a human-readable format."""
 
     ieb = fps.ieb
 
-    if not isinstance(ieb, IEB) or ieb.disabled:
+    if not isinstance(ieb, IEB):
         return command.fail(error="IEB is not conencted or is disabled.")
 
     modules = sorted(ieb.modules.keys())
+    categories = set()
 
     command.info(text="Modules:")
 
@@ -386,6 +387,7 @@ async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
             command.info(text=f"      {dev.name}:")
             if dev.category != "":
                 command.info(text=f"        category: {dev.category}")
+                categories.add(dev.category)
             if dev.description != "":
                 command.info(text=f"        description: {dev.description}")
 
@@ -398,5 +400,15 @@ async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
                     command.info(text=f"        type: {dev.__type__}")
                     if dev.__type__ == "relay" and dev.relay_type:
                         command.info(text=f"        relay type: {dev.relay_type}")
+
+    if len(categories) > 0 and command.actor and command.actor.model:
+
+        command.info(text="")
+        command.info(text="Keywords:")
+
+        for category in sorted(categories):
+            cat_data = command.actor.model.schema["properties"][category]
+            items = [item["title"] for item in cat_data["items"]]
+            command.info(text=f"  {category}=[{', '.join(items)}]")
 
     return command.finish()
