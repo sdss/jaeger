@@ -70,7 +70,7 @@ def ieb(command, fps):
 async def status(command, fps):
     """Outputs the status of the devices."""
 
-    categories = fps.ieb.get_categories()
+    categories = sorted(fps.ieb.get_categories())
 
     status_data = {}
     for category in categories:
