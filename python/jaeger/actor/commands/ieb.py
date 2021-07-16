@@ -9,8 +9,6 @@
 import asyncio
 import math
 
-from typing import TYPE_CHECKING
-
 import click
 
 from clu.command import Command
