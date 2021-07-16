@@ -153,7 +153,7 @@ class Positioner(StatusMixIn):
         if not isinstance(self.fps.can, JaegerCAN):
             raise PositionerError("CAN bus not found.")
 
-        if not self.fps._is_multibus:
+        if not self.fps.can.multibus:
             return (0, None)
 
         iface, bus = self.fps.positioner_to_bus[self.positioner_id]

@@ -161,8 +161,6 @@ class FPS(BaseFPS):
         # The mapping between positioners and buses.
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
-        self._is_multibus = False
-
         self._locked = False
 
         if self.ieb is None or self.ieb is True:
@@ -231,14 +229,14 @@ class FPS(BaseFPS):
         """
 
         instance = cls(can=can, ieb=ieb)
-        await instance._start_can()
+        await instance.start_can()
 
         if initialise:
             await instance.initialise(start_pollers=start_pollers)
 
         return instance
 
-    async def _start_can(self):
+    async def start_can(self):
         """Starts the JaegerCAN interface."""
 
         if isinstance(self.can, JaegerCAN):
@@ -289,7 +287,7 @@ class FPS(BaseFPS):
             await self.pollers.stop()
 
         # Make sure CAN buses are connected.
-        await self._start_can()
+        await self.start_can()
 
         # Test IEB connection.
         if isinstance(self.ieb, IEB):
@@ -422,10 +420,7 @@ class FPS(BaseFPS):
         assert isinstance(self.can, JaegerCAN), "CAN connection not established."
 
         if len(self.can.interfaces) == 1 and not self.can.multibus:
-            self._is_multibus = False
             return
-
-        self._is_multibus = True
 
         timeout = config["fps"]["initialise_timeouts"]
         id_cmd = self.send_command(CommandID.GET_ID, timeout=timeout)
@@ -595,13 +590,16 @@ class FPS(BaseFPS):
     ):
         """Sets the interface and bus to which to send a command."""
 
-        # Don't do anything if the interface is not multibus
-        if not self._is_multibus or command.positioner_id == 0:
-            return
+        assert isinstance(self.can, JaegerCAN), "JaegerCAN not initialised."
 
         if bus or interface:
             command._interfaces = [interface] if interface else None
             command._bus = bus
+            return
+
+        if len(self.can.interfaces) == 1 and not self.can.multibus:
+            command._interfaces = self.can.interfaces
+            command._bus = None
             return
 
         positioner_id = command.positioner_id
