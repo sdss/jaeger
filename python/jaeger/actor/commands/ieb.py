@@ -11,12 +11,14 @@ import math
 
 import click
 
+from clu.command import Command
 from clu.parsers.click import pass_args
 
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.testing import VirtualFPS
 
+from .. import JaegerActor
 from . import jaeger_parser
 
 
@@ -343,4 +345,68 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
         )
 
     await device.write(raw_value)
+    return command.finish()
+
+
+@ieb.command()
+@click.option("-v", "--verbose", is_flag=True, help="Shows extra information.")
+async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
+    """Shows information about the IEB layout in a human-readable format."""
+
+    ieb = fps.ieb
+
+    if not isinstance(ieb, IEB):
+        return command.fail(error="IEB is not conencted or is disabled.")
+
+    modules = sorted(ieb.modules.keys())
+    categories = set()
+
+    command.info(text="Modules:")
+
+    for module_name in modules:
+        module = ieb.modules[module_name]
+
+        command.info(text=f"  {module.name}:")
+
+        if module.description != "":
+            command.info(text=f"    description: {module.description}")
+
+        if verbose:
+            if module.model:
+                command.info(text=f"    model: {module.model}")
+            if module.mode:
+                command.info(text=f"    mode: {module.mode}")
+            if module.channels:
+                command.info(text=f"    channels: {module.channels}")
+
+        command.info(text="    Devices:")
+
+        for dev in ieb[module_name].devices.values():
+            command.info(text=f"      {dev.name}:")
+            if dev.category != "":
+                command.info(text=f"        category: {dev.category}")
+                categories.add(dev.category)
+            if dev.description != "":
+                command.info(text=f"        description: {dev.description}")
+
+            if verbose:
+                if dev.address:
+                    command.info(text=f"        address: {dev.address}")
+                if dev.channel:
+                    command.info(text=f"        channel: {dev.channel}")
+                if dev.__type__:
+                    command.info(text=f"        type: {dev.__type__}")
+                    if dev.__type__ == "relay" and dev.relay_type:
+                        command.info(text=f"        relay type: {dev.relay_type}")
+
+    if len(categories) > 0 and command.actor and command.actor.model:
+
+        command.info(text="")
+        command.info(text="Keywords:")
+
+        for category in sorted(categories):
+            cat_data = command.actor.model.schema["properties"][category]
+            items = [item["title"] for item in cat_data["items"]]
+            command.info(text=f"  {category}=[{', '.join(items)}]")
+
     return command.finish()
