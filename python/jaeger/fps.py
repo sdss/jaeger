@@ -257,6 +257,10 @@ class FPS(BaseFPS):
         # Clear all robots
         dict.__init__(self, {})
 
+        # Stop pollers while initialising
+        if self.pollers.running:
+            await self.pollers.stop()
+
         # Make sure CAN buses are connected.
         await self._start_can()
 
