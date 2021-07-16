@@ -46,7 +46,7 @@ class BaseFPS(dict):
     objects and can be used by the real `FPS` class or the
     `~jaeger.testing.VirtualFPS`.
 
-    Parameters
+    Attributes
     ----------
     positioner_class
         The class to be used to create a new positioner. In principle this will
@@ -55,7 +55,7 @@ class BaseFPS(dict):
 
     """
 
-    positioner_class: ClassVar[Type[Any]] = Positioner
+    positioner_class: ClassVar[Type[Positioner]] = Positioner
 
     def __init__(self):
         dict.__init__(self, {})
@@ -71,8 +71,18 @@ class BaseFPS(dict):
 
         return self
 
-    def add_positioner(self, positioner_id, centre=(None, None)) -> Positioner:
+    def add_positioner(
+        self,
+        positioner: int | Positioner,
+        centre=(None, None),
+    ) -> Positioner:
         """Adds a new positioner to the list, and checks for duplicates."""
+
+        if isinstance(positioner, self.positioner_class):
+            positioner_id = positioner.positioner_id
+        else:
+            positioner_id = positioner
+            positioner = self.positioner_class(positioner_id, None, centre=centre)
 
         if positioner_id in self.positioners:
             raise JaegerError(
@@ -81,13 +91,9 @@ class BaseFPS(dict):
                 f"{positioner_id}."
             )
 
-        self.positioners[positioner_id] = self.positioner_class(
-            positioner_id,
-            None,
-            centre=centre,
-        )
+        self.positioners[positioner_id] = positioner
 
-        return self.positioners[positioner_id]
+        return positioner
 
 
 T = TypeVar("T", bound="FPS")
@@ -154,8 +160,6 @@ class FPS(BaseFPS):
 
         # The mapping between positioners and buses.
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
-
-        self._is_multibus = False
 
         self._locked = False
 
@@ -225,14 +229,14 @@ class FPS(BaseFPS):
         """
 
         instance = cls(can=can, ieb=ieb)
-        await instance._start_can()
+        await instance.start_can()
 
         if initialise:
             await instance.initialise(start_pollers=start_pollers)
 
         return instance
 
-    async def _start_can(self):
+    async def start_can(self):
         """Starts the JaegerCAN interface."""
 
         if isinstance(self.can, JaegerCAN):
@@ -243,6 +247,27 @@ class FPS(BaseFPS):
                 return
 
         self.can = await JaegerCAN.create(self.can, fps=self)
+
+    def add_positioner(
+        self,
+        positioner: int | Positioner,
+        centre=(None, None),
+        interface: Optional[BusABC | int] = None,
+        bus: Optional[int] = None,
+    ) -> Positioner:
+
+        positioner = super().add_positioner(positioner, centre=centre)
+        positioner.fps = self
+
+        if interface is not None:
+            if isinstance(interface, int):
+                assert isinstance(self.can, JaegerCAN), "JaegerCAN not initialised."
+                interface = self.can.interfaces[interface]
+                assert isinstance(interface, BusABC), f"Invalid interface {interface!r}"
+            print(bus)
+            self.positioner_to_bus[positioner.positioner_id] = (interface, bus)
+
+        return positioner
 
     async def initialise(self: T, start_pollers: bool = True) -> T:
         """Initialises all positioners with status and firmware version.
@@ -262,7 +287,7 @@ class FPS(BaseFPS):
             await self.pollers.stop()
 
         # Make sure CAN buses are connected.
-        await self._start_can()
+        await self.start_can()
 
         # Test IEB connection.
         if isinstance(self.ieb, IEB):
@@ -395,10 +420,7 @@ class FPS(BaseFPS):
         assert isinstance(self.can, JaegerCAN), "CAN connection not established."
 
         if len(self.can.interfaces) == 1 and not self.can.multibus:
-            self._is_multibus = False
             return
-
-        self._is_multibus = True
 
         timeout = config["fps"]["initialise_timeouts"]
         id_cmd = self.send_command(CommandID.GET_ID, timeout=timeout)
@@ -568,13 +590,16 @@ class FPS(BaseFPS):
     ):
         """Sets the interface and bus to which to send a command."""
 
-        # Don't do anything if the interface is not multibus
-        if not self._is_multibus or command.positioner_id == 0:
-            return
+        assert isinstance(self.can, JaegerCAN), "JaegerCAN not initialised."
 
         if bus or interface:
             command._interfaces = [interface] if interface else None
             command._bus = bus
+            return
+
+        if len(self.can.interfaces) == 1 and not self.can.multibus:
+            command._interfaces = self.can.interfaces
+            command._bus = None
             return
 
         positioner_id = command.positioner_id

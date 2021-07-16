@@ -127,6 +127,21 @@ It's possible to use the `.FPS` object as an async context manager. The `.FPS` i
     async with fps:
         await fps[13].goto(10, 10)
 
+Adding a single positioner
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Normally one wants `.FPS.initialise` to autodiscover all the positioners connected to all the CAN interfaces. In some cases one may want a lower level control, adding positioners manually. That can be achieves with the following initialisation ::
+
+    >>> p20 = Positioner(20)
+    >>> fps = FPS()
+    >>> await fps.start_can()  # Initialise the CAN interfaces manually.
+    >>> fps.add_positioner(p20, interface=fps.can.interfaces[3], bus=3)
+    >>> await p20.initialise()
+    >>> p20.alpha, p20.beta
+    0.009910762310028076 180.0494384765625
+
+The ``interface=`` and ``bus=`` parameters to `~.FPS.add_positioner` can be skipped if `.JaegerCAN` has a single, non-multibus interface.
+
 .. _send-trajectory:
 
 Sending trajectories
