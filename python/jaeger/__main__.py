@@ -251,6 +251,12 @@ async def actor(fps_maker, no_tron):
     nargs=1,
     type=click.Path(exists=True),
 )
+@click.argument(
+    "SEXTANTS",
+    type=int,
+    nargs=-1,
+    required=False,
+)
 @click.option(
     "-f",
     "--force",
@@ -264,16 +270,16 @@ async def actor(fps_maker, no_tron):
     help="Comma-separated positioners to upgrade",
 )
 @click.option(
-    "-c",
-    "--cycle",
+    "-n",
+    "--no-cycle",
     is_flag=True,
-    help="Power cycle positioners before upgrade to set them to bootloader mode. "
-    "If --sextant not used, cycles all sextants",
+    help="Does not power cycle positioners before upgrading each sextant",
 )
 @click.option(
-    "--sextant",
-    type=int,
-    help="The sextant to power cycle",
+    "-o",
+    "--all-on",
+    is_flag=True,
+    help="Powers on all sextants after a successful upgrade.",
 )
 @pass_fps
 @cli_coro
@@ -282,8 +288,9 @@ async def upgrade_firmware(
     firmware_file,
     force,
     positioners,
-    cycle,
-    sextant,
+    no_cycle,
+    sextants,
+    all_on,
 ):
     """Upgrades the firmaware."""
 
@@ -292,29 +299,42 @@ async def upgrade_firmware(
 
     fps_maker.initialise = False
 
+    sextants = sextants or (1, 2, 3, 4, 5, 6)
+
+    click.confirm(
+        f"Upgrade firmware in sextants {sextants}?", default=False, abort=True
+    )
+
     async with fps_maker as fps:
 
-        if fps.ieb and cycle:
-            log.info("power cycling positioners")
-            if sextant:
-                devs = [f"PS{sextant}"]
-            else:
-                devs = [f"PS{s}" for s in range(1, 7)]
+        for sextant in sextants:
+            log.info(f"Upgrading firmware on sextant {sextant}.")
 
-            await asyncio.gather(*[fps.ieb.get_device(dev).open() for dev in devs])
-            await asyncio.sleep(5)
-            await asyncio.gather(*[fps.ieb.get_device(dev).close() for dev in devs])
-            await asyncio.sleep(5)
+            if fps.ieb and no_cycle is False:
+                log.info("power cycling positioners")
+                dev = "PS" + str(sextant)
+                await asyncio.gather(
+                    *[fps.ieb.get_device(f"PS{sextant}").open() for sextant in sextants]
+                )
+                await asyncio.sleep(5)
+                await fps.ieb.get_device(dev).close()
+                await asyncio.sleep(3)
 
-        await fps.initialise(start_pollers=False)
+            await fps.initialise(start_pollers=False)
 
-        await load_firmware(
-            fps,
-            firmware_file,
-            positioners=positioners,
-            force=force,
-            show_progressbar=True,
-        )
+            await load_firmware(
+                fps,
+                firmware_file,
+                positioners=positioners,
+                force=force,
+                show_progressbar=True,
+            )
+
+    if all_on is True:
+        log.info("Powering on sextants.")
+        for sextant in sextants:
+            await fps.ieb.get_device(f"PS{sextant}").close()
+            await asyncio.sleep(3)
 
 
 @jaeger.command()
