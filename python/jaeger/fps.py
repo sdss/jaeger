@@ -46,7 +46,7 @@ class BaseFPS(dict):
     objects and can be used by the real `FPS` class or the
     `~jaeger.testing.VirtualFPS`.
 
-    Parameters
+    Attributes
     ----------
     positioner_class
         The class to be used to create a new positioner. In principle this will
@@ -55,7 +55,7 @@ class BaseFPS(dict):
 
     """
 
-    positioner_class: ClassVar[Type[Any]] = Positioner
+    positioner_class: ClassVar[Type[Positioner]] = Positioner
 
     def __init__(self):
         dict.__init__(self, {})
@@ -71,8 +71,18 @@ class BaseFPS(dict):
 
         return self
 
-    def add_positioner(self, positioner_id, centre=(None, None)) -> Positioner:
+    def add_positioner(
+        self,
+        positioner: int | Positioner,
+        centre=(None, None),
+    ) -> Positioner:
         """Adds a new positioner to the list, and checks for duplicates."""
+
+        if isinstance(positioner, self.positioner_class):
+            positioner_id = positioner.positioner_id
+        else:
+            positioner_id = positioner
+            positioner = self.positioner_class(positioner_id, None, centre=centre)
 
         if positioner_id in self.positioners:
             raise JaegerError(
@@ -81,13 +91,9 @@ class BaseFPS(dict):
                 f"{positioner_id}."
             )
 
-        self.positioners[positioner_id] = self.positioner_class(
-            positioner_id,
-            None,
-            centre=centre,
-        )
+        self.positioners[positioner_id] = positioner
 
-        return self.positioners[positioner_id]
+        return positioner
 
 
 T = TypeVar("T", bound="FPS")
@@ -243,6 +249,27 @@ class FPS(BaseFPS):
                 return
 
         self.can = await JaegerCAN.create(self.can, fps=self)
+
+    def add_positioner(
+        self,
+        positioner: int | Positioner,
+        centre=(None, None),
+        interface: Optional[BusABC | int] = None,
+        bus: Optional[int] = None,
+    ) -> Positioner:
+
+        positioner = super().add_positioner(positioner, centre=centre)
+        positioner.fps = self
+
+        if interface is not None:
+            if isinstance(interface, int):
+                assert isinstance(self.can, JaegerCAN), "JaegerCAN not initialised."
+                interface = self.can.interfaces[interface]
+                assert isinstance(interface, BusABC), f"Invalid interface {interface!r}"
+            print(bus)
+            self.positioner_to_bus[positioner.positioner_id] = (interface, bus)
+
+        return positioner
 
     async def initialise(self: T, start_pollers: bool = True) -> T:
         """Initialises all positioners with status and firmware version.
