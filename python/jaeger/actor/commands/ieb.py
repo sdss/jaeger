@@ -364,13 +364,39 @@ async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
 
     command.info(text="Modules:")
 
-    for module in modules:
-        command.info(text=f"  {module}:")
+    for module_name in modules:
+        module = ieb.modules[module_name]
+
+        command.info(text=f"  {module.name}:")
+
+        if module.description != "":
+            command.info(text=f"    description: {module.description}")
+
+        if verbose:
+            if module.model:
+                command.info(text=f"    model: {module.model}")
+            if module.mode:
+                command.info(text=f"    mode: {module.mode}")
+            if module.channels:
+                command.info(text=f"    channels: {module.channels}")
+
         command.info(text="    Devices:")
-        for dev_name in ieb[module].devices:
-            dev = ieb[module][dev_name]
-            command.info(text=f"      {dev_name}:")
+
+        for dev in ieb[module_name].devices.values():
+            command.info(text=f"      {dev.name}:")
             if dev.category != "":
                 command.info(text=f"        category: {dev.category}")
             if dev.description != "":
                 command.info(text=f"        description: {dev.description}")
+
+            if verbose:
+                if dev.address:
+                    command.info(text=f"        address: {dev.address}")
+                if dev.channel:
+                    command.info(text=f"        channel: {dev.channel}")
+                if dev.__type__:
+                    command.info(text=f"        type: {dev.__type__}")
+                    if dev.__type__ == "relay" and dev.relay_type:
+                        command.info(text=f"        relay type: {dev.relay_type}")
+
+    return command.finish()
