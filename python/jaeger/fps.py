@@ -264,7 +264,7 @@ class FPS(BaseFPS):
                 assert isinstance(self.can, JaegerCAN), "JaegerCAN not initialised."
                 interface = self.can.interfaces[interface]
                 assert isinstance(interface, BusABC), f"Invalid interface {interface!r}"
-            print(bus)
+
             self.positioner_to_bus[positioner.positioner_id] = (interface, bus)
 
         return positioner
@@ -327,14 +327,19 @@ class FPS(BaseFPS):
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it.
-        replied_pids = [reply.positioner_id for reply in get_firmware_command.replies]
-        for pid in replied_pids:
-            if pid not in self.positioners:
-                self.add_positioner(pid)
+        for reply in get_firmware_command.replies:
+            if reply.positioner_id not in self.positioners:
+                if hasattr(reply.message, "interface"):
+                    interface = reply.message.interface
+                    bus = reply.message.bus
+                else:
+                    interface = bus = None
 
-            positioner = self.positioners[pid]
+                self.add_positioner(reply.positioner_id, interface=interface, bus=bus)
+
+            positioner = self.positioners[reply.positioner_id]
             positioner.fps = self
-            positioner.firmware = get_firmware_command.get_firmware(pid)
+            positioner.firmware = get_firmware_command.get_firmware(reply.positioner_id)
 
         pids = sorted(list(self.keys()))
         if len(pids) > 0:
