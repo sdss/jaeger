@@ -14,7 +14,7 @@ import collections
 import logging
 import time
 
-from typing import Callable, Dict, List, Literal, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 from jaeger import can_log, config, log, maskbits
 from jaeger.exceptions import CommandError, JaegerError
@@ -23,6 +23,12 @@ from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
 
 from . import CommandID
+
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 
 __all__ = ["SuperMessage", "Command"]
