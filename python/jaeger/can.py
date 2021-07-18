@@ -295,7 +295,7 @@ class JaegerCAN(Generic[Bus_co]):
             if self.fps and self.fps.locked:
                 return
 
-            stop_trajectory_command = StopTrajectory(positioner_ids=0)
+            stop_trajectory_command = StopTrajectory(0)
             self.send_messages(stop_trajectory_command)
 
             # Now lock the FPS. No need to abort trajectories because we just did.
