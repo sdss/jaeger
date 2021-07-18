@@ -86,9 +86,8 @@ class CommandError(JaegerError):
 
         if command:
             c_name = command.name
-            pid = command.positioner_id
             c_uid = command.command_uid
-            message = f"({c_name}, {pid}, {c_uid!s}): {message}"
+            message = f"({c_name}, {c_uid!s}): {message}"
 
         super(CommandError, self).__init__(message)
 

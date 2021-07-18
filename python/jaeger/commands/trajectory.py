@@ -460,7 +460,7 @@ class SendNewTrajectory(Command):
     broadcastable = False
     move_command = True
 
-    def __init__(self, n_alpha, n_beta, **kwargs):
+    def __init__(self, positioner_ids, n_alpha, n_beta, **kwargs):
 
         alpha_positions = int(n_alpha)
         beta_positions = int(n_beta)
@@ -470,7 +470,7 @@ class SendNewTrajectory(Command):
         data = int_to_bytes(alpha_positions) + int_to_bytes(beta_positions)
         kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_ids, **kwargs)
 
 
 class SendTrajectoryData(Command):
@@ -494,7 +494,7 @@ class SendTrajectoryData(Command):
     broadcastable = False
     move_command = True
 
-    def __init__(self, positions, **kwargs):
+    def __init__(self, positioner_ids, positions, **kwargs):
 
         positions = numpy.array(positions).astype(numpy.float64)
 
@@ -509,7 +509,7 @@ class SendTrajectoryData(Command):
 
         kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_ids, **kwargs)
 
 
 class TrajectoryDataEnd(Command):

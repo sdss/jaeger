@@ -10,6 +10,7 @@ import numpy
 
 import jaeger
 from jaeger.commands import Command, CommandID
+from jaeger.exceptions import CommandError
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
@@ -59,7 +60,7 @@ class GotoAbsolutePosition(Command):
     broadcastable = False
     move_command = True
 
-    def __init__(self, alpha=0.0, beta=0.0, **kwargs):
+    def __init__(self, positioner_id: int, alpha=0.0, beta=0.0, **kwargs):
 
         alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
@@ -68,7 +69,10 @@ class GotoAbsolutePosition(Command):
         )
         kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_id, **kwargs)
+
+        if self.is_broadcast or len(self.positioner_ids) > 1:
+            raise CommandError("This command can only be sent to one positioner.")
 
     @staticmethod
     def decode(data):
@@ -117,7 +121,7 @@ class SetActualPosition(Command):
     move_command = True  # Technically not a move command but we don't
     # want to issue it during a move.
 
-    def __init__(self, alpha=0.0, beta=0.0, **kwargs):
+    def __init__(self, positioner_id: int, alpha=0.0, beta=0.0, **kwargs):
 
         alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
@@ -126,7 +130,10 @@ class SetActualPosition(Command):
         )
         kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_id, **kwargs)
+
+        if self.is_broadcast or len(self.positioner_ids) > 1:
+            raise CommandError("This command can only be sent to one positioner.")
 
 
 class SetSpeed(Command):
@@ -137,14 +144,17 @@ class SetSpeed(Command):
     safe = True
     move_command = False
 
-    def __init__(self, alpha=0, beta=0, **kwargs):
+    def __init__(self, positioner_id: int, alpha=0, beta=0, **kwargs):
 
         assert alpha >= 0 and beta >= 0, "invalid speed."
 
         data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
         kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_id, **kwargs)
+
+        if self.is_broadcast or len(self.positioner_ids) > 1:
+            raise CommandError("This command can only be sent to one positioner.")
 
     @staticmethod
     def encode(alpha, beta):
@@ -163,11 +173,14 @@ class SetCurrent(Command):
     safe = True
     move_command = True
 
-    def __init__(self, alpha=0, beta=0, **kwargs):
+    def __init__(self, positioner_id: int, alpha=0, beta=0, **kwargs):
 
         assert alpha >= 0 and beta >= 0, "invalid current."
 
         data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
         kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_id, **kwargs)
+
+        if self.is_broadcast or len(self.positioner_ids) > 1:
+            raise CommandError("This command can only be sent to one positioner.")

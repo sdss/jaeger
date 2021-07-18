@@ -16,7 +16,17 @@ import re
 import socket
 from dataclasses import dataclass, field
 
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    cast,
+)
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
@@ -41,7 +51,7 @@ if TYPE_CHECKING:
 __all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
 
 
-LOG_HEADER = "({cmd.command_id.name}, {cmd.positioner_id}, {cmd.command_uid}):"
+LOG_HEADER = "({cmd.command_id.name}, {cmd.command_uid}):"
 
 #: Accepted CAN interfaces and whether they are multibus.
 INTERFACES = {
@@ -259,8 +269,6 @@ class JaegerCAN(Generic[Bus_co]):
                     cmd.cancel()
                 continue
 
-            can_log.debug(log_header + " sending messages to CAN bus.")
-
             try:
                 self.send_messages(cmd)
             except jaeger.JaegerError as ee:
@@ -275,7 +283,7 @@ class JaegerCAN(Generic[Bus_co]):
         if command_id == CommandID.COLLISION_DETECTED:
 
             log.error(
-                f"a collision was detected in positioner {positioner_id}. "
+                f"A collision was detected in positioner {positioner_id}. "
                 "Sending STOP_TRAJECTORIES and locking the FPS."
             )
 
@@ -287,7 +295,7 @@ class JaegerCAN(Generic[Bus_co]):
             if self.fps and self.fps.locked:
                 return
 
-            stop_trajectory_command = StopTrajectory(positioner_id=0)
+            stop_trajectory_command = StopTrajectory(positioner_ids=0)
             self.send_messages(stop_trajectory_command)
 
             # Now lock the FPS. No need to abort trajectories because we just did.
@@ -317,22 +325,22 @@ class JaegerCAN(Generic[Bus_co]):
             running_cmd = self.running_commands[cmd_key]
         else:
             can_log.debug(
-                f"({command_id_flag.name}, {positioner_id}): "
+                f"[{command_id_flag.name}, {positioner_id}]: "
                 f"cannot find a matching running command."
             )
             return
 
-        if running_cmd.positioner_id != 0:
+        if not running_cmd.is_broadcast:
             if reply_uid not in running_cmd.message_uids:
                 can_log.debug(
-                    f"({command_id_flag.name}, {positioner_id}): "
+                    f"[{command_id_flag.name}, {positioner_id}]: "
                     f"matching command does not contain reply UID={reply_uid}."
                 )
                 return
 
         can_log.debug(
-            f"({command_id_flag.name}, "
-            f"{positioner_id}, {running_cmd.command_uid}): "
+            f"[{command_id_flag.name}, "
+            f"{positioner_id}, {running_cmd.command_uid}]: "
             f"queuing reply UID={reply_uid} "
             f"to command {running_cmd.command_uid}."
         )
@@ -358,19 +366,12 @@ class JaegerCAN(Generic[Bus_co]):
                 cmd.cancel()
             return
 
+        can_log.debug(
+            f"{log_header} sending command {cmd.command_uid} "
+            f"to positioners {cmd.positioner_ids!r}."
+        )
         can_log.debug(log_header + " sending messages to CAN bus.")
 
-        cmd.status = CommandStatus.RUNNING
-
-        # Get the interface and bus to which to send the message
-        interfaces: List[Bus_co] | None = getattr(cmd, "_interfaces", None)
-        bus: int | None = getattr(cmd, "_bus", None)
-
-        # If not interface, send the message to all interfaces.
-        if interfaces is None:
-            interfaces = self.interfaces
-
-        log_header = LOG_HEADER.format(cmd=cmd)
         messages = cmd.get_messages()
 
         for message in messages:
@@ -382,11 +383,20 @@ class JaegerCAN(Generic[Bus_co]):
                 )
                 break
 
-            cmd_key = message.command.positioner_id << 25
+            cmd_key = message.positioner_id << 25
             cmd_key += message.command.command_id << 15
             cmd_key += message.uid
 
             self.running_commands[cmd_key] = message.command
+
+            # Get the interface and buses to which to send this command.
+            interfaces = self.interfaces
+            bus = None
+            is_multibus = self.multibus or len(self.interfaces) > 1
+            if is_multibus and message.positioner_id != 0:
+                if self.fps and message.positioner_id in self.fps.positioner_to_bus:
+                    interface, bus = self.fps.positioner_to_bus[message.positioner_id]
+                    interfaces = [cast(Bus_co, interface)]
 
             for iface in interfaces:
 
@@ -405,6 +415,8 @@ class JaegerCAN(Generic[Bus_co]):
                     iface.send(message, bus=bus)  # type: ignore
                 else:
                     iface.send(message)
+
+        cmd.status = CommandStatus.RUNNING
 
     @staticmethod
     def print_profiles() -> List[str]:

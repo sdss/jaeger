@@ -12,7 +12,6 @@ import asyncio
 import os
 import pathlib
 import warnings
-from contextlib import suppress
 from dataclasses import dataclass
 
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -30,7 +29,7 @@ from jaeger.exceptions import (
 from jaeger.ieb import IEB
 from jaeger.interfaces import BusABC
 from jaeger.positioner import Positioner
-from jaeger.utils import Poller, PollerList, bytes_to_int
+from jaeger.utils import Poller, PollerList
 
 
 __all__ = ["BaseFPS", "FPS"]
@@ -504,24 +503,25 @@ class FPS(BaseFPS):
 
         assert isinstance(command, Command)
 
-        if command.is_broadcast:
+        broadcast = command.is_broadcast
+        pids = command.positioner_ids
+
+        if broadcast:
             if any([self[pos].disabled for pos in self]) and not command.safe:
                 raise JaegerError(
                     "Some positioners are disabled. "
                     "Use send_to_all with a list of valid positioners."
                 )
         else:
-            any_disabled = any([self[pid].disabled for pid in command.positioner_ids])
-            if any_disabled and not command.safe:
+            if any([self[pid].disabled for pid in pids]) and not command.safe:
                 raise JaegerError("Some commanded positioners are disabled.")
 
-        if positioner_id != 0 and positioner_id not in self.positioners:
-            raise JaegerError(f"Positioner {positioner_id} is not connected.")
+        if not broadcast and not all([p in self for p in pids]):
+            raise JaegerError("Some positioners are not connected.")
 
         # Check if we are in bootloader mode.
-        if (broadcast and self.is_bootloader()) or (
-            not broadcast and self[positioner_id].is_bootloader() is not False
-        ):
+        in_boot = [p for p in pids if p != 0 and self[p].is_bootloader()]
+        if (broadcast and self.is_bootloader()) or (not broadcast and any(in_boot)):
             if not command.bootloader:
                 raise JaegerError(
                     f"Cannot send command {command.command_id.name!r} "
@@ -530,16 +530,14 @@ class FPS(BaseFPS):
 
         command_name = command.name
         command_uid = command.command_uid
-        header = f"({command_name}, {positioner_id}, {command_uid}): "
+        header = f"({command_name}, {command_uid}): "
 
         if self.locked:
             if command.safe:
                 log.debug(f"FPS is locked but {command_name} is safe.")
             else:
                 command.cancel(silent=True)
-                raise FPSLockedError(
-                    "Solve the problem and unlock the FPS before sending commands."
-                )
+                raise FPSLockedError("FPS is locked.")
 
         elif command.move_command and self.moving:
             command.cancel(silent=True)
@@ -596,7 +594,7 @@ class FPS(BaseFPS):
 
     async def update_status(
         self,
-        positioner_ids: Optional[List[int]] = None,
+        positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 1,
     ) -> bool:
         """Update statuses for all positioners.
@@ -611,42 +609,37 @@ class FPS(BaseFPS):
 
         """
 
-        assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
+        if positioner_ids is None:
+            positioner_ids = [0]
+        elif not isinstance(positioner_ids, (list, tuple)):
+            positioner_ids = [positioner_ids]
 
-        if positioner_ids:
-            n_positioners = len(positioner_ids)
-        else:
-            # This is the max number that should reply.
+        if positioner_ids == [0]:
             n_positioners = len(self) if len(self) > 0 else None
+        else:
+            n_positioners = None
 
         await self.update_firmware_version(timeout=timeout)
 
         command = self.send_command(
             CommandID.GET_STATUS,
-            positioner_ids=0,
+            positioner_ids=positioner_ids,
             n_positioners=n_positioners,
             timeout=timeout,
         )
         await command
 
         if command.status.failed:
-            log.warning(
-                f"Failed broadcasting {CommandID.GET_STATUS.name!r} "
-                "during update status."
-            )
+            log.warning(f"{CommandID.GET_STATUS.name!r} failed during update status.")
             return False
 
         update_status_coros = []
-        for reply in command.replies:
+        for pid, status_int in command.get_positioner_status():  # type: ignore
 
-            pid = reply.positioner_id
-            if pid not in self or (positioner_ids and pid not in positioner_ids):
+            if pid not in self:
                 continue
 
-            positioner = self[pid]
-
-            status_int = int(bytes_to_int(reply.data))
-            update_status_coros.append(positioner.update_status(status_int))
+            update_status_coros.append(self[pid].update_status(status_int))
 
         await asyncio.gather(*update_status_coros)
 
@@ -654,10 +647,60 @@ class FPS(BaseFPS):
 
     async def update_position(
         self,
-        positioner_ids: Optional[List[int]] = None,
+        positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 1,
     ) -> bool:
         """Updates positions.
+
+        Parameters
+        ----------
+        positioner_ids
+            The list of positioners to update. If `None`, update all
+            initialised positioners.
+        timeout
+            How long to wait before timing out the command.
+
+        """
+
+        if positioner_ids is None:
+            positioner_ids = [
+                pos.positioner_id
+                for pos in self.values()
+                if pos.initialised and not pos.is_bootloader()
+            ]
+            if positioner_ids == []:
+                return True
+
+        command = self.send_command(
+            CommandID.GET_ACTUAL_POSITION,
+            positioners=positioner_ids,
+            timeout=timeout,
+        )
+
+        await command
+
+        if command.status.failed:
+            log.error(f"{command.name} failed during update position.")
+            return False
+
+        update_position_commands = []
+        for pid, position in command.get_positions():  # type: ignore
+
+            if pid not in self:
+                continue
+
+            update_position_commands.append(self[pid].update_position(position))
+
+        await asyncio.gather(*update_position_commands)
+
+        return True
+
+    async def update_firmware_version(
+        self,
+        positioner_ids: Optional[int | List[int]] = None,
+        timeout: float = 2,
+    ) -> bool:
+        """Updates the firmware version of connected positioners.
 
         Parameters
         ----------
@@ -669,77 +712,15 @@ class FPS(BaseFPS):
 
         """
 
-        assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
+        if positioner_ids is None:
+            positioner_ids = [0]
+        elif not isinstance(positioner_ids, (list, tuple)):
+            positioner_ids = [positioner_ids]
 
-        if not positioner_ids:
-            positioner_ids = [
-                pos.positioner_id
-                for pos in self.values()
-                if pos.initialised and not pos.is_bootloader()
-            ]
-            if not positioner_ids:
-                return True
-
-        commands_all = self.send_to_all(
-            CommandID.GET_ACTUAL_POSITION,
-            positioners=positioner_ids,
-            timeout=timeout,
-        )
-
-        commands = await commands_all
-
-        update_position_commands = []
-        for command in commands:
-
-            pid = command.positioner_id
-
-            if not isinstance(command, Command) or (
-                command.status.failed and self[pid].initialised
-            ):
-                log.warning(
-                    f"({CommandID.GET_ACTUAL_POSITION.name}, "
-                    f"{command.positioner_id}): "
-                    "failed during update position."
-                )
-                continue
-
-            try:
-                position = command.get_positions()  # type: ignore
-                update_position_commands.append(self[pid].update_position(position))
-            except ValueError as ee:
-                raise JaegerError(
-                    f"Failed updating position for positioner {pid}: {ee}"
-                )
-
-        await asyncio.gather(*update_position_commands)
-
-        return True
-
-    async def update_firmware_version(
-        self,
-        positioner_ids: Optional[List[int]] = None,
-        timeout: float = 2,
-    ) -> bool:
-        """Updates the firmware version of connected positioners.
-
-        Parameters
-        ----------
-        positioner_ids
-            The list of positioners to update. If `None`, update all
-            positioners. ``positioner_ids=False`` ignores currently
-            connected positioners and times out to receive all possible
-            replies.
-        timeout
-            How long to wait before timing out the command.
-
-        """
-
-        assert not positioner_ids or isinstance(positioner_ids, (list, tuple))
-
-        if positioner_ids:
-            n_positioners = len(positioner_ids)
-        else:
+        if positioner_ids == [0]:
             n_positioners = len(self) if len(self) > 0 else None
+        else:
+            n_positioners = None
 
         get_firmware_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
@@ -752,13 +733,12 @@ class FPS(BaseFPS):
         await get_firmware_command
 
         if get_firmware_command.status.failed:
-            raise JaegerError("Failed retrieving firmware version.")
+            log.error("Failed retrieving firmware version.")
+            return False
 
         for reply in get_firmware_command.replies:
             pid = reply.positioner_id
-            if pid not in self.positioners or (
-                positioner_ids and pid not in positioner_ids
-            ):
+            if pid not in self.positioners:
                 continue
 
             positioner = self.positioners[pid]
@@ -768,7 +748,7 @@ class FPS(BaseFPS):
 
     async def stop_trajectory(
         self,
-        positioners: Optional[List[int]] = None,
+        positioner_ids: Optional[int | List[int]] = None,
         clear_flags: bool = True,
         timeout: float = 0,
     ):
@@ -776,7 +756,7 @@ class FPS(BaseFPS):
 
         Parameters
         ----------
-        positioners
+        positioner_ids
             The list of positioners to abort. If `None`, abort all positioners.
         clear_flags
             If `True`, in addition to sending ``TRAJECTORY_TRANSMISSION_ABORT``
@@ -788,24 +768,24 @@ class FPS(BaseFPS):
 
         """
 
-        if positioners is None:
-            positioners = [
+        if positioner_ids is None:
+            positioner_ids = [
                 positioner_id
-                for positioner_id in self.keys()
+                for positioner_id in self
                 if not self[positioner_id].is_bootloader()
             ]
-            if positioners == []:
+            if positioner_ids == []:
                 return
 
-        await self.send_to_all(
+        await self.send_command(
             "TRAJECTORY_TRANSMISSION_ABORT",
-            positioners=positioners,
+            positioner_ids=positioner_ids,
         )
 
         if clear_flags:
             await self.send_command(
                 "STOP_TRAJECTORY",
-                positioner_id=0,
+                positioner_ids=0,
                 timeout=timeout,
             )
 
@@ -827,70 +807,15 @@ class FPS(BaseFPS):
         cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_ids=0)
         return asyncio.create_task(cmd)
 
-    async def send_to_all(
-        self,
-        command: str | int | CommandID | Command,
-        positioners: Optional[List[int]] = None,
-        data: Optional[List[bytearray]] = None,
-        **kwargs,
-    ) -> List[Command]:
+    async def send_to_all(self, *args, **kwargs):
         """Sends a command to multiple positioners and awaits completion.
 
-        Parameters
-        ----------
-        command
-            The ID of the command, either as the integer value, a string,
-            or the `.CommandID` flag. Alternatively, the `.Command` to send.
-        positioners
-            The list of ``positioner_id`` of the positioners to command. If
-            `None`, sends the command to all the positioners in the FPS that
-            are not disabled.
-        data
-            The payload to send. If `None`, no payload is sent. If the value
-            is a list with a single value, the same payload is sent to all
-            the positioners. Otherwise the list length must match the number
-            of positioners.
-        kwargs
-            Keyword argument to pass to the command.
-
-        Returns
-        -------
-        commands
-            A list with the command instances executed.
+        This method has been deprecated. Use `.send_command` with a list
+        for ``positioner_ids`` instead.
 
         """
 
-        if positioners is None or positioners == 0:
-            positioners = [pos for pos in self.keys() if not self[pos].disabled]
-        else:
-            assert isinstance(positioners, (list, tuple))
-
-        if data is None or len(data) == 1:
-            commands = [
-                self.send_command(command, positioner_ids=positioner_id, **kwargs)
-                for positioner_id in positioners
-            ]
-        else:
-            commands = [
-                self.send_command(
-                    command,
-                    positioner_ids=positioner_id,
-                    data=[data[ii]],
-                    **kwargs,
-                )
-                for ii, positioner_id in enumerate(positioners)
-            ]
-
-        try:
-            await asyncio.gather(*commands)
-        except (JaegerError, FPSLockedError):
-            for command in commands:
-                command.cancel()
-                with suppress(asyncio.CancelledError):
-                    await command
-            raise
-
-        return commands
+        raise JaegerError("send_to_all has been deprecated. Use send_command instead.")
 
     async def report_status(self) -> Dict[str, Any]:
         """Returns a dict with the position and status of each positioner."""

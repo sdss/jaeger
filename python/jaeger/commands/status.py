@@ -6,6 +6,8 @@
 # @Filename: status.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from typing import Dict, List
+
 import numpy
 
 from jaeger.commands import Command, CommandID
@@ -24,7 +26,7 @@ class GetID(Command):
     safe = True
     bootloader = True
 
-    def get_ids(self):
+    def get_ids(self) -> List:
         """Returns a list of positioners that replied back."""
 
         return [reply.positioner_id for reply in self.replies]
@@ -38,10 +40,10 @@ class GetStatus(Command):
     safe = True
     bootloader = True
 
-    def get_positioner_status(self):
-        """Returns the positioner status flag for each reply."""
+    def get_positioner_status(self) -> Dict[int, int]:
+        """Returns the status flag for each positioner that replied."""
 
-        return [bytes_to_int(reply.data) for reply in self.replies]
+        return {reply.positioner_id: bytes_to_int(reply.data) for reply in self.replies}
 
 
 class GetActualPosition(Command):
@@ -51,7 +53,7 @@ class GetActualPosition(Command):
     broadcastable = False
     safe = True
 
-    def get_positions(self):
+    def get_positions(self) -> Dict[int, numpy.ndarray]:
         """Returns the positions of alpha and beta in degrees.
 
         Raises
@@ -64,12 +66,17 @@ class GetActualPosition(Command):
         if len(self.replies) == 0:
             raise ValueError("no positioners have replied to this command.")
 
-        data = self.replies[0].data
+        positions = {}
+        for reply in self.replies:
+            pid = reply.positioner_id
+            data = reply.data
 
-        beta = bytes_to_int(data[4:], dtype="i4")
-        alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
+            alpha = bytes_to_int(data[0:4], dtype="i4")
 
-        return numpy.array(motor_steps_to_angle(alpha, beta))
+            positions[pid] = numpy.array(motor_steps_to_angle(alpha, beta))
+
+        return positions
 
     @staticmethod
     def encode(alpha, beta):
@@ -77,9 +84,10 @@ class GetActualPosition(Command):
 
         alpha_motor, beta_motor = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        data = int_to_bytes(int(alpha_motor), "i4") + int_to_bytes(
-            int(beta_motor), "i4"
-        )
+        alpha_bytes = int_to_bytes(int(alpha_motor), "i4")
+        beta_bytes = int_to_bytes(int(beta_motor), "i4")
+
+        data = alpha_bytes + beta_bytes
 
         return data
 
@@ -91,8 +99,8 @@ class GetCurrent(Command):
     broadcastable = False
     safe = True
 
-    def get_current(self):
-        """Returns the current of alpha and beta.
+    def get_currents(self) -> Dict[int, numpy.ndarray]:
+        """Returns a dictionary of current of alpha and beta for each positioner.
 
         Raises
         ------
@@ -103,12 +111,17 @@ class GetCurrent(Command):
         if len(self.replies) == 0:
             raise ValueError("no positioners have replied to this command.")
 
-        data = self.replies[0].data
+        currents = {}
 
-        beta = bytes_to_int(data[4:], dtype="i4")
-        alpha = bytes_to_int(data[0:4], dtype="i4")
+        for reply in self.replies:
+            data = reply.data
 
-        return numpy.array([alpha, beta])
+            beta = bytes_to_int(data[4:], dtype="i4")
+            alpha = bytes_to_int(data[0:4], dtype="i4")
+
+            currents[reply.positioner_id] = numpy.array([alpha, beta])
+
+        return currents
 
 
 class GetTemperature(Command):
@@ -118,7 +131,7 @@ class GetTemperature(Command):
     broadcastable = False
     safe = True
 
-    def get_temperature(self) -> int:
+    def get_temperatures(self) -> Dict[int, int]:
         """Returns the temperature in Celsius.
 
         Raises
@@ -130,10 +143,14 @@ class GetTemperature(Command):
         if len(self.replies) == 0:
             raise ValueError("no positioners have replied to this command.")
 
-        data = self.replies[0].data
-        rawT = bytes_to_int(data, dtype="u4")  # Raw temperature
+        temperatures = {}
 
-        return rawT
+        for reply in self.replies:
+            data = self.replies[0].data
+            rawT = bytes_to_int(data, dtype="u4")  # Raw temperature
+            temperatures[reply.positioner_id] = rawT
+
+        return temperatures
 
 
 class SwitchLEDOn(Command):

@@ -220,6 +220,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     def __init__(
         self,
         positioner_ids: int | List[int],
+        /,
         timeout: Optional[float | Literal[False]] = None,
         done_callback: Optional[Callable] = None,
         n_positioners: Optional[int] = None,
@@ -292,6 +293,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
 
         # Messages sent.
         self.messages = []
+        self.message_uids = []
 
         # Generate a UUID for this command.
         self.command_uid = COMMAND_UID
@@ -354,7 +356,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
         c_name = command_id.name
         pid = positioner_id or self.positioner_ids
 
-        msg = f"({c_name}, {pid}, {self.command_uid!s}): " + msg
+        msg = f"[{c_name}, {pid}, {self.command_uid!s}]: " + msg
 
         for ll in logs:
             ll.log(level, msg)
@@ -374,7 +376,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     def _check_replies(self):
         """Checks if the UIDs of the replies match the messages."""
 
-        sent_uids = [message.uid for message in self.messages]
+        sent_uids = self.message_uids
         replies_uids = [reply.uid for reply in self.replies]
 
         if self.is_broadcast:
@@ -558,9 +560,8 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
                 uid = UID_POOL[cid][pid].pop()
             except KeyError:
                 # Before failing, put back the UIDs of the other messages
-                if pid != 0:
-                    for message in messages:
-                        UID_POOL[cid][pid].add(message.uid)
+                for message in messages:
+                    UID_POOL[cid][pid].add(message.uid)
                 raise EmptyPool("no UIDs left in the pool.")
 
             for d in pid_data:
@@ -581,6 +582,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
         messages = self._generate_messages_internal(data=data)
 
         self.messages = messages
+        self.message_uids = [message.uid for message in messages]
 
         return messages
 
