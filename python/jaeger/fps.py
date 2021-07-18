@@ -16,7 +16,7 @@ from dataclasses import dataclass
 
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-from jaeger import config, log, start_file_loggers
+from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
 from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
 from jaeger.exceptions import (
@@ -565,10 +565,10 @@ class FPS(BaseFPS):
         if not now:
             assert self.can.command_queue
             self.can.command_queue.put_nowait(command)
-            log.debug(header + "added command to CAN processing queue.")
+            can_log.debug(header + "added command to CAN processing queue.")
         else:
             self.can.send_messages(command)
-            log.debug(header + "sent command to CAN immediately.")
+            can_log.debug(header + "sent command to CAN immediately.")
 
         return command
 
@@ -869,16 +869,16 @@ class FPS(BaseFPS):
         )
 
         if not bootloader:
-            log.info("Stopping positioners")
+            log.info("Stopping positioners and shutting down.")
             await self.stop_trajectory()
 
-        log.info("Stopping all pollers.")
+        log.debug("Stopping all pollers.")
         if self.pollers:
             await self.pollers.stop()
 
         await asyncio.sleep(1)
 
-        log.info("Cancelling all pending tasks and shutting down.")
+        log.debug("Cancelling all pending tasks and shutting down.")
 
         tasks = [
             task

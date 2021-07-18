@@ -258,13 +258,19 @@ async def actor(fps_maker, no_tron):
     required=False,
 )
 @click.option(
+    "-y",
+    "--yes",
+    is_flag=True,
+    help="Do not ask for confirmation.",
+)
+@click.option(
     "-f",
     "--force",
     is_flag=True,
     help="Forces skipping of invalid positioners",
 )
 @click.option(
-    "-s",
+    "-p",
     "--positioners",
     type=str,
     help="Comma-separated positioners to upgrade",
@@ -291,6 +297,7 @@ async def upgrade_firmware(
     no_cycle,
     sextants,
     all_on,
+    yes,
 ):
     """Upgrades the firmaware."""
 
@@ -301,9 +308,12 @@ async def upgrade_firmware(
 
     sextants = sextants or (1, 2, 3, 4, 5, 6)
 
-    click.confirm(
-        f"Upgrade firmware in sextants {sextants}?", default=False, abort=True
-    )
+    if not yes:
+        click.confirm(
+            f"Upgrade firmware in sextants {sextants}?",
+            default=False,
+            abort=True,
+        )
 
     async with fps_maker as fps:
 
