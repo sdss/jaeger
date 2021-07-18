@@ -315,7 +315,7 @@ class FPS(BaseFPS):
 
         get_firmware_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
-            positioner_id=0,
+            positioner_ids=0,
             timeout=config["fps"]["initialise_timeouts"],
         )
 
@@ -454,11 +454,8 @@ class FPS(BaseFPS):
     def send_command(
         self,
         command: str | int | CommandID | Command,
-        positioner_id: int = 0,
-        data: List[bytearray] = [bytearray([])],
-        interface: Optional[BusABC] = None,
-        bus: Optional[int] = None,
-        broadcast: bool = False,
+        positioner_ids: int | List[int] = 0,
+        data: Any = None,
         now: bool = False,
         **kwargs,
     ) -> Command:
@@ -469,10 +466,10 @@ class FPS(BaseFPS):
         command
             The ID of the command, either as the integer value, a string,
             or the `.CommandID` flag. Alternatively, the `.Command` to send.
-        positioner_id
-            The positioner ID to command, or zero for broadcast.
+        positioner_ids
+            The positioner IDs to command, or zero for broadcast.
         data
-            The bytes to send.
+            The bytes to send. See `.Command` for details on the format.
         interface
             The index in the interface list for the interface to use. Only
             relevant in case of a multibus interface. If `None`, the positioner
@@ -481,8 +478,6 @@ class FPS(BaseFPS):
             The bus within the interface to be used. Only relevant in case of
             a multibus interface. If `None`, the positioner to bus map will
             be used.
-        broadcast
-            If `True`, sends the command to all the buses.
         now
             If `True`, the command is sent to the CAN network immediately,
             skipping the command queue. No tracking is done for this command.
@@ -500,32 +495,25 @@ class FPS(BaseFPS):
 
         assert isinstance(self.can, JaegerCAN), "CAN connection not established."
 
-        if positioner_id == 0:
-            broadcast = True
-
         if not isinstance(command, Command):
             command_flag = CommandID(command)
             CommandClass = command_flag.get_command_class()
             assert CommandClass, "CommandClass not defined"
 
-            command = CommandClass(
-                positioner_id=positioner_id,
-                loop=self.loop,
-                data=data,
-                **kwargs,
-            )
+            command = CommandClass(positioner_ids, data=data, **kwargs)
 
         assert isinstance(command, Command)
 
-        if broadcast:
+        if command.is_broadcast:
             if any([self[pos].disabled for pos in self]) and not command.safe:
                 raise JaegerError(
                     "Some positioners are disabled. "
                     "Use send_to_all with a list of valid positioners."
                 )
         else:
-            if self[positioner_id].disabled and not command.safe:
-                raise JaegerError(f"Positioner {positioner_id} is disabled.")
+            any_disabled = any([self[pid].disabled for pid in command.positioner_ids])
+            if any_disabled and not command.safe:
+                raise JaegerError("Some commanded positioners are disabled.")
 
         if positioner_id != 0 and positioner_id not in self.positioners:
             raise JaegerError(f"Positioner {positioner_id} is not connected.")
@@ -564,14 +552,6 @@ class FPS(BaseFPS):
         if command.status.is_done:
             raise JaegerError(header + "trying to send a done command.")
 
-        # By default a command will be sent to all interfaces and buses.
-        # Normally we want to set the interface and bus to which the command
-        # will be sent.
-        if not broadcast:
-            self._set_interface(command, bus=bus, interface=interface)
-            if command.status == command.status.FAILED:
-                return command
-
         if not now:
             assert self.can.command_queue
             self.can.command_queue.put_nowait(command)
@@ -581,39 +561,6 @@ class FPS(BaseFPS):
             log.debug(header + "sent command to CAN immediately.")
 
         return command
-
-    def _set_interface(
-        self,
-        command: Command,
-        interface: Optional[BusABC] = None,
-        bus: Optional[int] = None,
-    ):
-        """Sets the interface and bus to which to send a command."""
-
-        assert isinstance(self.can, JaegerCAN), "JaegerCAN not initialised."
-
-        if bus or interface:
-            command._interfaces = [interface] if interface else None
-            command._bus = bus
-            return
-
-        if len(self.can.interfaces) == 1 and not self.can.multibus:
-            command._interfaces = self.can.interfaces
-            command._bus = None
-            return
-
-        positioner_id = command.positioner_id
-
-        if positioner_id not in self.positioner_to_bus:
-            command.finish_command(command.status.FAILED)
-            raise JaegerError(f"Positioner {positioner_id} has no assigned bus.")
-
-        interface, bus = self.positioner_to_bus[positioner_id]
-
-        command._interfaces = [interface]
-        command._bus = bus
-
-        return
 
     async def lock(self, stop_trajectories: bool = True):
         """Locks the `.FPS` and prevents commands to be sent.
@@ -676,7 +623,7 @@ class FPS(BaseFPS):
 
         command = self.send_command(
             CommandID.GET_STATUS,
-            positioner_id=0,
+            positioner_ids=0,
             n_positioners=n_positioners,
             timeout=timeout,
         )
@@ -796,7 +743,7 @@ class FPS(BaseFPS):
 
         get_firmware_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
-            positioner_id=0,
+            positioner_ids=0,
             timeout=timeout,
             n_positioners=n_positioners,
         )
@@ -877,7 +824,7 @@ class FPS(BaseFPS):
     def abort(self):
         """Aborts trajectories and stops positioners."""
 
-        cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_id=0)
+        cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_ids=0)
         return asyncio.create_task(cmd)
 
     async def send_to_all(
@@ -920,14 +867,14 @@ class FPS(BaseFPS):
 
         if data is None or len(data) == 1:
             commands = [
-                self.send_command(command, positioner_id=positioner_id, **kwargs)
+                self.send_command(command, positioner_ids=positioner_id, **kwargs)
                 for positioner_id in positioners
             ]
         else:
             commands = [
                 self.send_command(
                     command,
-                    positioner_id=positioner_id,
+                    positioner_ids=positioner_id,
                     data=[data[ii]],
                     **kwargs,
                 )
