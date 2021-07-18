@@ -30,7 +30,11 @@ async def test_vfps(vfps):
 
 async def test_get_id(vfps, vpositioners):
 
-    command = await vfps.send_command("GET_ID", n_positioners=len(vpositioners))
+    command = await vfps.send_command(
+        "GET_ID",
+        positioner_ids=0,
+        n_positioners=len(vpositioners),
+    )
     assert len(command.replies) == len(vpositioners)
 
 
@@ -109,7 +113,7 @@ async def test_positioner_disabled_send_command_fails_broadcast(vfps):
     vfps[2].disabled = True
 
     with pytest.raises(JaegerError) as err:
-        await vfps.send_command("START_TRAJECTORY", positioner_id=0)
+        await vfps.send_command("START_TRAJECTORY", positioner_ids=0)
 
     assert "Some positioners are disabled." in str(err)
 
@@ -120,9 +124,9 @@ async def test_positioner_disabled_send_command_fails(vfps):
     vfps[2].disabled = True
 
     with pytest.raises(JaegerError) as err:
-        await vfps.send_command("GO_TO_ABSOLUTE_POSITION", positioner_id=2)
+        await vfps.send_command("GO_TO_ABSOLUTE_POSITION", positioner_ids=2)
 
-    assert "Positioner 2 is disabled." in str(err)
+    assert "Some commanded positioners are disabled." in str(err)
 
 
 async def test_positioner_disabled_send_to_all(vfps):
@@ -130,5 +134,5 @@ async def test_positioner_disabled_send_to_all(vfps):
     await vfps.initialise()
     vfps[2].disabled = True
 
-    results = await vfps.send_to_all("GET_ID", positioners=0)
-    assert len(results) == len(vfps) - 1
+    cmd = await vfps.send_command("GET_ID", positioner_ids=None)
+    assert len(cmd.replies) == len(vfps) - 1

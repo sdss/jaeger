@@ -169,7 +169,7 @@ class Positioner(StatusMixIn):
 
         command = await self.fps.send_command(
             command,
-            positioner_id=self.positioner_id,
+            positioner_ids=self.positioner_id,
             **kwargs,
         )
 
@@ -197,7 +197,7 @@ class Positioner(StatusMixIn):
                 raise PositionerError("failed updating position")
 
             try:
-                position = command.get_positions()
+                position = command.get_positions()[self.positioner_id]
             except ValueError:
                 raise PositionerError("cannot parse current position.")
 
@@ -347,7 +347,7 @@ class Positioner(StatusMixIn):
             error="failed retrieving firmware version.",
         )
 
-        self.firmware = command.get_firmware()
+        self.firmware = command.get_firmware(positioner_id=self.positioner_id)
         self.flags = self.get_positioner_flags()
 
         self._log(f"firmware {self.firmware}")
@@ -599,7 +599,7 @@ class Positioner(StatusMixIn):
 
             # Sleeps for the time the firmware believes it's going to take
             # to get to the desired position.
-            alpha_time, beta_time = goto_command.get_move_time()
+            alpha_time, beta_time = goto_command.get_move_time()[0]
 
             # Update status as soon as we start moving. This clears any
             # possible DISPLACEMENT_COMPLETED.

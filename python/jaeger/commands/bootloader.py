@@ -16,7 +16,7 @@ import time
 import warnings
 import zlib
 
-from typing import TYPE_CHECKING, Any, Callable, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 import numpy
 
@@ -152,18 +152,15 @@ async def load_firmware(
     log.info(f"CRC32: {crc32}")
     log.info(f"File size: {filesize} bytes")
 
-    cmds = [
-        fps.send_command(
-            CommandID.START_FIRMWARE_UPGRADE,
-            positioner_id=positioner.positioner_id,
-            data=[start_firmware_payload],
-        )
-        for positioner in valid_positioners
-    ]
+    pids = [pos.positioner_id for pos in valid_positioners]
 
-    await asyncio.gather(*cmds)
+    cmd = await fps.send_command(
+        CommandID.START_FIRMWARE_UPGRADE,
+        positioner_ids=pids,
+        data=[start_firmware_payload],
+    )
 
-    if any(cmd.status.failed or cmd.status.timed_out for cmd in cmds):
+    if cmd.status.failed or cmd.status.timed_out:
         log.error("firmware upgrade failed.")
         return False
 
@@ -204,15 +201,14 @@ async def load_firmware(
                     stop = True
                     break
 
-                cmds += [
+                cmds.append(
                     fps.send_command(
                         CommandID.SEND_FIRMWARE_DATA,
-                        positioner_id=positioner.positioner_id,
+                        positioner_ids=pids,
                         data=[packetdata],
                         timeout=15,
                     )
-                    for positioner in valid_positioners
-                ]
+                )
 
             await asyncio.gather(*cmds)
 
@@ -252,23 +248,22 @@ class GetFirmwareVersion(Command):
     safe = True
     bootloader = True
 
-    def get_firmware(self, positioner_id=None):
+    def get_firmware(self, positioner_id=None) -> str | Dict[int, str] | None:
         """Returns the firmware version string.
 
         Parameters
         ----------
         positioner_id : int
-            The positioner for which to return the version. This parameter is
-            ignored unless the command is a broadcast. If `None` and the
-            command is a broadcast, returns a list with the firmware version of
-            all the positioners, in the order of `GetFirmwareVersion.replies`.
+            The positioner for which to return the version. If `None` returns
+            a dictionary with the firmware version of all the positioners that
+            replied.
 
         Returns
         -------
-        firmware : `str` or `list`
-            A string or list of string with the firmware version(s), with the
-            format ``'XX.YY.ZZ'`` where ``YY='80'`` if the positioner is in
-            bootloader mode.
+        firmware
+            A string or dictionary of string with the firmware version(s),
+            with the format ``'XX.YY.ZZ'`` where ``YY='80'`` if the positioner
+            is in bootloader mode.
 
         Raises
         ------
@@ -280,21 +275,21 @@ class GetFirmwareVersion(Command):
         def format_version(reply):
             return ".".join(format(byt, "02d") for byt in reply.data[0:3][::-1])
 
-        # If not a broadcast, use the positioner_id of the command
-        if self.positioner_id != 0:
-            positioner_id = self.positioner_id
-
         if len(self.replies) == 0:
-            raise ValueError("no positioners have replied to this command.")
+            raise ValueError("No positioners have replied to this command.")
 
-        if positioner_id is None:
-            return [format_version(reply) for reply in self.replies]
-        else:
-            reply = self.get_reply_for_positioner(positioner_id)
-            if reply:
-                return format_version(reply)
+        firmwares = {}
+        for reply in self.replies:
+            version = format_version(reply)
+            if positioner_id is not None and reply.positioner_id == positioner_id:
+                return version
             else:
-                return None
+                firmwares[reply.positioner_id] = version
+
+        if positioner_id is not None:
+            return None
+
+        return firmwares
 
     @staticmethod
     def encode(firmware):

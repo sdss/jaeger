@@ -80,34 +80,34 @@ The mapping between positioners and buses is done in the :ref:`FPS class <fps>`.
 The `.FPS` class
 ----------------
 
-The `.FPS` class is the main entry point to monitor and command the focal plane system and usually it will be the first thing you instantiate. It contains a `CAN bus <can-bus>`_, a `dictionary <.BaseFPS.positioners>` of all the positioners included in the layout (a layout is a list of the positioners that compose the FPS, with their associated ``positioner_id`` and central position; it can be stored as a file or in a database), and high level methods to perform operations that affect multiple positioners (e.g., `send a trajectory <send-trajectory>`_).
+The `.FPS` class is the main entry point to monitor and command the focal plane system and usually it will be the first thing you instantiate. It contains a `CAN bus <can-bus>`_, a `dictionary <.BaseFPS.positioners>` of all the positioners that have been added to the FPS with their associated ``positioner_id`` and central position; it can be stored as a file or in a database), and high level methods to perform operations that affect multiple positioners (e.g., `send a trajectory <send-trajectory>`_).
 
 To instantiate with the default options, simply do ::
 
     >>> from jaeger import FPS
     >>> fps = FPS()
 
-This will create a new CAN bus (accessible as `.FPS.bus`) using the ``default`` profile and will use the default layout stored in the configuration file under ``config['fps']['default_layout']`` to add instances of `.Positioner` to `.BaseFPS.positioners`.
+This will create a new CAN bus (accessible as `.FPS.can`) and an empty dictionary of positioners. Note that the CAN bus is not initialised until `.FPS.start_can` or `.FPS.initialise` are called.
 
 Initialisation
 ^^^^^^^^^^^^^^
 
-Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `~.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected and sets their status. Each one of the positioners that have replied are subsequently initialised as detailed in :ref:`positioner-initialise`.
+Once we have created a `.FPS` object we'll need to initialise it by calling and awaiting `.FPS.initialise`. This will issue two broadcast commands: `~.commands.GetStatus` and `~.commands.GetFirmwareVersion`. The replies to these commands are used to determine which positioners are connected, add them to the FPS, and set their status. Each one of the positioners that have replied are subsequently initialised as detailed in :ref:`positioner-initialise`.
 
 Sending commands
 ^^^^^^^^^^^^^^^^
 
-The preferred way to send a command to the bus is by using the `.FPS.send_command` method which accepts a `.commands.CommandID` (either as a flag, integer, or string), the ``positioner_id`` that must listen to the command, and additional arguments to be passed to the command associated with the `~.commands.CommandID`. For example, to broadcast a `~.commands.CommandID.GET_ID` command ::
+The preferred way to send a command to the bus is by using the `.FPS.send_command` method which accepts a `.commands.CommandID` (either as a flag, integer, or string), the list of ``positioner_ids`` that we want to address, and additional arguments to be passed to the command associated with the `~.commands.CommandID`. For example, to broadcast a `~.commands.CommandID.GET_ID` command ::
 
-    >>> await fps.send_command('GET_ID', positioner_id=0)
+    >>> await fps.send_command('GET_ID', positioner_ids=0)
 
 Note that you need to ``await`` the command, which will return the execution to the event loop until the `command has finished <command-done>`_.
 
 Some commands, such as `~.commands.SetActualPosition` take multiple attributes ::
 
-    >>> cmd = await fps.send_command(CommandID.SET_ACTUAL_POSITION, positioner_id=4, alpha=10, beta=100)
+    >>> cmd = await fps.send_command(CommandID.SET_ACTUAL_POSITION, positioner_ids=[4, 5], alpha=0, beta=0)
     >>> cmd
-    <Command SET_ACTUAL_POSITION (positioner_id=4, status='DONE')>
+    <Command SET_ACTUAL_POSITION (positioner_ids=[4, 5], status='DONE')>
 
 When a command is send `.FPS` puts it in the `bus command queue <can-queue>`_ and, once it gets processed, starts listening for replies from the bus. When it gets a reply with the same ``command_id`` and ``positioner_id`` the bus sends it to the command for further processing.
 
@@ -239,9 +239,9 @@ Commands
 Commands can sent directly to the FPS ::
 
     >>> from jaeger.commands import GetStatus
-    >>> status_cmd = GetStatus(positioner_id=4)
+    >>> status_cmd = GetStatus(positioner_ids=4)
     >>> status_cmd
-    <Command GET_STATUS (positioner_id=4, status='READY')>
+    <Command GET_STATUS (positioner_ids=4, status='READY')>
     >>> fps.send_command(status_cmd)
     True
     >>> await status_cmd
@@ -302,7 +302,7 @@ The ``timeout`` can be set to `None`, in which case the command will never time 
         fps = FPS()
         await fps.initialise()
 
-        status_cmd = fps.send_command('GET_STATUS', positioner_id=0, timeout=None)
+        status_cmd = fps.send_command('GET_STATUS', positioner_ids=0, timeout=None)
 
         asyncio.create_task(check_status(status_cmd, fps.positioners))
 
@@ -415,13 +415,13 @@ If is possible to upgrade the firmware of a positioner (or set of them) by using
 
     jaeger upgrade-firmware ~/Downloads/tendo_v04.00.04.bin
 
-The positioners must be in bootloader mode when the upgrade begins. The easiest way to achieve this is to use the ``--cycle`` flag to power cycle the 24V positioner power source ahead of the upgrade, provided that the IEB module is connected.
+This will sequentially cycle each one of the IEB sextant power supplies and upgrade the firmware.
 
 If there are multiple positioners and some of them are in an invalid state it's possible to force upgrading the firmware to only certain positioners
 
 .. code-block:: console
 
-    jaeger upgrade-firmware --cycle -f -s 101 ~/Downloads/tendo_v04.00.04.bin
+    jaeger upgrade-firmware -f -p 101 ~/Downloads/tendo_v04.00.04.bin
 
 
 .. _kaiju: https://github.com/csayres/kaiju
