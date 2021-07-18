@@ -73,14 +73,14 @@ To schedule a command you must use the `.FPS.send_command` method, which returns
 
     >>> fps = await FPS().start()
     # We don't need to initialise the FPS to send low-level commands.
-    >>> cmd = fps.send_command('GO_TO_ABSOLUTE_POSITION', positioner_id=4, alpha=100, beta=30)
+    >>> cmd = fps.send_command('GO_TO_ABSOLUTE_POSITION', positioner_ids=4, alpha=100, beta=30)
     >>> cmd
-    <Command GO_TO_ABSOLUTE_POSITION (positioner_id=4, status='READY')>
+    <Command GO_TO_ABSOLUTE_POSITION (positioner_ids=4, status='READY')>
     >>> await cmd
 
-The replies to the command are stored in the `~.Command.replies` attribute: ::
+The replies to the command are stored in the `~.Command.replies` attribute. Here we send a broadcast command to get the status from all the connected positioners: ::
 
-    >>> status_cmd = GetStatus(positioner_id=4)
+    >>> status_cmd = GetStatus(positioner_ids=0)
     >>> fps.send_command(status_cmd)
     >>> await status_cmd
     >>> reply = status_cmd.replies[0]
