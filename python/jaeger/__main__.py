@@ -310,7 +310,7 @@ async def upgrade_firmware(
 
     if not yes:
         click.confirm(
-            f"Upgrade firmware in sextants {sextants}?",
+            f"Upgrade firmware for sextant(s) {', '.join(map(str, sextants))}?",
             default=False,
             abort=True,
         )
