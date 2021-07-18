@@ -220,7 +220,6 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     def __init__(
         self,
         positioner_ids: int | List[int],
-        /,
         timeout: Optional[float | Literal[False]] = None,
         done_callback: Optional[Callable] = None,
         n_positioners: Optional[int] = None,
