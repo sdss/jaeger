@@ -21,6 +21,7 @@ from jaeger.can import CANnetInterface, JaegerCAN
 from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
 from jaeger.exceptions import (
     FPSLockedError,
+    JaegerDeprecationWarning,
     JaegerError,
     JaegerUserWarning,
     PositionerError,
@@ -454,6 +455,7 @@ class FPS(BaseFPS):
         self,
         command: str | int | CommandID | Command,
         positioner_ids: int | List[int] | None = None,
+        positioner_id: int | List[int] | None = None,
         data: Any = None,
         now: bool = False,
         **kwargs,
@@ -494,6 +496,15 @@ class FPS(BaseFPS):
         """
 
         assert isinstance(self.can, JaegerCAN), "CAN connection not established."
+
+        if positioner_id is not None:
+            warnings.warn(
+                "positioner_id is deprecated and will be removed soon. "
+                "Use positioner_ids.",
+                JaegerDeprecationWarning,
+            )
+            if positioner_ids is None:
+                positioner_ids = positioner_id
 
         if positioner_ids is None:
             positioner_ids = [p for p in self if not self[p].disabled]
