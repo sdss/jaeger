@@ -599,7 +599,7 @@ class Positioner(StatusMixIn):
 
             # Sleeps for the time the firmware believes it's going to take
             # to get to the desired position.
-            alpha_time, beta_time = goto_command.get_move_time()
+            alpha_time, beta_time = goto_command.get_move_time()[0]
 
             # Update status as soon as we start moving. This clears any
             # possible DISPLACEMENT_COMPLETED.

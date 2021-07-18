@@ -184,7 +184,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     ----------
     positioner_ids
         The id or list of ids of the robot(s) to which this command will be
-        sent. Use ``positioner_id=0`` to broadcast to all robots.
+        sent. Use ``positioner_ids=0`` to broadcast to all robots.
     loop
         The running event loop, or uses `~asyncio.get_event_loop`.
     timeout
@@ -236,7 +236,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
             self.positioner_ids = list(positioner_ids)
             if len(positioner_ids) != len(set(positioner_ids)):
                 raise JaegerError("The list of positioner_ids must be unique.")
-            if len(positioner_ids) > 0 and 0 in positioner_ids:
+            if len(positioner_ids) > 1 and 0 in positioner_ids:
                 raise JaegerError("Broadcasts cannot be mixed with other positioners.")
         else:
             self.positioner_ids = [positioner_ids]
@@ -338,7 +338,7 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     def __repr__(self):
         return (
             f"<Command {self.command_id.name} "
-            f"(positioner_id={self.positioner_ids}, "
+            f"(positioner_ids={self.positioner_ids!r}, "
             f"status={self.status.name!r})>"
         )
 
@@ -347,14 +347,14 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
         msg,
         level=logging.DEBUG,
         command_id=None,
-        positioner_id=None,
+        positioner_ids=None,
         logs=[can_log],
     ):
         """Logs a message."""
 
         command_id = command_id or self.command_id
         c_name = command_id.name
-        pid = positioner_id or self.positioner_ids
+        pid = positioner_ids or self.positioner_ids
 
         msg = f"[{c_name}, {pid}, {self.command_uid!s}]: " + msg
 

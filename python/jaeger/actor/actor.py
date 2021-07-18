@@ -108,8 +108,10 @@ class JaegerActor(clu.LegacyActor):
                     "w",
                     text="Disabling very low temperature mode. Setting holding torque.",
                 )
-            await self.fps.send_to_all(
-                CommandID.SET_HOLDING_CURRENT, alpha=ht[0], beta=ht[1]
+            await self.fps.send_command(
+                CommandID.SET_HOLDING_CURRENT,
+                alpha=ht[0],
+                beta=ht[1],
             )
 
         sensor = config["low_temperature"]["sensor"]

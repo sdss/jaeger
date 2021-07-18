@@ -6,7 +6,11 @@
 # @Filename: calibration.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
+
+from typing import Dict, List
 
 import numpy
 
@@ -82,7 +86,8 @@ async def calibrate_positioner(
         log.info("Starting motor calibration.")
 
         cmd = await fps.send_command(
-            CommandID.START_MOTOR_CALIBRATION, positioner_id=positioner_id
+            CommandID.START_MOTOR_CALIBRATION,
+            positioner_ids=positioner_id,
         )
 
         if cmd.status.failed:
@@ -102,7 +107,8 @@ async def calibrate_positioner(
     if datums:
         log.info("Starting datum calibration.")
         cmd = await fps.send_command(
-            CommandID.START_DATUM_CALIBRATION, positioner_id=positioner_id
+            CommandID.START_DATUM_CALIBRATION,
+            positioner_ids=positioner_id,
         )
         if cmd.status.failed:
             raise JaegerError("Datum calibration failed.")
@@ -121,7 +127,8 @@ async def calibrate_positioner(
     if cogging:
         log.info("Starting cogging calibration.")
         cmd = await fps.send_command(
-            CommandID.START_COGGING_CALIBRATION, positioner_id=positioner_id
+            CommandID.START_COGGING_CALIBRATION,
+            positioner_ids=positioner_id,
         )
         if cmd.status.failed:
             raise JaegerError("Cogging calibration failed.")
@@ -136,7 +143,8 @@ async def calibrate_positioner(
     if motors or datums or cogging:
         log.info("Saving calibration.")
         cmd = await fps.send_command(
-            CommandID.SAVE_INTERNAL_CALIBRATION, positioner_id=positioner_id
+            CommandID.SAVE_INTERNAL_CALIBRATION,
+            positioner_ids=positioner_id,
         )
         if cmd.status.failed:
             raise JaegerError("Saving calibration failed.")
@@ -185,7 +193,7 @@ class GetOffset(Command):
     broadcastable = False
     safe = True
 
-    def get_offsets(self):
+    def get_offsets(self) -> Dict[int, numpy.ndarray]:
         """Returns the alpha and beta offsets, in degrees.
 
         Raises
@@ -198,12 +206,17 @@ class GetOffset(Command):
         if len(self.replies) == 0:
             raise ValueError("No positioners have replied to this command.")
 
-        data = self.replies[0].data
+        offsets = {}
+        for reply in self.replies:
+            pid = reply.positioner_id
+            data = reply.data
 
-        alpha = bytes_to_int(data[0:4], dtype="i4")
-        beta = bytes_to_int(data[4:], dtype="i4")
+            alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
 
-        return numpy.array(motor_steps_to_angle(alpha, beta))
+            offsets[pid] = numpy.array(motor_steps_to_angle(alpha, beta))
+
+        return offsets
 
 
 class SetOffsets(Command):
@@ -214,14 +227,21 @@ class SetOffsets(Command):
     safe = True
     move_command = False
 
-    def __init__(self, alpha=0, beta=0, **kwargs):
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        alpha=None,
+        beta=None,
+        **kwargs,
+    ):
 
-        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
+        if alpha is not None and beta is not None:
+            alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        data = int_to_bytes(int(alpha_steps)) + int_to_bytes(int(beta_steps))
-        kwargs["data"] = data
+            data = int_to_bytes(int(alpha_steps)) + int_to_bytes(int(beta_steps))
+            kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_ids, **kwargs)
 
 
 class HallOn(Command):
@@ -250,12 +270,13 @@ class SetHoldingCurrents(Command):
     safe = True
     move_command = False
 
-    def __init__(self, alpha=0, beta=0, **kwargs):
+    def __init__(self, positioner_ids, alpha=None, beta=None, **kwargs):
 
-        data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
-        kwargs["data"] = data
+        if alpha is not None and beta is not None:
+            data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
+            kwargs["data"] = data
 
-        super().__init__(**kwargs)
+        super().__init__(positioner_ids, **kwargs)
 
 
 class GetHoldingCurrents(Command):
@@ -265,7 +286,7 @@ class GetHoldingCurrents(Command):
     broadcastable = False
     safe = True
 
-    def get_holding_currents(self):
+    def get_holding_currents(self) -> Dict[int, numpy.ndarray]:
         """Returns the alpha and beta holding currents, in percent.
 
         Raises
@@ -278,12 +299,16 @@ class GetHoldingCurrents(Command):
         if len(self.replies) == 0:
             raise ValueError("No positioners have replied to this command.")
 
-        data = self.replies[0].data
+        currents = {}
+        for reply in self.replies:
+            data = reply.data
 
-        alpha = bytes_to_int(data[0:4], dtype="i4")
-        beta = bytes_to_int(data[4:], dtype="i4")
+            alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
 
-        return numpy.array([alpha, beta])
+            currents[reply.positioner_id] = numpy.array([alpha, beta])
+
+        return currents
 
 
 class PreciseMoveAlphaOn(Command):

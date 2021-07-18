@@ -6,11 +6,14 @@
 # @Filename: goto.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
+from typing import List
+
 import numpy
 
 import jaeger
 from jaeger.commands import Command, CommandID
-from jaeger.exceptions import CommandError
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
@@ -60,19 +63,24 @@ class GotoAbsolutePosition(Command):
     broadcastable = False
     move_command = True
 
-    def __init__(self, positioner_id: int, alpha=0.0, beta=0.0, **kwargs):
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        alpha: float | None = None,
+        beta: float | None = None,
+        **kwargs,
+    ):
 
-        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
+        if alpha is not None and beta is not None:
+            alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        data = int_to_bytes(alpha_steps, dtype="i4") + int_to_bytes(
-            beta_steps, dtype="i4"
-        )
-        kwargs["data"] = data
+            alpha_bytes = int_to_bytes(alpha_steps, dtype="i4")
+            beta_bytes = int_to_bytes(beta_steps, dtype="i4")
 
-        super().__init__(positioner_id, **kwargs)
+            data = alpha_bytes + beta_bytes
+            kwargs["data"] = data
 
-        if self.is_broadcast or len(self.positioner_ids) > 1:
-            raise CommandError("This command can only be sent to one positioner.")
+        super().__init__(positioner_ids, **kwargs)
 
     @staticmethod
     def decode(data):
@@ -96,12 +104,16 @@ class GotoAbsolutePosition(Command):
         if len(self.replies) == 0:
             raise ValueError("no positioners have replied to this command.")
 
-        data = self.replies[0].data
+        move_time = []
+        for reply in self.replies:
+            data = reply.data
 
-        beta = bytes_to_int(data[4:], dtype="i4")
-        alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
+            alpha = bytes_to_int(data[0:4], dtype="i4")
 
-        return numpy.array([alpha, beta]) * TIME_STEP
+            move_time.append([alpha, beta])
+
+        return numpy.array(move_time) * TIME_STEP
 
 
 class GotoRelativePosition(GotoAbsolutePosition):
@@ -121,19 +133,26 @@ class SetActualPosition(Command):
     move_command = True  # Technically not a move command but we don't
     # want to issue it during a move.
 
-    def __init__(self, positioner_id: int, alpha=0.0, beta=0.0, **kwargs):
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        alpha: float | None = None,
+        beta: float | None = None,
+        **kwargs,
+    ):
 
-        alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
+        if alpha is not None and beta is not None:
 
-        data = int_to_bytes(int(alpha_steps), dtype="i4") + int_to_bytes(
-            int(beta_steps), dtype="i4"
-        )
-        kwargs["data"] = data
+            alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
-        super().__init__(positioner_id, **kwargs)
+            alpha_bytes = int_to_bytes(int(alpha_steps), dtype="i4")
+            beta_bytes = int_to_bytes(int(beta_steps), dtype="i4")
 
-        if self.is_broadcast or len(self.positioner_ids) > 1:
-            raise CommandError("This command can only be sent to one positioner.")
+            data = alpha_bytes + beta_bytes
+
+            kwargs["data"] = data
+
+        super().__init__(positioner_ids, **kwargs)
 
 
 class SetSpeed(Command):
@@ -144,17 +163,21 @@ class SetSpeed(Command):
     safe = True
     move_command = False
 
-    def __init__(self, positioner_id: int, alpha=0, beta=0, **kwargs):
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        alpha: float | None = None,
+        beta: float | None = None,
+        **kwargs,
+    ):
 
-        assert alpha >= 0 and beta >= 0, "invalid speed."
+        if alpha is not None and beta is not None:
+            assert alpha >= 0 and beta >= 0, "invalid speed."
 
-        data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
-        kwargs["data"] = data
+            data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
+            kwargs["data"] = data
 
-        super().__init__(positioner_id, **kwargs)
-
-        if self.is_broadcast or len(self.positioner_ids) > 1:
-            raise CommandError("This command can only be sent to one positioner.")
+        super().__init__(positioner_ids, **kwargs)
 
     @staticmethod
     def encode(alpha, beta):
@@ -173,14 +196,18 @@ class SetCurrent(Command):
     safe = True
     move_command = True
 
-    def __init__(self, positioner_id: int, alpha=0, beta=0, **kwargs):
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        alpha: float | None = None,
+        beta: float | None = None,
+        **kwargs,
+    ):
 
-        assert alpha >= 0 and beta >= 0, "invalid current."
+        if alpha is not None and beta is not None:
+            assert alpha >= 0 and beta >= 0, "invalid current."
 
-        data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
-        kwargs["data"] = data
+            data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
+            kwargs["data"] = data
 
-        super().__init__(positioner_id, **kwargs)
-
-        if self.is_broadcast or len(self.positioner_ids) > 1:
-            raise CommandError("This command can only be sent to one positioner.")
+        super().__init__(positioner_ids, **kwargs)

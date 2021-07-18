@@ -53,8 +53,8 @@ async def upgrade(command, fps, firmware_file, positioners):
     command.debug(text="stopping pollers")
     await fps.pollers.stop()
 
-    await fps.update_firmware_version(positioner_id=positioner_id)
-    await fps.update_status(positioner_id=positioner_id)
+    await fps.update_firmware_version(positioner_ids=positioner_id)
+    await fps.update_status(positioner_ids=positioner_id)
 
     def report_progress(current_chunk, n_chunks):
 

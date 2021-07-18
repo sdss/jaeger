@@ -26,7 +26,7 @@ async def talk(command, fps, command_id, positioner_id, params):
     CommandClass = CommandID(command_id).get_command_class()
     assert CommandClass
 
-    can_command = CommandClass(*params, positioner_id=positioner_id)
+    can_command = CommandClass(positioner_id, *params)
 
     command.info(f"Running command {can_command.command_id.name}.")
 

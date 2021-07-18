@@ -295,7 +295,7 @@ async def current(command, fps, positioner_id, alpha, beta, all):
         return command.fail(error="FPS is moving. Cannot send set current.")
 
     commands = [
-        fps.send_command(SetCurrent(positioner_id=pid, alpha=alpha, beta=beta))
+        fps.send_command(SetCurrent(pid, alpha=alpha, beta=beta))
         for pid in positioner_id
     ]
     await asyncio.gather(*commands)
@@ -390,7 +390,7 @@ async def on(command, fps, positioner_id):
         return
 
     command.debug("Turning hall sensors ON")
-    await fps.send_to_all("HALL_ON", positioners=positioner_id)
+    await fps.send_command("HALL_ON", positioner_ids=positioner_id)
 
     command.debug("Waiting 5 seconds ...")
     await asyncio.sleep(5)
@@ -410,7 +410,7 @@ async def off(command, fps, positioner_id):
         return
 
     command.debug("Turning hall sensors OFF")
-    await fps.send_to_all("HALL_OFF", positioners=positioner_id)
+    await fps.send_command("HALL_OFF", positioner_ids=positioner_id)
 
     command.finish()
 
@@ -434,7 +434,7 @@ async def led_on(command, fps, positioner_id):
         return
 
     command.debug("Turning LED on")
-    await fps.send_to_all("SWITCH_LED_ON", positioners=positioner_id)
+    await fps.send_command("SWITCH_LED_ON", positioner_ids=positioner_id)
 
     command.finish()
 
@@ -451,7 +451,7 @@ async def led_off(command, fps, positioner_id):
         return
 
     command.debug("Turning LED off")
-    await fps.send_to_all("SWITCH_LED_OFF", positioners=positioner_id)
+    await fps.send_command("SWITCH_LED_OFF", positioner_ids=positioner_id)
 
     command.finish()
 

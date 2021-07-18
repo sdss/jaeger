@@ -152,18 +152,15 @@ async def load_firmware(
     log.info(f"CRC32: {crc32}")
     log.info(f"File size: {filesize} bytes")
 
-    cmds = [
-        fps.send_command(
-            CommandID.START_FIRMWARE_UPGRADE,
-            positioner_id=positioner.positioner_id,
-            data=[start_firmware_payload],
-        )
-        for positioner in valid_positioners
-    ]
+    pids = [pos.positioner_id for pos in valid_positioners]
 
-    await asyncio.gather(*cmds)
+    cmd = await fps.send_command(
+        CommandID.START_FIRMWARE_UPGRADE,
+        positioner_ids=pids,
+        data=[start_firmware_payload],
+    )
 
-    if any(cmd.status.failed or cmd.status.timed_out for cmd in cmds):
+    if cmd.status.failed or cmd.status.timed_out:
         log.error("firmware upgrade failed.")
         return False
 
@@ -204,15 +201,14 @@ async def load_firmware(
                     stop = True
                     break
 
-                cmds += [
+                cmds.append(
                     fps.send_command(
                         CommandID.SEND_FIRMWARE_DATA,
-                        positioner_id=positioner.positioner_id,
+                        positioner_ids=pids,
                         data=[packetdata],
                         timeout=15,
                     )
-                    for positioner in valid_positioners
-                ]
+                )
 
             await asyncio.gather(*cmds)
 
