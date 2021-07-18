@@ -196,7 +196,8 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future):
     timeout
         Time after which the command will be marked done when not all the
         positioners have replies. If `None`, the default timeout will be used.
-        If `False`, the command won't timeout until all the positioners have replied.
+        If `False`, the command won't timeout until all the positioners have
+        replied.
     done_callback
         A function to call when the command has been successfully completed.
     n_positioners
