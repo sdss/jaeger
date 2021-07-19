@@ -53,7 +53,7 @@ async def send_trajectory(
     fps: FPS,
     trajectories: str | pathlib.Path | TrajectoryDataType,
     use_sync_line=True,
-):
+) -> Trajectory:
     """Sends a set of trajectories to the positioners.
 
     This is a low-level function that raises errors when a problem is
@@ -121,7 +121,7 @@ async def send_trajectory(
 
     log.info("All positioners have successfully reached their positions.")
 
-    return True
+    return traj
 
 
 class Trajectory(object):
