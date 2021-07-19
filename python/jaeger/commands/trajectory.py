@@ -287,18 +287,23 @@ class Trajectory(object):
             if max_time_pos > self.move_time:
                 self.move_time = max_time_pos
 
-        # Starts trajectory
-        new_traj_cmds = [
-            self.fps.send_command(
-                "SEND_NEW_TRAJECTORY",
-                positioner_ids=pos_id,
-                n_alpha=self.n_points[pos_id][0],
-                n_beta=self.n_points[pos_id][1],
+        new_traj_data = {}
+        for pos_id in self.trajectories:
+            data = SendNewTrajectory.get_data(
+                self.n_points[pos_id][0],
+                self.n_points[pos_id][1],
             )
-            for pos_id in self.trajectories
-        ]
+            new_traj_data[pos_id] = data
 
-        await asyncio.gather(*new_traj_cmds)
+        # Starts trajectory
+        new_traj_cmd = await self.fps.send_command(
+            "SEND_NEW_TRAJECTORY",
+            positioner_ids=list(self.trajectories),
+            data=new_traj_data,
+        )
+
+        if new_traj_cmd.status.failed or new_traj_cmd.status.timed_out:
+            raise TrajectoryError("Failed sending SEND_NEW_TRAJECTORY.")
 
         start_trajectory_send_time = time.time()
 
@@ -315,7 +320,8 @@ class Trajectory(object):
 
             for jj in range(0, max_points[arm], n_chunk):
 
-                data_cmds = []
+                data = {}
+                send_trajectory_pids = []
 
                 for pos_id in self.trajectories:
 
@@ -323,22 +329,24 @@ class Trajectory(object):
                     if len(arm_chunk) == 0:
                         continue
 
-                    data_cmds.append(
-                        self.fps.send_command(
-                            "SEND_TRAJECTORY_DATA",
-                            positioner_ids=pos_id,
-                            positions=arm_chunk,
-                        )
+                    send_trajectory_pids.append(pos_id)
+
+                    positions = numpy.array(arm_chunk).astype(numpy.float64)
+                    data_pos = SendTrajectoryData.calculate_positions(positions)
+
+                    data[pos_id] = data_pos
+
+                data_send_cmd = await self.fps.send_command(
+                    "SEND_TRAJECTORY_DATA",
+                    positioner_ids=send_trajectory_pids,
+                    data=data,
+                )
+
+                if data_send_cmd.status.failed or data_send_cmd.status.timed_out:
+                    self.failed = True
+                    raise TrajectoryError(
+                        "At least one SEND_TRAJECTORY_COMMAND failed."
                     )
-
-                await asyncio.gather(*data_cmds)
-
-                for cmd in data_cmds:
-                    if cmd.status.failed or cmd.status.timed_out:
-                        self.failed = True
-                        raise TrajectoryError(
-                            "At least one SEND_TRAJECTORY_COMMAND failed."
-                        )
 
         # Finalise the trajectories
         end_traj_cmds = await self.fps.send_command(
@@ -468,7 +476,18 @@ class SendNewTrajectory(Command):
     broadcastable = False
     move_command = True
 
-    def __init__(self, positioner_ids, n_alpha, n_beta, **kwargs):
+    def __init__(self, positioner_ids, n_alpha=None, n_beta=None, **kwargs):
+
+        if n_alpha is not None and n_beta is not None:
+            kwargs["data"] = self.get_data(n_alpha, n_beta)
+        else:
+            assert "data" in kwargs, "n_alpha/n_beta or data need to be passed."
+
+        super().__init__(positioner_ids, **kwargs)
+
+    @staticmethod
+    def get_data(n_alpha, n_beta):
+        """Returns the data bytearray from a pair for ``(n_alpha, n_beta)``."""
 
         alpha_positions = int(n_alpha)
         beta_positions = int(n_beta)
@@ -476,9 +495,8 @@ class SendNewTrajectory(Command):
         assert alpha_positions > 0 and beta_positions > 0
 
         data = int_to_bytes(alpha_positions) + int_to_bytes(beta_positions)
-        kwargs["data"] = data
 
-        super().__init__(positioner_ids, **kwargs)
+        return data
 
 
 class SendTrajectoryData(Command):
@@ -502,22 +520,31 @@ class SendTrajectoryData(Command):
     broadcastable = False
     move_command = True
 
-    def __init__(self, positioner_ids, positions, **kwargs):
+    def __init__(self, positioner_ids, positions=None, **kwargs):
+
+        if positions is not None:
+            kwargs["data"] = self.calculate_positions(positions)
+        else:
+            assert "data" in kwargs, "positions or data need to be passed."
+
+        super().__init__(positioner_ids, **kwargs)
+
+    @staticmethod
+    def calculate_positions(positions):
+        """Converts angle-time posions to bytes data."""
 
         positions = numpy.array(positions).astype(numpy.float64)
 
         positions[:, 0] = positions[:, 0] / 360.0 * MOTOR_STEPS
         positions[:, 1] /= TIME_STEP
 
-        self.trajectory_points = positions.astype(numpy.int32)
+        positions = positions.astype(numpy.int32)
 
         data = []
-        for angle, tt in self.trajectory_points:
+        for angle, tt in positions:
             data.append(int_to_bytes(angle, dtype="i4") + int_to_bytes(tt, dtype="i4"))
 
-        kwargs["data"] = data
-
-        super().__init__(positioner_ids, **kwargs)
+        return data
 
 
 class TrajectoryDataEnd(Command):
