@@ -163,7 +163,7 @@ class EmptyPool(CommandError):
 data_co = Union[None, bytearray, List[bytearray]]
 
 
-class Command(StatusMixIn[CommandStatus], asyncio.Future):
+class Command(StatusMixIn[CommandStatus], asyncio.Future["Command"]):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
