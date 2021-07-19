@@ -760,48 +760,35 @@ class FPS(BaseFPS):
 
         return True
 
-    async def stop_trajectory(
-        self,
-        positioner_ids: Optional[int | List[int]] = None,
-        clear_flags: bool = True,
-        timeout: float = 0,
-    ):
+    async def stop_trajectory(self):
         """Stops all the positioners.
 
         Parameters
         ----------
         positioner_ids
             The list of positioners to abort. If `None`, abort all positioners.
-        clear_flags
-            If `True`, in addition to sending ``TRAJECTORY_TRANSMISSION_ABORT``
-            sends ``STOP_TRAJECTORY`` which clears all the collision and
-            warning flags.
         timeout
             How long to wait before timing out the command. By default, just
             sends the command and does not wait for replies.
 
         """
 
-        if positioner_ids is None:
-            positioner_ids = [
-                positioner_id
-                for positioner_id in self
-                if not self[positioner_id].is_bootloader()
-            ]
-            if positioner_ids == []:
-                return
-
         await self.send_command(
-            "TRAJECTORY_TRANSMISSION_ABORT",
-            positioner_ids=positioner_ids,
+            "STOP_TRAJECTORY",
+            positioner_ids=0,
+            timeout=0,
+            now=True,
         )
 
-        if clear_flags:
-            await self.send_command(
-                "STOP_TRAJECTORY",
-                positioner_ids=0,
-                timeout=timeout,
-            )
+        await self.send_command("TRAJECTORY_TRANSMISSION_ABORT", positioner_ids=None)
+
+        # Check running command that are "move" and cancel them.
+        assert isinstance(self.can, JaegerCAN)
+        for command in self.can.running_commands.values():
+            if command.move_command and not command.done():
+                command.cancel(silent=True)
+
+        self.can.refresh_running_commands()
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.

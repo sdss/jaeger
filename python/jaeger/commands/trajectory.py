@@ -239,7 +239,7 @@ class Trajectory(object):
 
         self.move_time = 0.0
 
-        await self.abort_trajectory()
+        await self.fps.stop_trajectory()
 
         if not await self.fps.update_status(
             positioner_ids=list(self.trajectories.keys()),
@@ -408,40 +408,44 @@ class Trajectory(object):
                 self.failed = True
                 raise TrajectoryError("START_TRAJECTORY failed")
 
+        restart_pollers = True if self.fps.pollers.running else False
+        await self.fps.pollers.stop()
+
+        start_time = time.time()
+
         try:
-            await self.fps.pollers.set_delay(1)
-            use_pollers = True
-        except Exception as ee:
-            use_pollers = False
-            log.error(f"Failed setting poller delay: {ee}.")
+            assert self.move_time is not None, "move_time not set."
 
-        assert self.move_time is not None, "move_time not set."
+            while True:
 
-        # Wait approximate time before starting to poll for status
-        await asyncio.sleep(0.95 * self.move_time)
+                await asyncio.sleep(1)
 
-        remaining_time = self.move_time - 0.95 * self.move_time
+                if self.fps.locked:
+                    raise TrajectoryError("The FPS got locked during the trajectory.")
 
-        # Wait until all positioners have completed.
-        wait_status = [
-            self.fps.positioners[pos_id].wait_for_status(
-                self.fps.positioners[pos_id].flags.DISPLACEMENT_COMPLETED,
-                timeout=remaining_time + 3,
-                delay=0.1,
-            )
-            for pos_id in self.trajectories
-        ]
-        results = await asyncio.gather(*wait_status)
+                await self.fps.update_status()
 
-        if not all(results):
-            if use_pollers:
-                await self.fps.pollers.set_delay()
+                if all(
+                    [
+                        maskbits.PositionerStatus.DISPLACEMENT_COMPLETED
+                        in self.fps[pid]
+                        for pid in self.trajectories
+                    ]
+                ):
+                    self.failed = False
+                    break
+
+            elapsed = time.time() - start_time
+            if elapsed > (self.move_time + 3):
+                raise TrajectoryError("Some positioners did not complete the move.")
+
+        except BaseException:
             self.failed = True
-            raise TrajectoryError("Some positioners did not complete the move.")
+            raise
 
-        # Restore default polling time
-        if use_pollers:
-            await self.fps.pollers.set_delay()
+        finally:
+            if restart_pollers:
+                self.fps.pollers.start()
 
         return True
 

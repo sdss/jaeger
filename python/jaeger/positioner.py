@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from distutils.version import StrictVersion
+from time import time
 
 from typing import List, Optional, Tuple, cast
 
@@ -238,12 +239,12 @@ class Positioner(StatusMixIn):
         else:
             self.flags = maskbits.BootloaderStatus
 
-        self.status = self.flags(status)
+        self.status = self.flags(int(status))
 
         # Checks if the positioner is collided. If so, locks the FPS.
-        if not self.is_bootloader() and self.collision and not self.fps.locked:
-            await self.fps.lock()
-            raise PositionerError("collision detected. Locking the FPS.")
+        # if not self.is_bootloader() and self.collision and not self.fps.locked:
+        #     await self.fps.lock()
+        #     raise PositionerError("collision detected. Locking the FPS.")
 
         return True
 
@@ -296,7 +297,7 @@ class Positioner(StatusMixIn):
 
                 await asyncio.sleep(delay)
 
-        wait_for_status = [self.flags(ss) for ss in status]
+        wait_for_status = [self.flags(int(ss)) for ss in status]
 
         try:
             await asyncio.wait_for(status_waiter(wait_for_status), timeout)
@@ -633,17 +634,28 @@ class Positioner(StatusMixIn):
 
             self._log(f"the move will take {self.move_time:.2f} seconds", logging.INFO)
 
-            await asyncio.sleep(self.move_time)
+            assert self.fps
 
-            # Blocks until we're sure both arms at at the position.
-            result = await self.wait_for_status(
-                self.flags.DISPLACEMENT_COMPLETED, delay=0.1, timeout=3
-            )
+            while True:
+                await asyncio.sleep(0.2)
 
-            if result is False:
-                raise PositionerError("failed to reach commanded position.")
+                if self.fps.locked:
+                    # No need to be very verbose about this.
+                    self._log(
+                        "Cancelling goto because the FPS got locked",
+                        logging.DEBUG,
+                    )
+                    result = False
+                    break
 
-            self._log("position reached.", logging.INFO)
+                elapsed = time() - goto_command.start_time
+                if elapsed > self.move_time + 3:
+                    raise PositionerError("failed to reach commanded position.")
+
+                await self.update_status()
+                if maskbits.PositionerStatus.DISPLACEMENT_COMPLETED in self.status:
+                    result = True
+                    break
 
         except BaseException:
             raise
@@ -652,7 +664,10 @@ class Positioner(StatusMixIn):
             if self.speed != original_speed:
                 await self.set_speed(*original_speed, force=force)
 
-        return True
+        if result is True:
+            self._log("position reached.", logging.INFO)
+
+        return result
 
     async def home(self):
         """Homes the positioner.
