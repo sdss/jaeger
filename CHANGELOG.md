@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+## ✨ Improved
+
+* `Trajectory()` now sends data points using a single command per trajectory chunk.
+
+
 ## 0.9.0 - July 18, 2021
 
 ### 🚀 New
