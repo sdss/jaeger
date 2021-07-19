@@ -30,7 +30,7 @@ from typing import (
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.commands import Command, CommandID, StopTrajectory
+from jaeger.commands import Command, CommandID
 from jaeger.exceptions import JaegerCANError
 from jaeger.interfaces import BusABC, CANNetBus, Message, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
