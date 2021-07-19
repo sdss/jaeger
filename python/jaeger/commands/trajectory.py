@@ -428,7 +428,7 @@ class Trajectory(object):
                 if all(
                     [
                         maskbits.PositionerStatus.DISPLACEMENT_COMPLETED
-                        in self.fps[pid]
+                        in self.fps[pid].status
                         for pid in self.trajectories
                     ]
                 ):
