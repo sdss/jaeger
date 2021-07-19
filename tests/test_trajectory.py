@@ -9,6 +9,7 @@
 import pytest
 
 from jaeger import config
+from jaeger.commands.trajectory import send_trajectory
 from jaeger.exceptions import JaegerError
 
 
@@ -40,7 +41,8 @@ async def test_disabled_positioner_fails(vfps):
     vfps[1].disabled = True
 
     with pytest.raises(JaegerError) as err:
-        await vfps.send_trajectory(
+        await send_trajectory(
+            vfps,
             {
                 1: {
                     "alpha": [(1, 1), (2, 2)],
@@ -58,13 +60,14 @@ async def test_validate_out_of_limits(vfps):
     await vfps.initialise()
 
     with pytest.raises(JaegerError) as err:
-        await vfps.send_trajectory(
+        await send_trajectory(
+            vfps,
             {
                 1: {
                     "alpha": [(1000, 1), (2, 2)],
                     "beta": [(1, 1), (2, 2)],
                 }
-            }
+            },
         )
 
     assert "out of range" in str(err)
@@ -78,13 +81,14 @@ async def test_validate_safe_mode(vfps, monkeypatch, beta, safe_mode):
     await vfps.initialise()
 
     with pytest.raises(JaegerError) as err:
-        await vfps.send_trajectory(
+        await send_trajectory(
+            vfps,
             {
                 1: {
                     "alpha": [(beta, 1), (2, 2)],
                     "beta": [(1, 1), (2, 2)],
                 }
-            }
+            },
         )
 
     assert "safe mode is on" in str(err)
