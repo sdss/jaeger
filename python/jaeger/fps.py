@@ -587,7 +587,7 @@ class FPS(BaseFPS):
 
         """
 
-        warnings.warn("Locking FPS.", JaegerUserWarning)
+        warnings.warn("Locking the FPS.", JaegerUserWarning)
         self._locked = True
 
         if stop_trajectories:
@@ -800,7 +800,7 @@ class FPS(BaseFPS):
         try:
             return await send_trajectory(self, *args, **kwargs)
         except TrajectoryError as ee:
-            raise JaegerError(f"Sending trajectory failed with error: {ee}")
+            log.error(f"Sending trajectory failed with error: {ee}")
 
     def abort(self):
         """Aborts trajectories and stops positioners."""
