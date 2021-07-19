@@ -15,6 +15,7 @@
 
 * [#135](https://github.com/sdss/jaeger/issues/135) Cleaned up initialisation methods for `JaegerCAN` and `FPS`. Objects can now be instantiated and initialised at the same time using the async classmethod `.create()`.
 * [#141](https://github.com/sdss/jaeger/issues/141) The `jaeger upgrade-firmware` command will now upgrade the firmware of one sextant at a time to avoid powering on too many power supplies at the same time.
+* [#124](https://github.com/sdss/jaeger/issues/124) Collisions are handled better. If a move command is running when the FPS is locked, the command is cancelled. `Postioner.goto()` and `send_trajectory()` now continuously check if the FPS has been locked during the move. If it is, they fail in a non-verbose way. `FPS.send_trajectory()` now logs an error but doesn't raise an exception if the trajectory fails.
 
 ### 🧹 Cleaned
 

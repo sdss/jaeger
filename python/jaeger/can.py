@@ -30,7 +30,7 @@ from typing import (
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.commands import Command, CommandID, StopTrajectory
+from jaeger.commands import Command, CommandID
 from jaeger.exceptions import JaegerCANError
 from jaeger.interfaces import BusABC, CANNetBus, Message, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
@@ -295,12 +295,12 @@ class JaegerCAN(Generic[Bus_co]):
             if self.fps and self.fps.locked:
                 return
 
-            stop_trajectory_command = StopTrajectory(0)
-            self.send_messages(stop_trajectory_command)
+            assert self.fps
+            await self.fps.stop_trajectory()
 
             # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                asyncio.create_task(self.fps.lock(stop_trajectories=False))
+                await self.fps.lock(stop_trajectories=False)
                 return
 
         if command_id == 0:
