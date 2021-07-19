@@ -154,7 +154,7 @@ class Trajectory(object):
     Given the following two-point trajectory for positioner 4 ::
 
         points = {4: {'alpha': [(90, 0), (91, 3)],
-                    'beta': [(20, 0), (23, 4)]}}
+                      'beta': [(20, 0), (23, 4)]}}
 
     the normal process to execute the trajectory is ::
 
@@ -207,7 +207,7 @@ class Trajectory(object):
         if len(self.trajectories) == 0:
             raise TrajectoryError("trajectory is empty.")
 
-        if len(self.trajectories) != len(numpy.unique(list(self.trajectories.keys()))):
+        if len(self.trajectories) != len(numpy.unique(list(self.trajectories))):
             raise TrajectoryError("Duplicate positioner trajectories.")
 
         for pid in self.trajectories:
@@ -230,8 +230,8 @@ class Trajectory(object):
                             min_beta = config["safe_mode"]["min_beta"]
                         if numpy.any(data < min_beta):
                             raise TrajectoryError(
-                                f"Oositioner {pid}: safe mode is "
-                                f"on and beta < {min_beta}."
+                                f"Positioner {pid}: safe mode is on "
+                                f"and beta < {min_beta}."
                             )
 
     async def send(self):
@@ -242,7 +242,7 @@ class Trajectory(object):
         await self.fps.stop_trajectory()
 
         if not await self.fps.update_status(
-            positioner_ids=list(self.trajectories.keys()),
+            positioner_ids=list(self.trajectories),
             timeout=1.0,
         ):
             self.failed = True
@@ -422,7 +422,8 @@ class Trajectory(object):
         start_time = time.time()
 
         try:
-            assert self.move_time is not None, "move_time not set."
+            if self.move_time is None:
+                raise TrajectoryError("move_time not set.")
 
             while True:
 
