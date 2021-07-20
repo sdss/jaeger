@@ -13,11 +13,12 @@ import binascii
 import collections
 import logging
 import time
+import warnings
 
 from typing import Callable, Dict, List, Optional, Union
 
 from jaeger import can_log, config, log, maskbits
-from jaeger.exceptions import CommandError, JaegerError
+from jaeger.exceptions import CommandError, JaegerError, JaegerUserWarning
 from jaeger.interfaces import BusABC, Message
 from jaeger.maskbits import CommandStatus, ResponseCode
 from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
@@ -459,6 +460,13 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future["Command"]):
             f"code={reply.response_code.name!r}, "
             f"data={data_hex!r}"
         )
+
+        if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
+            warnings.warn(
+                f"Positioner {reply.positioner_id} replied to {self.name} "
+                f"UID={self.command_uid} with {reply.response_code.name!r}.",
+                JaegerUserWarning,
+            )
 
         reply_status = self._check_replies()
         if reply_status is True:

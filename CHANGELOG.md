@@ -5,6 +5,7 @@
 ## ✨ Improved
 
 * `Trajectory()` now sends data points using a single command per trajectory chunk.
+* Warn about individual replies that return without `COMMAND_ACCEPTED`.
 
 ### 🔧 Fixed
 
