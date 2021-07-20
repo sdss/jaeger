@@ -12,6 +12,7 @@ import asyncio
 import binascii
 import collections
 import logging
+import sys
 import time
 import warnings
 
@@ -164,7 +165,13 @@ class EmptyPool(CommandError):
 data_co = Union[None, bytearray, List[bytearray]]
 
 
-class Command(StatusMixIn[CommandStatus], asyncio.Future["Command"]):
+if sys.version_info >= (3, 9):
+    Future_co = asyncio.Future["Command"]
+else:
+    Future_co = asyncio.Future
+
+
+class Command(StatusMixIn[CommandStatus], Future_co):
     """A command to be sent to the CAN controller.
 
     Implements a base class to define CAN commands to interact with the
