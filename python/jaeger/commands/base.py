@@ -562,15 +562,16 @@ class Command(StatusMixIn[CommandStatus], asyncio.Future["Command"]):
 
             pid_data = self.data[pid]
 
-            try:
-                uid = UID_POOL[cid][pid].pop()
-            except KeyError:
-                # Before failing, put back the UIDs of the other messages
-                for message in messages:
-                    UID_POOL[cid][pid].add(message.uid)
-                raise EmptyPool("no UIDs left in the pool.")
-
             for d in pid_data:
+
+                try:
+                    uid = UID_POOL[cid][pid].pop()
+                except KeyError:
+                    # Before failing, put back the UIDs of the other messages
+                    for message in messages:
+                        UID_POOL[cid][pid].add(message.uid)
+                    raise EmptyPool("no UIDs left in the pool.")
+
                 messages.append(SuperMessage(self, positioner_id=pid, uid=uid, data=d))
 
         return messages

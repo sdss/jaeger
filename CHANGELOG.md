@@ -6,6 +6,10 @@
 
 * `Trajectory()` now sends data points using a single command per trajectory chunk.
 
+### 🔧 Fixed
+
+* When sending multiple message per positioner per command, assign different UIDs.
+
 
 ## 0.9.0 - July 18, 2021
 
