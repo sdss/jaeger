@@ -184,7 +184,7 @@ modules:
                 units: degC
                 description: FPS return manifold coolant
             RTD12:
-                address: 40035
+                address: 40036
                 category: temperature
                 adaptor: rtd
                 units: degC

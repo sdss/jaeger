@@ -10,6 +10,7 @@
 ### 🔧 Fixed
 
 * When sending multiple message per positioner per command, assign different UIDs.
+* Fix address of IEB RTD12.
 
 
 ## 0.9.0 - July 18, 2021
