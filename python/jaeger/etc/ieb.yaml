@@ -19,18 +19,6 @@ modules:
                 adaptor: t_dwyer
                 units: degC
                 description: Ambient outside air temperature
-            RH2:
-                address: 40011
-                category: humidity
-                adaptor: rh_dwyer
-                units: percent
-                description: Relative humidity sensor 2
-            T2:
-                address: 40012
-                category: temperature
-                adaptor: t_dwyer
-                units: degC
-                description: Air temperature sensor 2
             RH3:
                 address: 40013
                 category: humidity

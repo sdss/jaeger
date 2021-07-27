@@ -9,7 +9,6 @@
             "description": "Temperature measurements",
             "items": [
                 { "title": "T1", "type": "number" },
-                { "title": "T2", "type": "number" },
                 { "title": "T3", "type": "number" },
                 { "title": "RTD1", "type": "number" },
                 { "title": "RTD2", "type": "number" },
@@ -28,7 +27,6 @@
             "description": "Relative humidity measurements",
             "items": [
                 { "title": "RH1", "type": "number" },
-                { "title": "RH2", "type": "number" },
                 { "title": "RH3", "type": "number" }
             ]
         },
