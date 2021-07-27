@@ -57,6 +57,9 @@ class JaegerActor(clu.LegacyActor):
             self.timed_commands.add_command("ieb status", delay=ieb_status_delay)
             asyncio.create_task(self.handle_temperature())
 
+        fvc_ieb_path = os.path.join(os.path.dirname(__file__), "../etc/fvc.yaml")
+        self.fvc_ieb = IEB.from_config(fvc_ieb_path)
+
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
 

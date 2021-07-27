@@ -9,22 +9,22 @@ modules:
         devices:
             RTD1:
                 address: 40005
-                category: temperature
+                category: fvc_temperature
                 adaptor: rtd
                 units: degC
                 description: IEB inside air temperature
             RTD2:
                 address: 40006
-                category: temperature
+                category: fvc_temperature
                 adaptor: rtd
                 units: degC
-                description: Wok center (metal) temperature
+                description:
             RTD3:
                 address: 40007
-                category: temperature
+                category: fvc_temperature
                 adaptor: rtd
                 units: degC
-                description: FPS air above wok, center
+                description:
     ANALOG_OUTPUT1:
         model: 750-511
         mode: holding_register
@@ -33,7 +33,7 @@ modules:
         devices:
             LED1:
                 address: 40514
-                category: fbi_led
+                category: fvc_fbi_led
                 adaptor: pwd
                 units: percent
                 description: Red LED
@@ -47,13 +47,13 @@ modules:
                 address: 40517
                 channel: 0
                 type: relay
-                category: power_nuc
+                category: fvc_power_nuc
                 relay_type: NC
                 description: FVC NUC
             FVC:
                 address: 40517
                 channel: 1
                 type: relay
-                category: power_fvc
+                category: fvc_power_camera
                 relay_type: NO
                 description: FVC camera power
