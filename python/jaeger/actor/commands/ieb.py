@@ -143,6 +143,10 @@ async def switch(command, fps, device, on, cycle):
         except Exception:
             return command.fail(error=f"failed to power device {dev_name!r} back on.")
 
+    # If we read the status immediately sometimes we still get the old one.
+    # Sleep a bit to avoid that.
+    await asyncio.sleep(0.2)
+
     status = "on" if (await device_obj.read())[0] == "closed" else "off"
 
     return command.finish(
