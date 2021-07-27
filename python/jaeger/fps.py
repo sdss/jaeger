@@ -281,6 +281,7 @@ class FPS(BaseFPS):
 
         # Clear all robots
         dict.__init__(self, {})
+        self.positioner_to_bus = {}
 
         # Stop pollers while initialising
         if self.pollers.running:
