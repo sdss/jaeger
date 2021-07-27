@@ -6,19 +6,16 @@
 # @Filename: fvc.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from typing import TYPE_CHECKING
-
+from clu import Command
 from drift import DriftError
 
+from jaeger import FPS
+
+from ..actor import JaegerActor
 from . import jaeger_parser
 
 
-if TYPE_CHECKING:
-    from clu import Command
-
-    from jaeger import FPS
-
-    from ..actor import JaegerActor
+__all__ = ["fvc"]
 
 
 @jaeger_parser.group()
@@ -39,13 +36,22 @@ async def status(command: Command[JaegerActor], fps: FPS):
 
     try:
         status = {}
-        async with ieb:
-            categories = ieb.get_categories()
-            for category in sorted(categories):
-                cat_data = await ieb.read_category(category)
-                status[category] = [cat_data[cd][0] for cd in cat_data]
+        categories = ieb.get_categories()
+        for category in sorted(categories):
+            cat_data = await ieb.read_category(category)
+            status[category] = []
+            for cd in cat_data:
+                value = cat_data[cd][0]
+                if value == "closed":
+                    value = True
+                elif value == "open":
+                    value = False
+                else:
+                    value = round(value, 1)
+                status[category].append(value)
 
         command.info(status)
+
     except DriftError:
         command.warning(text="FVC IEB is unavailable.")
 
