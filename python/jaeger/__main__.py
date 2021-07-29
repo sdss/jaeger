@@ -98,7 +98,8 @@ class FPSWrapper(object):
 
     async def __aexit__(self, *excinfo):
         try:
-            assert self.fps
+            if self.fps is None:
+                return
             await self.fps.shutdown()
         except JaegerError as err:
             warnings.warn(f"Failed shutting down FPS: {err}", JaegerUserWarning)
@@ -317,20 +318,28 @@ async def upgrade_firmware(
 
     async with fps_maker as fps:
 
+        ps_devs = []
+        if fps.ieb and no_cycle is False:
+            for module in fps.ieb.modules.values():
+                for dev_name in module.devices:
+                    if dev_name.upper().startswith("PS"):
+                        ps_devs.append(dev_name)
+
         for sextant in sextants:
             log.info(f"Upgrading firmware on sextant {sextant}.")
 
             if fps.ieb and no_cycle is False:
-                log.info("power cycling positioners")
-                dev = "PS" + str(sextant)
+                log.info("Power cycling positioners")
+
                 await asyncio.gather(
-                    *[
-                        fps.ieb.get_device(f"PS{sextant}").open()
-                        for sextant in range(1, 7)
-                    ]
+                    *[fps.ieb.get_device(dev).open() for dev in ps_devs]
                 )
+
                 await asyncio.sleep(5)
+
+                dev = "PS" + str(sextant)
                 await fps.ieb.get_device(dev).close()
+
                 await asyncio.sleep(3)
 
             await fps.initialise(start_pollers=False)
