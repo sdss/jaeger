@@ -9,6 +9,7 @@
 * Remove check for whether a positioner has started to move after sending the goto command. It sometimes produced false positives on very short moves.
 * Disable precise moves by default.
 * Improve reloading the FPS.
+* Remove `bootloader` commands from actor.
 
 ### 🔧 Fixed
 
