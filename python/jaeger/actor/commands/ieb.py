@@ -84,7 +84,7 @@ async def status(command, fps):
 
 
 @ieb.command()
-@click.argument("DEVICE", type=str)
+@click.argument("DEVICES", type=str, nargs=-1)
 @click.option(
     "--on/--off",
     default=None,
@@ -95,66 +95,84 @@ async def status(command, fps):
     is_flag=True,
     help="power cycles a relay. The final status is on.",
 )
-async def switch(command, fps, device, on, cycle):
+@click.option(
+    "--delay",
+    type=float,
+    default=1,
+    help="When powering multiple devices, the delay to wait between them.",
+)
+async def switch(command, fps, devices=(), on=None, cycle=False, delay=1):
     """Switches the status of an on/off device."""
 
     ieb = fps.ieb
 
-    if cycle:
-        on = False
+    if len(devices) == 0:
+        return command.fail(error="No devices specified.")
 
-    try:
-        device_obj = ieb.get_device(device)
-        dev_name = device_obj.name
-        category = device_obj.category.lower()
-    except ValueError:
-        return command.fail(error=f"cannot find device {device!r}.")
+    for idev, device in enumerate(devices):
 
-    if dev_name == "SYNC":
-        return command.fail(error="the SYNC line cannot be switched manually.")
+        if len(devices) > 1 and idev != 0:
+            await asyncio.sleep(delay)
 
-    if device_obj.module.mode not in ["holding_register", "coil"]:
-        return command.fail(error=f"{dev_name!r} is not an output.")
-
-    if on is None:  # The --on/--off was not passed
-        current_status = (await device_obj.read())[0]
-        if current_status == "closed":
+        if cycle:
             on = False
-        elif current_status == "open":
-            on = True
-        else:
-            return command.fail(
-                error=f"invalid status for device {dev_name!r}: {current_status!r}."
-            )
 
-    try:
-        if on is True:
-            await device_obj.close()
-        elif on is False:
-            await device_obj.open()
-    except Exception:
-        return command.fail(error=f"failed to set status of device {dev_name!r}.")
-
-    if cycle:
-        command.write("d", text="waiting 1 second before powering up.")
-        await asyncio.sleep(1)
         try:
-            await device_obj.close()
+            device_obj = ieb.get_device(device)
+            dev_name = device_obj.name
+            category = device_obj.category.lower()
+        except ValueError:
+            return command.fail(error=f"cannot find device {device!r}.")
+
+        if dev_name == "SYNC":
+            return command.fail(error="the SYNC line cannot be switched manually.")
+
+        if device_obj.module.mode not in ["holding_register", "coil"]:
+            return command.fail(error=f"{dev_name!r} is not an output.")
+
+        if on is None:  # The --on/--off was not passed
+            current_status = (await device_obj.read())[0]
+            if current_status == "closed":
+                on = False
+            elif current_status == "open":
+                on = True
+            else:
+                return command.fail(
+                    error=f"invalid status for device {dev_name!r}: {current_status!r}."
+                )
+
+        try:
+            if on is True:
+                await device_obj.close()
+            elif on is False:
+                await device_obj.open()
         except Exception:
-            return command.fail(error=f"failed to power device {dev_name!r} back on.")
+            return command.fail(error=f"failed to set status of device {dev_name!r}.")
 
-    # If we read the status immediately sometimes we still get the old one.
-    # Sleep a bit to avoid that.
-    await asyncio.sleep(0.2)
+        if cycle:
+            command.write("d", text="waiting 1 second before powering up.")
+            await asyncio.sleep(1)
+            try:
+                await device_obj.close()
+            except Exception:
+                return command.fail(
+                    error=f"failed to power device {dev_name!r} back on."
+                )
 
-    status = "on" if (await device_obj.read())[0] == "closed" else "off"
+        # If we read the status immediately sometimes we still get the old one.
+        # Sleep a bit to avoid that.
+        await asyncio.sleep(0.2)
 
-    return command.finish(
-        message={
-            "text": f"device {dev_name!r} is now {status!r}.",
-            category: await _get_category_data(command, category),
-        }
-    )
+        status = "on" if (await device_obj.read())[0] == "closed" else "off"
+
+        command.info(
+            message={
+                "text": f"device {dev_name!r} is now {status!r}.",
+                category: await _get_category_data(command, category),
+            }
+        )
+
+    return command.finish()
 
 
 async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
@@ -181,6 +199,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
     command.debug(power_sync=[False])
 
     for devname in seq:
+        do_delay = False
         if isinstance(devname, str):
             dev = ieb.get_device(devname)
             category = dev.category.lower()
@@ -194,6 +213,8 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
                 if (await dev.read())[0] != relay_result:
                     command.fail(error=f"Failed powering {mode} {devname}.")
                     return False
+
+                do_delay = True
 
             command.debug({category: await _get_category_data(command, category)})
 
@@ -219,6 +240,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
                 await asyncio.gather(
                     *[dev.close() if mode == "on" else dev.open() for dev in devs]
                 )
+                do_delay = True
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
             for ii, res in enumerate(status):
@@ -232,7 +254,8 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
             command.fail(error=f"Invalid relay {devname!r}.")
             return False
 
-        await asyncio.sleep(delay)
+        if do_delay:
+            await asyncio.sleep(delay)
 
     return True
 
