@@ -222,7 +222,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
             for ii, res in enumerate(status):
-                if res[0] != "closed":
+                if res[0] != relay_result:
                     command.fail(error=f"Failed powering {mode} {devname[ii]}.")
                     return False
 
