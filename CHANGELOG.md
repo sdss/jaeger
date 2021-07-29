@@ -6,11 +6,17 @@
 
 * `Trajectory()` now sends data points using a single command per trajectory chunk.
 * Warn about individual replies that return without `COMMAND_ACCEPTED`.
+* Remove check for whether a positioner has started to move after sending the goto command. It sometimes produced false positives on very short moves.
+* Disable precise moves by default.
+* Improve reloading the FPS.
 
 ### 🔧 Fixed
 
 * When sending multiple message per positioner per command, assign different UIDs.
 * Fix address of IEB RTD12.
+* Fix upgrade firmware script in the case of a single test sextant.
+* Turn off all sextants before upgrading the firmware.
+* Fixed and tested the power on and power off IEB sequences.
 
 
 ## 0.9.0 - July 18, 2021
