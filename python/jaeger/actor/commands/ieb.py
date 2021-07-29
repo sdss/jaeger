@@ -301,7 +301,6 @@ async def off(command, fps, nucs):
     # Sequence of relays to power off. Tuples indicate relays that can be powered
     # off concurrently.
     off_seq = [
-        ("CM1", "CM2", "CM3", "CM4", "CM5", "CM6"),
         "PS1",
         "PS2",
         "PS3",
