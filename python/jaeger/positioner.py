@@ -15,8 +15,6 @@ from time import time
 
 from typing import List, Optional, Tuple, cast
 
-import numpy.testing
-
 import jaeger
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
@@ -68,8 +66,6 @@ class Positioner(StatusMixIn):
 
         self.disabled = False
 
-        self._move_time = None
-
         super().__init__(
             maskbit_flags=maskbits.PositionerStatus,
             initial_status=maskbits.PositionerStatus.UNKNOWN,
@@ -98,21 +94,6 @@ class Positioner(StatusMixIn):
             return True
 
         return False
-
-    @property
-    def move_time(self):
-        """Returns the move time."""
-
-        if not self.moving:
-            self._move_time = None
-
-        return self._move_time
-
-    @move_time.setter
-    def move_time(self, value):
-        """Sets the move time."""
-
-        self._move_time = value
 
     @property
     def initialised(self):
@@ -552,10 +533,10 @@ class Positioner(StatusMixIn):
         """
 
         if self.moving:
-            raise PositionerError("positioner is already moving.")
+            raise PositionerError("Positioner is already moving.")
 
         if force is False and not self._can_move():
-            raise PositionerError("positioner is not in a movable state.")
+            raise PositionerError("Positioner is not in a movable state.")
 
         ALPHA_MAX = 360
         BETA_MAX = 360
@@ -565,13 +546,13 @@ class Positioner(StatusMixIn):
         if (
             alpha < ALPHA_MIN or alpha > ALPHA_MAX or beta < BETA_MIN or beta > BETA_MAX
         ) and not force:
-            raise PositionerError("position out of limits.")
+            raise PositionerError("Position out of limits.")
 
         if not self.initialised:
-            raise PositionerError("not initialised.")
+            raise PositionerError("Not initialised.")
 
         if None in self.speed:
-            raise PositionerError("speed has not been set.")
+            raise PositionerError("Speed has not been set.")
 
         # Update position
         await self.update_position()
@@ -590,7 +571,7 @@ class Positioner(StatusMixIn):
                 relative is True and (self.beta + beta) < min_beta
             ):
                 raise PositionerError(
-                    "safe mode enabled. Cannot move beta arm that far."
+                    "Safe mode enabled. Cannot move beta arm that far."
                 )
 
         original_speed = cast(Tuple[float, float], self.speed)
@@ -612,41 +593,9 @@ class Positioner(StatusMixIn):
                 (GotoAbsolutePosition, GotoRelativePosition),
             )
 
-            # Sleeps for the time the firmware believes it's going to take
-            # to get to the desired position.
             alpha_time, beta_time = goto_command.get_move_time()[0]
-
-            # Update status as soon as we start moving. This clears any
-            # possible DISPLACEMENT_COMPLETED.
-            await asyncio.sleep(0.1)
-            await self.update_status()
-
-            if not self.moving:
-
-                if not self.position or None in self.position:
-                    raise PositionerError("position is unknown.")
-
-                if not relative:
-                    goto_position = (alpha, beta)
-                else:
-                    position = cast(Tuple[float, float], self.position)
-                    goto_position = (alpha + position[0], beta + position[1])
-
-                try:
-
-                    numpy.testing.assert_allclose(
-                        self.position, goto_position, atol=0.001
-                    )
-                    self._log("position reached (did not move).", logging.INFO)
-                    return True
-
-                except AssertionError:
-
-                    raise PositionerError("positioner is not moving when it should.")
-
-            self.move_time = max([alpha_time, beta_time])
-
-            self._log(f"the move will take {self.move_time:.2f} seconds", logging.INFO)
+            move_time = max([alpha_time, beta_time])
+            self._log(f"The move will take {move_time:.2f} seconds", logging.INFO)
 
             assert self.fps is not None
             assert goto_command.start_time is not None
@@ -664,8 +613,8 @@ class Positioner(StatusMixIn):
                     break
 
                 elapsed = time() - goto_command.start_time
-                if elapsed > self.move_time + 3:
-                    raise PositionerError("failed to reach commanded position.")
+                if elapsed > move_time + 3:
+                    raise PositionerError("Failed to reach commanded position.")
 
                 await self.update_status()
                 if maskbits.PositionerStatus.DISPLACEMENT_COMPLETED in self.status:
@@ -680,7 +629,7 @@ class Positioner(StatusMixIn):
                 await self.set_speed(*original_speed, force=force)
 
         if result is True:
-            self._log("position reached.", logging.INFO)
+            self._log("Position reached.", logging.INFO)
 
         return result
 

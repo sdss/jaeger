@@ -51,7 +51,7 @@ async def test_goto_no_move(vfps, event_loop, caplog):
 
     assert await vfps[1].goto(0, 0)
 
-    assert "did not move" in caplog.records[-1].message
+    assert "Did not move" in caplog.records[-1].message
 
 
 async def test_goto_relative(vfps, event_loop):
