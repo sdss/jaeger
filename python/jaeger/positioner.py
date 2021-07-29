@@ -21,6 +21,9 @@ import jaeger
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
+from jaeger.commands.bootloader import GetFirmwareVersion
+from jaeger.commands.goto import GotoAbsolutePosition, GotoRelativePosition
+from jaeger.commands.status import GetActualPosition
 from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
 
@@ -61,7 +64,7 @@ class Positioner(StatusMixIn):
         self.alpha = None
         self.beta = None
         self.speed = (None, None)
-        self.firmware = None
+        self.firmware: str | None = None
 
         self.disabled = False
 
@@ -192,6 +195,8 @@ class Positioner(StatusMixIn):
                 CommandID.GET_ACTUAL_POSITION,
                 timeout=timeout,
             )
+
+            assert isinstance(command, GetActualPosition)
 
             if command.status.failed:
                 self.alpha = self.beta = None
@@ -348,7 +353,12 @@ class Positioner(StatusMixIn):
             error="failed retrieving firmware version.",
         )
 
-        self.firmware = command.get_firmware(positioner_id=self.positioner_id)
+        assert isinstance(command, GetFirmwareVersion)
+
+        firmware = command.get_firmware(positioner_id=self.positioner_id)
+        assert firmware is not None and isinstance(firmware, str)
+
+        self.firmware = firmware
         self.flags = self.get_positioner_flags()
 
         self._log(f"firmware {self.firmware}")
@@ -597,6 +607,10 @@ class Positioner(StatusMixIn):
             )
 
             goto_command = await self._goto_position(alpha, beta, relative=relative)
+            assert isinstance(
+                goto_command,
+                (GotoAbsolutePosition, GotoRelativePosition),
+            )
 
             # Sleeps for the time the firmware believes it's going to take
             # to get to the desired position.
@@ -634,7 +648,8 @@ class Positioner(StatusMixIn):
 
             self._log(f"the move will take {self.move_time:.2f} seconds", logging.INFO)
 
-            assert self.fps
+            assert self.fps is not None
+            assert goto_command.start_time is not None
 
             while True:
                 await asyncio.sleep(0.2)

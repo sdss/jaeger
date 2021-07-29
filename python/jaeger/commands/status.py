@@ -6,7 +6,7 @@
 # @Filename: status.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import numpy
 
@@ -53,7 +53,7 @@ class GetActualPosition(Command):
     broadcastable = False
     safe = True
 
-    def get_positions(self) -> Dict[int, numpy.ndarray]:
+    def get_positions(self) -> Dict[int, Any]:
         """Returns the positions of alpha and beta in degrees.
 
         Raises
