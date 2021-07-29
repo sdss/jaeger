@@ -157,7 +157,7 @@ async def switch(command, fps, device, on, cycle):
     )
 
 
-async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
+async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
     """Applies the power on/off sequence."""
 
     # To speed up tests
@@ -178,7 +178,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
         command.fail(error="Failed opening SYNC line.")
         return False
 
-    command.debug(sync=False)
+    command.debug(power_sync=[False])
 
     for devname in seq:
         if isinstance(devname, str):
@@ -186,10 +186,11 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
             category = dev.category.lower()
 
             if (await dev.read())[0] == relay_result:
-                command.debug(text=f"{devname} alredy powered {mode}.")
+                command.debug(text=f"{devname} already powered {mode}.")
             else:
                 command.debug(text=f"Powering {mode} {devname}.")
-                await dev.close() if mode == "on" else dev.open()
+                await dev.close() if mode == "on" else await dev.open()
+                await asyncio.sleep(0.2)
                 if (await dev.read())[0] != relay_result:
                     command.fail(error=f"Failed powering {mode} {devname}.")
                     return False
@@ -206,21 +207,18 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
             keep = []
             for ii, res in enumerate(status):
                 if res[0] == relay_result:
-                    command.debug(
-                        {
-                            "text": f"{devname[ii]} alredy powered {mode}.",
-                            devname[ii].lower(): relay_result,
-                        }
-                    )
+                    command.debug({"text": f"{devname[ii]} already powered {mode}."})
                     continue
                 keep.append(ii)
 
             devs = [devs[ii] for ii in keep]
             devname = [devname[ii] for ii in keep]
 
-            command.debug(text=f"Powering {mode} {', '.join(devname)}")
-
-            await asyncio.gather(*[dev.close() for dev in devs])
+            if len(devs) > 0:
+                command.debug(text=f"Powering {mode} {', '.join(devname)}")
+                await asyncio.gather(
+                    *[dev.close() if mode == "on" else dev.open() for dev in devs]
+                )
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
             for ii, res in enumerate(status):
