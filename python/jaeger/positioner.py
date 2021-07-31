@@ -202,7 +202,8 @@ class Positioner(StatusMixIn):
         assert self.fps, "FPS is not set."
 
         # Need to update the firmware to make sure we get the right flags.
-        await self.update_firmware_version()
+        if not self.firmware:
+            await self.update_firmware_version()
 
         if not status:
 
