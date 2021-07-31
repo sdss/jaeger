@@ -56,7 +56,7 @@ async def test_goto_safe_mode(vfps, monkeypatch):
     await vfps.initialise()
 
     with pytest.raises(PositionerError):
-        await vfps[1].goto(100, 150)
+        await vfps[1].goto(100, 150, use_trajectory=False)
 
 
 async def test_goto_safe_mode_custom_beta(vfps, monkeypatch):
@@ -65,4 +65,4 @@ async def test_goto_safe_mode_custom_beta(vfps, monkeypatch):
     await vfps.initialise()
 
     with pytest.raises(PositionerError):
-        await vfps[1].goto(100, 169)
+        await vfps[1].goto(100, 169, use_trajectory=False)
