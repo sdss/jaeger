@@ -331,9 +331,9 @@ async def upgrade_firmware(
             if fps.ieb and no_cycle is False:
                 log.info("Power cycling positioners")
 
-                await asyncio.gather(
-                    *[fps.ieb.get_device(dev).open() for dev in ps_devs]
-                )
+                for dev in ps_devs:
+                    await fps.ieb.get_device(dev).open()
+                    await asyncio.sleep(1)
 
                 await asyncio.sleep(5)
 
