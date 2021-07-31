@@ -111,7 +111,7 @@ async def send_trajectory(
     if traj.failed:
         raise TrajectoryError("Something went wrong sending the trajectory.")
 
-    log.info(f"Trajectory successfully sent in {traj.data_send_time:1f} seconds.")
+    log.debug(f"Trajectory successfully sent in {traj.data_send_time:1f} seconds.")
     log.info(f"Expected time to complete trajectory: {traj.move_time:.2f} seconds.")
 
     log.info("starting trajectory ...")
