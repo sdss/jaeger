@@ -2,6 +2,10 @@
 
 ## Next version
 
+## 🚀 New
+
+* [#149](https://github.com/sdss/jaeger/issues/149) Added an `FPS.goto()` method that sends a list of positioners to a given position using trajectories. By default `Positioner.goto()` now also uses trajectories, but `GOTO_ABSOLUTE_POSITION` can still be used.
+
 ## ✨ Improved
 
 * `Trajectory()` now sends data points using a single command per trajectory chunk.
