@@ -213,7 +213,7 @@ class FPS(BaseFPS):
         can=None,
         ieb=None,
         initialise=True,
-        start_pollers=True,
+        start_pollers: bool | None = None,
     ) -> FPS:
         """Starts the CAN bus and .
 
@@ -269,7 +269,7 @@ class FPS(BaseFPS):
 
         return positioner
 
-    async def initialise(self: T, start_pollers: bool = True) -> T:
+    async def initialise(self: T, start_pollers: bool | None = None) -> T:
         """Initialises all positioners with status and firmware version.
 
         Parameters
@@ -278,6 +278,10 @@ class FPS(BaseFPS):
             Whether to initialise the pollers.
 
         """
+
+        if start_pollers is None:
+            start_pollers = config["fps"]["start_pollers"]
+        assert isinstance(start_pollers, bool)
 
         # Clear all robots
         self.clear()
