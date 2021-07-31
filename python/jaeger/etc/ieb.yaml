@@ -235,187 +235,162 @@ modules:
                 description: LED4 power
     DO1:
         model: 750-530
-        mode: holding_register
+        mode: coil
         channels: 16
         description: Relays for AC power switching (Cards 1-2)
         devices:
             PS1:
-                address: 40521
-                channel: 0
+                address: 40513
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 1
             PS2:
-                address: 40521
-                channel: 1
+                address: 40514
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 2
             PS3:
-                address: 40521
-                channel: 2
+                address: 40515
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 3
             PS4:
-                address: 40521
-                channel: 3
+                address: 40516
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 4
             PS5:
-                address: 40521
-                channel: 4
+                address: 40517
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 5
             PS6:
-                address: 40521
-                channel: 5
+                address: 40518
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 6
             CM1:
-                address: 40521
-                channel: 6
+                address: 40519
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 1
             CM2:
-                address: 40521
-                channel: 7
+                address: 40520
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 2
             CM3:
                 address: 40521
-                channel: 8
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 3
             CM4:
-                address: 40521
-                channel: 9
+                address: 40522
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 4
             CM5:
-                address: 40521
-                channel: 10
+                address: 40523
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 5
             CM6:
-                address: 40521
-                channel: 11
+                address: 40524
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 6
             SYNC:
-                address: 40521
-                channel: 12
+                address: 40525
                 type: relay
                 category: power_sync
                 relay_type: NO
                 description: Sync line
             GFA1:
-                address: 40521
-                channel: 13
+                address: 40526
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 1
             GFA2:
-                address: 40521
-                channel: 14
+                address: 40527
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 2
             GFA3:
-                address: 40521
-                channel: 15
+                address: 40528
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 3
     DO2:
         model: 750-530
-        mode: holding_register
+        mode: coil
         channels: 16
         description: Relays for AC power switching (Cards 3-4)
         devices:
             GFA4:
-                address: 40522
-                channel: 0
+                address: 40529
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 4
             GFA5:
-                address: 40522
-                channel: 1
+                address: 40530
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 5
             GFA6:
-                address: 40522
-                channel: 2
+                address: 40531
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 6
             NUC1:
-                address: 40522
-                channel: 3
+                address: 40532
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 1
             NUC2:
-                address: 40522
-                channel: 4
+                address: 40533
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 2
             NUC3:
-                address: 40522
-                channel: 5
+                address: 40534
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 3
             NUC4:
-                address: 40522
-                channel: 6
+                address: 40535
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 4
             NUC5:
-                address: 40522
-                channel: 7
+                address: 40536
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 5
             NUC6:
-                address: 40522
-                channel: 8
+                address: 40537
                 type: relay
                 category: power_nuc
                 relay_type: NC
