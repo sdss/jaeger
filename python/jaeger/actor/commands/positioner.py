@@ -321,13 +321,13 @@ async def unlock(command, fps):
     """Unlocks the FPS."""
 
     if not fps.locked:
-        command.info(locker=False)
+        command.info(locked=False)
         return command.finish(text="FPS is not locked")
 
     result = await fps.unlock()
 
     if result:
-        command.info(locker=False)
+        command.info(locked=False)
         return command.finish(text="FPS unlocked")
     else:
         return command.fail(error="failed to unlock FPS")
