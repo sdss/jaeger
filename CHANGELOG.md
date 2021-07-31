@@ -10,6 +10,7 @@
 * Disable precise moves by default.
 * Improve reloading the FPS.
 * Remove `bootloader` commands from actor.
+* `FPS.locked_by` now reports what positioner id(s) locked the FPS on a collision.
 
 ### 🔧 Fixed
 

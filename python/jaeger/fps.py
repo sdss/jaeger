@@ -162,6 +162,7 @@ class FPS(BaseFPS):
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
         self._locked = False
+        self.locked_by: List[int] = []
 
         if self.ieb is None or self.ieb is True:
             self.ieb = config["files"]["ieb_config"]
@@ -578,7 +579,11 @@ class FPS(BaseFPS):
 
         return command
 
-    async def lock(self, stop_trajectories: bool = True):
+    async def lock(
+        self,
+        stop_trajectories: bool = True,
+        by: Optional[List[int]] = None,
+    ):
         """Locks the `.FPS` and prevents commands to be sent.
 
         Parameters
@@ -589,7 +594,11 @@ class FPS(BaseFPS):
         """
 
         warnings.warn("Locking the FPS.", JaegerUserWarning)
+
         self._locked = True
+
+        if by:
+            self.locked_by += by
 
         if stop_trajectories:
             await self.stop_trajectory()
@@ -607,6 +616,7 @@ class FPS(BaseFPS):
                 )
 
         self._locked = False
+        self.locked_by = []
 
         return True
 
