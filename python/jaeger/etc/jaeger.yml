@@ -55,7 +55,7 @@ positioner:
     disable_precise_moves: true
     uid_bits: 6
     trajectory_data_n_points: 3
-    firmware_messages_per_positioner: 4
+    firmware_messages_per_positioner: 8
 
 files:
     log_dir: /data/logs/jaeger
