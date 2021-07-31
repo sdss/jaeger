@@ -283,15 +283,18 @@ async def goto(
         if pos.alpha is None or pos.beta is None:
             raise JaegerError(f"Positioner {pid}: cannot goto with unknown position.")
 
+        current_alpha = numpy.clip(pos.alpha, 0, 360)
+        current_beta = numpy.clip(pos.beta, 0, 360)
+
         if relative is True:
-            alpha_end = pos.alpha + alpha
-            beta_end = pos.beta + beta
+            alpha_end = current_alpha + alpha
+            beta_end = current_beta + beta
         else:
             alpha_end = alpha
             beta_end = beta
 
-        alpha_delta = abs(alpha_end - pos.alpha)
-        beta_delta = abs(beta_end - pos.beta)
+        alpha_delta = abs(alpha_end - current_alpha)
+        beta_delta = abs(beta_end - current_beta)
 
         time_end = [
             get_goto_move_time(alpha_delta, speed=speed[0]),
@@ -299,8 +302,8 @@ async def goto(
         ]
 
         trajectories[pid] = {
-            "alpha": [(fps[pid].alpha, 0.1), (alpha_end, time_end[0])],
-            "beta": [(fps[pid].beta, 0.1), (beta_end, time_end[1])],
+            "alpha": [(current_alpha, 0.1), (alpha_end, time_end[0] + 0.1)],
+            "beta": [(current_beta, 0.1), (beta_end, time_end[1] + 0.1)],
         }
 
     return await send_trajectory(fps, trajectories, use_sync_line=use_sync_line)
