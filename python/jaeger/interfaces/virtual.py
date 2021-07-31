@@ -10,13 +10,11 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import TYPE_CHECKING, Dict, List
+from typing import Dict, List
 
 from jaeger.interfaces.bus import BusABC
 
-
-if TYPE_CHECKING:
-    from .message import Message
+from .message import Message
 
 
 queues: Dict[str, List[asyncio.Queue]] = {}

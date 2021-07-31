@@ -173,7 +173,7 @@ class JaegerCAN(Generic[Bus_co]):
         interface_type: Optional[str] = None,
         channels: list | tuple = [],
         interface_args: Dict[str, Any] = {},
-    ) -> JaegerCAN:
+    ) -> "JaegerCAN":
         """Create and initialise a new bus interface from a configuration profile.
 
         This is the preferred method to initialise a new `.JaegerCAN` instance and is

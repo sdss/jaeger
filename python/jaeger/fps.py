@@ -221,7 +221,7 @@ class FPS(BaseFPS):
         ieb=None,
         initialise=True,
         start_pollers: bool | None = None,
-    ) -> FPS:
+    ) -> "FPS":
         """Starts the CAN bus and .
 
         Parameters
