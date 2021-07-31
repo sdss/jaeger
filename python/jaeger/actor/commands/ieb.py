@@ -9,6 +9,8 @@
 import asyncio
 import math
 
+from typing import Tuple
+
 import click
 
 from clu.command import Command
@@ -348,9 +350,9 @@ async def off(command, fps, nucs):
 
 
 @ieb.command()
-@click.argument("device_name", metavar="DEVICE", type=str)
+@click.argument("device_names", metavar="DEVICES", type=str, nargs=-1)
 @click.argument("VALUE", type=click.FloatRange(0, 100))
-async def fbi(command, fps: FPS, device_name: str, value: float):
+async def fbi(command, fps: FPS, device_names: Tuple[str], value: float):
     """Control the power output (0-100%) of the fibre back illuminator (FBI)."""
 
     raw_value = 32 * int(1023 * (value / 100))
@@ -358,17 +360,22 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
     if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
         return command.fail(error="IEB is not conencted or is disabled.")
 
-    try:
-        device = fps.ieb.get_device(device_name)
-    except ValueError:
-        return command.fail(error=f"Cannot find device {device_name!r}.")
+    if len(device_names) == 0:
+        return command.fail(error="No devices provided.")
 
-    if device.mode != "holding_register":
-        return command.fail(
-            error=f"Invalid device mode for {device_name!r}: {device.__type__}."
-        )
+    for device_name in device_names:
+        try:
+            device = fps.ieb.get_device(device_name)
+        except ValueError:
+            return command.fail(error=f"Cannot find device {device_name!r}.")
 
-    await device.write(raw_value)
+        if device.mode != "holding_register":
+            return command.fail(
+                error=f"Invalid device mode for {device_name!r}: {device.__type__}."
+            )
+
+        await device.write(raw_value)
+
     return command.finish()
 
 

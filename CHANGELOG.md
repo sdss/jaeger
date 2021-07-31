@@ -11,6 +11,7 @@
 * Improve reloading the FPS.
 * Remove `bootloader` commands from actor.
 * `FPS.locked_by` now reports what positioner id(s) locked the FPS on a collision.
+* Actor `ieb fbi` now accepts multiple devices.
 
 ### 🔧 Fixed
 
