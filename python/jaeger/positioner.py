@@ -20,7 +20,7 @@ from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.commands.bootloader import GetFirmwareVersion
-from jaeger.commands.goto import GotoAbsolutePosition, GotoRelativePosition
+from jaeger.commands.goto import GotoAbsolutePosition, GotoRelativePosition, goto
 from jaeger.commands.status import GetActualPosition
 from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
@@ -498,6 +498,8 @@ class Positioner(StatusMixIn):
         speed: Tuple[float, float] = None,
         relative=False,
         force=False,
+        use_trajectory=True,
+        use_sync_line=True,
     ) -> bool:
         """Moves positioner to a given position.
 
@@ -514,6 +516,10 @@ class Positioner(StatusMixIn):
             position.
         force
             Allows to set position and speed limits outside the normal range.
+        use_trajectory
+            If `True`, uses a trajectory to reach the position.
+        use_sync_line
+            If ``use_trajectory=True``, whether to use the SYNC line.
 
         Returns
         -------
@@ -538,6 +544,22 @@ class Positioner(StatusMixIn):
 
         if force is False and not self._can_move():
             raise PositionerError("Positioner is not in a movable state.")
+
+        if use_trajectory:
+            assert self.fps
+            try:
+                await goto(
+                    self.fps,
+                    [self.positioner_id],
+                    alpha,
+                    beta,
+                    speed=speed,
+                    relative=relative,
+                    use_sync_line=use_sync_line,
+                )
+                return True
+            except JaegerError:
+                raise
 
         ALPHA_MAX = 360
         BETA_MAX = 360

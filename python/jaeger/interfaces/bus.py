@@ -10,11 +10,7 @@ from __future__ import annotations
 
 import abc
 
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    from .message import Message
+from .message import Message
 
 
 class BusABC(object, metaclass=abc.ABCMeta):

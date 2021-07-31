@@ -18,7 +18,13 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Un
 
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
-from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
+from jaeger.commands import (
+    Command,
+    CommandID,
+    GetFirmwareVersion,
+    goto,
+    send_trajectory,
+)
 from jaeger.exceptions import (
     FPSLockedError,
     JaegerDeprecationWarning,
@@ -215,7 +221,7 @@ class FPS(BaseFPS):
         ieb=None,
         initialise=True,
         start_pollers: bool | None = None,
-    ) -> FPS:
+    ) -> "FPS":
         """Starts the CAN bus and .
 
         Parameters
@@ -804,6 +810,63 @@ class FPS(BaseFPS):
                 command.cancel(silent=True)
 
         self.can.refresh_running_commands()
+
+    async def goto(
+        self,
+        positioner_ids: Optional[List[int]],
+        alpha,
+        beta,
+        speed: Optional[Tuple[float, float]] = None,
+        relative=False,
+        force: bool = False,
+        use_sync_line=True,
+    ):
+        """Sends a list of positioners to a given position.
+
+        Parameters
+        ----------
+        positioner_ids
+            The list of positioner_ids to command. If `None`, uses all conencted
+            positioners.
+        alpha
+            The alpha angle.
+        beta
+            The beta angle.
+        speed
+            As a tuple, the alpha and beta speeds to use. If `None`, uses the default
+            ones.
+        relative
+            If `True`, ``alpha`` and ``beta`` are considered relative angles.
+        force
+            If ``positioners_ids=None``, ``force`` must be set to `True` to move
+            the entire array.
+        use_sync_line
+            Whether to use the SYNC line to start the trajectories.
+
+        """
+
+        if (positioner_ids is None or len(positioner_ids) == 0) and force is False:
+            raise JaegerError("Moving all positioners requires force=True.")
+
+        positioner_ids = positioner_ids or list(self.keys())
+
+        try:
+            traj = await goto(
+                self,
+                positioner_ids,
+                alpha,
+                beta,
+                relative=relative,
+                speed=speed,
+                use_sync_line=use_sync_line,
+            )
+        except JaegerError:
+            raise
+        finally:
+            await self.update_status()
+            await self.update_position()
+
+        return traj
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.
