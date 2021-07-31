@@ -383,6 +383,9 @@ class FPS(BaseFPS):
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
+        if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
+            log.error("Unable to disable precise moves for some positioners.")
+
         n_non_initialised = len(
             [
                 positioner

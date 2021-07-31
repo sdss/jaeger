@@ -65,6 +65,7 @@ class Positioner(StatusMixIn):
         self.firmware: str | None = None
 
         self.disabled = False
+        self.precise_moves = True
 
         super().__init__(
             maskbit_flags=maskbits.PositionerStatus,
@@ -319,7 +320,7 @@ class Positioner(StatusMixIn):
         )
 
         if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
-            self._log("Disabling precise moves requires >=04.01.17", logging.ERROR)
+            self._log("Disabling precise moves requires >=04.01.17", logging.DEBUG)
         else:
             await self.set_precise_move(mode=not disable_precise_moves)
 
@@ -444,6 +445,8 @@ class Positioner(StatusMixIn):
 
         if any([cmd.status != maskbits.CommandStatus.DONE for cmd in cmds]):
             raise PositionerError("failed switching precise moves.")
+
+        self.precise_moves = mode
 
         return True
 
