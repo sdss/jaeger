@@ -422,7 +422,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         return True
 
-    def process_reply(self, reply_message):
+    async def process_reply(self, reply_message):
         """Watches the reply queue."""
 
         reply = Reply(reply_message, command=self)

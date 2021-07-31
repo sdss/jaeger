@@ -333,7 +333,7 @@ class JaegerCAN(Generic[Bus_co]):
             f"to command {running_cmd.command_uid}."
         )
 
-        running_cmd.process_reply(msg)
+        asyncio.create_task(running_cmd.process_reply(msg))
 
     def send_messages(self, cmd: Command):
         """Sends messages to the interface.
