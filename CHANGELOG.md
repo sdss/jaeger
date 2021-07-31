@@ -12,6 +12,8 @@
 * Remove `bootloader` commands from actor.
 * `FPS.locked_by` now reports what positioner id(s) locked the FPS on a collision.
 * Actor `ieb fbi` now accepts multiple devices.
+* Use coil space for IEB relays.
+* Use 8 message per positioner by default when upgrading the firmware.
 
 ### 🔧 Fixed
 
