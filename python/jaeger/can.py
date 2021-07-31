@@ -287,20 +287,8 @@ class JaegerCAN(Generic[Bus_co]):
                 "Sending STOP_TRAJECTORIES and locking the FPS."
             )
 
-            # Manually send the stop trajectory to be sure it has
-            # priority over other messages. No need to do it if the FPS
-            # has been locked, which means that we have already stopped
-            # trajectories.
-
-            if self.fps and self.fps.locked:
-                return
-
-            assert self.fps
-            await self.fps.stop_trajectory()
-
-            # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                await self.fps.lock(stop_trajectories=False)
+                await self.fps.lock(by=[positioner_id])
                 return
 
         if command_id == 0:
