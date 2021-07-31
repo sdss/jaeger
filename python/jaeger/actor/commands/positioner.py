@@ -14,8 +14,9 @@ import numpy
 
 import clu
 
+from jaeger import config
 from jaeger.commands import SetCurrent, Trajectory
-from jaeger.exceptions import TrajectoryError
+from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.utils import get_goto_move_time
 
 from . import jaeger_parser
@@ -62,7 +63,7 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 @click.option(
     "-s",
     "--speed",
-    type=click.FloatRange(0.0, 2000.0),
+    type=click.FloatRange(100.0, 4000.0),
     nargs=2,
     help="the speed of both alpha and beta arms, in RPS on the input.",
 )
@@ -86,13 +87,13 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
     if all:
         if not force:
             return command.fail(
-                error="need to specify --force to move all positioners at once."
+                error="Need to specify --force to move all positioners at once."
             )
         positioner_id = list(fps.positioners.keys())
 
     if not relative:
         if alpha < 0 or beta < 0:
-            return command.fail(error="negative angles only allowed in relative mode.")
+            return command.fail(error="Negative angles only allowed in relative mode.")
 
     if not check_positioners(positioner_id, command, fps, initialised=True):
         return
@@ -100,10 +101,12 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
     if fps.moving:
         return command.fail(error="FPS is moving. Cannot send goto.")
 
-    speed = speed or [None, None]
+    if speed is None:
+        default_speed = config["positioner"]["motor_speed"]
+        speed = (default_speed, default_speed)
+
     max_time = 0.0
 
-    tasks = []
     for pid in positioner_id:
 
         # Manually calculate the max move time we'll encounter.
@@ -129,24 +132,20 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
         if time_beta > max_time:
             max_time = time_beta
 
-        tasks.append(
-            fps.positioners[pid].goto(
-                alpha,
-                beta,
-                speed=speed,
-                relative=relative,
-            )
-        )
-
     command.info(move_time=round(max_time, 2))
 
-    result = await clu.as_complete_failer(tasks, on_fail_callback=fps.stop_trajectory)
+    try:
+        await command.actor.fps.goto(
+            positioner_id,
+            alpha,
+            beta,
+            speed=speed,
+            relative=relative,
+        )
+    except JaegerError as err:
+        return command.fail(error=f"Goto command failed: {err}")
 
-    if not result[0]:
-        error_message = result[1] or "goto command failed"
-        command.set_status(clu.CommandStatus.FAILED, error=error_message)
-    else:
-        command.set_status(clu.CommandStatus.DONE, text="Position reached")
+    command.finish(text="Position reached")
 
 
 @jaeger_parser.command()
@@ -228,6 +227,9 @@ async def status(command, fps, positioner_id, full):
     if not check_positioners(positioner_id, command, fps):
         return
 
+    await fps.update_status()
+    await fps.update_position()
+
     command.info(locked=fps.locked)
 
     command.info(n_positioners=len(fps.positioners))
@@ -242,7 +244,7 @@ async def status(command, fps, positioner_id, full):
             interface, bus = fps.positioner_to_bus[pid]
             interface = fps.can.interfaces.index(interface) + 1
         else:
-            interface = "NA"
+            interface = -1
             bus = -1
 
         command.write(

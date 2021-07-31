@@ -8,13 +8,26 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy
 
 import jaeger
+from jaeger import config
 from jaeger.commands import Command, CommandID
-from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
+from jaeger.exceptions import JaegerError
+from jaeger.utils import (
+    bytes_to_int,
+    get_goto_move_time,
+    int_to_bytes,
+    motor_steps_to_angle,
+)
+
+from .trajectory import send_trajectory
+
+
+if TYPE_CHECKING:
+    from jaeger.fps import FPS
 
 
 __all__ = [
@@ -26,6 +39,7 @@ __all__ = [
     "SetActualPosition",
     "SetSpeed",
     "SetCurrent",
+    "goto",
 ]
 
 
@@ -211,3 +225,82 @@ class SetCurrent(Command):
             kwargs["data"] = data
 
         super().__init__(positioner_ids, **kwargs)
+
+
+async def goto(
+    fps: FPS,
+    positioner_ids: List[int],
+    alpha: float,
+    beta: float,
+    speed: Optional[Tuple[float, float]] = None,
+    relative: bool = False,
+    use_sync_line: bool = True,
+):
+    """Send positioners to a given position using a trajectory.
+
+    Parameters
+    ----------
+    fps
+        The `.FPS` instance.
+    positioner_ids
+        The list of positioner_ids to command.
+    alpha
+        The alpha angle.
+    beta
+        The beta angle.
+    speed
+        As a tuple, the alpha and beta speeds to use. If `None`, uses the default ones.
+    relative
+        If `True`, ``alpha`` and ``beta`` are considered relative angles.
+    use_sync_line
+        Whether to use the SYNC line to start the trajectories.
+
+    """
+
+    # Just in case.
+    await fps.start_can()
+
+    if alpha is None or beta is None:
+        raise JaegerError("alpha and beta must be non-null.")
+
+    if speed is None:
+        default_speed = config["positioner"]["motor_speed"]
+        speed = (default_speed, default_speed)
+    else:
+        if len(speed) != 2 or speed[0] is None or speed[1] is None:
+            raise JaegerError("Invalid speed.")
+
+    speed_array = numpy.array(speed)
+    if numpy.any(speed_array <= 0) or numpy.any(speed_array > 5000):
+        raise JaegerError("Speed out of bounds.")
+
+    await fps.update_position(positioner_ids=positioner_ids)
+
+    trajectories = {}
+    for pid in positioner_ids:
+        pos = fps[pid]
+
+        if pos.alpha is None or pos.beta is None:
+            raise JaegerError(f"Positioner {pid}: cannot goto with unknown position.")
+
+        if relative is True:
+            alpha_end = pos.alpha + alpha
+            beta_end = pos.beta + beta
+        else:
+            alpha_end = alpha
+            beta_end = beta
+
+        alpha_delta = abs(alpha_end - pos.alpha)
+        beta_delta = abs(beta_end - pos.beta)
+
+        time_end = [
+            get_goto_move_time(alpha_delta, speed=speed[0]),
+            get_goto_move_time(beta_delta, speed=speed[1]),
+        ]
+
+        trajectories[pid] = {
+            "alpha": [(fps[pid].alpha, 0.1), (alpha_end, time_end[0])],
+            "beta": [(fps[pid].beta, 0.1), (beta_end, time_end[1])],
+        }
+
+    return await send_trajectory(fps, trajectories, use_sync_line=use_sync_line)
