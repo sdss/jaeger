@@ -285,6 +285,11 @@ class JaegerCAN(Generic[Bus_co]):
 
         if command_id == CommandID.COLLISION_DETECTED:
 
+            # Sending stop trajectories causes many more robots to report a collision
+            # so if the FPS has already been locked we ignore those.
+            if not self.fps or self.fps.locked:
+                return
+
             log.error(
                 f"A collision was detected in positioner {positioner_id}. "
                 "Sending STOP_TRAJECTORIES and locking the FPS."
