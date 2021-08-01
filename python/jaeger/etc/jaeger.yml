@@ -45,7 +45,7 @@ fps:
     start_pollers: false
     status_poller_delay: 5
     position_poller_delay: 5
-    skip_positioners: []
+    skip_positioners: [1255, 1367, 398]
     disable_collision_detection_positioners: []
 
 positioner:
