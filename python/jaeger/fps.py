@@ -341,6 +341,10 @@ class FPS(BaseFPS):
         # positioner was not in the list, adds it.
         for reply in get_firmware_command.replies:
             if reply.positioner_id not in self.positioners:
+
+                if reply.positioner_id in config["fps"]["skip_positioners"]:
+                    continue
+
                 if hasattr(reply.message, "interface"):
                     interface = reply.message.interface
                     bus = reply.message.bus
@@ -422,6 +426,18 @@ class FPS(BaseFPS):
             warnings.warn(
                 f"Safe mode enabled. Minimum beta is {min_beta} degrees.",
                 JaegerUserWarning,
+            )
+
+        # Disable collision detection for listed robots.
+        disable_collision = config["fps"]["disable_collision_detection_positioners"]
+        if len(disable_collision):
+            await self.send_command(
+                CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=disable_collision,
+            )
+            await self.send_command(
+                CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=disable_collision,
             )
 
         # Start the pollers

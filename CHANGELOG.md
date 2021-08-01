@@ -5,6 +5,7 @@
 ## 🚀 New
 
 * [#149](https://github.com/sdss/jaeger/issues/149) Added an `FPS.goto()` method that sends a list of positioners to a given position using trajectories. By default `Positioner.goto()` now also uses trajectories, but `GOTO_ABSOLUTE_POSITION` can still be used.
+* [#150](https://github.com/sdss/jaeger/issues/150) Allow to skip positioners that are connected to the bus but that we want to ignore. Also allow to disable collision detection for a list of positioners. See configuration options `fps.skip_positioners` and `fps.disable_collision_detection_positioners`.
 
 ## ✨ Improved
 
