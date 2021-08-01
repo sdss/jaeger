@@ -408,7 +408,8 @@ class Trajectory(object):
                 "START_TRAJECTORY",
                 positioner_ids=0,
                 timeout=1,
-                n_positioners=len(self.trajectories),
+                # All positioners reply, including those not in the trajectory.
+                n_positioners=len(self.fps.positioners),
             )
 
             if command.status.failed:
