@@ -342,7 +342,7 @@ class FPS(BaseFPS):
         for reply in get_firmware_command.replies:
             if reply.positioner_id not in self.positioners:
 
-                if reply.positioner_id in config["fps"]["skipped_positioners"]:
+                if reply.positioner_id in config["fps"]["skip_positioners"]:
                     continue
 
                 if hasattr(reply.message, "interface"):
