@@ -45,6 +45,8 @@ fps:
     start_pollers: false
     status_poller_delay: 5
     position_poller_delay: 5
+    skipped_positioners: []
+    disable_collision_detection_positioners: []
 
 positioner:
     reduction_ratio: 1024
