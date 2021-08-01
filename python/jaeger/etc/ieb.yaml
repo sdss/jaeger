@@ -41,42 +41,42 @@ modules:
                 address: 40017
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32764]
+                adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 1 Positioner Power 24V out
             PV24_2:
                 address: 40018
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32764]
+                adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 2 Positioner Power 24V out
             PV24_3:
                 address: 40019
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32764]
+                adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 3 Positioner Power 24V out
             PV24_4:
                 address: 40020
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32764]
+                adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 4 Positioner Power 24V out
             PV24_5:
                 address: 40021
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32764]
+                adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 5 Positioner Power 24V out
             PV24_6:
                 address: 40022
                 category: voltage
                 adaptor: voltage
-                adaptor_extra_params: [0, 30, 32764]
+                adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 6 Positioner Power 24V out
             FLOW1:
