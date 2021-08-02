@@ -221,8 +221,8 @@ class Trajectory(object):
             for arm in ["alpha", "beta"]:
                 data = numpy.array(list(zip(*trajectory[arm]))[0])
 
-                if numpy.any(data > 360) or numpy.any(data < 0):
-                    raise TrajectoryError(f"Positioner {pid} has points out of range.")
+                # if numpy.any(data > 360) or numpy.any(data < 0):
+                #     raise TrajectoryError(f"Positioner {pid} has points out of range.")
 
                 if arm == "beta":
                     if config.get("safe_mode", False):
