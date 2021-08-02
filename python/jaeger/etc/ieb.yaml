@@ -184,14 +184,14 @@ modules:
         description: Pressure sensors
         devices:
             PRESSURE1:
-                address: 40033
+                address: 40037
                 category: pressure
                 adaptor: linear
                 adaptor_extra_params: [0, 50, 0, 32764]
                 units: psi
                 description: Glycol Supply Pressure
             PRESSURE2:
-                address: 40034
+                address: 40038
                 category: pressure
                 adaptor: linear
                 adaptor_extra_params: [0, 50, 0, 32764]
