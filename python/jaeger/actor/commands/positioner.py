@@ -211,7 +211,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 
 @jaeger_parser.command()
-@click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
+@click.argument("POSITIONER-IDS", type=int, nargs=-1, required=False)
 @click.option(
     "-f",
     "--full",
@@ -219,16 +219,16 @@ async def initialise(command, fps, positioner_id, datums=False):
     default=False,
     help="outputs more statuses.",
 )
-async def status(command, fps, positioner_id, full):
+async def status(command, fps, positioner_ids, full):
     """Reports the position and status bit of a list of positioners."""
 
-    positioner_ids = positioner_id or list(fps.positioners.keys())
+    positioner_ids = positioner_ids or list(fps.positioners.keys())
 
-    if not check_positioners(positioner_id, command, fps):
+    if not check_positioners(positioner_ids, command, fps):
         return
 
-    await fps.update_status()
-    await fps.update_position()
+    await fps.update_status(positioner_ids=positioner_ids)
+    await fps.update_position(positioner_ids=positioner_ids)
 
     command.info(locked=fps.locked)
 
