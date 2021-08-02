@@ -160,13 +160,13 @@ modules:
         description: Pt RTD sensors
         devices:
             RTD10:
-                address: 40033
+                address: 40034
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS supply manifold coolant
             RTD11:
-                address: 40034
+                address: 40035
                 category: temperature
                 adaptor: rtd
                 units: degC
