@@ -174,7 +174,9 @@ class Trajectory(object):
         self.trajectories: TrajectoryDataType
 
         if self.fps.locked:
-            raise FPSLockedError("FPS is locked. Cannot send trajectories.")
+            raise FPSLockedError(
+                f"FPS is locked by {fps.locked_by}. Cannot send trajectories."
+            )
 
         if self.fps.moving:
             raise TrajectoryError("The FPS is moving. Cannot send new trajectory.")

@@ -342,7 +342,9 @@ async def trajectory(command, fps, path):
         return command.fail(error="FPS is moving. Cannot send trajectory.")
 
     if fps.locked:
-        return command.fail(error="FPS is locked. Cannot send trajectory.")
+        return command.fail(
+            error=f"FPS is locked by {fps.locked_by}. Cannot send trajectory."
+        )
 
     path = pathlib.Path(path).expanduser()
     if not path.exists():
