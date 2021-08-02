@@ -6,9 +6,13 @@
 # @Filename: ieb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import os
+
 from typing import Any, Dict
 
 from drift import Drift, DriftError
+
+from jaeger import config
 
 
 __all__ = ["IEB"]
@@ -28,6 +32,18 @@ class IEB(Drift):
         super().__init__(*args, **kwargs)
 
         self._categories = None
+
+    @classmethod
+    def create(cls):
+        """Creates an `.IEB` instance with the default configuration."""
+
+        default_ieb_path = config["files"]["ieb_config"]
+
+        default_ieb_path = os.path.expanduser(os.path.expandvars(default_ieb_path))
+        if not os.path.isabs(default_ieb_path):
+            default_ieb_path = os.path.join(os.path.dirname(__file__), default_ieb_path)
+
+        return cls.from_config(default_ieb_path)
 
     def get_categories(self):
         """Returns a list of categories."""
