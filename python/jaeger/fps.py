@@ -16,6 +16,8 @@ from dataclasses import dataclass
 
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import numpy
+
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
 from jaeger.commands import (
@@ -832,9 +834,9 @@ class FPS(BaseFPS):
 
     async def goto(
         self,
-        positioner_ids: Optional[List[int]],
-        alpha,
-        beta,
+        positioner_ids: int | List[int] | None,
+        alpha: float | list | numpy.ndarray,
+        beta: float | list | numpy.ndarray,
         speed: Optional[Tuple[float, float]] = None,
         relative=False,
         force: bool = False,
@@ -848,7 +850,8 @@ class FPS(BaseFPS):
             The list of positioner_ids to command. If `None`, uses all conencted
             positioners.
         alpha
-            The alpha angle.
+            The alpha angle. Can be an array with the same size of the list of
+            positioner IDs. Otherwise sends all the positioners to the same angle.
         beta
             The beta angle.
         speed
@@ -863,6 +866,9 @@ class FPS(BaseFPS):
             Whether to use the SYNC line to start the trajectories.
 
         """
+
+        if isinstance(positioner_ids, int):
+            positioner_ids = [positioner_ids]
 
         if (positioner_ids is None or len(positioner_ids) == 0) and force is False:
             raise JaegerError("Moving all positioners requires force=True.")

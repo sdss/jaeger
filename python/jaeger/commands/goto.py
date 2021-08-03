@@ -230,8 +230,8 @@ class SetCurrent(Command):
 async def goto(
     fps: FPS,
     positioner_ids: List[int],
-    alpha: float,
-    beta: float,
+    alpha: float | list | numpy.ndarray,
+    beta: float | list | numpy.ndarray,
     speed: Optional[Tuple[float, float]] = None,
     relative: bool = False,
     use_sync_line: bool = True,
@@ -245,7 +245,8 @@ async def goto(
     positioner_ids
         The list of positioner_ids to command.
     alpha
-        The alpha angle.
+        The alpha angle. Can be an array with the same size of the list of positioner
+        IDs. Otherwise sends all the positioners to the same angle.
     beta
         The beta angle.
     speed
@@ -259,6 +260,16 @@ async def goto(
 
     # Just in case.
     await fps.start_can()
+
+    if not isinstance(alpha, (list, tuple, numpy.ndarray)):
+        alpha = numpy.tile(alpha, len(positioner_ids))
+    if not isinstance(beta, (list, tuple, numpy.ndarray)):
+        beta = numpy.tile(beta, len(positioner_ids))
+
+    alpha = numpy.array(alpha)
+    beta = numpy.array(alpha)
+
+    assert len(alpha) == len(positioner_ids) and len(beta) == len(positioner_ids)
 
     if alpha is None or beta is None:
         raise JaegerError("alpha and beta must be non-null.")
@@ -277,7 +288,7 @@ async def goto(
     await fps.update_position(positioner_ids=positioner_ids)
 
     trajectories = {}
-    for pid in positioner_ids:
+    for i, pid in enumerate(positioner_ids):
         pos = fps[pid]
 
         if pos.alpha is None or pos.beta is None:
@@ -287,11 +298,11 @@ async def goto(
         current_beta = numpy.clip(pos.beta, 0, 360)
 
         if relative is True:
-            alpha_end = current_alpha + alpha
-            beta_end = current_beta + beta
+            alpha_end = current_alpha + alpha[i]
+            beta_end = current_beta + beta[i]
         else:
-            alpha_end = alpha
-            beta_end = beta
+            alpha_end = alpha[i]
+            beta_end = beta[i]
 
         alpha_delta = abs(alpha_end - current_alpha)
         beta_delta = abs(beta_end - current_beta)
