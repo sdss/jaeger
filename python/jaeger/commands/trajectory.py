@@ -53,6 +53,8 @@ async def send_trajectory(
     fps: FPS,
     trajectories: str | pathlib.Path | TrajectoryDataType,
     use_sync_line=True,
+    send_trajectory=True,
+    start_trajectory=True,
 ) -> Trajectory:
     """Sends a set of trajectories to the positioners.
 
@@ -76,6 +78,13 @@ async def send_trajectory(
         If `True`, the SYNC line will be used to synchronise the beginning of
         all trajectories. Otherwise a `.START_TRAJECTORY` command will be sent
         over the CAN network.
+    send_trajectory
+        If `True`, sends the trajectory to the positioners and returns the
+        `.Trajectory` instance.
+    start_trajectory
+        If `True`, runs the trajectory after sending it. Otherwise, returns
+        the `.Trajectory` instance after sending the data. Ignored if
+        `send_trajectory=False`.
 
     Raises
     ------
@@ -105,19 +114,36 @@ async def send_trajectory(
         if (await fps.ieb.get_device("sync").read())[0] == "closed":
             raise TrajectoryError("The SYNC line is on high.")
 
-    log.debug("sending trajectory data.")
-    await traj.send()
+    if send_trajectory is False:
+        return traj
 
-    if traj.failed:
-        raise TrajectoryError("Something went wrong sending the trajectory.")
+    log.debug("sending trajectory data.")
+
+    try:
+        await traj.send()
+    except TrajectoryError as err:
+        raise TrajectoryError(f"Something went wrong sending the trajectory: {err}")
 
     log.debug(f"Trajectory successfully sent in {traj.data_send_time:1f} seconds.")
     log.info(f"Expected time to complete trajectory: {traj.move_time:.2f} seconds.")
 
+    if start_trajectory is False:
+        return traj
+
     log.info("starting trajectory ...")
-    result = await traj.start(use_sync_line=use_sync_line)
-    if traj.failed or not result:
-        raise TrajectoryError("Something went wrong starting the trajectory.")
+    try:
+        await traj.start(use_sync_line=use_sync_line)
+    except TrajectoryError as err:
+
+        if traj.start_time is not None and traj.end_time is not None:
+            elapsed = traj.end_time - traj.start_time
+            elapsed_msg = f" Trajectory failed {elapsed:.2f} seconds after start."
+        else:
+            elapsed_msg = ""
+
+        raise TrajectoryError(
+            f"Something went wrong during the trajectory: {err}.{elapsed_msg}"
+        )
 
     log.info("All positioners have successfully reached their positions.")
 
@@ -194,12 +220,15 @@ class Trajectory(object):
         self.n_points = {}
 
         #: The time required to complete the trajectory.
-        self.move_time = None
+        self.move_time: float | None = None
 
         #: How long it took to send the trajectory.
-        self.data_send_time = None
+        self.data_send_time: float | None = None
 
         self.failed = False
+
+        self.start_time: float | None = None
+        self.end_time: float | None = None
 
         self._ready_to_start = False
 
@@ -424,7 +453,7 @@ class Trajectory(object):
         restart_pollers = True if self.fps.pollers.running else False
         await self.fps.pollers.stop()
 
-        start_time = time.time()
+        self.start_time = time.time()
 
         try:
             if self.move_time is None:
@@ -449,7 +478,7 @@ class Trajectory(object):
                     self.failed = False
                     break
 
-            elapsed = time.time() - start_time
+            elapsed = time.time() - self.start_time
             if elapsed > (self.move_time + 3):
                 raise TrajectoryError("Some positioners did not complete the move.")
 
@@ -458,6 +487,7 @@ class Trajectory(object):
             raise
 
         finally:
+            self.end_time = time.time()
             if restart_pollers:
                 self.fps.pollers.start()
 

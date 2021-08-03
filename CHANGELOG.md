@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+## ✨ Improved
+
+* Add `Trajectory.start_time` and `Trajectory.end_time` that can be used to determine when the trajectory failed. `send_trajectory` now allows to return the unsent or non-started trajectory.
+
+
 ## 0.10.0 - August 3, 2021
 
 ## 🚀 New
