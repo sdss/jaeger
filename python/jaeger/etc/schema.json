@@ -17,8 +17,8 @@
                 { "title": "RTD6", "type": "number" },
                 { "title": "RTD7", "type": "number" },
                 { "title": "RTD8", "type": "number" },
-                { "title": "RTD9", "type": "number" },
                 { "title": "RTD10", "type": "number" },
+                { "title": "RTD11", "type": "number" },
                 { "title": "RTD12", "type": "number" }
             ]
         },
