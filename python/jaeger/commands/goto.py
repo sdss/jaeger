@@ -267,7 +267,7 @@ async def goto(
         beta = numpy.tile(beta, len(positioner_ids))
 
     alpha = numpy.array(alpha)
-    beta = numpy.array(alpha)
+    beta = numpy.array(beta)
 
     assert len(alpha) == len(positioner_ids) and len(beta) == len(positioner_ids)
 
