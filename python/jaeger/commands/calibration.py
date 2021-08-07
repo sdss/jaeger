@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import asyncio
+import struct
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy
 
@@ -361,3 +362,57 @@ class SetIncreaseCollisionMargin(Command):
         kwargs["data"] = data
 
         super().__init__(positioner_ids, **kwargs)
+
+
+class GetAlphaHallCalibration(Command):
+
+    command_id = CommandID.GET_ALPHA_HALL_CALIB
+    broadcastable = False
+    move_command = False
+    safe = True
+
+    def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
+        """Returns the ``maxA, maxB, minA, minB`` values."""
+
+        values = {}
+
+        for reply in self.replies:
+            values[reply.positioner_id] = struct.unpack("HHHH", reply.data)
+
+        return values
+
+
+class GetBetaHallCalibration(Command):
+
+    command_id = CommandID.GET_BETA_HALL_CALIB
+    broadcastable = False
+    move_command = False
+    safe = True
+
+    def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
+        """Returns the ``maxA, maxB, minA, minB`` values."""
+
+        values = {}
+
+        for reply in self.replies:
+            values[reply.positioner_id] = struct.unpack("HHHH", reply.data)
+
+        return values
+
+
+class GetHallCalibrationError(Command):
+
+    command_id = CommandID.GET_HALL_CALIB_ERROR
+    broadcastable = False
+    move_command = False
+    safe = True
+
+    def get_values(self) -> dict[int, Tuple[int, int]]:
+        """Returns the alpha and beta error values."""
+
+        values = {}
+
+        for reply in self.replies:
+            values[reply.positioner_id] = struct.unpack("ii", reply.data)
+
+        return values

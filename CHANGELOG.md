@@ -2,6 +2,10 @@
 
 ## Next version
 
+## 🚀 New
+
+* Add commands 45, 104, and 105 for hall sensor calibration querying.
+
 ## ✨ Improved
 
 * Add `Trajectory.start_time` and `Trajectory.end_time` that can be used to determine when the trajectory failed. `send_trajectory` now allows to return the unsent or non-started trajectory.
