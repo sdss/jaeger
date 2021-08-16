@@ -108,7 +108,7 @@ class FPSWrapper(object):
 pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 
 
-@click.group(cls=DefaultGroup, default="actor", default_if_no_args=True)
+@click.group(cls=DefaultGroup, default="jaeger-actor", default_if_no_args=True)
 @click.option(
     "-c",
     "--config",
@@ -215,7 +215,18 @@ def jaeger(
     )
 
 
-@jaeger.group(cls=DaemonGroup, prog="jaeger_actor", workdir=os.getcwd())
+LOG_FILE = os.path.join(
+    os.environ.get("ACTOR_DAEMON_LOG_DIR", "$HOME/logs"),
+    "jaeger/jaeger.log",
+)
+
+
+@jaeger.group(
+    cls=DaemonGroup,
+    prog="jaeger_actor",
+    workdir=os.getcwd(),
+    log_file=LOG_FILE,
+)
 @click.option(
     "--no-tron",
     is_flag=True,
