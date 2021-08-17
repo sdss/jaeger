@@ -108,7 +108,7 @@ class FPSWrapper(object):
 pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 
 
-@click.group(cls=DefaultGroup, default="jaeger-actor", default_if_no_args=True)
+@click.group(cls=DefaultGroup, default="actor", default_if_no_args=True)
 @click.option(
     "-c",
     "--config",
