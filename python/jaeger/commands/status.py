@@ -6,6 +6,8 @@
 # @Filename: status.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 from typing import Any, Dict, List
 
 import numpy
@@ -167,3 +169,55 @@ class SwitchLEDOff(Command):
     command_id = CommandID.SWITCH_LED_ON
     broadcastable = False
     safe = True
+
+
+class GetNumberTrajectories(Command):
+
+    command_id = CommandID.GET_NUMBER_TRAJECTORIES
+    broadcastable = False
+    safe = False
+
+    def get_number_trajectories(self) -> Dict[int, int]:
+        """Returns the number of trajectories.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError("no positioners have replied to this command.")
+
+        number_trajectories = {}
+
+        for reply in self.replies:
+            data = self.replies[0].data
+            number_trajectories[reply.positioner_id] = bytes_to_int(data, dtype="u4")
+
+        return number_trajectories
+
+
+class SetNumberTrajectories(Command):
+
+    command_id = CommandID.SET_NUMBER_TRAJECTORIES
+    broadcastable = False
+    safe = False
+
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        moves: int | Dict[int, int],
+        **kwargs,
+    ):
+
+        if isinstance(moves, int):
+            data = int_to_bytes(moves)
+        elif isinstance(moves, dict):
+            data = {pos: int_to_bytes(moves[pos]) for pos in moves}
+        else:
+            raise TypeError("Invalid data type.")
+
+        kwargs["data"] = data
+
+        super().__init__(positioner_ids, **kwargs)
