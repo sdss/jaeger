@@ -308,7 +308,7 @@ class Positioner(StatusMixIn):
             return True
 
         if not self.initialised:
-            raise PositionerError("failed inisialising.")
+            raise PositionerError("failed initialising.")
 
         # Update position only if it's not bootloader.
         await self.update_position()
