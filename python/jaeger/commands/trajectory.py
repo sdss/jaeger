@@ -502,6 +502,7 @@ class Trajectory(object):
             if restart_pollers:
                 self.fps.pollers.start()
             if self.disable_halls:
+                log.debug("Turning off Hall sensors.")
                 await self.fps.send_command(
                     CommandID.HALL_OFF,
                     positioner_ids=positioner_ids,
