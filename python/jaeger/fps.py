@@ -442,6 +442,9 @@ class FPS(BaseFPS):
                 positioner_ids=disable_collision,
             )
 
+        # Disable Hall sensors while on idle to save power.
+        await self.send_command(CommandID.HALL_OFF)
+
         # Start the pollers
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
