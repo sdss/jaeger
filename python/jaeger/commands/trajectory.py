@@ -158,15 +158,19 @@ class Trajectory(object):
 
     Parameters
     ----------
-    fps : .FPS
+    fps
         The instance of `.FPS` that will receive the trajectory.
-    trajectories : `str` or `dict`
+    trajectories
         Either a path to a YAML file to read or a dictionary with the
         trajectories. In either case the format must be a dictionary in
         which the keys are the ``positioner_ids`` and each value is a
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
+    disable_halls
+        If `True`, turns off all the Hall sensors after the trajectory
+        is completed.
+
 
     Raises
     ------
@@ -194,10 +198,12 @@ class Trajectory(object):
         self,
         fps: FPS,
         trajectories: str | pathlib.Path | TrajectoryDataType,
+        disable_halls: bool = True,
     ):
 
         self.fps = fps
         self.trajectories: TrajectoryDataType
+        self.disable_halls = disable_halls
 
         if self.fps.locked:
             raise FPSLockedError(
@@ -413,8 +419,13 @@ class Trajectory(object):
         if not self._ready_to_start or self.failed:
             raise TrajectoryError("The trajectory has not been sent.")
 
-        for positioner_id in list(self.trajectories.keys()):
+        positioner_ids = list(self.trajectories.keys())
+
+        for positioner_id in positioner_ids:
             self.fps[positioner_id].move_time = self.move_time
+
+        log.debug("Turning on Hall sensors.")
+        await self.fps.send_command(CommandID.HALL_ON, positioner_ids=positioner_ids)
 
         if use_sync_line:
 
@@ -490,6 +501,11 @@ class Trajectory(object):
             self.end_time = time.time()
             if restart_pollers:
                 self.fps.pollers.start()
+            if self.disable_halls:
+                await self.fps.send_command(
+                    CommandID.HALL_OFF,
+                    positioner_ids=positioner_ids,
+                )
 
         return True
 
