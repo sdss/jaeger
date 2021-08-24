@@ -16,7 +16,7 @@ import sys
 import time
 import warnings
 
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from jaeger import can_log, config, log, maskbits
 from jaeger.exceptions import CommandError, JaegerError, JaegerUserWarning
@@ -608,20 +608,14 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         return messages
 
-    def get_replies_for_positioner(self, positioner_id):
-        """Returns the replies for a given ``positioner_id``.
+    def get_replies(self) -> Dict[int, Any]:
+        """Returns the formatted replies as a dictionary.
 
-        In principle this method is only useful when the command is sent in
-        broadcast mode and receives replies from multiples positioners.
+        The values returned will depend on the specific command.
 
         """
 
-        replies = []
-        for reply in self.replies:
-            if reply.positioner_id == positioner_id:
-                replies.append(reply)
-
-        return replies
+        return {}
 
     def cancel(self, silent=False, msg=None):
         """Cancels a command, stopping the reply queue watcher."""

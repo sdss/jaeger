@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy
 
@@ -105,6 +105,9 @@ class GotoAbsolutePosition(Command):
 
         return motor_steps_to_angle(alpha_steps, beta_steps)
 
+    def get_replies(self) -> Dict[int, Tuple[float, float]]:
+        return self.get_move_time()
+
     def get_move_time(self):
         """Returns the time needed to move to the commanded position.
 
@@ -118,16 +121,16 @@ class GotoAbsolutePosition(Command):
         if len(self.replies) == 0:
             raise ValueError("no positioners have replied to this command.")
 
-        move_time = []
+        move_times = {}
         for reply in self.replies:
             data = reply.data
 
-            beta = bytes_to_int(data[4:], dtype="i4")
             alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
 
-            move_time.append([alpha, beta])
+            move_times[reply.positioner_id] = [alpha * TIME_STEP, beta * TIME_STEP]
 
-        return numpy.array(move_time) * TIME_STEP
+        return move_times
 
 
 class GotoRelativePosition(GotoAbsolutePosition):

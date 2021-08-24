@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import numpy
 
@@ -42,6 +42,9 @@ class GetStatus(Command):
     safe = True
     bootloader = True
 
+    def get_replies(self) -> Dict[int, int]:
+        return self.get_positioner_status()
+
     def get_positioner_status(self) -> Dict[int, int]:
         """Returns the status flag for each positioner that replied."""
 
@@ -55,7 +58,10 @@ class GetActualPosition(Command):
     broadcastable = False
     safe = True
 
-    def get_positions(self) -> Dict[int, Any]:
+    def get_replies(self) -> Dict[int, Tuple[float, float]]:
+        return self.get_positions()
+
+    def get_positions(self) -> Dict[int, Tuple[float, float]]:
         """Returns the positions of alpha and beta in degrees.
 
         Raises
@@ -76,7 +82,7 @@ class GetActualPosition(Command):
             beta = bytes_to_int(data[4:], dtype="i4")
             alpha = bytes_to_int(data[0:4], dtype="i4")
 
-            positions[pid] = numpy.array(motor_steps_to_angle(alpha, beta))
+            positions[pid] = motor_steps_to_angle(alpha, beta)
 
         return positions
 
@@ -101,7 +107,10 @@ class GetCurrent(Command):
     broadcastable = False
     safe = True
 
-    def get_currents(self) -> Dict[int, numpy.ndarray]:
+    def get_replies(self) -> Dict[int, Tuple[int, int]]:
+        return self.get_currents()
+
+    def get_currents(self) -> Dict[int, Tuple[int, int]]:
         """Returns a dictionary of current of alpha and beta for each positioner.
 
         Raises
@@ -118,10 +127,10 @@ class GetCurrent(Command):
         for reply in self.replies:
             data = reply.data
 
-            beta = bytes_to_int(data[4:], dtype="i4")
             alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
 
-            currents[reply.positioner_id] = numpy.array([alpha, beta])
+            currents[reply.positioner_id] = (alpha, beta)
 
         return currents
 
@@ -132,6 +141,9 @@ class GetTemperature(Command):
     command_id = CommandID.GET_RAW_TEMPERATURE
     broadcastable = False
     safe = True
+
+    def get_replies(self) -> Dict[int, int]:
+        return self.get_replies()
 
     def get_temperatures(self) -> Dict[int, int]:
         """Returns the temperature in Celsius.
@@ -176,6 +188,9 @@ class GetNumberTrajectories(Command):
     command_id = CommandID.GET_NUMBER_TRAJECTORIES
     broadcastable = False
     safe = False
+
+    def get_replies(self) -> Dict[int, int]:
+        return self.get_number_trajectories()
 
     def get_number_trajectories(self) -> Dict[int, int]:
         """Returns the number of trajectories.

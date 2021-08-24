@@ -194,6 +194,9 @@ class GetOffset(Command):
     broadcastable = False
     safe = True
 
+    def get_replies(self) -> Dict[int, numpy.ndarray]:
+        return self.get_offsets()
+
     def get_offsets(self) -> Dict[int, numpy.ndarray]:
         """Returns the alpha and beta offsets, in degrees.
 
@@ -287,6 +290,9 @@ class GetHoldingCurrents(Command):
     broadcastable = False
     safe = True
 
+    def get_replies(self) -> Dict[int, numpy.ndarray]:
+        return self.get_holding_currents()
+
     def get_holding_currents(self) -> Dict[int, numpy.ndarray]:
         """Returns the alpha and beta holding currents, in percent.
 
@@ -371,6 +377,9 @@ class GetAlphaHallCalibration(Command):
     move_command = False
     safe = True
 
+    def get_replies(self) -> Dict[int, Tuple[int, int, int, int]]:
+        return self.get_values()
+
     def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
         """Returns the ``maxA, maxB, minA, minB`` values."""
 
@@ -389,6 +398,9 @@ class GetBetaHallCalibration(Command):
     move_command = False
     safe = True
 
+    def get_replies(self) -> Dict[int, Tuple[int, int, int, int]]:
+        return self.get_values()
+
     def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
         """Returns the ``maxA, maxB, minA, minB`` values."""
 
@@ -406,6 +418,9 @@ class GetHallCalibrationError(Command):
     broadcastable = False
     move_command = False
     safe = True
+
+    def get_replies(self) -> Dict[int, Tuple[int, int]]:
+        return self.get_values()
 
     def get_values(self) -> dict[int, Tuple[int, int]]:
         """Returns the alpha and beta error values."""
