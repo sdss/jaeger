@@ -216,6 +216,9 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         The data to pass to the messages. If a list, each element will be
         sent to each positioner as a message. It can also be a dictionary of
         lists in which the key is the positioner to which to send the data.
+    ignore_unknown
+        Ignores ``UNKNOWN_COMMAND`` replies from positioners that do now
+        support this command.
 
     """
 
@@ -239,6 +242,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         done_callback: Optional[Callable] = None,
         n_positioners: Optional[int] = None,
         data: Union[None, data_co, Dict[int, data_co]] = None,
+        ignore_unknown: bool = True,
     ):
 
         global COMMAND_UID
@@ -338,6 +342,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         self._timeout_handle = None
 
+        self._ignore_unknown = ignore_unknown
         self.loop = asyncio.get_event_loop()
 
         StatusMixIn.__init__(
@@ -468,18 +473,39 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             f"data={data_hex!r}"
         )
 
-        if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
-            warnings.warn(
-                f"Positioner {reply.positioner_id} replied to {self.name} "
-                f"UID={self.command_uid} with {reply.response_code.name!r}.",
-                JaegerUserWarning,
-            )
+        code = reply.response_code
+        COMMAND_ACCEPTED = ResponseCode.COMMAND_ACCEPTED
+        UNKNOWN_COMMAND = ResponseCode.UNKNOWN_COMMAND
+        if code != COMMAND_ACCEPTED:
+            if not self._ignore_unknown or code != UNKNOWN_COMMAND:
+                warnings.warn(
+                    f"Positioner {reply.positioner_id} replied to {self.name} "
+                    f"UID={self.command_uid} with {code.name!r}.",
+                    JaegerUserWarning,
+                )
 
         reply_status = self._check_replies()
+
+        # If reply_status is True then a reply from each commanded positioner has
+        # been received. If they are all COMMAND_ACCEPTED, mark the command as done.
+        # If some are not COMMAND_ACCEPTED, check the invalid replies are all
+        # UNKNOWN_COMMAND. In that case, if we are ignoring those, still mark as done.
+        # Otherwise finish as failed.
+        # If reply_status is False, that means we have received replies with UIDs that
+        # do not match the UID of this command. This should not happens and it's most
+        # likely a bug in the code.
+        # If reply_status is None, we haven't yet matched the expected number of
+        # replies and we just return.
+
         if reply_status is True:
             reply_codes = [reply.response_code for reply in self.replies]
-            if not all([code == ResponseCode.COMMAND_ACCEPTED for code in reply_codes]):
-                self.finish_command(CommandStatus.FAILED)
+            invalid = [code for code in reply_codes if code != COMMAND_ACCEPTED]
+            ignore_unknown = self._ignore_unknown
+            if not all([code == COMMAND_ACCEPTED for code in reply_codes]):
+                if all([inv == UNKNOWN_COMMAND for inv in invalid]) and ignore_unknown:
+                    self.finish_command(CommandStatus.DONE)
+                else:
+                    self.finish_command(CommandStatus.FAILED)
             else:
                 self.finish_command(CommandStatus.DONE)
         elif reply_status is False:

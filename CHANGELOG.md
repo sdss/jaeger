@@ -10,6 +10,7 @@
 
 * Add `Trajectory.start_time` and `Trajectory.end_time` that can be used to determine when the trajectory failed. `send_trajectory` now allows to return the unsent or non-started trajectory.
 * When running the actor as a daemon in detached mode, log stdout and stderr to file.
+* By default, do not fail when a command receives an `UNKNOWN_COMMAND` reply; this usually means that the positioner firmware does not support that command yet. This can be disabled by initialising the `Command` with `ignore_unknown=False`.
 
 
 ## 0.10.0 - August 3, 2021
