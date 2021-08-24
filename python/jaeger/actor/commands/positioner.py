@@ -6,8 +6,12 @@
 # @Filename: commands.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import pathlib
+
+from typing import TYPE_CHECKING, List, Tuple
 
 import click
 import numpy
@@ -15,11 +19,18 @@ import numpy
 import clu
 
 from jaeger import config
-from jaeger.commands import SetCurrent, Trajectory
+from jaeger.commands import CommandID, SetCurrent, Trajectory
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.utils import get_goto_move_time
 
 from . import jaeger_parser
+
+
+if TYPE_CHECKING:
+    from clu import Command
+
+    from jaeger import FPS
+    from jaeger.actor import JaegerActor
 
 
 __all__ = [
@@ -51,51 +62,70 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 
 
 @jaeger_parser.command()
-@click.argument("POSITIONER-ID", type=int, nargs=-1)
+@click.argument("POSITIONER-IDS", type=int, nargs=-1)
 @click.argument("ALPHA", type=click.FloatRange(-360.0, 360.0))
 @click.argument("BETA", type=click.FloatRange(-360.0, 360.0))
 @click.option(
     "-r",
     "--relative",
     is_flag=True,
-    help="whether this is a relative move",
+    help="Whether this is a relative move",
 )
 @click.option(
     "-s",
     "--speed",
     type=click.FloatRange(100.0, 4000.0),
     nargs=2,
-    help="the speed of both alpha and beta arms, in RPS on the input.",
+    help="The speed of both alpha and beta arms, in RPS on the input.",
 )
 @click.option(
     "-a",
     "--all",
     is_flag=True,
     default=False,
-    help="applies to all valid positioners.",
+    help="Applies to all valid positioners.",
 )
 @click.option(
     "-f",
     "--force",
     is_flag=True,
     default=False,
-    help="forces a move to happen.",
+    help="Forces a move to happen.",
 )
-async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, relative):
+@click.option(
+    "--use-sync/-no-use-sync",
+    " /-S",
+    default=True,
+    help="Whether to use the SYNC line to start the trajectory.",
+)
+async def goto(
+    command: Command[JaegerActor],
+    fps: FPS,
+    positioner_ids: Tuple[int, ...],
+    alpha: float,
+    beta: float,
+    speed: Tuple[float, float],
+    all: bool = False,
+    force: bool = False,
+    relative: bool = False,
+    use_sync: bool = True,
+):
     """Sends positioners to a given (alpha, beta) position."""
+
+    assert command.actor
 
     if all:
         if not force:
-            return command.fail(
-                error="Need to specify --force to move all positioners at once."
-            )
-        positioner_id = list(fps.positioners.keys())
+            return command.fail(error="Use --force to move all positioners at once.")
+        pids: List[int] = list(fps.positioners.keys())
+    else:
+        pids = list(positioner_ids)
 
     if not relative:
         if alpha < 0 or beta < 0:
             return command.fail(error="Negative angles only allowed in relative mode.")
 
-    if not check_positioners(positioner_id, command, fps, initialised=True):
+    if not check_positioners(pids, command, fps, initialised=True):
         return
 
     if fps.moving:
@@ -107,13 +137,13 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
     max_time = 0.0
 
-    for pid in positioner_id:
+    for pid in pids:
 
         # Manually calculate the max move time we'll encounter.
         p_alpha, p_beta = fps[pid].position
 
         if p_alpha is None or p_beta is None:
-            return command.fail(error="some positioners do not know their positions.")
+            return command.fail(error="Some positioners do not know their positions.")
 
         delta_alpha = abs(p_alpha - alpha) if not relative else alpha
         delta_beta = abs(p_beta - beta) if not relative else beta
@@ -136,11 +166,12 @@ async def goto(command, fps, positioner_id, alpha, beta, speed, all, force, rela
 
     try:
         await command.actor.fps.goto(
-            positioner_id,
+            pids,
             alpha,
             beta,
             speed=speed,
             relative=relative,
+            use_sync_line=use_sync,
         )
     except JaegerError as err:
         return command.fail(error=f"Goto command failed: {err}")
