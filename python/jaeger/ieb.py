@@ -15,7 +15,7 @@ from drift import Drift, DriftError
 from jaeger import config
 
 
-__all__ = ["IEB"]
+__all__ = ["IEB", "FVC"]
 
 
 class IEB(Drift):
@@ -34,10 +34,10 @@ class IEB(Drift):
         self._categories = None
 
     @classmethod
-    def create(cls):
+    def create(cls, path=None):
         """Creates an `.IEB` instance with the default configuration."""
 
-        default_ieb_path = config["files"]["ieb_config"]
+        default_ieb_path = path or config["files"]["ieb_config"]
 
         default_ieb_path = os.path.expanduser(os.path.expandvars(default_ieb_path))
         if not os.path.isabs(default_ieb_path):
@@ -88,3 +88,15 @@ class IEB(Drift):
                 status[device] = value
 
         return status
+
+
+class FVC(IEB):
+    """Connects to the FVC IEB."""
+
+    @classmethod
+    def create(cls, path=None):
+        """Creates an `.FVC` instance with the default configuration."""
+
+        default_ieb_path = config["files"]["fvc_config"]
+
+        return super().create(default_ieb_path)

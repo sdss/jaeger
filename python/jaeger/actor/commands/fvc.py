@@ -10,6 +10,7 @@ from clu import Command
 from drift import DriftError
 
 from jaeger import FPS
+from jaeger.ieb import FVC
 
 from ..actor import JaegerActor
 from . import jaeger_parser
@@ -29,16 +30,13 @@ def fvc():
 async def status(command: Command[JaegerActor], fps: FPS):
     """Reports the status of the FVC."""
 
-    actor = command.actor
-    assert actor
-
-    ieb = actor.fvc_ieb
+    fvc_ieb = FVC.create()
 
     try:
         status = {}
-        categories = ieb.get_categories()
+        categories = fvc_ieb.get_categories()
         for category in sorted(categories):
-            cat_data = await ieb.read_category(category)
+            cat_data = await fvc_ieb.read_category(category)
             status[category] = []
             for cd in cat_data:
                 value = cat_data[cd][0]
@@ -48,11 +46,9 @@ async def status(command: Command[JaegerActor], fps: FPS):
                     value = False
                 else:
                     value = round(value, 1)
-                status[category].append(value)
+                status["fvc_" + category].append(value)
 
-        command.info(status)
+        command.finish(status)
 
     except DriftError:
-        command.warning(text="FVC IEB is unavailable.")
-
-    command.finish()
+        return command.fail(error="FVC IEB is unavailable or failed to connect.")
