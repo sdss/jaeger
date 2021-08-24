@@ -189,10 +189,10 @@ class GetNumberTrajectories(Command):
     broadcastable = False
     safe = False
 
-    def get_replies(self) -> Dict[int, int]:
+    def get_replies(self):
         return self.get_number_trajectories()
 
-    def get_number_trajectories(self) -> Dict[int, int]:
+    def get_number_trajectories(self) -> Dict[int, int | None]:
         """Returns the number of trajectories.
 
         Raises
@@ -207,8 +207,11 @@ class GetNumberTrajectories(Command):
         number_trajectories = {}
 
         for reply in self.replies:
-            data = self.replies[0].data
-            number_trajectories[reply.positioner_id] = bytes_to_int(data, dtype="u4")
+            data = reply.data
+            if data == bytearray():
+                number_trajectories[reply.positioner_id] = None
+            else:
+                number_trajectories[reply.positioner_id] = bytes_to_int(data)
 
         return number_trajectories
 
