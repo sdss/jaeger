@@ -338,7 +338,7 @@ class Positioner(StatusMixIn):
 
         assert isinstance(command, GetFirmwareVersion)
 
-        firmware = command.get_firmware(positioner_id=self.positioner_id)
+        firmware = command.get_firmware()[self.positioner_id]
         assert firmware is not None and isinstance(firmware, str)
 
         self.firmware = firmware
@@ -731,3 +731,29 @@ class Positioner(StatusMixIn):
             f"<Positioner (id={self.positioner_id}, "
             f"status={self.status!s}, initialised={self.initialised})>"
         )
+
+    async def get_number_trajectories(self) -> int | None:
+        """Returns the number of trajectories executed by the positioner.
+
+        Will return `None` if the firmware does not support the
+        ``GET_NUMBER_TRAJECTORIES``.
+
+        """
+
+        if not self.firmware:
+            return None
+
+        if StrictVersion(self.firmware) < StrictVersion("04.01.21"):
+            return None
+
+        assert self.fps
+
+        cmd = await self.fps.send_command(
+            CommandID.GET_NUMBER_TRAJECTORIES,
+            positioner_ids=[self.positioner_id],
+            timeout=1,
+        )
+
+        n_traj = cmd.get_replies()[self.positioner_id]
+
+        return n_traj
