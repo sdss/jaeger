@@ -327,21 +327,21 @@ class FPS(BaseFPS):
         # Stop poller in case they are running
         await self.pollers.stop()
 
-        get_firmware_command = self.send_command(
+        get_fw_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
             positioner_ids=0,
             timeout=config["fps"]["initialise_timeouts"],
         )
 
-        assert isinstance(get_firmware_command, GetFirmwareVersion)
-        await get_firmware_command
+        assert isinstance(get_fw_command, GetFirmwareVersion)
+        await get_fw_command
 
-        if get_firmware_command.status.failed:
+        if get_fw_command.status.failed:
             raise JaegerError("Failed retrieving firmware version.")
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it.
-        for reply in get_firmware_command.replies:
+        for reply in get_fw_command.replies:
             if reply.positioner_id not in self.positioners:
 
                 if reply.positioner_id in config["fps"]["skip_positioners"]:
@@ -357,7 +357,7 @@ class FPS(BaseFPS):
 
             positioner = self.positioners[reply.positioner_id]
             positioner.fps = self
-            positioner.firmware = get_firmware_command.get_firmware(reply.positioner_id)
+            positioner.firmware = get_fw_command.get_firmware()[reply.positioner_id]
 
         pids = sorted(list(self.keys()))
         if len(pids) > 0:
@@ -778,27 +778,27 @@ class FPS(BaseFPS):
         else:
             n_positioners = None
 
-        get_firmware_command = self.send_command(
+        get_fw_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
             positioner_ids=0,
             timeout=timeout,
             n_positioners=n_positioners,
         )
 
-        assert isinstance(get_firmware_command, GetFirmwareVersion)
-        await get_firmware_command
+        assert isinstance(get_fw_command, GetFirmwareVersion)
+        await get_fw_command
 
-        if get_firmware_command.status.failed:
+        if get_fw_command.status.failed:
             log.error("Failed retrieving firmware version.")
             return False
 
-        for reply in get_firmware_command.replies:
+        for reply in get_fw_command.replies:
             pid = reply.positioner_id
             if pid not in self.positioners:
                 continue
 
             positioner = self.positioners[pid]
-            positioner.firmware = get_firmware_command.get_firmware(pid)
+            positioner.firmware = get_fw_command.get_firmware()[pid]
 
         return True
 
