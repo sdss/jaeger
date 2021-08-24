@@ -8,9 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
-
-import numpy
+from typing import Dict, List, Tuple
 
 from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
