@@ -130,7 +130,7 @@ async def send_trajectory(
     if start_trajectory is False:
         return traj
 
-    log.info("starting trajectory ...")
+    log.info("Starting trajectory ...")
     try:
         await traj.start(use_sync_line=use_sync_line)
     except TrajectoryError as err:
@@ -424,8 +424,11 @@ class Trajectory(object):
         for positioner_id in positioner_ids:
             self.fps[positioner_id].move_time = self.move_time
 
-        log.debug("Turning on Hall sensors.")
+        log.debug("Turning Hall sensors on.")
         await self.fps.send_command(CommandID.HALL_ON, positioner_ids=positioner_ids)
+
+        # Need to wait five seconds before Halls are reliably on.
+        await asyncio.sleep(5)
 
         if use_sync_line:
 
