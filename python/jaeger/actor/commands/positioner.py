@@ -261,6 +261,13 @@ async def status(command, fps, positioner_ids, full):
     await fps.update_status(positioner_ids=positioner_ids)
     await fps.update_position(positioner_ids=positioner_ids)
 
+    n_trajs = (
+        await fps.send_command(
+            CommandID.GET_NUMBER_TRAJECTORIES,
+            positioner_ids=positioner_ids,
+        )
+    ).get_replies()
+
     command.info(locked=fps.locked)
 
     command.info(n_positioners=len(fps.positioners))
@@ -270,6 +277,8 @@ async def status(command, fps, positioner_ids, full):
 
         alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
         beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
+
+        n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
 
         if pid in fps.positioner_to_bus:
             interface, bus = fps.positioner_to_bus[pid]
@@ -290,6 +299,7 @@ async def status(command, fps, positioner_ids, full):
                 p.firmware or "?",
                 interface,
                 bus,
+                n_trajs_pid,
             ],
         )
 

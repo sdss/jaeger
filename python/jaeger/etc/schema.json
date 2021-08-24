@@ -133,7 +133,11 @@
                 { "title": "bootloader", "type": "boolean" },
                 { "title": "firmware", "type": "string" },
                 { "title": "interface", "type": "integer" },
-                { "title": "bus", "type": "integer" }
+                { "title": "bus", "type": "integer" },
+                {
+                    "title": "n_trajectories",
+                    "oneOf": [{ "type": "integer" }, { "constant": "?" }]
+                }
             ]
         },
         "raw": {
