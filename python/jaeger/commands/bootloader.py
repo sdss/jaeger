@@ -248,7 +248,10 @@ class GetFirmwareVersion(Command):
     safe = True
     bootloader = True
 
-    def get_firmware(self, positioner_id=None) -> str | Dict[int, str] | None:
+    def get_replies(self) -> Dict[int, Any]:
+        return self.get_firmware()
+
+    def get_firmware(self, positioner_id=None) -> Dict[int, str]:
         """Returns the firmware version string.
 
         Parameters
@@ -275,19 +278,10 @@ class GetFirmwareVersion(Command):
         def format_version(reply):
             return ".".join(format(byt, "02d") for byt in reply.data[0:3][::-1])
 
-        if len(self.replies) == 0:
-            raise ValueError("No positioners have replied to this command.")
-
         firmwares = {}
         for reply in self.replies:
             version = format_version(reply)
-            if positioner_id is not None and reply.positioner_id == positioner_id:
-                return version
-            else:
-                firmwares[reply.positioner_id] = version
-
-        if positioner_id is not None:
-            return None
+            firmwares[reply.positioner_id] = version
 
         return firmwares
 

@@ -46,6 +46,7 @@ async def test_load_firmware(vfps, vpositioners):
     for vpositioner in vpositioners.values():
         vpositioner.set_bootloader(False)
 
+    await vfps[1].update_firmware_version()
     await vfps[1].update_status()
 
     assert vfps[1].firmware == firmware_version

@@ -173,7 +173,7 @@ class JaegerCAN(Generic[Bus_co]):
         interface_type: Optional[str] = None,
         channels: list | tuple = [],
         interface_args: Dict[str, Any] = {},
-    ) -> JaegerCAN:
+    ) -> "JaegerCAN":
         """Create and initialise a new bus interface from a configuration profile.
 
         This is the preferred method to initialise a new `.JaegerCAN` instance and is
@@ -280,27 +280,23 @@ class JaegerCAN(Generic[Bus_co]):
 
         positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
 
+        if positioner_id in config["fps"]["skip_positioners"]:
+            return
+
         if command_id == CommandID.COLLISION_DETECTED:
+
+            # Sending stop trajectories causes many more robots to report a collision
+            # so if the FPS has already been locked we ignore those.
+            if not self.fps or self.fps.locked:
+                return
 
             log.error(
                 f"A collision was detected in positioner {positioner_id}. "
                 "Sending STOP_TRAJECTORIES and locking the FPS."
             )
 
-            # Manually send the stop trajectory to be sure it has
-            # priority over other messages. No need to do it if the FPS
-            # has been locked, which means that we have already stopped
-            # trajectories.
-
-            if self.fps and self.fps.locked:
-                return
-
-            assert self.fps
-            await self.fps.stop_trajectory()
-
-            # Now lock the FPS. No need to abort trajectories because we just did.
             if self.fps:
-                await self.fps.lock(stop_trajectories=False)
+                await self.fps.lock(by=[positioner_id])
                 return
 
         if command_id == 0:
@@ -345,7 +341,7 @@ class JaegerCAN(Generic[Bus_co]):
             f"to command {running_cmd.command_uid}."
         )
 
-        running_cmd.process_reply(msg)
+        asyncio.create_task(running_cmd.process_reply(msg))
 
     def send_messages(self, cmd: Command):
         """Sends messages to the interface.

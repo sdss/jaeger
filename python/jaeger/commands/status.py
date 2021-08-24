@@ -6,9 +6,9 @@
 # @Filename: status.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from typing import Dict, List
+from __future__ import annotations
 
-import numpy
+from typing import Dict, List, Tuple
 
 from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
@@ -40,6 +40,9 @@ class GetStatus(Command):
     safe = True
     bootloader = True
 
+    def get_replies(self) -> Dict[int, int]:
+        return self.get_positioner_status()
+
     def get_positioner_status(self) -> Dict[int, int]:
         """Returns the status flag for each positioner that replied."""
 
@@ -53,7 +56,10 @@ class GetActualPosition(Command):
     broadcastable = False
     safe = True
 
-    def get_positions(self) -> Dict[int, numpy.ndarray]:
+    def get_replies(self) -> Dict[int, Tuple[float, float]]:
+        return self.get_positions()
+
+    def get_positions(self) -> Dict[int, Tuple[float, float]]:
         """Returns the positions of alpha and beta in degrees.
 
         Raises
@@ -74,7 +80,7 @@ class GetActualPosition(Command):
             beta = bytes_to_int(data[4:], dtype="i4")
             alpha = bytes_to_int(data[0:4], dtype="i4")
 
-            positions[pid] = numpy.array(motor_steps_to_angle(alpha, beta))
+            positions[pid] = motor_steps_to_angle(alpha, beta)
 
         return positions
 
@@ -99,7 +105,10 @@ class GetCurrent(Command):
     broadcastable = False
     safe = True
 
-    def get_currents(self) -> Dict[int, numpy.ndarray]:
+    def get_replies(self) -> Dict[int, Tuple[int, int]]:
+        return self.get_currents()
+
+    def get_currents(self) -> Dict[int, Tuple[int, int]]:
         """Returns a dictionary of current of alpha and beta for each positioner.
 
         Raises
@@ -116,10 +125,10 @@ class GetCurrent(Command):
         for reply in self.replies:
             data = reply.data
 
-            beta = bytes_to_int(data[4:], dtype="i4")
             alpha = bytes_to_int(data[0:4], dtype="i4")
+            beta = bytes_to_int(data[4:], dtype="i4")
 
-            currents[reply.positioner_id] = numpy.array([alpha, beta])
+            currents[reply.positioner_id] = (alpha, beta)
 
         return currents
 
@@ -130,6 +139,9 @@ class GetTemperature(Command):
     command_id = CommandID.GET_RAW_TEMPERATURE
     broadcastable = False
     safe = True
+
+    def get_replies(self) -> Dict[int, int]:
+        return self.get_replies()
 
     def get_temperatures(self) -> Dict[int, int]:
         """Returns the temperature in Celsius.
@@ -167,3 +179,61 @@ class SwitchLEDOff(Command):
     command_id = CommandID.SWITCH_LED_ON
     broadcastable = False
     safe = True
+
+
+class GetNumberTrajectories(Command):
+
+    command_id = CommandID.GET_NUMBER_TRAJECTORIES
+    broadcastable = False
+    safe = False
+
+    def get_replies(self):
+        return self.get_number_trajectories()
+
+    def get_number_trajectories(self) -> Dict[int, int | None]:
+        """Returns the number of trajectories.
+
+        Raises
+        ------
+        ValueError
+            If no reply has been received or the data cannot be parsed.
+        """
+
+        if len(self.replies) == 0:
+            raise ValueError("no positioners have replied to this command.")
+
+        number_trajectories = {}
+
+        for reply in self.replies:
+            data = reply.data
+            if data == bytearray():
+                number_trajectories[reply.positioner_id] = None
+            else:
+                number_trajectories[reply.positioner_id] = bytes_to_int(data)
+
+        return number_trajectories
+
+
+class SetNumberTrajectories(Command):
+
+    command_id = CommandID.SET_NUMBER_TRAJECTORIES
+    broadcastable = False
+    safe = False
+
+    def __init__(
+        self,
+        positioner_ids: int | List[int],
+        moves: int | Dict[int, int],
+        **kwargs,
+    ):
+
+        if isinstance(moves, int):
+            data = int_to_bytes(moves)
+        elif isinstance(moves, dict):
+            data = {pos: int_to_bytes(moves[pos]) for pos in moves}
+        else:
+            raise TypeError("Invalid data type.")
+
+        kwargs["data"] = data
+
+        super().__init__(positioner_ids, **kwargs)

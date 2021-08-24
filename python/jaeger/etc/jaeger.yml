@@ -42,8 +42,11 @@ fps:
     use_database: true
     allow_unknown: true
     initialise_timeouts: 0.5
+    start_pollers: false
     status_poller_delay: 5
     position_poller_delay: 5
+    skip_positioners: [717, 1255, 1367, 398]
+    disable_collision_detection_positioners: []
 
 positioner:
     reduction_ratio: 1024
@@ -51,10 +54,10 @@ positioner:
     time_step: 0.0005
     motor_speed: 3000
     initialise_datums_timeout: 300
-    disable_precise_moves: false
+    disable_precise_moves: true
     uid_bits: 6
     trajectory_data_n_points: 3
-    firmware_messages_per_positioner: 4
+    firmware_messages_per_positioner: 8
 
 files:
     log_dir: /data/logs/jaeger

@@ -2,15 +2,44 @@
 
 ## Next version
 
+## 🚀 New
+
+* Add commands 45, 104, and 105 for hall sensor calibration querying.
+
+## ✨ Improved
+
+* Add `Trajectory.start_time` and `Trajectory.end_time` that can be used to determine when the trajectory failed. `send_trajectory` now allows to return the unsent or non-started trajectory.
+* When running the actor as a daemon in detached mode, log stdout and stderr to file.
+* By default, do not fail when a command receives an `UNKNOWN_COMMAND` reply; this usually means that the positioner firmware does not support that command yet. This can be disabled by initialising the `Command` with `ignore_unknown=False`.
+
+
+## 0.10.0 - August 3, 2021
+
+## 🚀 New
+
+* [#149](https://github.com/sdss/jaeger/issues/149) Added an `FPS.goto()` method that sends a list of positioners to a given position using trajectories. By default `Positioner.goto()` now also uses trajectories, but `GOTO_ABSOLUTE_POSITION` can still be used.
+* [#150](https://github.com/sdss/jaeger/issues/150) Allow to skip positioners that are connected to the bus but that we want to ignore. Also allow to disable collision detection for a list of positioners. See configuration options `fps.skip_positioners` and `fps.disable_collision_detection_positioners`.
+
 ## ✨ Improved
 
 * `Trajectory()` now sends data points using a single command per trajectory chunk.
 * Warn about individual replies that return without `COMMAND_ACCEPTED`.
+* Remove check for whether a positioner has started to move after sending the goto command. It sometimes produced false positives on very short moves.
+* Disable precise moves by default.
+* Improve reloading the FPS.
+* Remove `bootloader` commands from actor.
+* `FPS.locked_by` now reports what positioner id(s) locked the FPS on a collision.
+* Actor `ieb fbi` now accepts multiple devices.
+* Use coil space for IEB relays.
+* Use 8 message per positioner by default when upgrading the firmware.
 
 ### 🔧 Fixed
 
 * When sending multiple message per positioner per command, assign different UIDs.
 * Fix address of IEB RTD12.
+* Fix upgrade firmware script in the case of a single test sextant.
+* Turn off all sextants before upgrading the firmware.
+* Fixed and tested the power on and power off IEB sequences.
 
 
 ## 0.9.0 - July 18, 2021

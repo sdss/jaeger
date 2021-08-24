@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jaeger"
-version = "0.9.1-alpha.0"
+version = "0.10.1-alpha.0"
 description = "Controllers for the SDSS-V FPS"
 authors = ["José Sánchez-Gallego <gallegoj@uw.edu>"]
 license = "BSD-3-Clause"
@@ -28,9 +28,8 @@ numpy = "^1.15.1"
 progressbar2 = "^3.39.3"
 sdss-drift = "^0.2.3"
 sdss-clu = "^1.0.0"
-sdsstools = ">=0.4.2"
+sdsstools = ">=0.4.13"
 click_default_group = "^1.2.2"
-daemonocle = "^1.0.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"

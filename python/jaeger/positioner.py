@@ -15,12 +15,13 @@ from time import time
 
 from typing import List, Optional, Tuple, cast
 
-import numpy.testing
-
 import jaeger
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
+from jaeger.commands.bootloader import GetFirmwareVersion
+from jaeger.commands.goto import GotoAbsolutePosition, GotoRelativePosition, goto
+from jaeger.commands.status import GetActualPosition
 from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
 
@@ -61,11 +62,10 @@ class Positioner(StatusMixIn):
         self.alpha = None
         self.beta = None
         self.speed = (None, None)
-        self.firmware = None
+        self.firmware: str | None = None
 
         self.disabled = False
-
-        self._move_time = None
+        self.precise_moves = True
 
         super().__init__(
             maskbit_flags=maskbits.PositionerStatus,
@@ -95,21 +95,6 @@ class Positioner(StatusMixIn):
             return True
 
         return False
-
-    @property
-    def move_time(self):
-        """Returns the move time."""
-
-        if not self.moving:
-            self._move_time = None
-
-        return self._move_time
-
-    @move_time.setter
-    def move_time(self, value):
-        """Sets the move time."""
-
-        self._move_time = value
 
     @property
     def initialised(self):
@@ -193,6 +178,8 @@ class Positioner(StatusMixIn):
                 timeout=timeout,
             )
 
+            assert isinstance(command, GetActualPosition)
+
             if command.status.failed:
                 self.alpha = self.beta = None
                 raise PositionerError("failed updating position")
@@ -216,7 +203,8 @@ class Positioner(StatusMixIn):
         assert self.fps, "FPS is not set."
 
         # Need to update the firmware to make sure we get the right flags.
-        await self.update_firmware_version()
+        if not self.firmware:
+            await self.update_firmware_version()
 
         if not status:
 
@@ -320,7 +308,7 @@ class Positioner(StatusMixIn):
             return True
 
         if not self.initialised:
-            raise PositionerError("failed inisialising.")
+            raise PositionerError("failed initialising.")
 
         # Update position only if it's not bootloader.
         await self.update_position()
@@ -332,7 +320,7 @@ class Positioner(StatusMixIn):
         )
 
         if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
-            self._log("Disabling precise moves requires >=04.01.17", logging.ERROR)
+            self._log("Disabling precise moves requires >=04.01.17", logging.DEBUG)
         else:
             await self.set_precise_move(mode=not disable_precise_moves)
 
@@ -348,7 +336,12 @@ class Positioner(StatusMixIn):
             error="failed retrieving firmware version.",
         )
 
-        self.firmware = command.get_firmware(positioner_id=self.positioner_id)
+        assert isinstance(command, GetFirmwareVersion)
+
+        firmware = command.get_firmware()[self.positioner_id]
+        assert firmware is not None and isinstance(firmware, str)
+
+        self.firmware = firmware
         self.flags = self.get_positioner_flags()
 
         self._log(f"firmware {self.firmware}")
@@ -453,6 +446,8 @@ class Positioner(StatusMixIn):
         if any([cmd.status != maskbits.CommandStatus.DONE for cmd in cmds]):
             raise PositionerError("failed switching precise moves.")
 
+        self.precise_moves = mode
+
         return True
 
     def _can_move(self):
@@ -506,6 +501,8 @@ class Positioner(StatusMixIn):
         speed: Tuple[float, float] = None,
         relative=False,
         force=False,
+        use_trajectory=True,
+        use_sync_line=True,
     ) -> bool:
         """Moves positioner to a given position.
 
@@ -522,6 +519,10 @@ class Positioner(StatusMixIn):
             position.
         force
             Allows to set position and speed limits outside the normal range.
+        use_trajectory
+            If `True`, uses a trajectory to reach the position.
+        use_sync_line
+            If ``use_trajectory=True``, whether to use the SYNC line.
 
         Returns
         -------
@@ -542,10 +543,26 @@ class Positioner(StatusMixIn):
         """
 
         if self.moving:
-            raise PositionerError("positioner is already moving.")
+            raise PositionerError("Positioner is already moving.")
 
         if force is False and not self._can_move():
-            raise PositionerError("positioner is not in a movable state.")
+            raise PositionerError("Positioner is not in a movable state.")
+
+        if use_trajectory:
+            assert self.fps
+            try:
+                await goto(
+                    self.fps,
+                    [self.positioner_id],
+                    alpha,
+                    beta,
+                    speed=speed,
+                    relative=relative,
+                    use_sync_line=use_sync_line,
+                )
+                return True
+            except JaegerError:
+                raise
 
         ALPHA_MAX = 360
         BETA_MAX = 360
@@ -555,13 +572,13 @@ class Positioner(StatusMixIn):
         if (
             alpha < ALPHA_MIN or alpha > ALPHA_MAX or beta < BETA_MIN or beta > BETA_MAX
         ) and not force:
-            raise PositionerError("position out of limits.")
+            raise PositionerError("Position out of limits.")
 
         if not self.initialised:
-            raise PositionerError("not initialised.")
+            raise PositionerError("Not initialised.")
 
         if None in self.speed:
-            raise PositionerError("speed has not been set.")
+            raise PositionerError("Speed has not been set.")
 
         # Update position
         await self.update_position()
@@ -580,7 +597,7 @@ class Positioner(StatusMixIn):
                 relative is True and (self.beta + beta) < min_beta
             ):
                 raise PositionerError(
-                    "safe mode enabled. Cannot move beta arm that far."
+                    "Safe mode enabled. Cannot move beta arm that far."
                 )
 
         original_speed = cast(Tuple[float, float], self.speed)
@@ -597,44 +614,17 @@ class Positioner(StatusMixIn):
             )
 
             goto_command = await self._goto_position(alpha, beta, relative=relative)
+            assert isinstance(
+                goto_command,
+                (GotoAbsolutePosition, GotoRelativePosition),
+            )
 
-            # Sleeps for the time the firmware believes it's going to take
-            # to get to the desired position.
             alpha_time, beta_time = goto_command.get_move_time()[0]
+            move_time = max([alpha_time, beta_time])
+            self._log(f"The move will take {move_time:.2f} seconds", logging.INFO)
 
-            # Update status as soon as we start moving. This clears any
-            # possible DISPLACEMENT_COMPLETED.
-            await asyncio.sleep(0.1)
-            await self.update_status()
-
-            if not self.moving:
-
-                if not self.position or None in self.position:
-                    raise PositionerError("position is unknown.")
-
-                if not relative:
-                    goto_position = (alpha, beta)
-                else:
-                    position = cast(Tuple[float, float], self.position)
-                    goto_position = (alpha + position[0], beta + position[1])
-
-                try:
-
-                    numpy.testing.assert_allclose(
-                        self.position, goto_position, atol=0.001
-                    )
-                    self._log("position reached (did not move).", logging.INFO)
-                    return True
-
-                except AssertionError:
-
-                    raise PositionerError("positioner is not moving when it should.")
-
-            self.move_time = max([alpha_time, beta_time])
-
-            self._log(f"the move will take {self.move_time:.2f} seconds", logging.INFO)
-
-            assert self.fps
+            assert self.fps is not None
+            assert goto_command.start_time is not None
 
             while True:
                 await asyncio.sleep(0.2)
@@ -649,8 +639,8 @@ class Positioner(StatusMixIn):
                     break
 
                 elapsed = time() - goto_command.start_time
-                if elapsed > self.move_time + 3:
-                    raise PositionerError("failed to reach commanded position.")
+                if elapsed > move_time + 3:
+                    raise PositionerError("Failed to reach commanded position.")
 
                 await self.update_status()
                 if maskbits.PositionerStatus.DISPLACEMENT_COMPLETED in self.status:
@@ -665,7 +655,7 @@ class Positioner(StatusMixIn):
                 await self.set_speed(*original_speed, force=force)
 
         if result is True:
-            self._log("position reached.", logging.INFO)
+            self._log("Position reached.", logging.INFO)
 
         return result
 
@@ -741,3 +731,29 @@ class Positioner(StatusMixIn):
             f"<Positioner (id={self.positioner_id}, "
             f"status={self.status!s}, initialised={self.initialised})>"
         )
+
+    async def get_number_trajectories(self) -> int | None:
+        """Returns the number of trajectories executed by the positioner.
+
+        Will return `None` if the firmware does not support the
+        ``GET_NUMBER_TRAJECTORIES``.
+
+        """
+
+        if not self.firmware:
+            return None
+
+        if StrictVersion(self.firmware) < StrictVersion("04.01.21"):
+            return None
+
+        assert self.fps
+
+        cmd = await self.fps.send_command(
+            CommandID.GET_NUMBER_TRAJECTORIES,
+            positioner_ids=[self.positioner_id],
+            timeout=1,
+        )
+
+        n_traj = cmd.get_replies()[self.positioner_id]
+
+        return n_traj

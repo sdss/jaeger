@@ -33,6 +33,7 @@ TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yam
 
 config["safe_mode"] = False
 config["files"]["ieb_config"] = "etc/ieb.yaml"
+config["fps"]["start_pollers"] = True
 
 
 # Disable logging to file.

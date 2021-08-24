@@ -51,6 +51,10 @@ List of commands
     :exclude-members:
     :undoc-members:
 
+.. autoclass:: jaeger.commands.goto
+    :exclude-members:
+    :undoc-members:
+
 
 .. _bootloader-commands:
 

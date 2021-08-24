@@ -16,9 +16,17 @@ from dataclasses import dataclass
 
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
+import numpy
+
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import CANnetInterface, JaegerCAN
-from jaeger.commands import Command, CommandID, GetFirmwareVersion, send_trajectory
+from jaeger.commands import (
+    Command,
+    CommandID,
+    GetFirmwareVersion,
+    goto,
+    send_trajectory,
+)
 from jaeger.exceptions import (
     FPSLockedError,
     JaegerDeprecationWarning,
@@ -162,6 +170,7 @@ class FPS(BaseFPS):
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
         self._locked = False
+        self.locked_by: List[int] = []
 
         if self.ieb is None or self.ieb is True:
             self.ieb = config["files"]["ieb_config"]
@@ -213,8 +222,8 @@ class FPS(BaseFPS):
         can=None,
         ieb=None,
         initialise=True,
-        start_pollers=True,
-    ) -> FPS:
+        start_pollers: bool | None = None,
+    ) -> "FPS":
         """Starts the CAN bus and .
 
         Parameters
@@ -269,7 +278,7 @@ class FPS(BaseFPS):
 
         return positioner
 
-    async def initialise(self: T, start_pollers: bool = True) -> T:
+    async def initialise(self: T, start_pollers: bool | None = None) -> T:
         """Initialises all positioners with status and firmware version.
 
         Parameters
@@ -279,8 +288,13 @@ class FPS(BaseFPS):
 
         """
 
+        if start_pollers is None:
+            start_pollers = config["fps"]["start_pollers"]
+        assert isinstance(start_pollers, bool)
+
         # Clear all robots
-        dict.__init__(self, {})
+        self.clear()
+        self.positioner_to_bus = {}
 
         # Stop pollers while initialising
         if self.pollers.running:
@@ -313,22 +327,26 @@ class FPS(BaseFPS):
         # Stop poller in case they are running
         await self.pollers.stop()
 
-        get_firmware_command = self.send_command(
+        get_fw_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
             positioner_ids=0,
             timeout=config["fps"]["initialise_timeouts"],
         )
 
-        assert isinstance(get_firmware_command, GetFirmwareVersion)
-        await get_firmware_command
+        assert isinstance(get_fw_command, GetFirmwareVersion)
+        await get_fw_command
 
-        if get_firmware_command.status.failed:
+        if get_fw_command.status.failed:
             raise JaegerError("Failed retrieving firmware version.")
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it.
-        for reply in get_firmware_command.replies:
+        for reply in get_fw_command.replies:
             if reply.positioner_id not in self.positioners:
+
+                if reply.positioner_id in config["fps"]["skip_positioners"]:
+                    continue
+
                 if hasattr(reply.message, "interface"):
                     interface = reply.message.interface
                     bus = reply.message.bus
@@ -339,7 +357,7 @@ class FPS(BaseFPS):
 
             positioner = self.positioners[reply.positioner_id]
             positioner.fps = self
-            positioner.firmware = get_firmware_command.get_firmware(reply.positioner_id)
+            positioner.firmware = get_fw_command.get_firmware()[reply.positioner_id]
 
         pids = sorted(list(self.keys()))
         if len(pids) > 0:
@@ -370,6 +388,9 @@ class FPS(BaseFPS):
             await asyncio.gather(*pos_initialise)
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
+
+        if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
+            log.error("Unable to disable precise moves for some positioners.")
 
         n_non_initialised = len(
             [
@@ -407,6 +428,18 @@ class FPS(BaseFPS):
             warnings.warn(
                 f"Safe mode enabled. Minimum beta is {min_beta} degrees.",
                 JaegerUserWarning,
+            )
+
+        # Disable collision detection for listed robots.
+        disable_collision = config["fps"]["disable_collision_detection_positioners"]
+        if len(disable_collision):
+            await self.send_command(
+                CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=disable_collision,
+            )
+            await self.send_command(
+                CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=disable_collision,
             )
 
         # Start the pollers
@@ -577,7 +610,11 @@ class FPS(BaseFPS):
 
         return command
 
-    async def lock(self, stop_trajectories: bool = True):
+    async def lock(
+        self,
+        stop_trajectories: bool = True,
+        by: Optional[List[int]] = None,
+    ):
         """Locks the `.FPS` and prevents commands to be sent.
 
         Parameters
@@ -588,7 +625,11 @@ class FPS(BaseFPS):
         """
 
         warnings.warn("Locking the FPS.", JaegerUserWarning)
+
         self._locked = True
+
+        if by:
+            self.locked_by += by
 
         if stop_trajectories:
             await self.stop_trajectory()
@@ -606,6 +647,7 @@ class FPS(BaseFPS):
                 )
 
         self._locked = False
+        self.locked_by = []
 
         return True
 
@@ -736,27 +778,27 @@ class FPS(BaseFPS):
         else:
             n_positioners = None
 
-        get_firmware_command = self.send_command(
+        get_fw_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
             positioner_ids=0,
             timeout=timeout,
             n_positioners=n_positioners,
         )
 
-        assert isinstance(get_firmware_command, GetFirmwareVersion)
-        await get_firmware_command
+        assert isinstance(get_fw_command, GetFirmwareVersion)
+        await get_fw_command
 
-        if get_firmware_command.status.failed:
+        if get_fw_command.status.failed:
             log.error("Failed retrieving firmware version.")
             return False
 
-        for reply in get_firmware_command.replies:
+        for reply in get_fw_command.replies:
             pid = reply.positioner_id
             if pid not in self.positioners:
                 continue
 
             positioner = self.positioners[pid]
-            positioner.firmware = get_firmware_command.get_firmware(pid)
+            positioner.firmware = get_fw_command.get_firmware()[pid]
 
         return True
 
@@ -789,6 +831,67 @@ class FPS(BaseFPS):
                 command.cancel(silent=True)
 
         self.can.refresh_running_commands()
+
+    async def goto(
+        self,
+        positioner_ids: int | List[int] | None,
+        alpha: float | list | numpy.ndarray,
+        beta: float | list | numpy.ndarray,
+        speed: Optional[Tuple[float, float]] = None,
+        relative=False,
+        force: bool = False,
+        use_sync_line=True,
+    ):
+        """Sends a list of positioners to a given position.
+
+        Parameters
+        ----------
+        positioner_ids
+            The list of positioner_ids to command. If `None`, uses all conencted
+            positioners.
+        alpha
+            The alpha angle. Can be an array with the same size of the list of
+            positioner IDs. Otherwise sends all the positioners to the same angle.
+        beta
+            The beta angle.
+        speed
+            As a tuple, the alpha and beta speeds to use. If `None`, uses the default
+            ones.
+        relative
+            If `True`, ``alpha`` and ``beta`` are considered relative angles.
+        force
+            If ``positioners_ids=None``, ``force`` must be set to `True` to move
+            the entire array.
+        use_sync_line
+            Whether to use the SYNC line to start the trajectories.
+
+        """
+
+        if isinstance(positioner_ids, int):
+            positioner_ids = [positioner_ids]
+
+        if (positioner_ids is None or len(positioner_ids) == 0) and force is False:
+            raise JaegerError("Moving all positioners requires force=True.")
+
+        positioner_ids = positioner_ids or list(self.keys())
+
+        try:
+            traj = await goto(
+                self,
+                positioner_ids,
+                alpha,
+                beta,
+                relative=relative,
+                speed=speed,
+                use_sync_line=use_sync_line,
+            )
+        except JaegerError:
+            raise
+        finally:
+            await self.update_status()
+            await self.update_position()
+
+        return traj
 
     async def send_trajectory(self, *args, **kwargs):
         """Sends a set of trajectories to the positioners.

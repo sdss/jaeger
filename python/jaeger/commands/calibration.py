@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import asyncio
+import struct
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy
 
@@ -193,6 +194,9 @@ class GetOffset(Command):
     broadcastable = False
     safe = True
 
+    def get_replies(self) -> Dict[int, numpy.ndarray]:
+        return self.get_offsets()
+
     def get_offsets(self) -> Dict[int, numpy.ndarray]:
         """Returns the alpha and beta offsets, in degrees.
 
@@ -286,6 +290,9 @@ class GetHoldingCurrents(Command):
     broadcastable = False
     safe = True
 
+    def get_replies(self) -> Dict[int, numpy.ndarray]:
+        return self.get_holding_currents()
+
     def get_holding_currents(self) -> Dict[int, numpy.ndarray]:
         """Returns the alpha and beta holding currents, in percent.
 
@@ -345,3 +352,82 @@ class PreciseMoveBetaOff(Command):
     broadcastable = False
     move_command = False
     safe = False
+
+
+class SetIncreaseCollisionMargin(Command):
+    """Sets the buffer for collision margin."""
+
+    command_id = CommandID.SET_INCREASE_COLLISION_MARGIN
+    broadcastable = False
+    move_command = False
+    safe = False
+
+    def __init__(self, positioner_ids, buffer: int, **kwargs):
+
+        data = int_to_bytes(int(buffer))
+        kwargs["data"] = data
+
+        super().__init__(positioner_ids, **kwargs)
+
+
+class GetAlphaHallCalibration(Command):
+
+    command_id = CommandID.GET_ALPHA_HALL_CALIB
+    broadcastable = False
+    move_command = False
+    safe = True
+
+    def get_replies(self) -> Dict[int, Tuple[int, int, int, int]]:
+        return self.get_values()
+
+    def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
+        """Returns the ``maxA, maxB, minA, minB`` values."""
+
+        values = {}
+
+        for reply in self.replies:
+            values[reply.positioner_id] = struct.unpack("HHHH", reply.data)
+
+        return values
+
+
+class GetBetaHallCalibration(Command):
+
+    command_id = CommandID.GET_BETA_HALL_CALIB
+    broadcastable = False
+    move_command = False
+    safe = True
+
+    def get_replies(self) -> Dict[int, Tuple[int, int, int, int]]:
+        return self.get_values()
+
+    def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
+        """Returns the ``maxA, maxB, minA, minB`` values."""
+
+        values = {}
+
+        for reply in self.replies:
+            values[reply.positioner_id] = struct.unpack("HHHH", reply.data)
+
+        return values
+
+
+class GetHallCalibrationError(Command):
+
+    command_id = CommandID.GET_HALL_CALIB_ERROR
+    broadcastable = False
+    move_command = False
+    safe = True
+
+    def get_replies(self) -> Dict[int, Tuple[int, int]]:
+        return self.get_values()
+
+    def get_values(self) -> dict[int, Tuple[int, int]]:
+        """Returns the alpha and beta error values."""
+
+        values = {}
+
+        for reply in self.replies:
+            values[reply.positioner_id] = struct.unpack("ii", reply.data)
+
+        return values

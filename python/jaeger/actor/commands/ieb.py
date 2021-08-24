@@ -9,6 +9,8 @@
 import asyncio
 import math
 
+from typing import Tuple
+
 import click
 
 from clu.command import Command
@@ -84,7 +86,7 @@ async def status(command, fps):
 
 
 @ieb.command()
-@click.argument("DEVICE", type=str)
+@click.argument("DEVICES", type=str, nargs=-1)
 @click.option(
     "--on/--off",
     default=None,
@@ -95,65 +97,87 @@ async def status(command, fps):
     is_flag=True,
     help="power cycles a relay. The final status is on.",
 )
-async def switch(command, fps, device, on, cycle):
+@click.option(
+    "--delay",
+    type=float,
+    default=1,
+    help="When powering multiple devices, the delay to wait between them.",
+)
+async def switch(command, fps, devices=(), on=None, cycle=False, delay=1):
     """Switches the status of an on/off device."""
 
     ieb = fps.ieb
 
-    if cycle:
-        on = False
+    if len(devices) == 0:
+        return command.fail(error="No devices specified.")
 
-    try:
-        device_obj = ieb.get_device(device)
-        dev_name = device_obj.name
-        category = device_obj.category.lower()
-    except ValueError:
-        return command.fail(error=f"cannot find device {device!r}.")
+    for idev, device in enumerate(devices):
 
-    if dev_name == "SYNC":
-        return command.fail(error="the SYNC line cannot be switched manually.")
+        if len(devices) > 1 and idev != 0:
+            await asyncio.sleep(delay)
 
-    if device_obj.module.mode not in ["holding_register", "coil"]:
-        return command.fail(error=f"{dev_name!r} is not an output.")
-
-    if on is None:  # The --on/--off was not passed
-        current_status = (await device_obj.read())[0]
-        if current_status == "closed":
+        if cycle:
             on = False
-        elif current_status == "open":
-            on = True
-        else:
-            return command.fail(
-                error=f"invalid status for device {dev_name!r}: {current_status!r}."
-            )
 
-    try:
-        if on is True:
-            await device_obj.close()
-        elif on is False:
-            await device_obj.open()
-    except Exception:
-        return command.fail(error=f"failed to set status of device {dev_name!r}.")
-
-    if cycle:
-        command.write("d", text="waiting 1 second before powering up.")
-        await asyncio.sleep(1)
         try:
-            await device_obj.close()
+            device_obj = ieb.get_device(device)
+            dev_name = device_obj.name
+            category = device_obj.category.lower()
+        except ValueError:
+            return command.fail(error=f"cannot find device {device!r}.")
+
+        if dev_name == "SYNC":
+            return command.fail(error="the SYNC line cannot be switched manually.")
+
+        if device_obj.module.mode not in ["holding_register", "coil"]:
+            return command.fail(error=f"{dev_name!r} is not an output.")
+
+        if on is None:  # The --on/--off was not passed
+            current_status = (await device_obj.read())[0]
+            if current_status == "closed":
+                on = False
+            elif current_status == "open":
+                on = True
+            else:
+                return command.fail(
+                    error=f"invalid status for device {dev_name!r}: {current_status!r}."
+                )
+
+        try:
+            if on is True:
+                await device_obj.close()
+            elif on is False:
+                await device_obj.open()
         except Exception:
-            return command.fail(error=f"failed to power device {dev_name!r} back on.")
+            return command.fail(error=f"failed to set status of device {dev_name!r}.")
 
-    status = "on" if (await device_obj.read())[0] == "closed" else "off"
+        if cycle:
+            command.write("d", text="waiting 1 second before powering up.")
+            await asyncio.sleep(1)
+            try:
+                await device_obj.close()
+            except Exception:
+                return command.fail(
+                    error=f"failed to power device {dev_name!r} back on."
+                )
 
-    return command.finish(
-        message={
-            "text": f"device {dev_name!r} is now {status!r}.",
-            category: await _get_category_data(command, category),
-        }
-    )
+        # If we read the status immediately sometimes we still get the old one.
+        # Sleep a bit to avoid that.
+        await asyncio.sleep(0.2)
+
+        status = "on" if (await device_obj.read())[0] == "closed" else "off"
+
+        command.info(
+            message={
+                "text": f"device {dev_name!r} is now {status!r}.",
+                category: await _get_category_data(command, category),
+            }
+        )
+
+    return command.finish()
 
 
-async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
+async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
     """Applies the power on/off sequence."""
 
     # To speed up tests
@@ -174,21 +198,25 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
         command.fail(error="Failed opening SYNC line.")
         return False
 
-    command.debug(sync=False)
+    command.debug(power_sync=[False])
 
     for devname in seq:
+        do_delay = False
         if isinstance(devname, str):
             dev = ieb.get_device(devname)
             category = dev.category.lower()
 
             if (await dev.read())[0] == relay_result:
-                command.debug(text=f"{devname} alredy powered {mode}.")
+                command.debug(text=f"{devname} already powered {mode}.")
             else:
                 command.debug(text=f"Powering {mode} {devname}.")
-                await dev.close() if mode == "on" else dev.open()
+                await dev.close() if mode == "on" else await dev.open()
+                await asyncio.sleep(0.2)
                 if (await dev.read())[0] != relay_result:
                     command.fail(error=f"Failed powering {mode} {devname}.")
                     return False
+
+                do_delay = True
 
             command.debug({category: await _get_category_data(command, category)})
 
@@ -202,25 +230,23 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
             keep = []
             for ii, res in enumerate(status):
                 if res[0] == relay_result:
-                    command.debug(
-                        {
-                            "text": f"{devname[ii]} alredy powered {mode}.",
-                            devname[ii].lower(): relay_result,
-                        }
-                    )
+                    command.debug({"text": f"{devname[ii]} already powered {mode}."})
                     continue
                 keep.append(ii)
 
             devs = [devs[ii] for ii in keep]
             devname = [devname[ii] for ii in keep]
 
-            command.debug(text=f"Powering {mode} {', '.join(devname)}")
-
-            await asyncio.gather(*[dev.close() for dev in devs])
+            if len(devs) > 0:
+                command.debug(text=f"Powering {mode} {', '.join(devname)}")
+                await asyncio.gather(
+                    *[dev.close() if mode == "on" else dev.open() for dev in devs]
+                )
+                do_delay = True
 
             status = list(await asyncio.gather(*[dev.read() for dev in devs]))
             for ii, res in enumerate(status):
-                if res[0] != "closed":
+                if res[0] != relay_result:
                     command.fail(error=f"Failed powering {mode} {devname[ii]}.")
                     return False
 
@@ -230,7 +256,8 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=1) -> bool:
             command.fail(error=f"Invalid relay {devname!r}.")
             return False
 
-        await asyncio.sleep(delay)
+        if do_delay:
+            await asyncio.sleep(delay)
 
     return True
 
@@ -299,7 +326,6 @@ async def off(command, fps, nucs):
     # Sequence of relays to power off. Tuples indicate relays that can be powered
     # off concurrently.
     off_seq = [
-        ("CM1", "CM2", "CM3", "CM4", "CM5", "CM6"),
         "PS1",
         "PS2",
         "PS3",
@@ -324,9 +350,9 @@ async def off(command, fps, nucs):
 
 
 @ieb.command()
-@click.argument("device_name", metavar="DEVICE", type=str)
+@click.argument("device_names", metavar="DEVICES", type=str, nargs=-1)
 @click.argument("VALUE", type=click.FloatRange(0, 100))
-async def fbi(command, fps: FPS, device_name: str, value: float):
+async def fbi(command, fps: FPS, device_names: Tuple[str], value: float):
     """Control the power output (0-100%) of the fibre back illuminator (FBI)."""
 
     raw_value = 32 * int(1023 * (value / 100))
@@ -334,17 +360,22 @@ async def fbi(command, fps: FPS, device_name: str, value: float):
     if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
         return command.fail(error="IEB is not conencted or is disabled.")
 
-    try:
-        device = fps.ieb.get_device(device_name)
-    except ValueError:
-        return command.fail(error=f"Cannot find device {device_name!r}.")
+    if len(device_names) == 0:
+        return command.fail(error="No devices provided.")
 
-    if device.mode != "holding_register":
-        return command.fail(
-            error=f"Invalid device mode for {device_name!r}: {device.__type__}."
-        )
+    for device_name in device_names:
+        try:
+            device = fps.ieb.get_device(device_name)
+        except ValueError:
+            return command.fail(error=f"Cannot find device {device_name!r}.")
 
-    await device.write(raw_value)
+        if device.mode != "holding_register":
+            return command.fail(
+                error=f"Invalid device mode for {device_name!r}: {device.__type__}."
+            )
+
+        await device.write(raw_value)
+
     return command.finish()
 
 
