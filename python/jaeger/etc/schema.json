@@ -119,6 +119,30 @@
                 { "title": "NUC6", "type": "boolean" }
             ]
         },
+        "fvc_temperature": {
+            "type": "array",
+            "description": "FVC temperature measurements",
+            "items": [
+                { "title": "RTD1", "type": "number" },
+                { "title": "RTD2", "type": "number" },
+                { "title": "RTD3", "type": "number" }
+            ]
+        },
+        "fvc_power_nuc": {
+            "type": "array",
+            "description": "FVC NUC power",
+            "items": [{ "title": "NUC", "type": "boolean" }]
+        },
+        "fvc_power_camera": {
+            "type": "array",
+            "description": "FVC camera power",
+            "items": [{ "title": "FVC", "type": "boolean" }]
+        },
+        "fvc_led": {
+            "type": "array",
+            "description": "FVC LED power",
+            "items": [{ "title": "LED1", "type": "number" }]
+        },
         "move_time": { "type": "number" },
         "locked": { "type": "boolean" },
         "n_positioners": { "type": "integer" },

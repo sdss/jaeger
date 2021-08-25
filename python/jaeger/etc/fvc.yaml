@@ -1,0 +1,59 @@
+address: sdss-fvc-wago
+port: 502
+modules:
+    ANALOG1:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pt RTD sensors
+        devices:
+            RTD1:
+                address: 40005
+                category: fvc_temperature
+                adaptor: rtd
+                units: degC
+                description: IEB inside air temperature
+            RTD2:
+                address: 40006
+                category: fvc_temperature
+                adaptor: rtd
+                units: degC
+                description:
+            RTD3:
+                address: 40007
+                category: fvc_temperature
+                adaptor: rtd
+                units: degC
+                description:
+    ANALOG_OUTPUT1:
+        model: 750-511
+        mode: holding_register
+        channels: 2
+        description: Pulse Width Modulator (PWM) output module for LED control
+        devices:
+            LED1:
+                address: 40514
+                category: fvc_led
+                adaptor: pwd
+                units: percent
+                description: Red LED
+    DO1:
+        model: 750-530
+        mode: holding_register
+        channels: 8
+        description: Relays for AC power switching
+        devices:
+            NUC:
+                address: 40517
+                channel: 0
+                type: relay
+                category: fvc_power_nuc
+                relay_type: NC
+                description: FVC NUC
+            FVC:
+                address: 40517
+                channel: 1
+                type: relay
+                category: fvc_power_camera
+                relay_type: NO
+                description: FVC camera power

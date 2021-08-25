@@ -13,6 +13,7 @@ jaeger_parser = command_parser
 
 
 from .debug import *
+from .fvc import *
 from .ieb import *
 from .pollers import *
 from .positioner import *
