@@ -33,7 +33,7 @@ modules:
         devices:
             LED1:
                 address: 40514
-                category: fvc_fbi_led
+                category: fvc_led
                 adaptor: pwd
                 units: percent
                 description: Red LED

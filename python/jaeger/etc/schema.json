@@ -131,23 +131,17 @@
         "fvc_power_nuc": {
             "type": "array",
             "description": "FVC NUC power",
-            "items": [
-                { "title": "NUC", "type": "boolean" }
-            ]
+            "items": [{ "title": "NUC", "type": "boolean" }]
         },
         "fvc_power_camera": {
             "type": "array",
             "description": "FVC camera power",
-            "items": [
-                { "title": "FVC", "type": "boolean" }
-            ]
+            "items": [{ "title": "FVC", "type": "boolean" }]
         },
-        "fvc_fbi_led": {
+        "fvc_led": {
             "type": "array",
-            "description": "FVC integration spheres LED power",
-            "items": [
-                { "title": "LED1", "type": "number", "multipleOf": 0.1 }
-            ]
+            "description": "FVC LED power",
+            "items": [{ "title": "LED1", "type": "number" }]
         },
         "move_time": { "type": "number" },
         "locked": { "type": "boolean" },
