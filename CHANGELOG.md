@@ -4,7 +4,8 @@
 
 ## 🚀 New
 
-* Add commands 45, 104, and 105 for hall sensor calibration querying.
+* [#152](https://github.com/sdss/jaeger/pull/152) FVC IEB support and actor commands.
+* Add commands `GET_HALL_CALIB_ERROR`, `GET_ALPHA_HALL_CALIB`, and `GET_BETA_HALL_CALIB` for hall sensor calibration querying.
 
 ## ✨ Improved
 
