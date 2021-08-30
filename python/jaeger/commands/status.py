@@ -14,7 +14,17 @@ from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
-__all__ = ["GetID", "GetStatus", "GetCurrent", "GetActualPosition"]
+__all__ = [
+    "GetID",
+    "GetStatus",
+    "GetCurrent",
+    "GetActualPosition",
+    "GetNumberTrajectories",
+    "SetNumberTrajectories",
+    "SwitchLEDOn",
+    "SwitchLEDOff",
+    "GetTemperature",
+]
 
 
 class GetID(Command):
