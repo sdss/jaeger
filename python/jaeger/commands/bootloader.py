@@ -236,7 +236,7 @@ async def load_firmware(
         can_log.addHandler(fh_handler)
 
     total_time = time.time() - start_time
-    log.info(f"upgrading firmware took {total_time:.2f}")
+    log.info(f"upgrading firmware took {total_time:.2f} s.")
 
     return True
 
