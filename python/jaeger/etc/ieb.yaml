@@ -159,6 +159,12 @@ modules:
         channels: 4
         description: Pt RTD sensors
         devices:
+            RTD9:
+                address: 40033
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: IEB Glycol Supply Temperature
             RTD10:
                 address: 40034
                 category: temperature
