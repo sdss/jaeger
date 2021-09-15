@@ -126,9 +126,6 @@ async def switch(command, fps, devices=(), on=None, cycle=False, delay=1):
         except ValueError:
             return command.fail(error=f"cannot find device {device!r}.")
 
-        if dev_name == "SYNC":
-            return command.fail(error="the SYNC line cannot be switched manually.")
-
         if device_obj.module.mode not in ["holding_register", "coil"]:
             return command.fail(error=f"{dev_name!r} is not an output.")
 
