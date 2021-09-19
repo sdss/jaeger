@@ -14,16 +14,12 @@
         "humidity": {
             "type": "array",
             "description": "Relative humidity measurements",
-            "items": [
-                { "title": "RH1", "type": "number" }
-            ]
+            "items": [{ "title": "RH1", "type": "number" }]
         },
         "voltage": {
             "type": "array",
             "description": "Power supply voltage measurements",
-            "items": [
-                { "title": "PV24", "type": "number" }
-            ]
+            "items": [{ "title": "PV24", "type": "number" }]
         },
         "fbi_led": {
             "type": "array",
@@ -36,16 +32,12 @@
         "power_sextant": {
             "type": "array",
             "description": "Power supply relays",
-            "items": [
-                { "title": "PS1", "type": "boolean" }
-            ]
+            "items": [{ "title": "PS1", "type": "boolean" }]
         },
         "power_can": {
             "type": "array",
             "description": "CANNet module relays",
-            "items": [
-                { "title": "CM1", "type": "boolean" }
-            ]
+            "items": [{ "title": "CM1", "type": "boolean" }]
         },
         "power_5v": {
             "type": "array",

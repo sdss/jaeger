@@ -2,17 +2,17 @@ address: 10.1.10.1
 port: 502
 modules:
     ANALOG1:
-        model: "750-497"
+        model: '750-497'
         mode: input_register
         channels: 8
-        description: "E+E temperature and humidity sensors"
+        description: 'E+E temperature and humidity sensors'
         devices:
-            "RH1":
+            'RH1':
                 address: 40005
                 category: humidity
                 adaptor: rh_dwyer
                 units: percent
-            "T1":
+            'T1':
                 address: 40006
                 category: temperature
                 adaptor: t_dwyer
@@ -54,10 +54,10 @@ modules:
                 units: percent
                 description: LED2 power
     DO:
-        model: "750-530"
+        model: '750-530'
         mode: holding_register
         channels: 16
-        description: "Power relays"
+        description: 'Power relays'
         devices:
             PS1:
                 address: 40517
