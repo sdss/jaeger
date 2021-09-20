@@ -33,7 +33,7 @@ except ImportError:
     from typing_extensions import Literal
 
 
-__all__ = ["SuperMessage", "Command"]
+__all__ = ["SuperMessage", "Command", "EmptyPool"]
 
 
 # A pool of UIDs that can be assigned to each command for a given command_id.

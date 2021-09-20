@@ -30,7 +30,7 @@ from typing import (
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.commands import Command, CommandID
+from jaeger.commands import Command, CommandID, EmptyPool
 from jaeger.exceptions import JaegerCANError
 from jaeger.interfaces import BusABC, CANNetBus, Message, Notifier, VirtualBus
 from jaeger.maskbits import CommandStatus
@@ -271,6 +271,13 @@ class JaegerCAN(Generic[Bus_co]):
 
             try:
                 self.send_messages(cmd)
+            except EmptyPool:
+                if cmd.positioner_ids == [0]:
+                    # We'll ignore this case silently since generally this happens only
+                    # with GET_FIRMWARE or GET_STATUS that can usually be delayed.
+                    loop = asyncio.get_event_loop()
+                    loop.call_later(1, self.command_queue.put_nowait, cmd)
+                    continue
             except jaeger.JaegerError as ee:
                 can_log.error(f"found error while getting messages: {ee}")
                 continue
