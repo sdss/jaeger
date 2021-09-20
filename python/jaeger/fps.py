@@ -428,14 +428,19 @@ class FPS(BaseFPS):
 
         # Disable collision detection for listed robots.
         disable_collision = config["fps"]["disable_collision_detection_positioners"]
-        if len(disable_collision):
+        disable_connected = list(set(disable_collision) & set(self.positioners.keys()))
+        if len(disable_connected) > 0:
+            warnings.warn(
+                f"Disabling collision detection for positioners {disable_connected}.",
+                JaegerUserWarning,
+            )
             await self.send_command(
                 CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_collision,
+                positioner_ids=disable_connected,
             )
             await self.send_command(
                 CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_collision,
+                positioner_ids=disable_connected,
             )
 
         # Start the pollers
