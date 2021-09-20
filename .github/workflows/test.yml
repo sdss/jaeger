@@ -37,10 +37,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install poetry
+        uses: abatilo/actions-poetry@master
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
           poetry install
 
       - name: Lint with flake8
