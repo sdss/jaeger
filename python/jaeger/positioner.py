@@ -619,7 +619,7 @@ class Positioner(StatusMixIn):
                 (GotoAbsolutePosition, GotoRelativePosition),
             )
 
-            alpha_time, beta_time = goto_command.get_move_time()[0]
+            alpha_time, beta_time = goto_command.get_move_time()[self.positioner_id]
             move_time = max([alpha_time, beta_time])
             self._log(f"The move will take {move_time:.2f} seconds", logging.INFO)
 
