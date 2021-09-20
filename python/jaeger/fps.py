@@ -320,10 +320,6 @@ class FPS(BaseFPS):
         # Get the positioner-to-bus map
         await self._get_positioner_bus_map()
 
-        # Resets all positioners
-        for positioner in self.positioners.values():
-            positioner.reset()
-
         # Stop poller in case they are running
         await self.pollers.stop()
 
