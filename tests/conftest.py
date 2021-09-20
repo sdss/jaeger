@@ -95,13 +95,12 @@ async def vfps(event_loop, ieb_server, monkeypatch):
     # Make initialisation faster.
     monkeypatch.setitem(jaeger.config["fps"], "initialise_timeouts", 0.05)
 
-    fps = VirtualFPS()
+    fps = await VirtualFPS.create(initialise=False)
 
     assert isinstance(fps.ieb, IEB)
     fps.ieb.client.host = "127.0.0.1"
     fps.ieb.client.port = 5020
-
-    await asyncio.sleep(0.001)  # Give time to the IEB server to serve.
+    await asyncio.sleep(0.01)  # Give time to the IEB server to serve.
 
     await fps.initialise()
 
@@ -122,6 +121,8 @@ async def vpositioners(test_config, vfps, event_loop):
 
     for pid in test_config["positioners"]:
         vfps.add_virtual_positioner(pid)
+
+    await vfps.initialise()  # Reinitialise
 
     yield vfps._vpositioners
 

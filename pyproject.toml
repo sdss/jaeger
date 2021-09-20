@@ -80,7 +80,7 @@ known_sdss = ["sdsstools", "clu", "sdssdb", "drift"]
 lines_after_imports = 2
 
 [tool.pytest.ini_options]
-addopts = "--cov jaeger --cov-report xml --cov-report html --cov-report term"
+addopts = "-p no:logging --disable-warnings --cov jaeger --cov-report xml --cov-report html --cov-report term"
 filterwarnings = [
     "ignore:.*The loop argument is deprecated since.*",
     "ignore:.*Loading an empty FPS.*",
@@ -97,6 +97,7 @@ omit = [
     "*/__main__.py",
     "*/__init__.py",
     "*/cannet.py",
+    "*/interfaces/message.py",
     "*/actor/commands/bootloader.py",
     "*/actor/commands/talk.py",
     "*/commands/calibration.py",

@@ -7,13 +7,16 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import asyncio
+import pathlib
 
 import pytest
 
 from drift import Relay
 
 import jaeger
-from jaeger.exceptions import JaegerError
+from jaeger.can import JaegerCAN
+from jaeger.exceptions import JaegerError, JaegerUserWarning
+from jaeger.fps import FPS
 from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
 
@@ -41,7 +44,6 @@ async def test_get_id(vfps, vpositioners):
 async def test_initialise(vfps, vpositioners):
 
     await vfps.initialise()
-    await asyncio.sleep(0.1)  # Give some time for the poller to set position.
 
     assert len(vfps) == len(vpositioners)
 
@@ -136,3 +138,134 @@ async def test_positioner_disabled_send_to_all(vfps):
 
     cmd = await vfps.send_command("GET_ID", positioner_ids=None)
     assert len(cmd.replies) == len(vfps) - 1
+
+
+async def test_vfps_add_positioner(vfps: VirtualFPS):
+
+    vpos = jaeger.Positioner(100)
+    vfps.add_positioner(vpos)
+
+    assert len(vfps) == 6
+
+
+async def test_vfps_add_positioner_exists(vfps: VirtualFPS):
+
+    vpos = jaeger.Positioner(1)
+    with pytest.raises(JaegerError):
+        vfps.add_positioner(vpos)
+
+
+async def test_fps_bad_ieb_file():
+
+    vbus = JaegerCAN("virtual", ["virtual"])
+
+    with pytest.warns(JaegerUserWarning):
+        fps = FPS(vbus, ieb=pathlib.Path("/some/bad/file.yaml"))
+    assert fps.ieb is None
+
+
+async def test_fps_ieb_none():
+
+    vbus = JaegerCAN("virtual", ["virtual"])
+
+    fps = FPS(vbus, ieb=False)
+    assert fps.ieb is None
+
+
+async def test_fps_ieb_bad_type():
+
+    vbus = JaegerCAN("virtual", ["virtual"])
+
+    with pytest.raises(ValueError):
+        FPS(vbus, ieb=[1, 2, 3])  # type: ignore
+
+
+async def test_fps_add_positioner():
+
+    vbus = JaegerCAN("virtual", ["virtual"])
+    fps = await FPS.create(vbus)
+
+    fps.add_positioner(5, interface=0, bus=1)  # Add positioner zero to first interface
+    assert fps.positioner_to_bus[5] == (vbus.interfaces[0], 1)
+
+
+async def test_initialise_locked(vfps, vpositioners):
+
+    vfps._locked = True
+
+    with pytest.raises(JaegerError) as err:
+        await vfps.initialise()
+        assert "FPS is locked" in str(err)
+
+
+async def test_disable_collision(vfps, vpositioners, monkeypatch):
+
+    monkeypatch.setitem(
+        jaeger.config["fps"],
+        "disable_collision_detection_positioners",
+        [2],
+    )
+
+    with pytest.warns(JaegerUserWarning) as w:
+        await vfps.initialise()
+        msg = str(w[-1].message)
+        assert msg == "Disabling collision detection for positioners [2]."
+
+
+async def test_lock_unlock(vfps, vpositioners):
+
+    assert vfps.locked is False
+
+    await vfps.lock(by=[1])
+
+    assert vfps.locked is True
+    assert vfps.locked_by == [1]
+
+    await vfps.unlock()
+    assert vfps.locked is False
+    assert vfps.locked_by == []
+
+
+async def test_unlock_fails(vfps, vpositioners, mocker):
+
+    mocker.patch.object(vfps, "update_status")
+
+    await vfps.lock()
+    vfps[1].status = PositionerStatus.COLLISION_BETA
+
+    with pytest.raises(JaegerError):
+        await vfps.unlock()
+
+
+@pytest.mark.parametrize("positioner_ids", [1, [1, 2, 3], None])
+async def test_goto(vfps, vpositioners, positioner_ids):
+
+    await vfps.goto(positioner_ids, 10, 10, force=True)
+
+
+async def test_goto_all_positioners_fails(vfps, vpositioners):
+
+    with pytest.raises(JaegerError):
+        await vfps.goto(None, 10, 10, force=False)
+
+
+async def test_goto_fails(vfps, vpositioners, mocker):
+    print(vfps[1].status)
+    mocker.patch("jaeger.fps.goto", side_effect=JaegerError)
+    with pytest.raises(JaegerError):
+        await vfps.goto(1, 10, 10)
+
+
+async def test_report_status(vfps, vpositioners):
+
+    assert isinstance(await vfps.report_status(), dict)
+
+
+async def test_context(vfps, mocker):
+
+    mock_initialise = mocker.patch.object(vfps, "initialise")
+
+    async with vfps:
+        pass
+
+    mock_initialise.assert_called()
