@@ -410,13 +410,6 @@ class FPS(BaseFPS):
             )
             return self
 
-        if self.locked:
-            warnings.warn("FPS is locked. Trying to unlock it.", JaegerUserWarning)
-            if not await self.unlock():
-                raise JaegerError("FPS cannot be unlocked. Initialisation failed.")
-            else:
-                log.info("FPS unlocked successfully.")
-
         if config.get("safe_mode", False) is not False:
             min_beta = MIN_BETA
             if isinstance(config["safe_mode"], dict):
