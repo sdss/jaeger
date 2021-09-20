@@ -19,7 +19,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Un
 import numpy
 
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.can import CANnetInterface, JaegerCAN
+from jaeger.can import JaegerCAN
 from jaeger.commands import (
     Command,
     CommandID,
@@ -924,8 +924,6 @@ class FPS(BaseFPS):
     async def report_status(self) -> Dict[str, Any]:
         """Returns a dict with the position and status of each positioner."""
 
-        assert isinstance(self.can, CANnetInterface)
-
         status: Dict[str, Any] = {"positioners": {}}
 
         for positioner in self.positioners.values():
@@ -942,7 +940,7 @@ class FPS(BaseFPS):
             }
 
         try:
-            status["devices"] = self.can.device_status
+            status["devices"] = self.can.device_status  # type: ignore
         except AttributeError:
             pass
 
