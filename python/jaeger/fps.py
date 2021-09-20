@@ -620,13 +620,13 @@ class FPS(BaseFPS):
 
         warnings.warn("Locking the FPS.", JaegerUserWarning)
 
-        self._locked = True
+        if stop_trajectories:
+            await self.stop_trajectory()
 
         if by:
             self.locked_by += by
 
-        if stop_trajectories:
-            await self.stop_trajectory()
+        self._locked = True
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
