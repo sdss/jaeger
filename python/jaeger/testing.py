@@ -143,6 +143,8 @@ class VirtualPositioner(StatusMixIn):
         self._firmware_size = 0
         self._firmware_received = b""
 
+        self.number_trajectories = 1
+
         self.bus = bus
 
         StatusMixIn.__init__(
@@ -174,6 +176,10 @@ class VirtualPositioner(StatusMixIn):
 
         elif command_id == CommandID.GET_STATUS:
             data_status = utils.int_to_bytes(self.status)
+            self.reply(command_id, uid, data=data_status)
+
+        elif command_id == CommandID.GET_NUMBER_TRAJECTORIES:
+            data_status = utils.int_to_bytes(self.number_trajectories)
             self.reply(command_id, uid, data=data_status)
 
         elif command_id in [

@@ -96,6 +96,7 @@ include = ["python/jaeger/*"]
 omit = [
     "*/__main__.py",
     "*/__init__.py",
+    "python/jaeger/testing.py",
     "*/cannet.py",
     "*/interfaces/message.py",
     "*/actor/commands/bootloader.py",
@@ -110,7 +111,8 @@ exclude_lines = [
     "class AsyncioExecutor",
     "def convert_kaiju_trajectory",
     "class CANnetInterface",
-    "if TYPE_CHECKING:"
+    "if TYPE_CHECKING:",
+    "def __repr__"
 ]
 
 [build-system]

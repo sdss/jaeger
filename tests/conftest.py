@@ -43,12 +43,12 @@ if jaeger.can_log.fh:
     jaeger.can_log.removeHandler(jaeger.can_log.fh)
 
 
-@pytest.fixture()
-def event_loop(request):
-    """A module-scoped event loop."""
+# @pytest.fixture()
+# def event_loop(request):
+#     """A module-scoped event loop."""
 
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
+#     loop = asyncio.get_event_loop_policy().new_event_loop()
+#     yield loop
 
 
 @pytest.fixture(scope="session")
@@ -83,13 +83,14 @@ async def ieb_server(event_loop):
     yield server
 
     server.server_close()
+
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
 
 
 @pytest.fixture()
-async def vfps(event_loop, ieb_server, monkeypatch):
+async def vfps(ieb_server, monkeypatch):
     """Sets up the virtual FPS."""
 
     # Make initialisation faster.
@@ -102,9 +103,8 @@ async def vfps(event_loop, ieb_server, monkeypatch):
     fps.ieb.client.port = 5020
     await asyncio.sleep(0.01)  # Give time to the IEB server to serve.
 
-    await fps.initialise()
-
-    yield fps
+    async with fps:
+        yield fps
 
     assert isinstance(fps.can, JaegerCAN) and fps.can._command_queue_task
 
@@ -116,7 +116,7 @@ async def vfps(event_loop, ieb_server, monkeypatch):
 
 
 @pytest.fixture()
-async def vpositioners(test_config, vfps, event_loop):
+async def vpositioners(test_config, vfps):
     """Yields positioners."""
 
     for pid in test_config["positioners"]:

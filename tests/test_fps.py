@@ -97,11 +97,6 @@ async def test_pollers_delay(vfps, vpositioners):
     await vfps.pollers.stop()
 
 
-async def test_shutdown(vfps):
-
-    await vfps.shutdown()
-
-
 async def test_ieb(vfps):
 
     sync = vfps.ieb.get_device("DO1.SYNC")
@@ -261,14 +256,3 @@ async def test_goto_fails(vfps, vpositioners, mocker):
 async def test_report_status(vfps, vpositioners):
 
     assert isinstance(await vfps.report_status(), dict)
-
-
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
-async def test_context(vfps, mocker):
-
-    mock_initialise = mocker.patch.object(vfps, "initialise")
-
-    async with vfps:
-        pass
-
-    mock_initialise.assert_called()
