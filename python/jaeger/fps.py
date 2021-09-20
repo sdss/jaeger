@@ -180,7 +180,7 @@ class FPS(BaseFPS):
 
         if isinstance(self.ieb, (str, dict)):
             if isinstance(self.ieb, str):
-                self.ieb = os.path.expanduser(os.path.expandvars(self.ieb))
+                self.ieb = os.path.expanduser(os.path.expandvars(str(self.ieb)))
                 if not os.path.isabs(self.ieb):
                     self.ieb = os.path.join(os.path.dirname(__file__), self.ieb)
             try:
