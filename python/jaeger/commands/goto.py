@@ -297,8 +297,8 @@ async def goto(
         if pos.alpha is None or pos.beta is None:
             raise JaegerError(f"Positioner {pid}: cannot goto with unknown position.")
 
-        current_alpha = numpy.clip(pos.alpha, 0, 360)
-        current_beta = numpy.clip(pos.beta, 0, 360)
+        current_alpha = pos.alpha
+        current_beta = pos.beta
 
         if relative is True:
             alpha_end = current_alpha + alpha[i]

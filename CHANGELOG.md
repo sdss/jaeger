@@ -15,6 +15,10 @@
 * By default, do not fail when a command receives an `UNKNOWN_COMMAND` reply; this usually means that the positioner firmware does not support that command yet. This can be disabled by initialising the `Command` with `ignore_unknown=False`.
 * It's now possible to switch the SYNC line relay (`ieb switch sync`). The SYNC line may be left closed if there's an uncaught exception while it's being actuated, or if the script is killed during that time. This allows to restore it to open.
 
+## 🔧 Fixed
+
+* Avoid clipping the current position to `(0, 360)` when calculating the trajectory in `goto()`. This prevents using `goto()` when the positioner is at a negative position.
+
 
 ## 0.10.0 - August 3, 2021
 
