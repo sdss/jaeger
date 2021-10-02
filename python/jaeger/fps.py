@@ -337,10 +337,12 @@ class FPS(BaseFPS):
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it.
+        ignored_positioners = []
         for reply in get_fw_command.replies:
             if reply.positioner_id not in self.positioners:
 
                 if reply.positioner_id in config["fps"]["skip_positioners"]:
+                    ignored_positioners.append(reply.positioner_id)
                     continue
 
                 if hasattr(reply.message, "interface"):
@@ -354,6 +356,13 @@ class FPS(BaseFPS):
             positioner = self.positioners[reply.positioner_id]
             positioner.fps = self
             positioner.firmware = get_fw_command.get_firmware()[reply.positioner_id]
+
+        if len(ignored_positioners) > 0:
+            warnings.warn(
+                "The following connected positioners are ignored as they are "
+                f"in the skip_positioners list: {ignored_positioners}",
+                JaegerUserWarning,
+            )
 
         pids = sorted(list(self.keys()))
         if len(pids) > 0:
