@@ -27,6 +27,7 @@ from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.fps import FPS
+from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
 
 
@@ -591,6 +592,40 @@ async def home(fps_maker, positioner_id):
         await asyncio.gather(*[positioner.home() for positioner in valid_positioners])
 
     return
+
+
+@jaeger.command()
+@click.argument("positioner_id", metavar="POSITIONER", type=int)
+@pass_fps
+@cli_coro
+async def status(fps_maker: FPSWrapper, positioner_id: int):
+    """Returns the status of a positioner with low-level initialisation."""
+
+    fps_maker.initialise = False
+
+    async with fps_maker as fps:
+
+        pos = Positioner(positioner_id, fps)
+
+        try:
+            await pos.update_firmware_version()
+            print(f"Firmware: {pos.firmware}")
+            print(f"Bootloader: {pos.is_bootloader()}")
+        except Exception as err:
+            raise JaegerError(f"Failed retrieving firmware: {err}")
+
+        try:
+            await pos.update_status()
+            bit_names = ", ".join(bit.name for bit in pos.status.active_bits)
+            print(f"Status: {pos.status.value} ({bit_names})")
+        except Exception as err:
+            raise JaegerError(f"Failed retrieving status: {err}")
+
+        try:
+            await pos.update_position()
+            print(f"Position: {pos.position}")
+        except Exception as err:
+            raise JaegerError(f"Failed retrieving position: {err}")
 
 
 if __name__ == "__main__":
