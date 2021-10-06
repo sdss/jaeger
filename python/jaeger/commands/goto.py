@@ -118,9 +118,6 @@ class GotoAbsolutePosition(Command):
 
         """
 
-        if len(self.replies) == 0:
-            raise ValueError("no positioners have replied to this command.")
-
         move_times = {}
         for reply in self.replies:
             data = reply.data

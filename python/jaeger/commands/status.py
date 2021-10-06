@@ -79,9 +79,6 @@ class GetActualPosition(Command):
 
         """
 
-        if len(self.replies) == 0:
-            raise ValueError("no positioners have replied to this command.")
-
         positions = {}
         for reply in self.replies:
             pid = reply.positioner_id
@@ -127,9 +124,6 @@ class GetCurrent(Command):
             If no reply has been received or the data cannot be parsed.
         """
 
-        if len(self.replies) == 0:
-            raise ValueError("no positioners have replied to this command.")
-
         currents = {}
 
         for reply in self.replies:
@@ -161,9 +155,6 @@ class GetTemperature(Command):
         ValueError
             If no reply has been received or the data cannot be parsed.
         """
-
-        if len(self.replies) == 0:
-            raise ValueError("no positioners have replied to this command.")
 
         temperatures = {}
 
@@ -208,9 +199,6 @@ class GetNumberTrajectories(Command):
         ValueError
             If no reply has been received or the data cannot be parsed.
         """
-
-        if len(self.replies) == 0:
-            raise ValueError("no positioners have replied to this command.")
 
         number_trajectories = {}
 

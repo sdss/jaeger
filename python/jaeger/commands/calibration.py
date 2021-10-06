@@ -207,9 +207,6 @@ class GetOffset(Command):
 
         """
 
-        if len(self.replies) == 0:
-            raise ValueError("No positioners have replied to this command.")
-
         offsets = {}
         for reply in self.replies:
             pid = reply.positioner_id
@@ -302,9 +299,6 @@ class GetHoldingCurrents(Command):
             If no reply has been received or the data cannot be parsed.
 
         """
-
-        if len(self.replies) == 0:
-            raise ValueError("No positioners have replied to this command.")
 
         currents = {}
         for reply in self.replies:
