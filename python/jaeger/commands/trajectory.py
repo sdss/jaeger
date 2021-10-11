@@ -19,15 +19,17 @@ import numpy
 import drift
 from sdsstools import read_yaml_file
 
-from jaeger import config, log, maskbits
+from jaeger import config, log
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, TrajectoryError
 from jaeger.ieb import IEB
+from jaeger.maskbits import PositionerStatus, ResponseCode
 from jaeger.utils import int_to_bytes
 
 
 if TYPE_CHECKING:
     from jaeger import FPS
+    from jaeger.commands import Command
 
 
 __all__ = [
@@ -221,6 +223,9 @@ class Trajectory(object):
         else:
             raise TrajectoryError("invalid trajectory data.", self)
 
+        # List of positioners that failed receiving the trajectory and reason.
+        self.failed_positioners: dict[int, str] = {}
+
         self.validate()
 
         #: Number of points sent to each positioner as a tuple ``(alpha, beta)``.
@@ -233,6 +238,11 @@ class Trajectory(object):
         self.data_send_time: float | None = None
 
         self.failed = False
+        self.send_new_trajectory_failed = False
+
+        # Commands that will be sent. Mostly for inspection if the trajectory fails.
+        self.data_send_cmd: Command | None = None
+        self.end_traj_cmds: Command | None = None
 
         self.start_time: float | None = None
         self.end_time: float | None = None
@@ -252,6 +262,7 @@ class Trajectory(object):
             trajectory = self.trajectories[pid]
 
             if "alpha" not in trajectory or "beta" not in trajectory:
+                self.failed_positioners[pid] = "NO_DATA"
                 raise TrajectoryError(
                     f"Positioner {pid} missing alpha or beta data.",
                     self,
@@ -273,6 +284,7 @@ class Trajectory(object):
                         else:
                             min_beta = config["safe_mode"]["min_beta"]
                         if numpy.any(data < min_beta):
+                            self.failed_positioners[pid] = "SAFE_MODE"
                             raise TrajectoryError(
                                 f"Positioner {pid}: safe mode is on "
                                 f"and beta < {min_beta}.",
@@ -313,6 +325,7 @@ class Trajectory(object):
                 or positioner.flags.DISPLACEMENT_COMPLETED not in status
             ):
                 self.failed = True
+                self.failed_positioners[pos_id] = "NOT_READY"
                 raise TrajectoryError(
                     f"positioner_id={pos_id} is not ready to receive a trajectory.",
                     self,
@@ -350,6 +363,7 @@ class Trajectory(object):
         )
 
         if new_traj_cmd.status.failed or new_traj_cmd.status.timed_out:
+            self.failed = True
             raise TrajectoryError("Failed sending SEND_NEW_TRAJECTORY.", self)
 
         start_trajectory_send_time = time.time()
@@ -383,13 +397,18 @@ class Trajectory(object):
 
                     data[pos_id] = data_pos
 
-                data_send_cmd = await self.fps.send_command(
+                self.data_send_cmd = await self.fps.send_command(
                     "SEND_TRAJECTORY_DATA",
                     positioner_ids=send_trajectory_pids,
                     data=data,
                 )
 
-                if data_send_cmd.status.failed or data_send_cmd.status.timed_out:
+                status = self.data_send_cmd.status
+                if status.failed or status.timed_out:
+                    for reply in self.data_send_cmd.replies:
+                        if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
+                            code = reply.response_code.name
+                            self.failed_positioners[reply.positioner_id] = code
                     self.failed = True
                     raise TrajectoryError(
                         "At least one SEND_TRAJECTORY_COMMAND failed.",
@@ -397,18 +416,17 @@ class Trajectory(object):
                     )
 
         # Finalise the trajectories
-        end_traj_cmds = await self.fps.send_command(
+        self.end_traj_cmds = await self.fps.send_command(
             "TRAJECTORY_DATA_END",
             positioner_ids=list(self.trajectories.keys()),
         )
 
-        for cmd in end_traj_cmds:
-
+        for cmd in self.end_traj_cmds:
             if cmd.status.failed:
                 self.failed = True
                 raise TrajectoryError("TRAJECTORY_DATA_END failed.", self)
 
-            if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
+            if ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
                 self.failed = True
                 raise TrajectoryError(
                     f"positioner_id={cmd.positioner_id} got an "
@@ -492,8 +510,7 @@ class Trajectory(object):
 
                 if all(
                     [
-                        maskbits.PositionerStatus.DISPLACEMENT_COMPLETED
-                        in self.fps[pid].status
+                        PositionerStatus.DISPLACEMENT_COMPLETED in self.fps[pid].status
                         for pid in self.trajectories
                     ]
                 ):
