@@ -14,6 +14,9 @@
 * When running the actor as a daemon in detached mode, log stdout and stderr to file.
 * By default, do not fail when a command receives an `UNKNOWN_COMMAND` reply; this usually means that the positioner firmware does not support that command yet. This can be disabled by initialising the `Command` with `ignore_unknown=False`.
 * It's now possible to switch the SYNC line relay (`ieb switch sync`). The SYNC line may be left closed if there's an uncaught exception while it's being actuated, or if the script is killed during that time. This allows to restore it to open.
+* `TrajectoryError` now includes the original `Trajectory` object as `TrajectoryError.trajectory`.
+* `FPS.send_trajectory()` now raises a `TrajectoryError` if it fails.
+* Better logging of the reason for failure in `Trajectory`. In particular, `Trajectory.failed_positioners` contains a dictionary with the reason why a give positioner failed to receive or execute the trajectory, if that information is known.
 
 ## 🔧 Fixed
 
