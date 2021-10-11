@@ -904,15 +904,17 @@ class FPS(BaseFPS):
         Returns
         -------
         trajectory
-            The `.Trajectory` object, or `None` if the trajectory failed.
+            The `.Trajectory` object.
+
+        Raises
+        ------
+        TajectoryError
+            You can inspect the `.Trajectory` object by capturing the error and
+            accessing ``error.trajectory``.
 
         """
 
-        try:
-            return await send_trajectory(self, *args, **kwargs)
-        except TrajectoryError as ee:
-            log.error(f"Sending trajectory failed with error: {ee}")
-            return None
+        return await send_trajectory(self, *args, **kwargs)
 
     def abort(self):
         """Aborts trajectories and stops positioners."""
