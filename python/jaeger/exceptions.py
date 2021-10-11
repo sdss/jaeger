@@ -8,7 +8,15 @@
 # @Last modified by: José Sánchez-Gallego
 # @Last Modified time: 2017-12-05 12:19:32
 
+from __future__ import annotations
+
 import inspect
+
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from jaeger.commands.trajectory import Trajectory
 
 
 class JaegerError(Exception):
@@ -101,9 +109,12 @@ class JaegerMissingDependency(JaegerError):
 class TrajectoryError(JaegerError):
     """A trajectory error."""
 
-    def __init__(self, message=None, trajectory=None):
+    def __init__(self, message=None, trajectory: Trajectory | None = None):
         super().__init__(message)
+
         self.trajectory = trajectory
+        if self.trajectory:
+            self.trajectory.failed = True
 
 
 class JaegerWarning(Warning):
