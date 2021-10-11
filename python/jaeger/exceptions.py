@@ -101,7 +101,9 @@ class JaegerMissingDependency(JaegerError):
 class TrajectoryError(JaegerError):
     """A trajectory error."""
 
-    pass
+    def __init__(self, message=None, trajectory=None):
+        super().__init__(message)
+        self.trajectory = trajectory
 
 
 class JaegerWarning(Warning):

@@ -110,9 +110,9 @@ async def send_trajectory(
 
     if use_sync_line:
         if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
-            raise TrajectoryError("IEB is not connected. Cannot use SYNC line.")
+            raise TrajectoryError("IEB is not connected. Cannot use SYNC line.", traj)
         if (await fps.ieb.get_device("sync").read())[0] == "closed":
-            raise TrajectoryError("The SYNC line is on high.")
+            raise TrajectoryError("The SYNC line is on high.", traj)
 
     if send_trajectory is False:
         return traj
@@ -122,7 +122,10 @@ async def send_trajectory(
     try:
         await traj.send()
     except TrajectoryError as err:
-        raise TrajectoryError(f"Something went wrong sending the trajectory: {err}")
+        raise TrajectoryError(
+            f"Something went wrong sending the trajectory: {err}",
+            err.trajectory,
+        )
 
     log.debug(f"Trajectory successfully sent in {traj.data_send_time:1f} seconds.")
     log.info(f"Expected time to complete trajectory: {traj.move_time:.2f} seconds.")
@@ -142,7 +145,8 @@ async def send_trajectory(
             elapsed_msg = ""
 
         raise TrajectoryError(
-            f"Something went wrong during the trajectory: {err}.{elapsed_msg}"
+            f"Something went wrong during the trajectory: {err}.{elapsed_msg}",
+            err.trajectory,
         )
 
     log.info("All positioners have successfully reached their positions.")
@@ -205,14 +209,17 @@ class Trajectory(object):
             )
 
         if self.fps.moving:
-            raise TrajectoryError("The FPS is moving. Cannot send new trajectory.")
+            raise TrajectoryError(
+                "The FPS is moving. Cannot send new trajectory.",
+                self,
+            )
 
         if isinstance(trajectories, (str, pathlib.Path)):
             self.trajectories = cast(TrajectoryDataType, read_yaml_file(trajectories))
         elif isinstance(trajectories, dict):
             self.trajectories = trajectories
         else:
-            raise TrajectoryError("invalid trajectory data.")
+            raise TrajectoryError("invalid trajectory data.", self)
 
         self.validate()
 
@@ -236,23 +243,27 @@ class Trajectory(object):
         """Validates the trajectory."""
 
         if len(self.trajectories) == 0:
-            raise TrajectoryError("trajectory is empty.")
+            raise TrajectoryError("trajectory is empty.", self)
 
         if len(self.trajectories) != len(numpy.unique(list(self.trajectories))):
-            raise TrajectoryError("Duplicate positioner trajectories.")
+            raise TrajectoryError("Duplicate positioner trajectories.", self)
 
         for pid in self.trajectories:
             trajectory = self.trajectories[pid]
 
             if "alpha" not in trajectory or "beta" not in trajectory:
-                raise TrajectoryError(f"Positioner {pid} missing alpha or beta data.")
+                raise TrajectoryError(
+                    f"Positioner {pid} missing alpha or beta data.",
+                    self,
+                )
 
             for arm in ["alpha", "beta"]:
                 data = numpy.array(list(zip(*trajectory[arm]))[0])
 
                 # if numpy.any(data > 360) or numpy.any(data < 0):
                 #     raise TrajectoryError(
-                #         f"Positioner {pid}: trajectory has points out of range."
+                #         f"Positioner {pid}: trajectory has points out of range.",
+                #         self,
                 #     )
 
                 if arm == "beta":
@@ -264,7 +275,8 @@ class Trajectory(object):
                         if numpy.any(data < min_beta):
                             raise TrajectoryError(
                                 f"Positioner {pid}: safe mode is on "
-                                f"and beta < {min_beta}."
+                                f"and beta < {min_beta}.",
+                                self,
                             )
 
     async def send(self):
@@ -279,7 +291,7 @@ class Trajectory(object):
             timeout=1.0,
         ):
             self.failed = True
-            raise TrajectoryError("some positioners did not respond.")
+            raise TrajectoryError("some positioners did not respond.", self)
 
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:
@@ -291,7 +303,8 @@ class Trajectory(object):
                 self.failed = True
                 raise TrajectoryError(
                     f"positioner_id={pos_id} is disabled but "
-                    "included in the trajectory."
+                    "included in the trajectory.",
+                    self,
                 )
 
             if (
@@ -301,7 +314,8 @@ class Trajectory(object):
             ):
                 self.failed = True
                 raise TrajectoryError(
-                    f"positioner_id={pos_id} is not ready to receive a trajectory."
+                    f"positioner_id={pos_id} is not ready to receive a trajectory.",
+                    self,
                 )
 
             traj_pos = self.trajectories[pos_id]
@@ -336,7 +350,7 @@ class Trajectory(object):
         )
 
         if new_traj_cmd.status.failed or new_traj_cmd.status.timed_out:
-            raise TrajectoryError("Failed sending SEND_NEW_TRAJECTORY.")
+            raise TrajectoryError("Failed sending SEND_NEW_TRAJECTORY.", self)
 
         start_trajectory_send_time = time.time()
 
@@ -378,7 +392,8 @@ class Trajectory(object):
                 if data_send_cmd.status.failed or data_send_cmd.status.timed_out:
                     self.failed = True
                     raise TrajectoryError(
-                        "At least one SEND_TRAJECTORY_COMMAND failed."
+                        "At least one SEND_TRAJECTORY_COMMAND failed.",
+                        self,
                     )
 
         # Finalise the trajectories
@@ -391,13 +406,14 @@ class Trajectory(object):
 
             if cmd.status.failed:
                 self.failed = True
-                raise TrajectoryError("TRAJECTORY_DATA_END failed.")
+                raise TrajectoryError("TRAJECTORY_DATA_END failed.", self)
 
             if maskbits.ResponseCode.INVALID_TRAJECTORY in cmd.replies[0].response_code:
                 self.failed = True
                 raise TrajectoryError(
                     f"positioner_id={cmd.positioner_id} got an "
-                    f"INVALID_TRAJECTORY reply."
+                    f"INVALID_TRAJECTORY reply.",
+                    self,
                 )
 
         self.data_send_time = time.time() - start_trajectory_send_time
@@ -411,7 +427,7 @@ class Trajectory(object):
         """Starts the trajectory."""
 
         if not self._ready_to_start or self.failed:
-            raise TrajectoryError("The trajectory has not been sent.")
+            raise TrajectoryError("The trajectory has not been sent.", self)
 
         for positioner_id in list(self.trajectories.keys()):
             self.fps[positioner_id].move_time = self.move_time
@@ -419,9 +435,12 @@ class Trajectory(object):
         if use_sync_line:
 
             if not isinstance(self.fps.ieb, IEB) or self.fps.ieb.disabled:
-                raise TrajectoryError("IEB is not connected. Cannot use SYNC line.")
+                raise TrajectoryError(
+                    "IEB is not connected. Cannot use SYNC line.",
+                    self,
+                )
             if (await self.fps.ieb.get_device("sync").read())[0] == "closed":
-                raise TrajectoryError("The SYNC line is on high.")
+                raise TrajectoryError("The SYNC line is on high.", self)
 
             sync = self.fps.ieb.get_device("sync")
             assert isinstance(sync, drift.Relay)
@@ -448,7 +467,7 @@ class Trajectory(object):
             if command.status.failed:
                 await self.fps.stop_trajectory()
                 self.failed = True
-                raise TrajectoryError("START_TRAJECTORY failed")
+                raise TrajectoryError("START_TRAJECTORY failed", self)
 
         restart_pollers = True if self.fps.pollers.running else False
         await self.fps.pollers.stop()
@@ -457,14 +476,17 @@ class Trajectory(object):
 
         try:
             if self.move_time is None:
-                raise TrajectoryError("move_time not set.")
+                raise TrajectoryError("move_time not set.", self)
 
             while True:
 
                 await asyncio.sleep(1)
 
                 if self.fps.locked:
-                    raise TrajectoryError("The FPS got locked during the trajectory.")
+                    raise TrajectoryError(
+                        "The FPS got locked during the trajectory.",
+                        self,
+                    )
 
                 await self.fps.update_status()
 
@@ -480,7 +502,10 @@ class Trajectory(object):
 
             elapsed = time.time() - self.start_time
             if elapsed > (self.move_time + 3):
-                raise TrajectoryError("Some positioners did not complete the move.")
+                raise TrajectoryError(
+                    "Some positioners did not complete the move.",
+                    self,
+                )
 
         except BaseException:
             self.failed = True
@@ -502,7 +527,7 @@ class Trajectory(object):
         )
 
         if cmd.status.failed:
-            raise TrajectoryError("Cannot abort trajectory transmission.")
+            raise TrajectoryError("Cannot abort trajectory transmission.", self)
 
 
 class SendNewTrajectory(Command):

@@ -9,8 +9,8 @@
 import pytest
 
 from jaeger import config
-from jaeger.commands.trajectory import send_trajectory
-from jaeger.exceptions import JaegerError
+from jaeger.commands.trajectory import Trajectory, send_trajectory
+from jaeger.exceptions import JaegerError, TrajectoryError
 
 
 # Need to mark all tests with positioners to make sure they are created,
@@ -40,7 +40,7 @@ async def test_disabled_positioner_fails(vfps):
     await vfps.initialise()
     vfps[1].disabled = True
 
-    with pytest.raises(JaegerError) as err:
+    with pytest.raises(TrajectoryError) as err:
         await send_trajectory(
             vfps,
             {
@@ -51,6 +51,8 @@ async def test_disabled_positioner_fails(vfps):
             },
             use_sync_line=False,
         )
+
+        assert isinstance(err.trajectory, Trajectory)  # type: ignore
 
     assert "positioner_id=1 is disabled" in str(err)
 
