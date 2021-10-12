@@ -33,7 +33,6 @@ from jaeger.exceptions import (
     JaegerError,
     JaegerUserWarning,
     PositionerError,
-    TrajectoryError,
 )
 from jaeger.ieb import IEB
 from jaeger.interfaces import BusABC
