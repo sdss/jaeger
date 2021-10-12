@@ -29,7 +29,6 @@ from jaeger.utils import int_to_bytes
 
 if TYPE_CHECKING:
     from jaeger import FPS
-    from jaeger.commands import Command
 
 
 __all__ = [
