@@ -19,6 +19,7 @@ modules:
                 adaptor: t_dwyer
                 units: degC
                 description: Ambient outside air temperature
+                offset: 0.0
             RH3:
                 address: 40013
                 category: humidity
@@ -31,6 +32,7 @@ modules:
                 adaptor: t_dwyer
                 units: degC
                 description: FPS inside air temperature above wok
+                offset: 0.0
     ANALOG2:
         model: 750-497
         mode: input_register
@@ -105,24 +107,28 @@ modules:
                 adaptor: rtd
                 units: degC
                 description: IEB inside air temperature (above modules)
+                offset: -1.55
             RTD2:
                 address: 40026
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: Wok center (metal) temperature
+                offset: -2.58
             RTD3:
                 address: 40027
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS air above wok, center
+                offset: -2.28
             RTD4:
                 address: 40028
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Latch ring surface adjacent to cold plate
+                offset: -2.18
     ANALOG4:
         model: 750-450
         mode: input_register
@@ -135,24 +141,28 @@ modules:
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon top side panel conduction rail
+                offset: -2.68
             RTD6:
                 address: 40030
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon bottom conduction rail
+                offset: -2.58
             RTD7:
                 address: 40031
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon bottom center ITEM rail
+                offset: -2.18
             RTD8:
                 address: 40032
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon air below wok, center
+                offset: -2.28
     ANALOG5:
         model: 750-450
         mode: input_register
@@ -165,24 +175,28 @@ modules:
                 adaptor: rtd
                 units: degC
                 description: IEB Glycol Supply Temperature
+                offset: -0.37
             RTD10:
                 address: 40034
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS supply manifold coolant
+                offset: -3.18
             RTD11:
                 address: 40035
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS return manifold coolant
+                offset: -2.89
             RTD12:
                 address: 40036
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: IEB inside air temperature (Lab Only)
+                offset: -0.80
     ANALOG6:
         model: 750-450
         mode: input_register
