@@ -175,7 +175,7 @@ modules:
                 adaptor: rtd
                 units: degC
                 description: IEB Glycol Supply Temperature
-                offset: -0.37
+                offset: -0.298
             RTD10:
                 address: 40034
                 category: temperature
@@ -196,7 +196,7 @@ modules:
                 adaptor: rtd
                 units: degC
                 description: IEB inside air temperature (Lab Only)
-                offset: -0.80
+                offset: -0.831
     ANALOG6:
         model: 750-450
         mode: input_register
