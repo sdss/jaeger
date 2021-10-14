@@ -11,15 +11,12 @@ from __future__ import annotations
 from functools import wraps
 from glob import glob
 
+import pandas
 import peewee
+from astropy import table
+from astropy.io import fits
 
 from sdssdb.peewee.sdss5db import targetdb
-
-
-try:
-    import pandas
-except ImportError:
-    pandas = None
 
 
 __all__ = ["load_holes", "load_fields"]
@@ -85,11 +82,6 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
         Alternative to ``files``, a pattern to be used with ``glob``
         to retrieve a list of files to load.
     """
-
-    assert pandas
-
-    from astropy import table
-    from astropy.io import fits
 
     if files is None and pattern:
         files = list(glob(pattern))

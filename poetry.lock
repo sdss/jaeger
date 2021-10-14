@@ -62,7 +62,7 @@ test = ["coverage", "flake8", "pexpect", "wheel"]
 name = "astropy"
 version = "4.3.1"
 description = "Astronomy and astrophysics core library"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -1030,7 +1030,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 name = "pyerfa"
 version = "2.0.0"
 description = "Python bindings for ERFA"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -1365,7 +1365,7 @@ dev = ["flake8 (>=3.7.9)", "doc8 (>=0.8.0)", "pytest (>=5.2.2)", "pytest-asyncio
 type = "git"
 url = "ssh://git@github.com/sdss/coordio.git"
 reference = "albireox/jaeger-integration"
-resolved_reference = "c7964e81d3dc49932b7424db692738392c276c68"
+resolved_reference = "f34e8ac482680854a2dd57b02ea6b6e66abf35cf"
 
 [[package]]
 name = "sdss-drift"
@@ -1402,7 +1402,7 @@ shapely = ">=1.6.4.post1"
 type = "git"
 url = "https://github.com/csayres/kaiju"
 reference = "albireox/kaiju-vs-jaeger"
-resolved_reference = "965a28aa1e0d458c1edb667783aa6f14f94c5dc2"
+resolved_reference = "876d9134ee0d260f022f0ce41f89b3223f4a1603"
 
 [[package]]
 name = "sdssdb"
@@ -1838,7 +1838,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1"
-content-hash = "accb495368dce52a00915a530f33c45bd006868610c8c12c744c432c24fe8808"
+content-hash = "b60f3e12f2a40d935d79b0a6f8fc374f7be6f65185ca4759095448d098898c91"
 
 [metadata.files]
 aio-pika = [
