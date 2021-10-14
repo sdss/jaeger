@@ -22,7 +22,7 @@ except ImportError:
     pandas = None
 
 
-__all__ = ["load_sequence_positioners", "load_holeids", "load_fields"]
+__all__ = ["load_holes", "load_fields"]
 
 
 def check_database(f):
@@ -36,73 +36,39 @@ def check_database(f):
 
 
 @check_database
-def load_sequence_positioners(start=1, end=1200):
-    """Loads a sequence of positioners to ``targetdb.positioner``
-
-    Does not populate row or column or observatory_pk.
-    Use `.populate_holeid` after running this function.
-    """
-
-    rows = ({"id": pid} for pid in range(start, end + 1))
-    targetdb.Positioner.insert_many(rows).execute(targetdb.database)
-
-
-def read_layout_data(data_file: str):
-    """Reads a layout file with positioner information."""
-
-    if pandas is None:
-        raise ImportError("pandas is required to run this function.")
-
-    data = pandas.read_csv(data_file)
-
-    # Select positioners only.
-    data = data.loc[data.Device.str.startswith("P")]
-
-    data.Device = pandas.to_numeric(data.Device.str.slice(1))
-    data.Row = pandas.to_numeric(data.Row.str.slice(1))
-    data.Column = pandas.to_numeric(data.Column.str.slice(1))
-
-    data = data.sort_values(["Row", "Column"], ascending=[False, True])
-    data.set_index(data.Device, inplace=True)
-
-    return data
-
-
-@check_database
-def load_holeids(file: str, observatory: str):
-    """Loads the hole IDs associated a list of positioners.
-
-    Parameters
-    ----------
-    file
-        The layout file containing positioners and their association with
-        hole positioners.
-    observatory
-        The observatory for the wok file.
-    """
-
-    data = read_layout_data(file)
-    observatory = observatory.upper()
+def load_holes(observatory: str):
+    """Loads a list holes to ``targetdb.hole``."""
 
     observatory_pk = targetdb.Observatory.get(label=observatory).pk
 
-    for pid, row_data in data.iterrows():
-        if row_data.Row == 0:
-            holeid = f"R0C{row_data.Column}"
-        else:
-            holeid = f"R{row_data.Row:+}C{row_data.Column}"
+    row_start = 13
+    row_end = -13
+    min_cols = 14
 
-        insert = targetdb.Positioner.update(
-            {
-                "row": row_data.Row,
-                "column": row_data.Column,
-                "holeid": holeid,
-                "observatory_pk": observatory_pk,
-            }
-        ).where(targetdb.Positioner.id == pid)
+    holes = []
+    for row in range(row_start, row_end - 1, -1):
+        end_col = min_cols + ((row_start - row) if row >= 0 else (row - row_end))
+        for col in range(1, end_col + 1, 1):
+            if row == 0:
+                holeid = f"R0C{col}"
+            else:
+                holeid = f"R{row:+}C{col}"
 
-        assert isinstance(insert, peewee.ModelUpdate)
-        insert.execute(targetdb.database)
+            holes.append(
+                dict(
+                    row=row,
+                    column=col,
+                    holeid=holeid,
+                    observatory_pk=observatory_pk,
+                )
+            )
+
+    targetdb.Hole.insert(holes).on_conflict(
+        conflict_target=[targetdb.Hole.holeid, targetdb.Hole.observatory],
+        action="IGNORE",
+    ).execute(  # type: ignore
+        targetdb.database
+    )
 
 
 @check_database
@@ -137,16 +103,16 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
         robostrategy=True,
     )
 
-    positioner_ids = pandas.DataFrame(
+    hole_ids = pandas.DataFrame(
         list(
-            targetdb.Positioner.select(
-                targetdb.Positioner.id,
-                targetdb.Positioner.holeid,
+            targetdb.Hole.select(
+                targetdb.Hole.pk,
+                targetdb.Hole.holeid,
             )
-            .where(targetdb.Positioner.holeid.is_null(False))
+            .where(targetdb.Hole.holeid.is_null(False))
             .tuples()  # type: ignore
         ),
-        columns=["id", "holeid"],
+        columns=["pk", "holeid"],
     ).set_index("holeid")
 
     for file_ in files:
@@ -210,12 +176,12 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
                 exp_data = assign_data[assign_data["holeID"][:, n] != " "]
                 holeIDs = exp_data["holeID"][:, n].tolist()
 
-            positioner_ids_exp = positioner_ids.loc[holeIDs].id.tolist()
+            holeid_pk_exp = hole_ids.loc[holeIDs].pk.tolist()
 
             insert_data += [
                 {
                     "design_id": design.design_id,
-                    "positioner_id": positioner_ids_exp[i],
+                    "hole_pk": holeid_pk_exp[i],
                     "carton_to_target_pk": exp_data["carton_to_target_pk"][i],
                     "instrument_pk": targetdb.Instrument.get(
                         label=exp_data["fiberType_2"][i]
