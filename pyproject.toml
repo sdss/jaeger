@@ -43,7 +43,6 @@ pytest-asyncio = "*"
 pytest-cov = "*"
 pytest-sugar = "*"
 isort = ">=5.0.0"
-typing_extensions = {version="*", python="~3.7"}
 codecov = ">=2.0.15"
 coverage = {version = ">=5.0", extras = ["toml"]}
 asynctest = {version=">=0.13.0", python="~3.7"}

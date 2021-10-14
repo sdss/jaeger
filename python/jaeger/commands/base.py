@@ -27,12 +27,6 @@ from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
 from . import CommandID
 
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
-
 __all__ = ["SuperMessage", "Command", "EmptyPool"]
 
 
@@ -204,8 +198,8 @@ class Command(StatusMixIn[CommandStatus], Future_co):
     timeout
         Time after which the command will be marked done when not all the
         positioners have replies. If `None`, the default timeout will be used.
-        If `False`, the command won't timeout until all the positioners have
-        replied.
+        If timeout is a negative number, the command won't timeout until all
+        the positioners have replied.
     done_callback
         A function to call when the command has been successfully completed.
     n_positioners
@@ -227,7 +221,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
     #: Whether the command can be broadcast to all robots.
     broadcastable: bool = False
     #: The default timeout for this command.
-    timeout: float | Literal[False] = 5
+    timeout: float = 5
     #: Whether it's safe to execute this command when the FPS is locked.
     safe = False
     #: Whether this command produces a positioner move.
@@ -238,7 +232,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
     def __init__(
         self,
         positioner_ids: int | List[int],
-        timeout: Optional[float | Literal[False]] = None,
+        timeout: Optional[float] = None,
         done_callback: Optional[Callable] = None,
         n_positioners: Optional[int] = None,
         data: Union[None, data_co, Dict[int, data_co]] = None,
@@ -300,10 +294,9 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             pass
         else:
             self.timeout = timeout
-            if self.timeout is False and self._n_replies is None:
+            if self.timeout < 0 and self._n_replies is None:
                 raise CommandError(
-                    "In a broadcast, timeout=False can only "
-                    "be used if n_positioners is set."
+                    "In a broadcast a timeout is required unless n_positioners is set."
                 )
 
         #: A list of messages with the responses to this command.
@@ -574,7 +567,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         if self.status == CommandStatus.RUNNING:
             self.start_time = time.time()
-            if self.timeout is False or self.timeout < 0:
+            if self.timeout < 0:
                 pass
             elif self.timeout == 0:
                 self.finish_command(CommandStatus.TIMEDOUT)
