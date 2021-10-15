@@ -104,5 +104,3 @@ ENV/
 setup.py
 
 .nox/
-
-pyrightconfig.json
