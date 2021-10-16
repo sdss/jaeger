@@ -1,6 +1,7 @@
 {
-    "extraPaths": ["../sdssdb/python", "../coordio/"],
+    "extraPaths": ["../sdssdb/python", "../coordio/src"],
     "typeCheckingMode": "basic",
-    "exclude": ["**/__pycache_", "python/jaeger/design.py"],
-    "ignore": ["python/jaeger/design.py"]
+    "exclude": ["**/__pycache_"],
+    "ignore": [],
+    "useLibraryCodeForTypes": false
 }
