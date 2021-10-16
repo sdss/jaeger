@@ -15,7 +15,17 @@ from typing import Optional, Union, cast
 import numpy
 import pandas
 import peewee
-from coordio import ICRS, Field, FocalPlane, Observed, Site, Tangent, Wok, positioner
+from coordio import (
+    ICRS,
+    Field,
+    FocalPlane,
+    Observed,
+    PositionerApogee,
+    PositionerBoss,
+    Site,
+    Tangent,
+    Wok,
+)
 from coordio.defaults import INST_TO_WAVE, positionerTable, wokCoords
 
 from sdssdb.peewee.sdss5db import targetdb
@@ -25,7 +35,7 @@ from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.utils import get_goto_move_time
 
 
-PositionerType = Union[positioner.PositionerApogee, positioner.PositionerBoss]
+PositionerType = Union[PositionerApogee, PositionerBoss]
 
 
 class Design:
@@ -206,9 +216,9 @@ class PositionerGrid:
             holeid = self.holeids[ipos]
 
             if ftype.upper() == "BOSS":
-                positioner_class = positioner.PositionerBoss
+                positioner_class = PositionerBoss
             elif ftype.upper() == "APOGEE":
-                positioner_class = positioner.PositionerApogee
+                positioner_class = PositionerApogee
             else:
                 raise ValueError(f"Invalid fibre type {ftype}.")
 
