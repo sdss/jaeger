@@ -63,9 +63,7 @@ def load_holes(observatory: str):
     targetdb.Hole.insert(holes).on_conflict(
         conflict_target=[targetdb.Hole.holeid, targetdb.Hole.observatory],
         action="IGNORE",
-    ).execute(  # type: ignore
-        targetdb.database
-    )
+    ).execute(targetdb.database)
 
 
 @check_database
@@ -141,7 +139,7 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
                 "cadence_pk": peewee.EXCLUDED.cadence_pk,
             },
         )
-        field_pk = insert.execute(targetdb.database)  # type: ignore
+        field_pk = insert.execute(targetdb.database)
 
         # Now create a design for each exposure.
         design_modes = hdul[0].header["DESMODE"].split()
