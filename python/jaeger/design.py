@@ -60,13 +60,79 @@ class Design:
 
         log.debug(f"[Design]: creating positioner assignments for {design_id}.")
 
-        self.positioner_grid = PositionerGrid(self, self.assignments)
+        self.assignment_data = AssignmentData(self, self.assignments)
+
+        assert self.assignment_data.site.time
+        self.epoch = self.assignment_data.site.time.jd
 
         log.debug("[Design]: finished creating assignments.")
 
+    def recompute_coordinates(self, jd: Optional[float] = None):
+        """Recalculates the coordinates. ``jd=None`` uses the current time."""
 
-class PositionerGrid:
-    """Information about the targets associated with a grid of positioners."""
+        self.assignment_data.compute_coordinates(jd=jd)
+
+        assert self.assignment_data.site.time
+        self.epoch = self.assignment_data.site.time.jd
+
+    def get_trajectory(self, current_positions: dict[int, tuple[float, float]]):
+        """Returns a trajectory dictionary based on the current position."""
+
+        # TODO: not calling kaiju yet because there seem to be several sets
+        # of calibration files. For now just using a variation of goto.
+
+        default_speed = config["positioner"]["motor_speed"]
+        speed = (default_speed, default_speed)
+
+        trajectories = {}
+        for pid in current_positions:
+            current_alpha, current_beta = current_positions[pid]
+
+            trajectories[pid] = {
+                "alpha": [(current_alpha, 0.1)],
+                "beta": [(current_beta, 0.1)],
+            }
+
+            if pid in self.assignment_data.positioner_ids:
+                pindex = self.assignment_data.positioner_to_index[pid]
+
+                if pindex not in self.assignment_data.valid_index:
+                    warnings.warn(
+                        f"Coordinates for positioner {pid} "
+                        "are not valid. Not moving it.",
+                        JaegerUserWarning,
+                    )
+                    trajectories[pid]["alpha"].append((current_alpha, 0.2))
+                    trajectories[pid]["beta"].append((current_beta, 0.2))
+                    continue
+
+                alpha_end, beta_end = self.assignment_data.positioner[pindex]
+
+                alpha_delta = abs(alpha_end - current_alpha)
+                beta_delta = abs(beta_end - current_beta)
+
+                time_end = [
+                    get_goto_move_time(alpha_delta, speed=speed[0]),
+                    get_goto_move_time(beta_delta, speed=speed[1]),
+                ]
+
+                trajectories[pid]["alpha"].append((alpha_end, time_end[0] + 0.1))
+                trajectories[pid]["beta"].append((beta_end, time_end[1] + 0.1))
+
+            else:
+                warnings.warn(
+                    f"Positioner {pid} is not assigned in this design. "
+                    "Not moving it.",
+                    JaegerUserWarning,
+                )
+                trajectories[pid]["alpha"].append((current_alpha, 0.2))
+                trajectories[pid]["beta"].append((current_beta, 0.2))
+
+        return trajectories
+
+
+class AssignmentData:
+    """Information about the target assignment along with coordinate transformation."""
 
     observed_boresight: Observed
 
@@ -252,58 +318,3 @@ class PositionerGrid:
             raise JaegerError("Some beta coordinates are < 180.")
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
-
-    def get_trajectory(self, current_positions: dict[int, tuple[float, float]]):
-        """Returns a trajectory dictionary based on the current position."""
-
-        # TODO: not calling kaiju yet because there seem to be several sets
-        # of calibration files. For now just using a variation of goto.
-
-        default_speed = config["positioner"]["motor_speed"]
-        speed = (default_speed, default_speed)
-
-        trajectories = {}
-        for pid in current_positions:
-            current_alpha, current_beta = current_positions[pid]
-
-            trajectories[pid] = {
-                "alpha": [(current_alpha, 0.1)],
-                "beta": [(current_beta, 0.1)],
-            }
-
-            if pid in self.positioner_ids:
-                pindex = self.positioner_to_index[pid]
-
-                if pindex not in self.valid_index:
-                    warnings.warn(
-                        f"Coordinates for positioner {pid} "
-                        "are not valid. Not moving it.",
-                        JaegerUserWarning,
-                    )
-                    trajectories[pid]["alpha"].append((current_alpha, 0.2))
-                    trajectories[pid]["beta"].append((current_beta, 0.2))
-                    continue
-
-                alpha_end, beta_end = self.positioner[pindex]
-
-                alpha_delta = abs(alpha_end - current_alpha)
-                beta_delta = abs(beta_end - current_beta)
-
-                time_end = [
-                    get_goto_move_time(alpha_delta, speed=speed[0]),
-                    get_goto_move_time(beta_delta, speed=speed[1]),
-                ]
-
-                trajectories[pid]["alpha"].append((alpha_end, time_end[0] + 0.1))
-                trajectories[pid]["beta"].append((beta_end, time_end[1] + 0.1))
-
-            else:
-                warnings.warn(
-                    f"Positioner {pid} is not assigned in this design. "
-                    "Not moving it.",
-                    JaegerUserWarning,
-                )
-                trajectories[pid]["alpha"].append((current_alpha, 0.2))
-                trajectories[pid]["beta"].append((current_beta, 0.2))
-
-        return trajectories
