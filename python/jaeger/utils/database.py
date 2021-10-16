@@ -100,11 +100,13 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
             targetdb.Hole.select(
                 targetdb.Hole.pk,
                 targetdb.Hole.holeid,
+                targetdb.Observatory.label,
             )
+            .join(targetdb.Observatory)
             .where(targetdb.Hole.holeid.is_null(False))
-            .tuples()  # type: ignore
+            .tuples()
         ),
-        columns=["pk", "holeid"],
+        columns=["pk", "holeid", "observatory"],
     ).set_index("holeid")
 
     for file_ in files:
@@ -168,7 +170,8 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
                 exp_data = assign_data[assign_data["holeID"][:, n] != " "]
                 holeIDs = exp_data["holeID"][:, n].tolist()
 
-            holeid_pk_exp = hole_ids.loc[holeIDs].pk.tolist()
+            obs_holes = hole_ids.loc[hole_ids.observatory == observatory]
+            holeid_pk_exp = obs_holes.loc[holeIDs].pk.tolist()
 
             insert_data += [
                 {
