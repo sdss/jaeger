@@ -663,6 +663,6 @@ class AssignmentData:
         )
 
         if not (self.positioner[self.valid_index][:, 1] < 180).all():
-            raise JaegerError("Some beta coordinates are < 180.")
+            raise JaegerError("Some beta coordinates are > 180.")
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
