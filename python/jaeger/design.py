@@ -26,9 +26,14 @@ from coordio import (
     Tangent,
     Wok,
 )
-from coordio.defaults import INST_TO_WAVE, positionerTable, wokCoords
+from coordio.defaults import (
+    INST_TO_WAVE,
+    fps_calibs_version,
+    positionerTable,
+    wokCoords,
+)
 
-from sdssdb.peewee.sdss5db import targetdb
+from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
@@ -56,19 +61,47 @@ class Design:
             raise ValueError(f"design_id {design_id} does not exist in the database.")
 
         self.field = self.design.field
-        self.assignments = list(self.design.assignments)
+        self.assignments: list[targetdb.Assignment] = list(self.design.assignments)
 
-        log.debug(f"[Design]: creating positioner assignments for {design_id}.")
+        log.debug(f"[Design]: creating initial configuration for {design_id}.")
 
-        self.assignment_data = AssignmentData(self, self.assignments)
+        self.configuration = Configuration(self)
+
+        log.debug("[Design]: finished creating initial configuration.")
+
+    def __repr__(self):
+        return f"<Design (design_id={self.design_id})>"
+
+
+class Configuration:
+    """A configuration based on a design."""
+
+    def __init__(self, design: Design):
+
+        # Configuration ID is None until we insert in the database.
+        # Once set, it cannot be changed.
+        self.configuration_id: int | None = None
+
+        self.design = design
+        self.assignment_data = AssignmentData(self)
 
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-        log.debug("[Design]: finished creating assignments.")
+    def __repr__(self):
+        return (
+            f"<Configuration (configuration_id={self.configuration_id}"
+            f"design_id={self.design.design_id})>"
+        )
 
     def recompute_coordinates(self, jd: Optional[float] = None):
         """Recalculates the coordinates. ``jd=None`` uses the current time."""
+
+        if self.configuration_id is not None:
+            raise JaegerError(
+                "Cannot recompute coordinates once the configuration "
+                "has been loaded to the database."
+            )
 
         self.assignment_data.compute_coordinates(jd=jd)
 
@@ -130,6 +163,74 @@ class Design:
 
         return trajectories
 
+    def write_to_database(self, replace=False):
+        """Writes the configuration to the database."""
+
+        if replace is False:
+
+            with opsdb.database.atomic():
+                configuration = opsdb.Configuration(
+                    configuration_id=self.configuration_id,
+                    design_id=self.design.design_id,
+                    epoch=self.epoch,
+                    calibration_version=fps_calibs_version,
+                )
+                configuration.save()
+
+            if configuration.configuration_id is None:
+                raise JaegerError("Failed loading configuration.")
+
+            self.configuration_id = configuration.configuration_id
+
+        else:
+
+            if self.configuration_id is None:
+                raise JaegerError("Must have a configuration_id to replace.")
+
+            with opsdb.database.atomic():
+                opsdb.AssignmentToFocal.delete().where(
+                    opsdb.AssignmentToFocal.configuration_id == self.configuration_id
+                ).execute(opsdb.database)
+
+                configuration = opsdb.Configuration.get_by_id(self.configuration_id)
+                configuration.delete_instance()
+
+                return self.write_to_database(replace=False)
+
+        a_data = self.assignment_data
+
+        focals = []
+        for assignment in self.design.assignments:
+            assignment_pk = assignment.pk
+            try:
+                data_index = a_data.assignments.index(assignment)
+                if data_index not in a_data.valid_index:
+                    raise ValueError()
+
+                positioner_id = a_data.positioner_ids[data_index]
+                positioner_to_index = a_data.positioner_to_index[positioner_id]
+
+                xfocal, yfocal, _ = a_data.focal[positioner_to_index, :]
+                if numpy.isnan(xfocal) or numpy.isnan(yfocal):
+                    xfocal = yfocal = None
+
+            except ValueError:
+                positioner_id = None
+                xfocal = yfocal = None
+
+            focals.append(
+                dict(
+                    assignment_pk=assignment_pk,
+                    xfocal=xfocal,
+                    yfocal=yfocal,
+                    positioner_id=positioner_id,
+                    configuration_id=self.configuration_id,
+                )
+            )
+        # print(focals)
+        with opsdb.database.atomic():
+            opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
+
 
 class AssignmentData:
     """Information about the target assignment along with coordinate transformation."""
@@ -146,10 +247,17 @@ class AssignmentData:
     valid_index: numpy.ndarray
     positioner_to_index: dict[int, int]
 
-    def __init__(self, design: Design, assignments: list[targetdb.Assignment]):
+    def __init__(self, configuration: Configuration):
 
-        self.design = design
+        self.configuration = configuration
+
+        self.design = configuration.design
         self.design_id = self.design.design_id
+
+        log.debug(
+            f"[AssignmentData]: creating assignment data for design {self.design_id}"
+        )
+
         self.observatory: str = self.design.field.observatory.label.upper()
         self.site = Site(self.observatory)
 
@@ -160,7 +268,7 @@ class AssignmentData:
 
         self.assignments = [
             assg
-            for assg in assignments
+            for assg in self.design.assignments
             if assg.instrument.label.lower()  # TODO: remove this when RS matches wok.
             in wok_table.loc[assg.hole.holeid].holeType.lower()
         ]
@@ -197,6 +305,9 @@ class AssignmentData:
             raise RuntimeError("Mismatch of fibre types to positioners.")
 
         self.compute_coordinates()
+
+    def __repr__(self):
+        return f"<AssignmentData (design_id={self.design_id})>"
 
     def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems."""
