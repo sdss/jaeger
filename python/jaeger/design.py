@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import os
 import warnings
 
 from typing import Optional, Union, cast
@@ -15,6 +16,8 @@ from typing import Optional, Union, cast
 import numpy
 import pandas
 import peewee
+from astropy.table import Table
+from astropy.time import Time
 from coordio import (
     ICRS,
     Field,
@@ -32,6 +35,7 @@ from coordio.defaults import (
     positionerTable,
     wokCoords,
 )
+from pydl.pydlutils.yanny import write_ndarray_to_yanny
 
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
@@ -41,6 +45,66 @@ from jaeger.utils import get_goto_move_time
 
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
+
+
+def get_fibermap_table() -> tuple[Table, dict]:
+    """Returns a stub for the FIBERMAP table and a default entry,"""
+
+    fiber_map_data = [
+        ("positionerId", numpy.int16),
+        ("holeId", "S7"),
+        ("fiberType", "S10"),
+        ("assigned", numpy.int16),
+        ("valid", numpy.int16),
+        ("xFocal", numpy.float64),
+        ("yFocal", numpy.float64),
+        ("alpha", numpy.float32),
+        ("beta", numpy.float32),
+        ("ra", numpy.float64),
+        ("dec", numpy.float64),
+        ("pmra", numpy.float32),
+        ("pmdec", numpy.float32),
+        ("parallax", numpy.float32),
+        ("coord_epoch", numpy.float32),
+        ("spectrographId", numpy.int16),
+        ("mag", numpy.dtype(("<f4", (5,)))),
+        ("optical_prov", "S10"),
+        ("bp_mag", numpy.float32),
+        ("gaia_g_mag", numpy.float32),
+        ("rp_mag", numpy.float32),
+        ("h_mag", numpy.float32),
+        ("catalogid", numpy.int64),
+        ("cadence", "S20"),
+        ("firstcarton", "S25"),
+        ("program", "S20"),
+        ("category", "S20"),
+    ]
+
+    names, dtype = zip(*fiber_map_data)
+
+    fibermap = Table(rows=None, names=names, dtype=dtype)
+
+    # Define a default row with all set to "" or -999. depending on column data type.
+    default = {}
+    for i in range(len(names)):
+        name = names[i]
+        dd = numpy.dtype(dtype[i])
+        if name == "mag":
+            value = [-999.0] * 5
+        elif dd.char in ["h", "i"]:
+            value = -999
+        elif dd.char in ["S"]:
+            value = ""
+        elif dd.char in ["f", "d"]:
+            value = -999.0
+        else:
+            value = -999.0
+        default[name] = value
+
+    default["assigned"] = 0
+    default["valid"] = 0
+
+    return (fibermap, default)
 
 
 class Design:
@@ -230,6 +294,168 @@ class Configuration:
         # print(focals)
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
+
+    def write_summary(self, overwrite=False):
+        """Writes the confSummary file."""
+
+        # TODO: some time may be saved by doing a single DB query and retrieving
+        # all the info at once for all the assignments. Need to be careful
+        # to maintain the order.
+
+        if self.configuration_id is None:
+            raise JaegerError("Configuration needs to be set and loaded to the DB.")
+
+        a_data = self.assignment_data
+
+        time = Time.now()
+        rs_run = self.design.field.version.plan
+
+        header = dict(
+            configuration_id=self.configuration_id,
+            targeting_version=-999,
+            robostrategy_run=rs_run,
+            fps_calibrations_version=fps_calibs_version,
+            design_id=self.design.design_id,
+            field_id=self.design.field.field_id,
+            instruments="BOSS APOGEE",
+            epoch=self.epoch,
+            obstime=time.strftime("%a %b %d %H:%M:%S %Y"),
+            MJD=int(time.mjd),  # TODO: this should be SJD
+            observatory=a_data.observatory,
+            temperature=-999,  # TODO
+            raCen=self.design.field.racen,
+            decCen=self.design.field.deccen,
+        )
+
+        fibermap, default = get_fibermap_table()
+
+        positioners = positionerTable.loc[positionerTable.wokID == a_data.observatory]
+
+        for pid in positioners.positionerID.tolist():
+            holeID = positioners.loc[positioners.positionerID == pid].holeID.values[0]
+            for fibre in ["APOGEE", "BOSS"]:
+
+                # Start with the default row.
+                row = default.copy()
+
+                index = a_data.positioner_to_index.get(pid, False)
+                is_fibre_ok = True
+                if index is not False:
+                    is_fibre_ok = a_data.fibre_types[index] == fibre
+
+                if index is False or is_fibre_ok is False:
+                    # Either the positioner was not assigned or the fibre
+                    # is not the targetted one. Add an empty line.
+                    row.update(
+                        {
+                            "positionerId": pid,
+                            "holeId": holeID,
+                            "fiberType": fibre,
+                            "assigned": 0,
+                            "valid": 0,
+                            "spectrographId": 0 if fibre == "APOGEE" else 1,
+                        }
+                    )
+
+                else:
+                    valid = index in a_data.valid_index
+                    if valid is True:
+                        xFocal, yFocal = a_data.focal[index, 0:2]
+                        alpha, beta = a_data.positioner[index, 0:2]
+                    else:
+                        xFocal = yFocal = alpha = beta = -999.0
+
+                    target = a_data.targets[index]
+                    c2t = a_data.assignments[index].carton_to_target
+
+                    try:
+                        cadence = c2t.cadence.label
+                    except peewee.DoesNotExist:
+                        cadence = ""
+
+                    row.update(
+                        {
+                            "positionerId": pid,
+                            "holeId": holeID,
+                            "fiberType": fibre,
+                            "assigned": 1,
+                            "valid": int(valid),
+                            "xFocal": xFocal,
+                            "yFocal": yFocal,
+                            "alpha": alpha,
+                            "beta": beta,
+                            "ra": target.ra,
+                            "dec": target.dec,
+                            "pmra": target.pmra or -999.0,
+                            "pmdec": target.pmdec or -999.0,
+                            "parallax": target.parallax or -999.0,
+                            "coord_epoch": target.epoch or -999.0,
+                            "spectrographId": 0 if fibre == "APOGEE" else 1,
+                            "catalogid": target.catalogid,
+                            "cadence": cadence,
+                            "firstcarton": c2t.carton.carton,
+                            "program": c2t.carton.program,
+                            "category": c2t.carton.category.label,
+                        }
+                    )
+
+                    mag = c2t.magnitudes
+                    if len(mag) > 0:
+                        mag = mag[0]
+                        optical_mag = [
+                            getattr(mag, m) or -999.0 for m in ["g", "r", "i", "z"]
+                        ]
+                        optical_mag = [-999.0] + optical_mag
+                    else:
+                        optical_mag = [-999.0] * 5
+                        mag = None
+
+                    if mag:
+                        row.update(
+                            {
+                                "mag": optical_mag,
+                                "optical_prov": mag.optical_prov or "",
+                                "bp_mag": mag.bp or -999.0,
+                                "gaia_g_mag": mag.gaia_g or -999.0,
+                                "rp_mag": mag.rp or -999.0,
+                                "h_mag": mag.h or -999.0,
+                            }
+                        )
+
+                fibermap.add_row(row)
+
+        fibermap.sort(["positionerId", "fiberType"])
+
+        if "SDSSCORE_DIR" not in os.environ:
+            raise JaegerError("$SDSSCORE_DIR is not set. Cannot write summary file.")
+
+        sdsscore_dir = os.environ["SDSSCORE_DIR"]
+        path = os.path.join(
+            sdsscore_dir,
+            a_data.observatory.lower(),
+            "summary_files",
+            f"{int(self.configuration_id / 100):04d}XX",
+            f"confSummary-{self.configuration_id}.par",
+        )
+
+        if os.path.exists(path):
+            if overwrite:
+                warnings.warn(
+                    f"Summary file {os.path.basename(path)} exists. Overwriting it.",
+                    JaegerUserWarning,
+                )
+            else:
+                raise JaegerError(f"Summary file {os.path.basename(path)} exists.")
+
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        write_ndarray_to_yanny(
+            path,
+            [fibermap],
+            structnames=["FIBERMAP"],
+            hdr=header,
+            enums={"fiberType": ("FIBERTYPE", ("BOSS", "APOGEE", "METROLOGY", "NONE"))},
+        )
 
 
 class AssignmentData:
