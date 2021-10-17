@@ -444,6 +444,7 @@ class Configuration:
                     f"Summary file {os.path.basename(path)} exists. Overwriting it.",
                     JaegerUserWarning,
                 )
+                os.remove(path)
             else:
                 raise JaegerError(f"Summary file {os.path.basename(path)} exists.")
 
