@@ -108,6 +108,8 @@ def get_fibermap_table() -> tuple[Table, dict]:
 
     default["assigned"] = 0
     default["valid"] = 0
+    default["sdssv_boss_target0"] = 0
+    default["sdssv_apogee_target0"] = 0
 
     return (fibermap, default)
 
