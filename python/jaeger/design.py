@@ -337,10 +337,19 @@ class Configuration:
         fibermap, default = get_fibermap_table()
 
         positioners = positionerTable.loc[positionerTable.wokID == a_data.observatory]
+        wok = wokCoords.loc[wokCoords.wokType == a_data.observatory]
 
         for pid in positioners.positionerID.tolist():
+
             holeID = positioners.loc[positioners.positionerID == pid].holeID.values[0]
+            holeType = wok.loc[wok.holeID == holeID].holeType.values[0].upper()
+
             for fibre in ["APOGEE", "BOSS"]:
+
+                # Only add a row if the hole has a connected fibre of the current
+                # type, even if it's not assigned.
+                if fibre not in holeType:
+                    continue
 
                 # Start with the default row.
                 row = default.copy()
