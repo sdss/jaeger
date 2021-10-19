@@ -173,6 +173,18 @@
                 { "title": "response_code", "type": "integer" },
                 { "title": "data", "type": "string" }
             ]
+        },
+        "configuration_loaded": {
+            "type": "array",
+            "items": [
+                { "title": "configuration_id", "type": "integer" },
+                { "title": "design_id", "type": "integer" },
+                { "title": "ra_boresight", "type": "number" },
+                { "title": "dec_boresight", "type": "number" },
+                { "title": "position_angle", "type": "number" },
+                { "title": "alt_boresight", "type": "number" },
+                { "title": "az_boresight", "type": "number" }
+            ]
         }
     },
     "additionalProperties": false

@@ -179,6 +179,19 @@ class Configuration:
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
+    @property
+    def ingested(self):
+        """Returns `True` if the configuration has been loaded to opsdb."""
+
+        if self.configuration_id is None:
+            return False
+
+        return (
+            opsdb.Configuration.select()
+            .where(opsdb.Configuration.configuration_id == self.configuration_id)
+            .exists()
+        )
+
     def get_trajectory(self, current_positions: dict[int, tuple[float, float]]):
         """Returns a trajectory dictionary based on the current position."""
 
@@ -237,7 +250,7 @@ class Configuration:
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
 
-        if replace is False:
+        if self.configuration_id is None:
 
             with opsdb.database.atomic():
                 configuration = opsdb.Configuration(
@@ -257,6 +270,18 @@ class Configuration:
 
             if self.configuration_id is None:
                 raise JaegerError("Must have a configuration_id to replace.")
+
+            if not self.ingested:
+                raise JaegerError(
+                    f"Configuration ID {self.configuration_id} does not exists "
+                    "in opsdb and cannot be replaced."
+                )
+
+            if replace is False:
+                raise JaegerError(
+                    f"Configuration ID {self.configuration_id} has already "
+                    "been loaded. Use replace=True to overwrite it."
+                )
 
             with opsdb.database.atomic():
                 opsdb.AssignmentToFocal.delete().where(
@@ -336,13 +361,13 @@ class Configuration:
 
         fibermap, default = get_fibermap_table()
 
-        positioners = positionerTable.loc[positionerTable.wokID == a_data.observatory]
-        wok = wokCoords.loc[wokCoords.wokType == a_data.observatory]
+        positioners = positionerTable.reset_index("positionerID")
+        wok = wokCoords.reset_index("holeID")
 
         for pid in positioners.positionerID.tolist():
 
-            holeID = positioners.loc[positioners.positionerID == pid].holeID.values[0]
-            holeType = wok.loc[wok.holeID == holeID].holeType.values[0].upper()
+            holeID = positioners.loc[pid].holeID.values[0]
+            holeType = wok.loc[holeID].holeType.values[0].upper()
 
             for fibre in ["APOGEE", "BOSS"]:
 
@@ -507,10 +532,8 @@ class AssignmentData:
         self.observatory: str = self.design.field.observatory.label.upper()
         self.site = Site(self.observatory)
 
-        positioner_table = positionerTable[positionerTable.wokID == self.observatory]
-        positioner_table.set_index("holeID", inplace=True)
-        wok_table = wokCoords[wokCoords.wokType == self.observatory]
-        wok_table.set_index("holeID", inplace=True)
+        positioner_table = positionerTable.set_index("holeID")
+        wok_table = wokCoords.set_index("holeID")
 
         self.assignments = [
             assg

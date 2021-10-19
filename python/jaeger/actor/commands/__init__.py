@@ -12,6 +12,7 @@ from clu.parsers.click import command_parser
 jaeger_parser = command_parser
 
 
+from .configuration import *
 from .debug import *
 from .fvc import *
 from .ieb import *
