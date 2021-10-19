@@ -157,7 +157,7 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
             design = targetdb.Design(
                 exposure=n + 1,
                 field_pk=field_pk,
-                design_mode_pk=design_modes[n],
+                design_mode_label=design_modes[n],
             )
             design.save()
 
