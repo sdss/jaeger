@@ -289,7 +289,7 @@ async def status(command, fps, positioner_ids, full):
 
         command.write(
             "i",
-            status=[
+            positioner_status=[
                 p.positioner_id,
                 alpha_pos,
                 beta_pos,

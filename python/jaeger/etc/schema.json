@@ -147,7 +147,7 @@
         "move_time": { "type": "number" },
         "locked": { "type": "boolean" },
         "n_positioners": { "type": "integer" },
-        "status": {
+        "positioner_status": {
             "type": "array",
             "items": [
                 { "title": "positioner_id", "type": "integer" },
