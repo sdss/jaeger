@@ -293,7 +293,7 @@ async def status(command, fps, positioner_ids, full):
                 p.positioner_id,
                 alpha_pos,
                 beta_pos,
-                int(p.status),
+                f"0x{int(p.status):X}",
                 p.initialised,
                 p.is_bootloader() or False,
                 p.firmware or "?",

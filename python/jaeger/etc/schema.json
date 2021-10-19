@@ -153,7 +153,7 @@
                 { "title": "positioner_id", "type": "integer" },
                 { "title": "alpha", "type": "number" },
                 { "title": "beta", "type": "number" },
-                { "title": "bits", "type": "integer" },
+                { "title": "bits", "type": "string" },
                 { "title": "initialised", "type": "boolean" },
                 { "title": "bootloader", "type": "boolean" },
                 { "title": "firmware", "type": "string" },
