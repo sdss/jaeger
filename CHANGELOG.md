@@ -1,14 +1,21 @@
 # Changelog
 
+## Next version
+
+### 🚀 New
+
+* [WIP] Code to load robostrategy designs to `targetdb` and create configurations
+
+
 ## 0.11.0 - October 12, 2021
 
-## 🚀 New
+### 🚀 New
 
 * [#152](https://github.com/sdss/jaeger/pull/152) FVC IEB support and actor commands.
 * Add commands `GET_HALL_CALIB_ERROR`, `GET_ALPHA_HALL_CALIB`, and `GET_BETA_HALL_CALIB` for hall sensor calibration querying.
 * The actor status command now returns the number of trajectories executed.
 
-## ✨ Improved
+### ✨ Improved
 
 * Add `Trajectory.start_time` and `Trajectory.end_time` that can be used to determine when the trajectory failed. `send_trajectory` now allows to return the unsent or non-started trajectory.
 * When running the actor as a daemon in detached mode, log stdout and stderr to file.
@@ -18,19 +25,19 @@
 * `FPS.send_trajectory()` now raises a `TrajectoryError` if it fails.
 * Better logging of the reason for failure in `Trajectory`. In particular, `Trajectory.failed_positioners` contains a dictionary with the reason why a give positioner failed to receive or execute the trajectory, if that information is known.
 
-## 🔧 Fixed
+### 🔧 Fixed
 
 * Avoid clipping the current position to `(0, 360)` when calculating the trajectory in `goto()`. This prevents using `goto()` when the positioner is at a negative position.
 
 
 ## 0.10.0 - August 3, 2021
 
-## 🚀 New
+### 🚀 New
 
 * [#149](https://github.com/sdss/jaeger/issues/149) Added an `FPS.goto()` method that sends a list of positioners to a given position using trajectories. By default `Positioner.goto()` now also uses trajectories, but `GOTO_ABSOLUTE_POSITION` can still be used.
 * [#150](https://github.com/sdss/jaeger/issues/150) Allow to skip positioners that are connected to the bus but that we want to ignore. Also allow to disable collision detection for a list of positioners. See configuration options `fps.skip_positioners` and `fps.disable_collision_detection_positioners`.
 
-## ✨ Improved
+### ✨ Improved
 
 * `Trajectory()` now sends data points using a single command per trajectory chunk.
 * Warn about individual replies that return without `COMMAND_ACCEPTED`.
