@@ -18,10 +18,7 @@ import clu
 import clu.protocol
 from clu.tools import ActorHandler
 
-from jaeger import FPS, __version__, config, log
-from jaeger.commands import CommandID
-from jaeger.ieb import IEB
-from jaeger.maskbits import LowTemperature
+from jaeger import FPS, __version__, log
 
 
 __all__ = ["JaegerActor"]
@@ -71,8 +68,6 @@ class JaegerActor(clu.LegacyActor):
         # command (the first argument is always the actor command).
         self.parser_args = [fps]
 
-        self.low_temperature = LowTemperature.NORMAL
-
         super().__init__(*args, **kwargs)
 
         self.version = __version__
@@ -82,9 +77,7 @@ class JaegerActor(clu.LegacyActor):
         log.addHandler(self.actor_handler)
         self.actor_handler.setLevel(logging.INFO)
 
-        if isinstance(fps.ieb, IEB) and not fps.ieb.disabled:
-            self.timed_commands.add_command("ieb status", delay=ieb_status_delay)
-            asyncio.create_task(self.handle_temperature())
+        self.__status_watcher_task = asyncio.create_task(self._status_watcher())
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
@@ -110,87 +103,9 @@ class JaegerActor(clu.LegacyActor):
 
         return status
 
-    async def handle_temperature(self):
-        """Handle positioners in low temperature."""
+    async def _status_watcher(self):
+        """Listens to the status async generator."""
 
-        async def set_rpm(activate):
-            if activate:
-                rpm = config["low_temperature"]["rpm_cold"]
-                self.write("w", text=f"Low temperature mode. Setting RPM={rpm}.")
-            else:
-                rpm = config["low_temperature"]["rpm_normal"]
-                self.write(
-                    "w",
-                    text=f"Disabling low temperature mode. Setting RPM={rpm}.",
-                )
-
-        async def set_idle_power(activate):
-            if activate:
-                ht = config["low_temperature"]["holding_torque_very_cold"]
-                self.write(
-                    "w",
-                    text="Very low temperature mode. Setting holding torque.",
-                )
-            else:
-                ht = config["low_temperature"]["holding_torque_normal"]
-                self.write(
-                    "w",
-                    text="Disabling very low temperature mode. Setting holding torque.",
-                )
-            await self.fps.send_command(
-                CommandID.SET_HOLDING_CURRENT,
-                alpha=ht[0],
-                beta=ht[1],
-            )
-
-        sensor = config["low_temperature"]["sensor"]
-        cold = config["low_temperature"]["cold_threshold"]
-        very_cold = config["low_temperature"]["very_cold_threshold"]
-        interval = config["low_temperature"]["interval"]
-
-        while True:
-            try:
-                assert isinstance(self.fps.ieb, IEB) and self.fps.ieb.disabled is False
-                device = self.fps.ieb.get_device(sensor)
-                temp = (await device.read())[0]
-
-                if temp <= very_cold:
-                    if self.low_temperature == LowTemperature.NORMAL:
-                        await set_rpm(True)
-                        await set_idle_power(True)
-                    elif self.low_temperature == LowTemperature.COLD:
-                        await set_idle_power(True)
-                    else:
-                        pass
-                    self.low_temperature = LowTemperature.VERY_COLD
-
-                elif temp <= cold:
-                    if self.low_temperature == LowTemperature.NORMAL:
-                        await set_rpm(True)
-                    elif self.low_temperature == LowTemperature.COLD:
-                        pass
-                    else:
-                        await set_idle_power(False)
-                    self.low_temperature = LowTemperature.COLD
-
-                else:
-                    if self.low_temperature == LowTemperature.NORMAL:
-                        pass
-                    elif self.low_temperature == LowTemperature.COLD:
-                        await set_rpm(False)
-                    else:
-                        await set_rpm(False)
-                        await set_idle_power(False)
-                    self.low_temperature = LowTemperature.NORMAL
-
-                self.write("w", low_temperature=LowTemperature.NORMAL.value)
-
-            except BaseException as err:
-                self.write(
-                    "w",
-                    text=f"Cannot read device {sensor!r}. "
-                    f"Low-temperature mode will not be engaged: {err}",
-                )
-                return
-
-            await asyncio.sleep(interval)
+        async for status in self.fps.async_status():
+            print(status)
+            self.write("i", fps_status=f"0x{status.value:X}")

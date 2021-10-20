@@ -216,6 +216,8 @@ class FPS(BaseFPS):
         assert isinstance(self.ieb, IEB) or self.ieb is None
 
         self.__status_event = asyncio.Event()
+        self.__temperature_task: asyncio.Task | None = None
+
         # Position and status pollers
         self.pollers = PollerList(
             [
@@ -1030,6 +1032,89 @@ class FPS(BaseFPS):
                 status["ieb"] = await self.ieb.get_status()
 
         return status
+
+    async def _handle_temperature(self):
+        """Handle positioners in low temperature."""
+
+        async def set_rpm(activate):
+            if activate:
+                rpm = config["low_temperature"]["rpm_cold"]
+                log.warning(f"Low temperature mode. Setting RPM={rpm}.")
+            else:
+                rpm = config["low_temperature"]["rpm_normal"]
+                log.warning(f"Disabling low temperature mode. Setting RPM={rpm}.")
+
+            config["positioner"]["motor_speed"] = rpm
+
+        async def set_idle_power(activate):
+            if activate:
+                ht = config["low_temperature"]["holding_torque_very_cold"]
+                log.warning("Very low temperature mode. Setting holding torque.")
+            else:
+                ht = config["low_temperature"]["holding_torque_normal"]
+                log.warning(
+                    "Disabling very low temperature mode. Setting holding torque."
+                )
+            await self.send_command(
+                CommandID.SET_HOLDING_CURRENT,
+                alpha=ht[0],
+                beta=ht[1],
+            )
+
+        sensor = config["low_temperature"]["sensor"]
+        cold = config["low_temperature"]["cold_threshold"]
+        very_cold = config["low_temperature"]["very_cold_threshold"]
+        interval = config["low_temperature"]["interval"]
+
+        while True:
+
+            try:
+                assert isinstance(self.ieb, IEB) and self.ieb.disabled is False
+                device = self.ieb.get_device(sensor)
+                temp = (await device.read())[0]
+
+                # Get the status without the temperature bits.
+                base_status = self.status & ~FPSStatus.TEMPERATURE_BITS
+
+                if temp <= very_cold:
+                    if self.status & FPSStatus.TEMPERATURE_NORMAL:
+                        await set_rpm(True)
+                        await set_idle_power(True)
+                    elif self.status & FPSStatus.TEMPERATURE_COLD:
+                        await set_idle_power(True)
+                    else:
+                        pass
+                    self.set_status(base_status | FPSStatus.TEMPERATURE_VERY_COLD)
+
+                elif temp <= cold:
+                    if self.status & FPSStatus.TEMPERATURE_NORMAL:
+                        await set_rpm(True)
+                    elif self.status & FPSStatus.TEMPERATURE_COLD:
+                        pass
+                    else:
+                        await set_idle_power(False)
+                    self.set_status(base_status | FPSStatus.TEMPERATURE_COLD)
+
+                else:
+                    if self.status & FPSStatus.TEMPERATURE_NORMAL:
+                        pass
+                    elif self.status & FPSStatus.TEMPERATURE_COLD:
+                        await set_rpm(False)
+                    else:
+                        await set_rpm(False)
+                        await set_idle_power(False)
+                    self.set_status(base_status | FPSStatus.TEMPERATURE_NORMAL)
+
+            except BaseException as err:
+                log.info(
+                    f"Cannot read device {sensor!r}. "
+                    f"Low-temperature mode will not be engaged: {err}",
+                )
+                base_status = self.status & ~FPSStatus.TEMPERATURE_BITS
+                self.set_status(base_status | FPSStatus.TEMPERATURE_UNKNOWN)
+                return
+
+            await asyncio.sleep(interval)
 
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
