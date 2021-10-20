@@ -3,7 +3,6 @@
     "type": "object",
     "properties": {
         "config_file": { "type": "string" },
-        "low_temperature": { "type": "integer", "enum": [0, 1, 2] },
         "temperature": {
             "type": "array",
             "description": "Temperature measurements",
@@ -164,6 +163,9 @@
                     "oneOf": [{ "type": "integer" }, { "constant": "?" }]
                 }
             ]
+        },
+        "fps_status": {
+            "type": "string"
         },
         "raw": {
             "type": "array",
