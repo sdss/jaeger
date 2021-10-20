@@ -326,7 +326,7 @@ class Configuration:
                     configuration_id=self.configuration_id,
                 )
             )
-        # print(focals)
+
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
