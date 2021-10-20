@@ -122,6 +122,9 @@ class Design:
         if targetdb.database.connected is False:
             raise RuntimeError("Database is not connected.")
 
+        if wokCoords is None:
+            raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
+
         log.debug(f"[Design]: loading design {design_id}.")
 
         self.design_id = design_id
