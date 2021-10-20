@@ -15,7 +15,7 @@ __all__ = [
     "CommandStatus",
     "ResponseCode",
     "BootloaderStatus",
-    "LowTemperature",
+    "FPSStatus",
 ]
 
 
@@ -244,9 +244,22 @@ class ResponseCode(enum.IntFlag):
     HALL_SENSORS_DISABLED = 15
 
 
-class LowTemperature(enum.Enum):
-    """Low temperature mode."""
+class FPSStatus(enum.Flag):
+    """Status of the FPS."""
 
-    NORMAL = 0
-    COLD = 1
-    VERY_COLD = 2
+    IDLE = 0x01
+    MOVING = 0x02
+    COLLIDED = 0x04
+    ERRORED = 0x08
+    TEMPERATURE_NORMAL = 0x10
+    TEMPERATURE_COLD = 0x20
+    TEMPERATURE_VERY_COLD = 0x40
+    TEMPERATURE_UNKNOWN = 0x80
+
+    TEMPERATURE_BITS = (
+        TEMPERATURE_NORMAL
+        | TEMPERATURE_COLD
+        | TEMPERATURE_VERY_COLD
+        | TEMPERATURE_UNKNOWN
+    )
+    STATUS_BITS = IDLE | ERRORED | MOVING | COLLIDED
