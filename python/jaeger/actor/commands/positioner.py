@@ -293,7 +293,7 @@ async def status(command, fps, positioner_ids, full):
                 p.positioner_id,
                 alpha_pos,
                 beta_pos,
-                f"0x{int(p.status):X}",
+                f"0x{int(p.status):x}",
                 p.initialised,
                 p.is_bootloader() or False,
                 p.firmware or "?",
@@ -303,7 +303,7 @@ async def status(command, fps, positioner_ids, full):
             ],
         )
 
-    command.info(fps_status=f"0x{fps.status.value:X}")
+    command.info(fps_status=f"0x{fps.status.value:x}")
 
     if full:
         await clu.Command("ieb status", parent=command).parse()

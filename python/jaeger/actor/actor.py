@@ -108,4 +108,4 @@ class JaegerActor(clu.LegacyActor):
 
         async for status in self.fps.async_status():
             print(status)
-            self.write("i", fps_status=f"0x{status.value:X}")
+            self.write("i", fps_status=f"0x{status.value:x}")
