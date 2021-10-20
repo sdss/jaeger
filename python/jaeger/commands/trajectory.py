@@ -23,7 +23,7 @@ from jaeger import config, log
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, TrajectoryError
 from jaeger.ieb import IEB
-from jaeger.maskbits import PositionerStatus, ResponseCode
+from jaeger.maskbits import FPSStatus, ResponseCode
 from jaeger.utils import int_to_bytes
 
 
@@ -446,6 +446,9 @@ class Trajectory(object):
         if not self._ready_to_start or self.failed:
             raise TrajectoryError("The trajectory has not been sent.", self)
 
+        if self.move_time is None:
+            raise TrajectoryError("move_time not set.", self)
+
         for positioner_id in list(self.trajectories.keys()):
             self.fps[positioner_id].move_time = self.move_time
 
@@ -465,10 +468,8 @@ class Trajectory(object):
             # Set SYNC line to high.
             await sync.close()
 
-            await asyncio.sleep(0.5)
-
-            # Reset SYNC line.
-            await sync.open()
+            # Schedule reseting of SYNC line
+            asyncio.get_event_loop().call_later(0.5, asyncio.create_task, sync.open())
 
         else:
 
@@ -492,8 +493,16 @@ class Trajectory(object):
         self.start_time = time.time()
 
         try:
-            if self.move_time is None:
-                raise TrajectoryError("move_time not set.", self)
+
+            await asyncio.sleep(1)
+            await self.fps.update_status()
+
+            if self.fps.status & FPSStatus.IDLE:
+                if self.move_time < 1:
+                    log.warning("It's not possible to determine if the FPS moved.")
+                    return
+                else:
+                    raise TrajectoryError("Move failed to start.")
 
             while True:
 
@@ -507,12 +516,7 @@ class Trajectory(object):
 
                 await self.fps.update_status()
 
-                if all(
-                    [
-                        PositionerStatus.DISPLACEMENT_COMPLETED in self.fps[pid].status
-                        for pid in self.trajectories
-                    ]
-                ):
+                if self.fps.status & FPSStatus.IDLE:
                     self.failed = False
                     break
 

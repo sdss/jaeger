@@ -5,6 +5,7 @@
 ### 🚀 New
 
 * [WIP] Code to load robostrategy designs to `targetdb` and create configurations
+* [#153](https://github.com/sdss/jaeger/issues/153) Handling of low temperature now happens in `FPS` instead of in the actor. Added an `FPS.status` attribute with the global status of the system (idle, moving, collided, and temperature status). The actor subscribes to status changes using `FPS.async_status()` and broadcasts them.
 
 
 ## 0.11.0 - October 12, 2021

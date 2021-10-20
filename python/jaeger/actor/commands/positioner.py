@@ -303,7 +303,7 @@ async def status(command, fps, positioner_ids, full):
             ],
         )
 
-    command.info(low_temperature=command.actor.low_temperature.value)
+    command.info(fps_status=f"0x{fps.status.value:X}")
 
     if full:
         await clu.Command("ieb status", parent=command).parse()

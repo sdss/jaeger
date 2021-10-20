@@ -22,11 +22,13 @@ async def test_send_trajectory(vfps):
 
     await vfps.initialise()
 
+    # Use a < 1s trajectory so that it doesn't complain when the first status after
+    # START_TRAJECTORY is already DISPLACEMENT_COMPLETED.
     await vfps.send_trajectory(
         {
             1: {
-                "alpha": [(1, 1), (2, 2)],
-                "beta": [(1, 1), (2, 2)],
+                "alpha": [(1, 0.5), (2, 0.9)],
+                "beta": [(1, 0.5), (2, 0.9)],
             }
         },
         use_sync_line=False,

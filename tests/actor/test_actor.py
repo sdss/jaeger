@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from jaeger.maskbits import LowTemperature
+from jaeger.maskbits import FPSStatus
 
 
 pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
@@ -42,9 +42,9 @@ async def test_info(actor):
     command = await actor.invoke_mock_command("info")
     assert command.status.did_succeed
 
-    data = actor.mock_replies[1:3]
-    assert "version" in data[0]
-    assert "config_file" in data[1]
+    data = actor.mock_replies
+    assert "version" in data[3]
+    assert "config_file" in data[4]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
@@ -52,7 +52,7 @@ async def test_info(actor):
 async def test_low_temperature_cold(mock_rtd2, actor):
 
     await asyncio.sleep(0.1)  # Wait for the first handle_temperature to complete
-    assert actor.low_temperature.value == LowTemperature.COLD.value
+    assert actor.fps.status & FPSStatus.TEMPERATURE_COLD
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
@@ -60,4 +60,4 @@ async def test_low_temperature_cold(mock_rtd2, actor):
 async def test_low_temperature_very_cold(mock_rtd2, actor):
 
     await asyncio.sleep(0.1)
-    assert actor.low_temperature.value == LowTemperature.VERY_COLD.value
+    assert actor.fps.status & FPSStatus.TEMPERATURE_VERY_COLD

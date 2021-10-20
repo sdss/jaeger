@@ -47,6 +47,7 @@ from jaeger.exceptions import (
 )
 from jaeger.ieb import IEB
 from jaeger.interfaces import BusABC
+from jaeger.maskbits import FPSStatus, PositionerStatus
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList
 
@@ -165,6 +166,7 @@ class FPS(BaseFPS):
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
     configuration: Configuration | None = None
+    status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
 
@@ -212,6 +214,9 @@ class FPS(BaseFPS):
             raise ValueError(f"Invalid input value for ieb {self.ieb!r}.")
 
         assert isinstance(self.ieb, IEB) or self.ieb is None
+
+        self.__status_event = asyncio.Event()
+        self.__temperature_task: asyncio.Task | None = None
 
         # Position and status pollers
         self.pollers = PollerList(
@@ -460,11 +465,42 @@ class FPS(BaseFPS):
                 positioner_ids=disable_connected,
             )
 
+        # Start temperature watcher.
+        if self.__temperature_task is not None:
+            self.__temperature_task.cancel()
+        if isinstance(self.ieb, IEB) and not self.ieb.disabled:
+            self.__temperature_task = asyncio.create_task(self._handle_temperature())
+        else:
+            self.set_status(
+                (self.status & ~FPSStatus.TEMPERATURE_NORMAL)
+                | FPSStatus.TEMPERATURE_UNKNOWN
+            )
+
+        # Issue an update status to get the status set.
+        await self.update_status()
+
         # Start the pollers
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
 
         return self
+
+    def set_status(self, status: FPSStatus):
+        """Sets the status of the FPS."""
+
+        if status != self.status:
+            self.status = status
+            if not self.__status_event.is_set():
+                self.__status_event.set()
+
+    async def async_status(self):
+        """Generator that yields FPS status changes."""
+
+        yield self.status
+        while True:
+            await self.__status_event.wait()
+            yield self.status
+            self.__status_event.clear()
 
     async def _get_positioner_bus_map(self):
         """Creates the positioner-to-bus map.
@@ -498,9 +534,7 @@ class FPS(BaseFPS):
     def moving(self):
         """Returns `True` if any of the positioners is moving."""
 
-        return any(
-            [pos.moving for pos in self.values() if pos.status != pos.flags.UNKNOWN]
-        )
+        return self.status & FPSStatus.MOVING
 
     def is_bootloader(self):
         """Returns `True` if any positioner is in bootloader mode."""
@@ -652,6 +686,8 @@ class FPS(BaseFPS):
 
         self._locked = True
 
+        await self.update_status()
+
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
 
@@ -661,7 +697,8 @@ class FPS(BaseFPS):
             if positioner.collision:
                 self._locked = True
                 raise JaegerError(
-                    "Cannot unlock the FPS until all the collisions have been cleared."
+                    "Cannot unlock the FPS until all the "
+                    "collisions have been cleared."
                 )
 
         self._locked = False
@@ -719,6 +756,22 @@ class FPS(BaseFPS):
             update_status_coros.append(self[pid].update_status(status_int))
 
         await asyncio.gather(*update_status_coros)
+
+        # Set the status of the FPS based on positioner information.
+        # First get the current bitmask without the status bit.
+        current = self.status & ~FPSStatus.STATUS_BITS
+
+        pbits = numpy.array([int(p.status) for p in self.values()])
+
+        coll_bits = PositionerStatus.COLLISION_ALPHA | PositionerStatus.COLLISION_BETA
+        if (pbits & coll_bits).any():
+            self.set_status(current | FPSStatus.COLLIDED)
+
+        elif (pbits & PositionerStatus.DISPLACEMENT_COMPLETED).all():
+            self.set_status(current | FPSStatus.IDLE)
+
+        else:
+            self.set_status(current | FPSStatus.MOVING)
 
         return True
 
@@ -979,6 +1032,89 @@ class FPS(BaseFPS):
                 status["ieb"] = await self.ieb.get_status()
 
         return status
+
+    async def _handle_temperature(self):
+        """Handle positioners in low temperature."""
+
+        async def set_rpm(activate):
+            if activate:
+                rpm = config["low_temperature"]["rpm_cold"]
+                log.warning(f"Low temperature mode. Setting RPM={rpm}.")
+            else:
+                rpm = config["low_temperature"]["rpm_normal"]
+                log.warning(f"Disabling low temperature mode. Setting RPM={rpm}.")
+
+            config["positioner"]["motor_speed"] = rpm
+
+        async def set_idle_power(activate):
+            if activate:
+                ht = config["low_temperature"]["holding_torque_very_cold"]
+                log.warning("Very low temperature mode. Setting holding torque.")
+            else:
+                ht = config["low_temperature"]["holding_torque_normal"]
+                log.warning(
+                    "Disabling very low temperature mode. Setting holding torque."
+                )
+            await self.send_command(
+                CommandID.SET_HOLDING_CURRENT,
+                alpha=ht[0],
+                beta=ht[1],
+            )
+
+        sensor = config["low_temperature"]["sensor"]
+        cold = config["low_temperature"]["cold_threshold"]
+        very_cold = config["low_temperature"]["very_cold_threshold"]
+        interval = config["low_temperature"]["interval"]
+
+        while True:
+
+            try:
+                assert isinstance(self.ieb, IEB) and self.ieb.disabled is False
+                device = self.ieb.get_device(sensor)
+                temp = (await device.read())[0]
+
+                # Get the status without the temperature bits.
+                base_status = self.status & ~FPSStatus.TEMPERATURE_BITS
+
+                if temp <= very_cold:
+                    if self.status & FPSStatus.TEMPERATURE_NORMAL:
+                        await set_rpm(True)
+                        await set_idle_power(True)
+                    elif self.status & FPSStatus.TEMPERATURE_COLD:
+                        await set_idle_power(True)
+                    else:
+                        pass
+                    self.set_status(base_status | FPSStatus.TEMPERATURE_VERY_COLD)
+
+                elif temp <= cold:
+                    if self.status & FPSStatus.TEMPERATURE_NORMAL:
+                        await set_rpm(True)
+                    elif self.status & FPSStatus.TEMPERATURE_COLD:
+                        pass
+                    else:
+                        await set_idle_power(False)
+                    self.set_status(base_status | FPSStatus.TEMPERATURE_COLD)
+
+                else:
+                    if self.status & FPSStatus.TEMPERATURE_NORMAL:
+                        pass
+                    elif self.status & FPSStatus.TEMPERATURE_COLD:
+                        await set_rpm(False)
+                    else:
+                        await set_rpm(False)
+                        await set_idle_power(False)
+                    self.set_status(base_status | FPSStatus.TEMPERATURE_NORMAL)
+
+            except BaseException as err:
+                log.info(
+                    f"Cannot read device {sensor!r}. "
+                    f"Low-temperature mode will not be engaged: {err}",
+                )
+                base_status = self.status & ~FPSStatus.TEMPERATURE_BITS
+                self.set_status(base_status | FPSStatus.TEMPERATURE_UNKNOWN)
+                return
+
+            await asyncio.sleep(interval)
 
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
