@@ -58,10 +58,13 @@ class JaegerActor(clu.LegacyActor):
 
         # This is mostly for the miniwoks. If the schema file is not the base
         # one, merge them.
-        jaeger_base = os.path.join(os.path.dirname(__file__), "..")
+        base = os.path.join(os.path.dirname(__file__), "..")
 
-        base_schema = os.path.realpath(os.path.join(jaeger_base, "etc/schema.json"))
-        c_schema = os.path.realpath(os.path.join(jaeger_base, kwargs["schema"]))
+        base_schema = os.path.realpath(os.path.join(base, "etc/schema.json"))
+
+        schema = kwargs.get("schema", None)
+        c_schema = os.path.realpath(os.path.join(base, schema)) if schema else None
+
         kwargs["schema"] = merge_json(base_schema, c_schema, write_temporary_file=True)
 
         # Pass the FPS instance as the second argument to each parser
