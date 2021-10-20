@@ -6,6 +6,15 @@
 # @Filename: conftest.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+# flake8: noqa E402
+
+import sys
+from unittest.mock import MagicMock
+
+
+sys.modules["coordio"] = MagicMock()
+sys.modules["coordio.defaults"] = MagicMock()
+
 import asyncio
 import contextlib
 import os

@@ -14,7 +14,18 @@ import pathlib
 import warnings
 from dataclasses import dataclass
 
-from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import numpy
 
@@ -38,6 +49,10 @@ from jaeger.ieb import IEB
 from jaeger.interfaces import BusABC
 from jaeger.positioner import Positioner
 from jaeger.utils import Poller, PollerList
+
+
+if TYPE_CHECKING:
+    from jaeger.design import Configuration
 
 
 __all__ = ["BaseFPS", "FPS"]
@@ -149,6 +164,7 @@ class FPS(BaseFPS):
 
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
+    configuration: Configuration | None = None
 
     def __post_init__(self):
 

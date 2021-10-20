@@ -6,10 +6,13 @@
 # @Filename: actor.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import os
+from tempfile import NamedTemporaryFile
 
 import clu
 import clu.protocol
@@ -24,6 +27,28 @@ from jaeger.maskbits import LowTemperature
 __all__ = ["JaegerActor"]
 
 
+def merge_json(base: str, custom: str | None, write_temporary_file=False):
+    """Merges two JSON files. Optional writes the result as a temporary file."""
+
+    if custom is None:
+        return base
+
+    if os.path.samefile(base, custom):
+        return base
+    else:
+        base_json = json.loads(open(base, "r").read())
+        custom_json = json.loads(open(custom, "r").read())
+        base_json["properties"].update(custom_json["properties"])
+
+        if write_temporary_file is False:
+            return base_json
+        else:
+            tmpfile = NamedTemporaryFile(delete=False, mode="w+")
+            json.dump(base_json, tmpfile)
+            tmpfile.flush()
+            return tmpfile.name
+
+
 class JaegerActor(clu.LegacyActor):
     """The jaeger SDSS-style actor."""
 
@@ -31,12 +56,16 @@ class JaegerActor(clu.LegacyActor):
 
         self.fps = fps
 
-        jaeger_base = os.path.join(os.path.dirname(__file__), "..")
-        if "schema" not in kwargs:
-            kwargs["schema"] = os.path.join(jaeger_base, "etc/schema.json")
-        else:
-            if not os.path.isabs(kwargs["schema"]):
-                kwargs["schema"] = os.path.join(jaeger_base, kwargs["schema"])
+        # This is mostly for the miniwoks. If the schema file is not the base
+        # one, merge them.
+        base = os.path.join(os.path.dirname(__file__), "..")
+
+        base_schema = os.path.realpath(os.path.join(base, "etc/schema.json"))
+
+        schema = kwargs.get("schema", None)
+        c_schema = os.path.realpath(os.path.join(base, schema)) if schema else None
+
+        kwargs["schema"] = merge_json(base_schema, c_schema, write_temporary_file=True)
 
         # Pass the FPS instance as the second argument to each parser
         # command (the first argument is always the actor command).

@@ -63,8 +63,8 @@
             "type": "array",
             "description": "Integration spheres LED power",
             "items": [
-                { "title": "LED1", "type": "number", "multipleOf": 0.1 },
-                { "title": "LED2", "type": "number", "multipleOf": 0.1 }
+                { "title": "LED1", "type": "number" },
+                { "title": "LED2", "type": "number" }
             ]
         },
         "power_sextant": {
@@ -147,13 +147,13 @@
         "move_time": { "type": "number" },
         "locked": { "type": "boolean" },
         "n_positioners": { "type": "integer" },
-        "status": {
+        "positioner_status": {
             "type": "array",
             "items": [
                 { "title": "positioner_id", "type": "integer" },
                 { "title": "alpha", "type": "number" },
                 { "title": "beta", "type": "number" },
-                { "title": "bits", "type": "integer" },
+                { "title": "bits", "type": "string" },
                 { "title": "initialised", "type": "boolean" },
                 { "title": "bootloader", "type": "boolean" },
                 { "title": "firmware", "type": "string" },
@@ -172,6 +172,18 @@
                 { "title": "uid", "type": "integer" },
                 { "title": "response_code", "type": "integer" },
                 { "title": "data", "type": "string" }
+            ]
+        },
+        "configuration_loaded": {
+            "type": "array",
+            "items": [
+                { "title": "configuration_id", "type": "integer" },
+                { "title": "design_id", "type": "integer" },
+                { "title": "ra_boresight", "type": "number" },
+                { "title": "dec_boresight", "type": "number" },
+                { "title": "position_angle", "type": "number" },
+                { "title": "alt_boresight", "type": "number" },
+                { "title": "az_boresight", "type": "number" }
             ]
         }
     },
