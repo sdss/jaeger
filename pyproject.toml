@@ -81,7 +81,7 @@ sections = ["FUTURE", "STDLIB", "TYPING", "THIRDPARTY", "SDSS", "FIRSTPARTY", "L
 default_section = "THIRDPARTY"
 known_first_party = "jaeger"
 known_typing = ["typing"]
-known_sdss = ["sdsstools", "clu", "sdssdb", "drift"]
+known_sdss = ["sdsstools", "clu", "sdssdb", "drift", "coordio", "kaiju"]
 lines_after_imports = 2
 
 [tool.pytest.ini_options]
