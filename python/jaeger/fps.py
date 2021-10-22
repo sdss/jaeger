@@ -706,6 +706,12 @@ class FPS(BaseFPS):
 
         return True
 
+    def get_positions(self) -> numpy.ndarray:
+        """Returns the alpha and beta positions as an array."""
+
+        data = [(p.positioner_id, p.alpha, p.beta) for p in self.positioners.values()]
+        return numpy.array(data)
+
     async def update_status(
         self,
         positioner_ids: Optional[int | List[int]] = None,
