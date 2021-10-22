@@ -35,8 +35,7 @@ from coordio.defaults import (
     positionerTable,
     wokCoords,
 )
-from pydl.pydlutils.yanny import write_ndarray_to_yanny
-
+from kaiju.robotGrid import RobotGridCalib
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import config, log
@@ -162,6 +161,13 @@ class Configuration:
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
+        self.robot_grid = RobotGridCalib()
+
+        # Set lattice (folded) positions.
+        lattice_position = config["fps"]["lattice_position"]
+        for robot in self.robot_grid.robotDict.values():
+            robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
+
     def __repr__(self):
         return (
             f"<Configuration (configuration_id={self.configuration_id}"
@@ -195,60 +201,27 @@ class Configuration:
             .exists()
         )
 
-    def get_trajectory(self, current_positions: dict[int, tuple[float, float]]):
-        """Returns a trajectory dictionary based on the current position."""
+    def get_trajectory(self):
+        """Returns a trajectory dictionary from the folded position."""
 
-        # TODO: not calling kaiju yet because there seem to be several sets
-        # of calibration files. For now just using a variation of goto.
+        # TODO: this needs more checks and warnings when a positioner doesn't
+        # get valid coordinates or when robots are disabled.
 
-        default_speed = config["positioner"]["motor_speed"]
-        speed = (default_speed, default_speed)
+        lattice_position = config["fps"]["lattice_position"]
 
-        trajectories = {}
-        for pid in current_positions:
-            current_alpha, current_beta = current_positions[pid]
-
-            trajectories[pid] = {
-                "alpha": [(current_alpha, 0.1)],
-                "beta": [(current_beta, 0.1)],
-            }
-
-            if pid in self.assignment_data.positioner_ids:
-                pindex = self.assignment_data.positioner_to_index[pid]
-
-                if pindex not in self.assignment_data.valid_index:
-                    warnings.warn(
-                        f"Coordinates for positioner {pid} "
-                        "are not valid. Not moving it.",
-                        JaegerUserWarning,
-                    )
-                    trajectories[pid]["alpha"].append((current_alpha, 0.2))
-                    trajectories[pid]["beta"].append((current_beta, 0.2))
-                    continue
-
-                alpha_end, beta_end = self.assignment_data.positioner[pindex]
-
-                alpha_delta = abs(alpha_end - current_alpha)
-                beta_delta = abs(beta_end - current_beta)
-
-                time_end = [
-                    get_goto_move_time(alpha_delta, speed=speed[0]),
-                    get_goto_move_time(beta_delta, speed=speed[1]),
-                ]
-
-                trajectories[pid]["alpha"].append((alpha_end, time_end[0] + 0.1))
-                trajectories[pid]["beta"].append((beta_end, time_end[1] + 0.1))
-
+        for robot in self.robot_grid.robotDict.values():
+            if robot.id in self.assignment_data.positioner_ids:
+                index = self.assignment_data.positioner_to_index[robot.id]
+                if index not in self.assignment_data.valid_index:
+                    robot.setAlphaBeta(lattice_position[0], lattice_position[1])
+                else:
+                    p_coords = self.assignment_data.positioner[index]
+                    robot.setAlphaBeta(p_coords[0], p_coords[1])
             else:
-                warnings.warn(
-                    f"Positioner {pid} is not assigned in this design. "
-                    "Not moving it.",
-                    JaegerUserWarning,
-                )
-                trajectories[pid]["alpha"].append((current_alpha, 0.2))
-                trajectories[pid]["beta"].append((current_beta, 0.2))
+                robot.setAlphaBeta(lattice_position[0], lattice_position[1])
 
-        return trajectories
+        forward = self.robot_grid.getPathPair()[0]
+        return forward
 
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
