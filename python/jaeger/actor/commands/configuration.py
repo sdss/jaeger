@@ -14,8 +14,10 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 import click
+import numpy
 
 from jaeger.design import Design
+from jaeger.exceptions import TrajectoryError
 
 from . import jaeger_parser
 
@@ -102,3 +104,37 @@ async def load(
         text=f"Configuration {fps.configuration.configuration_id} loaded "
         "and written to database."
     )
+
+
+@configuration.command()
+async def execute(command: Command[JaegerActor], fps: FPS):
+    """Executes a configuration trajectory."""
+
+    if fps.configuration is None:
+        return command.fail(error="A configuration must first be loaded.")
+
+    # Check that all positioners are folded.
+    if not numpy.allclose(fps.get_positions()[:, 1:] - [0, 180], 0, atol=0.1):
+        return command.fail(error="Not all the positioners are folded.")
+
+    command.info(text="Calculating trajectory.")
+    trajectory = await asyncio.get_event_loop().run_in_executor(
+        None,
+        fps.configuration.get_trajectory,
+    )
+
+    traj_pids = trajectory.keys()
+    for pid in traj_pids:
+        if pid not in fps:
+            return command.fail(
+                error=f"Trajectory contains positioner_id={pid} which is not connected."
+            )
+
+    command.info(text="Sending and executing trajectory.")
+
+    try:
+        await fps.send_trajectory(trajectory)
+    except TrajectoryError as err:
+        command.fail(error=f"Trajectory failed with error: {err}")
+
+    command.finish(text="All positioners reached their new positions.")
