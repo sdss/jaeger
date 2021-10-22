@@ -18,6 +18,8 @@ import pandas
 import peewee
 from astropy.table import Table
 from astropy.time import Time
+from pydl.pydlutils.yanny import write_ndarray_to_yanny
+
 from coordio import (
     ICRS,
     Field,
@@ -40,10 +42,34 @@ from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
-from jaeger.utils import get_goto_move_time
+
+
+__all__ = ["Design", "Configuration", "AssignmentData", "unwind"]
 
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
+
+
+def unwind(
+    configuration: Configuration | None,
+    current_positions: dict[int, tuple[float, float]],
+):
+    """Folds all the robots to the lattice position."""
+
+    if configuration is not None:
+        robot_grid = configuration.robot_grid
+    else:
+        robot_grid = RobotGridCalib()
+        lattice_position = config["fps"]["lattice_position"]
+        for robot in robot_grid.robotDict.values():
+            robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
+
+    for robot in robot_grid.robotDict.values():
+        robot_position = current_positions[robot.id]
+        robot.setAlphaBeta(robot_position[0], robot_position[1])
+
+    _, reverse = robot_grid.getPathPair()
+    return reverse
 
 
 def get_fibermap_table() -> tuple[Table, dict]:
