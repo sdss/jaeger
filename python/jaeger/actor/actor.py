@@ -19,6 +19,7 @@ import clu.protocol
 from clu.tools import ActorHandler
 
 from jaeger import FPS, __version__, log
+from jaeger.exceptions import JaegerUserWarning
 
 
 __all__ = ["JaegerActor"]
@@ -72,10 +73,15 @@ class JaegerActor(clu.LegacyActor):
 
         self.version = __version__
 
-        # Add ActorHandler to log
-        self.actor_handler = ActorHandler(self, code_mapping={logging.INFO: "d"})
+        # Add ActorHandler to log and to the warnings logger.
+        self.actor_handler = ActorHandler(
+            self,
+            level=logging.WARNING,
+            filter_warnings=[JaegerUserWarning],
+        )
         log.addHandler(self.actor_handler)
-        self.actor_handler.setLevel(logging.INFO)
+        if log.warnings_logger:
+            log.warnings_logger.addHandler(self.actor_handler)
 
         self.__status_watcher_task = asyncio.create_task(self._status_watcher())
 
