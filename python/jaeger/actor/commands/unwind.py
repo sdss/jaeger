@@ -9,8 +9,11 @@
 from __future__ import annotations
 
 import asyncio
+from functools import partial
 
 from typing import TYPE_CHECKING
+
+import click
 
 from jaeger.design import unwind as unwind_func
 from jaeger.exceptions import TrajectoryError
@@ -29,18 +32,39 @@ __all__ = ["unwind"]
 
 
 @jaeger_parser.command()
-async def unwind(command: Command[JaegerActor], fps: FPS):
+@click.option("--connected", is_flag=True, help="Unwind only connected positioners.")
+async def unwind(
+    command: Command[JaegerActor],
+    fps: FPS,
+    connected: bool = False,
+):
     """Sends the FPS to folded."""
 
     command.debug(text="Calculating unwind trajectory.")
 
-    current_positions = {p.id: (p.alpha, p.beta) for p in fps.positioners.values()}
-    trajectory = await asyncio.get_event_loop().run_in_executor(
-        None,
-        unwind_func,
-        fps.configuration,
-        current_positions,
-    )
+    positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
+
+    try:
+        func = partial(
+            unwind_func,
+            fps.configuration,
+            positions,
+            only_connected=connected,
+        )
+        trajectory = await asyncio.get_event_loop().run_in_executor(None, func)
+    except ValueError as err:
+        return command.fail(error=f"Failed calculating trajectory: {err}")
+
+    if len(set(trajectory.keys()) - set(positions.keys())) > 0:
+        # Some expected positioners are not connected.
+        if connected:
+            command.warning(text="Unwinding only connected positioners!")
+            trajectory = {k: trajectory[k] for k in trajectory if k in positions}
+        else:
+            return command.fail(
+                error="The unwind trajectory contains more positioners than those "
+                "connected. You can use --connected if you know what you are doing."
+            )
 
     command.info("Executing unwind trajectory.")
 

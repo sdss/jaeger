@@ -53,6 +53,7 @@ PositionerType = Union[PositionerApogee, PositionerBoss]
 def unwind(
     configuration: Configuration | None,
     current_positions: dict[int, tuple[float, float]],
+    only_connected: bool = False,
 ):
     """Folds all the robots to the lattice position."""
 
@@ -60,13 +61,24 @@ def unwind(
         robot_grid = configuration.robot_grid
     else:
         robot_grid = RobotGridCalib()
-        lattice_position = config["fps"]["lattice_position"]
+        lattice_position = config["positioner"]["lattice_position"]
         for robot in robot_grid.robotDict.values():
             robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
 
     for robot in robot_grid.robotDict.values():
+        if robot.id not in current_positions:
+            if only_connected:
+                continue
+            else:
+                raise ValueError(f"Positioner {robot.id} is not connected.")
+
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
+
+    layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
+    if len(set(current_positions.keys()) - set(layout_pids)) > 0:
+        # Some connected positioners are not in the layout.
+        raise ValueError("Some connected positioners are not in the grid layout.")
 
     _, reverse = robot_grid.getPathPair()
     return reverse
@@ -190,7 +202,7 @@ class Configuration:
         self.robot_grid = RobotGridCalib()
 
         # Set lattice (folded) positions.
-        lattice_position = config["fps"]["lattice_position"]
+        lattice_position = config["positioner"]["lattice_position"]
         for robot in self.robot_grid.robotDict.values():
             robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
 
@@ -233,7 +245,7 @@ class Configuration:
         # TODO: this needs more checks and warnings when a positioner doesn't
         # get valid coordinates or when robots are disabled.
 
-        lattice_position = config["fps"]["lattice_position"]
+        lattice_position = config["positioner"]["lattice_position"]
 
         for robot in self.robot_grid.robotDict.values():
             if robot.id in self.assignment_data.positioner_ids:
