@@ -1382,7 +1382,7 @@ dev = ["flake8 (>=3.7.9)", "doc8 (>=0.8.0)", "pytest (>=5.2.2)", "pytest-asyncio
 
 [package.source]
 type = "git"
-url = "ssh://git@github.com/sdss/coordio.git"
+url = "https://github.com/sdss/coordio.git"
 reference = "albireox/jaeger-integration"
 resolved_reference = "2f3be745544dac61566fcc4d6482e78a79788c40"
 
@@ -1414,7 +1414,7 @@ matplotlib = ">=2.2.3"
 numpy = ">=1.14.3"
 psutil = ">=5.8.0"
 pybind11 = ">=2.2.4"
-sdss-coordio = {git = "ssh://git@github.com/sdss/coordio.git", rev = "albireox/jaeger-integration"}
+sdss-coordio = {git = "https://github.com/sdss/coordio.git", rev = "albireox/jaeger-integration"}
 seaborn = "*"
 shapely = ">=1.6.4.post1"
 
@@ -1422,7 +1422,7 @@ shapely = ">=1.6.4.post1"
 type = "git"
 url = "https://github.com/csayres/kaiju"
 reference = "albireox/kaiju-vs-jaeger"
-resolved_reference = "c2ef7ca8834ed6918d42b28212d824ecb908182c"
+resolved_reference = "b6a87ba48cab7c41ee9463568c6eb4153c584148"
 
 [[package]]
 name = "sdssdb"
