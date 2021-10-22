@@ -58,6 +58,7 @@ positioner:
     uid_bits: 6
     trajectory_data_n_points: 3
     firmware_messages_per_positioner: 8
+    lattice_position: [0., 180.]
 
 files:
     log_dir: /data/logs/jaeger
