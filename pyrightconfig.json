@@ -3,5 +3,5 @@
     "typeCheckingMode": "basic",
     "exclude": ["**/__pycache_"],
     "ignore": [],
-    "useLibraryCodeForTypes": false
+    "useLibraryCodeForTypes": true
 }
