@@ -75,8 +75,8 @@ low_temperature:
     cold_threshold: 0
     very_cold_threshold: -10
     interval: 60
-    rpm_normal: 5000
-    rpm_cold: 3000
+    rpm_normal: 2000
+    rpm_cold: 1000
     holding_torque_normal: [0, 30]
     holding_torque_very_cold: [45, 30]
 
