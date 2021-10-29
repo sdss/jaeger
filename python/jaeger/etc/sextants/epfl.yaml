@@ -1,0 +1,67 @@
+address: 10.25.1.128
+port: 502
+modules:
+    ANALOG_1:
+        model: "750-497"
+        mode: input_register
+        channels: 8
+        description: "E+E temperature and humidity sensors"
+        devices:
+            "RH1":
+                address: 40001
+                category: humidity
+                adaptor: rh_dwyer
+                units: percent
+            "T1":
+                address: 40002
+                category: temperature
+                adaptor: t_dwyer
+                units: degC
+    ANALOG2:
+        model: 750-450
+        mode: input_register
+        channels: 4
+        description: Pt RTD sensors
+        devices:
+            RTD1:
+                address: 40011
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description: Inside the controller box
+            RTD2:
+                address: 40012
+                category: temperature
+                adaptor: rtd
+                units: degC
+                description:
+    DO:
+        model: "750-530"
+        mode: holding_register
+        channels: 16
+        description: "Power relays"
+        devices:
+            PS1:
+                address: 40513
+                type: relay
+                channel: 0
+                category: power_sextant
+                relay_type: NC
+            PS5V:
+                address: 40513
+                type: relay
+                channel: 1
+                category: power_5v
+                relay_type: NC
+            CM1:
+                address: 40513
+                type: relay
+                channel: 2
+                category: power_can
+                relay_type: NC
+            SYNC:
+                address: 40513
+                type: relay
+                channel: 3
+                category: power_sync
+                relay_type: NO
