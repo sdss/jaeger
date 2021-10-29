@@ -298,7 +298,11 @@ class FPS(BaseFPS):
 
         return positioner
 
-    async def initialise(self: T, start_pollers: bool | None = None) -> T:
+    async def initialise(
+        self: T,
+        start_pollers: bool | None = None,
+        enable_low_temperature=True,
+    ) -> T:
         """Initialises all positioners with status and firmware version.
 
         Parameters
@@ -468,7 +472,11 @@ class FPS(BaseFPS):
         # Start temperature watcher.
         if self.__temperature_task is not None:
             self.__temperature_task.cancel()
-        if isinstance(self.ieb, IEB) and not self.ieb.disabled:
+        if (
+            isinstance(self.ieb, IEB)
+            and not self.ieb.disabled
+            and enable_low_temperature
+        ):
             self.__temperature_task = asyncio.create_task(self._handle_temperature())
         else:
             self.set_status(

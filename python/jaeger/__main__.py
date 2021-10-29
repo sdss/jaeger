@@ -63,13 +63,21 @@ def cli_coro(f):
 class FPSWrapper(object):
     """A helper to store FPS initialisation parameters."""
 
-    def __init__(self, profile, ieb=None, initialise=True, npositioners=10):
+    def __init__(
+        self,
+        profile,
+        ieb=None,
+        initialise=True,
+        npositioners=10,
+        enable_low_temperature=True,
+    ):
 
         self.profile = profile
         if self.profile in ["test", "virtual"]:
             self.profile = "virtual"
 
         self.ieb = ieb
+        self.enable_low_temperature = enable_low_temperature
         self.initialise = initialise
 
         self.vpositioners = []
@@ -93,7 +101,14 @@ class FPSWrapper(object):
         __FPS__ = self.fps
 
         if self.initialise:
-            await self.fps.initialise()
+            await self.fps.initialise(
+                enable_low_temperature=self.enable_low_temperature
+            )
+            if self.enable_low_temperature is False:
+                warnings.warn(
+                    "Disabling low temperature handling for sextant.",
+                    JaegerUserWarning,
+                )
 
         return self.fps
 
@@ -206,6 +221,11 @@ def jaeger(
         config["files"]["ieb_config"] = sextant_file
         log.debug(f"Using internal IEB sextant onfiguration file {sextant_file}.")
 
+    if sextant or "sextants/" in config["files"]["ieb_config"]:
+        enable_low_temperature = False
+    else:
+        enable_low_temperature = True
+
     if virtual is True:
         profile = "virtual"
 
@@ -213,6 +233,7 @@ def jaeger(
         profile,
         ieb=ieb,
         npositioners=npositioners,
+        enable_low_temperature=enable_low_temperature,
     )
 
 
