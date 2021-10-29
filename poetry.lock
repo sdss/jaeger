@@ -1420,7 +1420,7 @@ shapely = ">=1.6.4.post1"
 type = "git"
 url = "https://github.com/csayres/kaiju"
 reference = "master"
-resolved_reference = "1e2b1e7fcb5d5a268bd022b40465dbd4e569db62"
+resolved_reference = "8ddf2756e6107f126cfd8f905aad05a908cd61c4"
 
 [[package]]
 name = "sdssdb"
