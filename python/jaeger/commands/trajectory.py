@@ -11,9 +11,9 @@ from __future__ import annotations
 import asyncio
 import pathlib
 import time
+import warnings
 
 from typing import TYPE_CHECKING, Dict, List, Tuple, cast
-import warnings
 
 import numpy
 
