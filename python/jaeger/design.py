@@ -37,17 +37,46 @@ from coordio.defaults import (
     positionerTable,
     wokCoords,
 )
-from kaiju.robotGrid import RobotGridCalib
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 
 
-__all__ = ["Design", "Configuration", "AssignmentData", "unwind_or_explode"]
+__all__ = [
+    "Design",
+    "Configuration",
+    "AssignmentData",
+    "unwind_or_explode",
+    "get_robot_grid",
+]
 
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
+
+
+def get_robot_grid(seed: int = 0):
+    """Returns a new robot grid with the destination set to the lattice position."""
+
+    from kaiju.robotGrid import RobotGridCalib
+
+    kaiju_config = config["kaiju"]
+    ang_step = kaiju_config["ang_step"]
+    collision_buffer = kaiju_config["collision_buffer"]
+    alpha0, beta0 = kaiju_config["lattice_position"]
+    epsilon = ang_step * 2
+
+    robot_grid = RobotGridCalib(
+        stepSize=ang_step,
+        collisionBuffer=collision_buffer,
+        epsilon=epsilon,
+        seed=seed,
+    )
+
+    for robot in robot_grid.robotDict.values():
+        robot.setDestinationAlphaBeta(alpha0, beta0)
+
+    return robot_grid
 
 
 def unwind_or_explode(
@@ -58,20 +87,7 @@ def unwind_or_explode(
 ):
     """Folds all the robots to the lattice position."""
 
-    kaiju_config = config["kaiju"]
-    ang_step = kaiju_config["ang_step"]
-    collision_buffer = kaiju_config["collision_buffer"]
-    lattice_position = kaiju_config["lattice_position"]
-    epsilon = ang_step * 2
-
-    robot_grid = RobotGridCalib(
-        stepSize=ang_step,
-        collisionBuffer=collision_buffer,
-        epsilon=epsilon,
-    )
-
-    for robot in robot_grid.robotDict.values():
-        robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
+    robot_grid = get_robot_grid()
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
@@ -219,22 +235,7 @@ class Configuration:
 
     def _initialise_grid(self):
 
-        kaiju_config = config["kaiju"]
-        ang_step = kaiju_config["ang_step"]
-        collision_buffer = kaiju_config["collision_buffer"]
-        lattice_position = kaiju_config["lattice_position"]
-        epsilon = ang_step * 2
-
-        self.robot_grid = RobotGridCalib(
-            stepSize=ang_step,
-            collisionBuffer=collision_buffer,
-            epsilon=epsilon,
-        )
-
-        # Set lattice (folded) positions.
-        lattice_position = config["positioner"]["lattice_position"]
-        for robot in self.robot_grid.robotDict.values():
-            robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
+        self.robot_grid = get_robot_grid()
 
         return self.robot_grid
 
