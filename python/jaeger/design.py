@@ -57,13 +57,20 @@ def unwind(
 ):
     """Folds all the robots to the lattice position."""
 
-    if configuration is not None:
-        robot_grid = configuration.robot_grid
-    else:
-        robot_grid = RobotGridCalib()
-        lattice_position = config["positioner"]["lattice_position"]
-        for robot in robot_grid.robotDict.values():
-            robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
+    kaiju_config = config["kaiju"]
+    ang_step = kaiju_config["ang_step"]
+    collision_buffer = kaiju_config["collision_buffer"]
+    lattice_position = kaiju_config["lattice_position"]
+    epsilon = ang_step * 2
+
+    robot_grid = RobotGridCalib(
+        stepSize=ang_step,
+        collisionBuffer=collision_buffer,
+        epsilon=epsilon,
+    )
+
+    for robot in robot_grid.robotDict.values():
+        robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
@@ -199,7 +206,17 @@ class Configuration:
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-        self.robot_grid = RobotGridCalib()
+        kaiju_config = config["kaiju"]
+        ang_step = kaiju_config["ang_step"]
+        collision_buffer = kaiju_config["collision_buffer"]
+        lattice_position = kaiju_config["lattice_position"]
+        epsilon = ang_step * 2
+
+        self.robot_grid = RobotGridCalib(
+            stepSize=ang_step,
+            collisionBuffer=collision_buffer,
+            epsilon=epsilon,
+        )
 
         # Set lattice (folded) positions.
         lattice_position = config["positioner"]["lattice_position"]
