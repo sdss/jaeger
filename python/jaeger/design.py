@@ -44,16 +44,17 @@ from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 
 
-__all__ = ["Design", "Configuration", "AssignmentData", "unwind"]
+__all__ = ["Design", "Configuration", "AssignmentData", "unwind_or_explode"]
 
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
 
 
-def unwind(
-    configuration: Configuration | None,
+def unwind_or_explode(
     current_positions: dict[int, tuple[float, float]],
     only_connected: bool = False,
+    explode=False,
+    explode_deg=20.,
 ):
     """Folds all the robots to the lattice position."""
 
@@ -82,12 +83,20 @@ def unwind(
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
 
+    if explode is False:
+        robot_grid.pathGenGreedy()
+    else:
+        robot_grid.pathGenEscape(explode_deg)
+
     layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
     if len(set(current_positions.keys()) - set(layout_pids)) > 0:
         # Some connected positioners are not in the layout.
         raise ValueError("Some connected positioners are not in the grid layout.")
 
-    _, reverse = robot_grid.getPathPair()
+    speed = config['positioner']['motor_speed'] / config['positioner']['gear_ratio']
+
+    _, reverse = robot_grid.getPathPair(speed=speed)
+
     return reverse
 
 
@@ -262,7 +271,7 @@ class Configuration:
         # TODO: this needs more checks and warnings when a positioner doesn't
         # get valid coordinates or when robots are disabled.
 
-        lattice_position = config["positioner"]["lattice_position"]
+        lattice_position = config["kaiju"]["lattice_position"]
 
         for robot in self.robot_grid.robotDict.values():
             if robot.id in self.assignment_data.positioner_ids:
