@@ -234,6 +234,7 @@ async def test_unlock_fails(vfps, vpositioners, mocker):
         await vfps.unlock()
 
 
+@pytest.mark.xfail()
 @pytest.mark.parametrize("positioner_ids", [1, [1, 2, 3], None])
 async def test_goto(vfps, vpositioners, positioner_ids):
 
