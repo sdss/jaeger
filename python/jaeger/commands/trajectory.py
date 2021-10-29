@@ -13,6 +13,7 @@ import pathlib
 import time
 
 from typing import TYPE_CHECKING, Dict, List, Tuple, cast
+import warnings
 
 import numpy
 
@@ -21,9 +22,9 @@ from sdsstools import read_yaml_file
 
 from jaeger import config, log
 from jaeger.commands import Command, CommandID
-from jaeger.exceptions import FPSLockedError, TrajectoryError
+from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
 from jaeger.ieb import IEB
-from jaeger.maskbits import FPSStatus, ResponseCode
+from jaeger.maskbits import FPSStatus, PositionerStatus, ResponseCode
 from jaeger.utils import int_to_bytes
 
 
@@ -504,6 +505,16 @@ class Trajectory(object):
                 else:
                     raise TrajectoryError("Move failed to start.")
 
+            statuses = numpy.array([p.status for p in self.fps.positioners.values()])
+            not_moving = statuses & PositionerStatus.DISPLACEMENT_COMPLETED
+            if not_moving.any():
+                not_moving_pids = numpy.array(list(self.fps.positioners))[not_moving]
+                # Should this be an error?
+                warnings.warn(
+                    f"Some positioners appear to not be moving: {not_moving_pids}.",
+                    JaegerUserWarning,
+                )
+
             while True:
 
                 await asyncio.sleep(1)
@@ -520,15 +531,36 @@ class Trajectory(object):
                     self.failed = False
                     break
 
-            elapsed = time.time() - self.start_time
-            if elapsed > (self.move_time + 3):
+                elapsed = time.time() - self.start_time
+                if elapsed > (self.move_time + 3):
+                    raise TrajectoryError(
+                        "Some positioners did not complete the move.",
+                        self,
+                    )
+
+            # The FPS says they have all stopped moving but check that they are
+            # actually at their positions.
+            await self.fps.update_position()
+            failed_reach = False
+            for pid in self.trajectories:
+                alpha = self.trajectories[pid]["alpha"][-1][0]
+                beta = self.trajectories[pid]["beta"][-1][0]
+                if not numpy.allclose(self.fps[pid].position, [alpha, beta], atol=0.1):
+                    warnings.warn(
+                        f"Positioner {pid} may not have reached its position.",
+                        JaegerUserWarning,
+                    )
+                    failed_reach = True
+
+            if failed_reach:
                 raise TrajectoryError(
-                    "Some positioners did not complete the move.",
+                    "Some positioners did not reach their positioners",
                     self,
                 )
 
         except BaseException:
             self.failed = True
+            await self.fps.stop_trajectory()
             raise
 
         finally:
