@@ -54,7 +54,7 @@ def unwind_or_explode(
     current_positions: dict[int, tuple[float, float]],
     only_connected: bool = False,
     explode=False,
-    explode_deg=20.,
+    explode_deg=20.0,
 ):
     """Folds all the robots to the lattice position."""
 
@@ -93,7 +93,7 @@ def unwind_or_explode(
         # Some connected positioners are not in the layout.
         raise ValueError("Some connected positioners are not in the grid layout.")
 
-    speed = config['positioner']['motor_speed'] / config['positioner']['gear_ratio']
+    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
 
     _, reverse = robot_grid.getPathPair(speed=speed)
 
