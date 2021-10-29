@@ -215,6 +215,10 @@ class Configuration:
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
+        self.robot_grid = self._initialise_grid()
+
+    def _initialise_grid(self):
+
         kaiju_config = config["kaiju"]
         ang_step = kaiju_config["ang_step"]
         collision_buffer = kaiju_config["collision_buffer"]
@@ -231,6 +235,8 @@ class Configuration:
         lattice_position = config["positioner"]["lattice_position"]
         for robot in self.robot_grid.robotDict.values():
             robot.setDestinationAlphaBeta(lattice_position[0], lattice_position[1])
+
+        return self.robot_grid
 
     def __repr__(self):
         return (
@@ -271,6 +277,9 @@ class Configuration:
         # TODO: this needs more checks and warnings when a positioner doesn't
         # get valid coordinates or when robots are disabled.
 
+        # Just to be sure, reinitialise the grid.
+        self._initialise_grid()
+
         lattice_position = config["kaiju"]["lattice_position"]
 
         for robot in self.robot_grid.robotDict.values():
@@ -284,7 +293,12 @@ class Configuration:
             else:
                 robot.setAlphaBeta(lattice_position[0], lattice_position[1])
 
-        forward = self.robot_grid.getPathPair()[0]
+        self.robot_grid.pathGenGreedy()
+
+        speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
+
+        forward = self.robot_grid.getPathPair(speed=speed)[0]
+
         return forward
 
     def write_to_database(self, replace=False):
