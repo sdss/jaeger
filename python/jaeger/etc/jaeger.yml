@@ -82,6 +82,7 @@ low_temperature:
 
 safe_mode:
     min_beta: 160
+    max_beta: 220
 
 debug: false
 
