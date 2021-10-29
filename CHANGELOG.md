@@ -4,8 +4,13 @@
 
 ### 🚀 New
 
-* Code to load robostrategy designs to `targetdb` and create configurations. Added acto commands to use `kaiju` to calculate and send a valid trajectory and to unwind the array.
+* Code to load robostrategy designs to `targetdb` and create configurations. Added actor commands to use `kaiju` to calculate and send a valid trajectory and to unwind, explode, and send a random configuration to the array.
 * [#153](https://github.com/sdss/jaeger/issues/153) Handling of low temperature now happens in `FPS` instead of in the actor. Added an `FPS.status` attribute with the global status of the system (idle, moving, collided, and temperature status). The actor subscribes to status changes using `FPS.async_status()` and broadcasts them.
+
+
+### ✨ Improved
+
+* Added additional checks to confirm that a trajectory starts correctly and succeeds. After one second, the code checks that the FPS is moving and that `DISPLACEMENT_COMPLETED` is not present on any positioner status. At the end of the trajectory a check confirms that all the positioners are within 0.1 degrees of their destinations.
 
 
 ## 0.11.0 - October 12, 2021
