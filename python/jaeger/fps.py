@@ -761,6 +761,9 @@ class FPS(BaseFPS):
             log.warning(f"{CommandID.GET_STATUS.name!r} failed during update status.")
             return False
 
+        if len(command.replies) == 0:
+            return True
+
         update_status_coros = []
         for pid, status_int in command.get_positioner_status().items():  # type: ignore
 
