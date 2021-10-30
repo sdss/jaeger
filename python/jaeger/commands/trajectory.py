@@ -507,8 +507,8 @@ class Trajectory(object):
 
             statuses = numpy.array([p.status for p in self.fps.positioners.values()])
             not_moving = numpy.where(statuses & PositionerStatus.DISPLACEMENT_COMPLETED)
-            if not_moving.any():
-                not_moving_pids = numpy.array(list(self.fps.positioners))[not_moving]
+            if not_moving[0].any():
+                not_moving_pids = numpy.array(list(self.fps.positioners))[not_moving[0]]
                 # Should this be an error?
                 warnings.warn(
                     f"Some positioners do not appear to be moving: {not_moving_pids}.",
