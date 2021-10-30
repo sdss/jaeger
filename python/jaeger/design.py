@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import warnings
 
-from typing import Optional, Union, cast
+from typing import TYPE_CHECKING, Optional, Union, cast
 
 import numpy
 import pandas
@@ -43,6 +43,10 @@ from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 
 
+if TYPE_CHECKING:
+    from kaiju import RobotGridCalib
+
+
 __all__ = [
     "Design",
     "Configuration",
@@ -53,6 +57,10 @@ __all__ = [
 
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
+
+
+def warn(message):
+    warnings.warn(message, JaegerUserWarning)
 
 
 def get_robot_grid(seed: int = 0):
@@ -79,6 +87,37 @@ def get_robot_grid(seed: int = 0):
     return robot_grid
 
 
+def decollide_grid(robot_grid: RobotGridCalib):
+    """Decollides a potentially collided grid. Raises on fail."""
+
+    def get_collided():
+        collided = [rid for rid in robot_grid.robotDict if robot_grid.isCollided(rid)]
+        if len(collided) == 0:
+            return False
+        else:
+            return collided
+
+    # First pass. If collided, decollide each robot one by one.
+    collided = get_collided()
+    if collided is not False:
+        warn("The grid is collided. Attempting one-by-one decollision.")
+        for robot_id in collided:
+            robot_grid.decollideRobot(robot_id)
+            if robot_grid.isCollided(robot_id):
+                warn(f"Failed decolliding positioner {robot_id}.")
+            else:
+                warn(f"Positioner {robot_id} was successfully decollided.")
+
+    # Second pass. If still collided, try a grid decollision.
+    if get_collided() is not False:
+        warn("Grid is still colliding. Attempting full grid decollision.")
+        robot_grid.decollideGrid()
+        if get_collided() is not False:
+            raise JaegerError("Failed decolliding grid.")
+        else:
+            warn("The grid was decollided.")
+
+
 def unwind_or_explode(
     current_positions: dict[int, tuple[float, float]],
     only_connected: bool = False,
@@ -98,6 +137,8 @@ def unwind_or_explode(
 
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
+
+    decollide_grid(robot_grid)
 
     if explode is False:
         robot_grid.pathGenGreedy()
@@ -279,26 +320,26 @@ class Configuration:
         # get valid coordinates or when robots are disabled.
 
         # Just to be sure, reinitialise the grid.
-        self._initialise_grid()
+        robot_grid = self._initialise_grid()
 
-        lattice_position = config["kaiju"]["lattice_position"]
+        a_data = self.assignment_data
+        alpha0, beta0 = config["kaiju"]["lattice_position"]
 
-        for robot in self.robot_grid.robotDict.values():
-            if robot.id in self.assignment_data.positioner_ids:
-                index = self.assignment_data.positioner_to_index[robot.id]
-                if index not in self.assignment_data.valid_index:
-                    robot.setAlphaBeta(lattice_position[0], lattice_position[1])
-                else:
-                    p_coords = self.assignment_data.positioner[index]
+        for robot in robot_grid.robotDict.values():
+            robot.setAlphaBeta(alpha0, beta0)
+            if robot.id in a_data.positioner_ids:
+                index = a_data.positioner_to_index[robot.id]
+                if index in a_data.valid_index:
+                    p_coords = a_data.positioner[index]
                     robot.setAlphaBeta(p_coords[0], p_coords[1])
-            else:
-                robot.setAlphaBeta(lattice_position[0], lattice_position[1])
+                    continue
+            warn(f"Positioner {robot.id} was not assigned.")
 
-        self.robot_grid.pathGenGreedy()
+        decollide_grid(robot_grid)
+        robot_grid.pathGenGreedy()
 
         speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-
-        forward = self.robot_grid.getPathPair(speed=speed)[0]
+        forward = robot_grid.getPathPair(speed=speed)[0]
 
         return forward
 
@@ -539,10 +580,7 @@ class Configuration:
 
         if os.path.exists(path):
             if overwrite:
-                warnings.warn(
-                    f"Summary file {os.path.basename(path)} exists. Overwriting it.",
-                    JaegerUserWarning,
-                )
+                warn(f"Summary file {os.path.basename(path)} exists. Overwriting it.")
                 os.remove(path)
             else:
                 raise JaegerError(f"Summary file {os.path.basename(path)} exists.")
@@ -588,13 +626,15 @@ class AssignmentData:
         self.site = Site(self.observatory)
 
         positioner_table = positionerTable.set_index("holeID")
-        wok_table = wokCoords.set_index("holeID")
 
+        # TODO: we are limiting the wok to those holes in the list of positioners.
+        # For now this is useful to work with the miniwok but it may not be what
+        # we want.
+        wok_table = wokCoords.set_index("holeID").loc[positioner_table.index]
         self.assignments = [
             assg
             for assg in self.design.assignments
-            if assg.instrument.label.lower()  # TODO: remove this when RS matches wok.
-            in wok_table.loc[assg.hole.holeid].holeType.lower()
+            if assg.hole.holeid in wok_table.index
         ]
 
         self.holeids: list[str] = [assg.hole.holeid for assg in self.assignments]
@@ -735,10 +775,9 @@ class AssignmentData:
                 )
 
         if any([pos.positioner_warn[0] for pos in self.positioner_objs]):
-            warnings.warn(
+            warn(
                 "Some coordinates failed while converting to "
-                "positioner coordinates. Skipping.",
-                JaegerUserWarning,
+                "positioner coordinates. Skipping."
             )
 
         self.valid_index = numpy.where(

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from functools import partial
+from pprint import pprint
 
 from typing import TYPE_CHECKING
 
@@ -113,15 +114,22 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
 
+    positions = fps.get_positions()
+    if len(positions) == 0:
+        return command.fail("No positioners found.")
+
     # Check that all positioners are folded.
-    if not numpy.allclose(fps.get_positions()[:, 1:] - [0, 180], 0, atol=0.1):
+    if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
         return command.fail(error="Not all the positioners are folded.")
 
     command.info(text="Calculating trajectory.")
-    trajectory = await asyncio.get_event_loop().run_in_executor(
-        None,
-        fps.configuration.get_trajectory,
-    )
+    try:
+        trajectory = await asyncio.get_event_loop().run_in_executor(
+            None,
+            fps.configuration.get_trajectory,
+        )
+    except Exception as err:
+        return command.fail(error=f"Failed getting trajectory: {err}")
 
     traj_pids = trajectory.keys()
     for pid in traj_pids:
@@ -135,6 +143,6 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     try:
         await fps.send_trajectory(trajectory)
     except TrajectoryError as err:
-        command.fail(error=f"Trajectory failed with error: {err}")
+        return command.fail(error=f"Trajectory failed with error: {err}")
 
     command.finish(text="All positioners reached their new positions.")
