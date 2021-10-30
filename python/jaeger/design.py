@@ -40,7 +40,7 @@ from coordio.defaults import (
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import config, log
-from jaeger.exceptions import JaegerError, JaegerUserWarning
+from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 
 
 if TYPE_CHECKING:
@@ -98,15 +98,18 @@ def decollide_grid(robot_grid: RobotGridCalib):
             return collided
 
     # First pass. If collided, decollide each robot one by one.
+    # TODO: Probably this should be done in order of less to more important targets
+    # to throw out the less critical ones first.
     collided = get_collided()
     if collided is not False:
         warn("The grid is collided. Attempting one-by-one decollision.")
         for robot_id in collided:
-            robot_grid.decollideRobot(robot_id)
             if robot_grid.isCollided(robot_id):
-                warn(f"Failed decolliding positioner {robot_id}.")
-            else:
-                warn(f"Positioner {robot_id} was successfully decollided.")
+                robot_grid.decollideRobot(robot_id)
+                if robot_grid.isCollided(robot_id):
+                    warn(f"Failed decolliding positioner {robot_id}.")
+                else:
+                    warn(f"Positioner {robot_id} was successfully decollided.")
 
     # Second pass. If still collided, try a grid decollision.
     if get_collided() is not False:
@@ -144,6 +147,12 @@ def unwind_or_explode(
         robot_grid.pathGenGreedy()
     else:
         robot_grid.pathGenEscape(explode_deg)
+
+    if robot_grid.didFail:
+        raise TrajectoryError(
+            "Failed generating a valid trajectory. "
+            "This usually means a deadlock was found."
+        )
 
     layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
     if len(set(current_positions.keys()) - set(layout_pids)) > 0:
@@ -337,6 +346,12 @@ class Configuration:
 
         decollide_grid(robot_grid)
         robot_grid.pathGenGreedy()
+
+        if robot_grid.didFail:
+            raise TrajectoryError(
+                "Failed generating a valid trajectory. "
+                "This usually means a deadlock was found."
+            )
 
         speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
         forward = robot_grid.getPathPair(speed=speed)[0]
