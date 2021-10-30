@@ -506,12 +506,12 @@ class Trajectory(object):
                     raise TrajectoryError("Move failed to start.")
 
             statuses = numpy.array([p.status for p in self.fps.positioners.values()])
-            not_moving = statuses & PositionerStatus.DISPLACEMENT_COMPLETED
+            not_moving = numpy.where(statuses & PositionerStatus.DISPLACEMENT_COMPLETED)
             if not_moving.any():
                 not_moving_pids = numpy.array(list(self.fps.positioners))[not_moving]
                 # Should this be an error?
                 warnings.warn(
-                    f"Some positioners appear to not be moving: {not_moving_pids}.",
+                    f"Some positioners do not appear to be moving: {not_moving_pids}.",
                     JaegerUserWarning,
                 )
 
