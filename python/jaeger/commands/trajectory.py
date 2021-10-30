@@ -538,6 +538,13 @@ class Trajectory(object):
                         self,
                     )
 
+            # TODO: There seems to ba bug in the firmware. Sometimes when a positioner
+            # fails to start its trajectory, at the end of the trajectory time it
+            # does believe it has reached the commanded position, although it's still
+            # at the initial position. In those cases issuing a STOP_TRAJECTORY
+            # followed by a position update seems to return correct positions.
+            await self.fps.stop_trajectory()
+
             # The FPS says they have all stopped moving but check that they are
             # actually at their positions.
             await self.fps.update_position()
@@ -564,6 +571,7 @@ class Trajectory(object):
             raise
 
         finally:
+            await self.fps.stop_trajectory()
             await self.fps.update_position()
             self.end_time = time.time()
             if restart_pollers:
