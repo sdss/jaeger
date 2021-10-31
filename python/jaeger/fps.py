@@ -684,6 +684,7 @@ class FPS(BaseFPS):
 
         """
 
+        self._locked = True
         warnings.warn("Locking the FPS.", JaegerUserWarning)
 
         if stop_trajectories:
@@ -691,8 +692,6 @@ class FPS(BaseFPS):
 
         if by:
             self.locked_by += by
-
-        self._locked = True
 
         await self.update_status()
 
