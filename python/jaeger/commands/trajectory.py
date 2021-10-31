@@ -509,11 +509,32 @@ class Trajectory(object):
             not_moving = numpy.where(statuses & PositionerStatus.DISPLACEMENT_COMPLETED)
             if not_moving[0].any():
                 not_moving_pids = numpy.array(list(self.fps.positioners))[not_moving[0]]
-                # Should this be an error?
-                warnings.warn(
-                    f"Some positioners do not appear to be moving: {not_moving_pids}.",
-                    JaegerUserWarning,
-                )
+
+                # Before reporting that the positioner is not moving, check if it's
+                # already there.
+                await self.fps.update_position()
+                positions = self.fps.get_positions()
+
+                really_not_moving = []
+                for pid in not_moving_pids:
+                    if pid not in self.trajectories:
+                        continue
+
+                    current = positions[positions[:, 0] == pid][0, 1:]
+                    alpha = self.trajectories[pid]["alpha"][-1][0]
+                    beta = self.trajectories[pid]["beta"][-1][0]
+
+                    if not numpy.allclose(current - [alpha, beta], 0, atol=0.1):
+                        really_not_moving.append(pid)
+
+                if len(really_not_moving) > 0:
+                    not_moving_str = ', '.join(map(str, really_not_moving))
+                    # Should this be an error?
+                    warnings.warn(
+                        "Some positioners do not appear to be "
+                        f"moving: {not_moving_str}.",
+                        JaegerUserWarning,
+                    )
 
             while True:
 
