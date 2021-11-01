@@ -53,7 +53,7 @@ from jaeger.utils import Poller, PollerList
 
 
 if TYPE_CHECKING:
-    from jaeger.design import Configuration
+    from jaeger.design import BaseConfiguration
 
 
 __all__ = ["BaseFPS", "FPS"]
@@ -165,7 +165,7 @@ class FPS(BaseFPS):
 
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
-    configuration: Configuration | None = None
+    configuration: BaseConfiguration | None = None
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
