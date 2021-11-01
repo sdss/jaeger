@@ -11,6 +11,7 @@
 ### ✨ Improved
 
 * Added additional checks to confirm that a trajectory starts correctly and succeeds. After one second, the code checks that the FPS is moving and that `DISPLACEMENT_COMPLETED` is not present on any positioner status. At the end of the trajectory a check confirms that all the positioners are within 0.1 degrees of their destinations.
+* Add `--no-gfas` to the `ieb power on` command to avoid powering the GFAs during the power on sequence.
 
 
 ## 0.11.0 - October 12, 2021

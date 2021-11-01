@@ -268,7 +268,8 @@ def power(command, fps):
 
 
 @power.command()
-async def on(command, fps: FPS):
+@click.option("--no-gfas", is_flag=True, help="Do not power the GFAs.")
+async def on(command, fps: FPS, no_gfas: bool = False):
     """Powers on all the FPS IEB components."""
 
     command.info(text="Turning pollers off.")
@@ -288,12 +289,6 @@ async def on(command, fps: FPS):
         "PS4",
         "PS5",
         "PS6",
-        "GFA1",
-        "GFA2",
-        "GFA3",
-        "GFA4",
-        "GFA5",
-        "GFA6",
         "NUC1",
         "NUC2",
         "NUC3",
@@ -301,6 +296,16 @@ async def on(command, fps: FPS):
         "NUC5",
         "NUC6",
     ]
+
+    if no_gfas is False:
+        on_seq += [
+            "GFA1",
+            "GFA2",
+            "GFA3",
+            "GFA4",
+            "GFA5",
+            "GFA6",
+        ]
 
     if not (await _power_sequence(command, ieb, on_seq, mode="on")):
         return
