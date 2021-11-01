@@ -26,6 +26,7 @@ from coordio.defaults import fiducialCoords, positionerTable, wokCoords
 from coordio.transforms import RoughTransform, ZhaoBurgeTransform
 
 from jaeger import config
+from jaeger.actor import JaegerActor
 from jaeger.exceptions import FVCError
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
@@ -34,8 +35,6 @@ from jaeger.ieb import IEB
 if TYPE_CHECKING:
 
     from kaiju import RobotGridCalib
-
-    from jaeger.actor import JaegerActor
 
 
 __all__ = ["take_image"]
@@ -68,7 +67,7 @@ async def take_image(
     for reply in expose_command.replies:
         for keyword in reply.keywords:
             if keyword.name.lower() == "filename":
-                return pathlib.Path(keyword.values[-1].native)
+                return pathlib.Path(keyword.values[-1])
 
     raise FVCError("The exposure succeeded but did not output the filename.")
 
