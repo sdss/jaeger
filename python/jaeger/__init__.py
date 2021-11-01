@@ -8,6 +8,8 @@ import warnings
 from sdsstools import get_config, get_logger, get_package_version
 from sdsstools.configuration import __ENVVARS__
 
+from .exceptions import JaegerUserWarning
+
 
 NAME = "jaeger"
 
@@ -30,6 +32,9 @@ if config["debug"] is False:
         message=".+was never awaited.+",
         category=RuntimeWarning,
     )
+
+
+warnings.simplefilter("always", category=JaegerUserWarning)
 
 
 def start_file_loggers(start_log=True, start_can=True):
