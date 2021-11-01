@@ -14,7 +14,7 @@ import click
 import numpy
 
 from jaeger import config
-from jaeger.design import ManualConfiguration, get_robot_grid
+from jaeger.design import ManualConfiguration
 from jaeger.exceptions import TrajectoryError
 
 from . import jaeger_parser
