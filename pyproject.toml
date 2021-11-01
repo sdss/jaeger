@@ -35,6 +35,7 @@ pandas = "^1.3.3"
 astropy = "^4.3.1"
 sdss-kaiju = { git = "https://github.com/csayres/kaiju", branch = "master"}
 pydl = { version = "^1.0.0rc2", allow-prereleases = true }
+sep = "^1.2.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "*"

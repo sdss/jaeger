@@ -1487,6 +1487,17 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
+name = "sep"
+version = "1.2.0"
+description = "Astronomical source extraction and photometry library"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "shapely"
 version = "1.8.0"
 description = "Geometric objects, predicates, and operations"
@@ -1870,7 +1881,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1,<3.10.0"
-content-hash = "1653933d912cf422d5c6f67447a7afd5a8c0c87911dc5ea6d2d681a7f5e73edb"
+content-hash = "1e403ff46a2164f22364a01bf7d27e6e5386167ca73e6150342317af7ad73042"
 
 [metadata.files]
 aio-pika = [
@@ -2922,6 +2933,39 @@ seaborn = [
 semantic-version = [
     {file = "semantic_version-2.8.5-py2.py3-none-any.whl", hash = "sha256:45e4b32ee9d6d70ba5f440ec8cc5221074c7f4b0e8918bdab748cc37912440a9"},
     {file = "semantic_version-2.8.5.tar.gz", hash = "sha256:d2cb2de0558762934679b9a104e82eca7af448c9f4974d1f3eeccff651df8a54"},
+]
+sep = [
+    {file = "sep-1.2.0-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:96853e86c54fb3206358969a984fc4fd5776eee46a3e647cac1570ff8ae1327e"},
+    {file = "sep-1.2.0-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:19588150e6d7e480ad8f51ac5e68d6bcfa258ff3c9f2dd2b9df4fbcca6e515a5"},
+    {file = "sep-1.2.0-cp35-cp35m-manylinux2014_i686.whl", hash = "sha256:3cf285c125be0087d0f5991392189030c0063d6c5eb0ae59fa0df94a49744fcf"},
+    {file = "sep-1.2.0-cp35-cp35m-manylinux2014_x86_64.whl", hash = "sha256:9fdb960566ccd4daa5fbd627596f8b80c761c68c63d14cc0a45772cb1593d5b3"},
+    {file = "sep-1.2.0-cp35-cp35m-win32.whl", hash = "sha256:1c0bc14fc73453032c5402e28251e191db2a58fb9f524161b9dbb30f07555857"},
+    {file = "sep-1.2.0-cp35-cp35m-win_amd64.whl", hash = "sha256:16798f181ee47a54607d84b262194529fb19c7f22fd72e80ce39e3754a3c90ed"},
+    {file = "sep-1.2.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:11cfb66d2d87a11f6576931b0aff7e8d27c43f908e5463aa6550549f048a4d88"},
+    {file = "sep-1.2.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:f51e030832ee6f775fe564a9c0eadc1caa4e2e5e3cd33fcbf39904b3c9ff184f"},
+    {file = "sep-1.2.0-cp36-cp36m-manylinux2014_i686.whl", hash = "sha256:a4e85365b818680193e4909e018ebcb25c2cdc30a450535347d7f4de45e994ee"},
+    {file = "sep-1.2.0-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:afb549fe01795c6436ea1748507eae74efb20acec08b9ebb0f2f91ce81874934"},
+    {file = "sep-1.2.0-cp36-cp36m-win32.whl", hash = "sha256:a680a17ee106c6d1385aa6567a3cca8bfb157ec33f40352121320505b38a4d47"},
+    {file = "sep-1.2.0-cp36-cp36m-win_amd64.whl", hash = "sha256:d4bf43b99d160ed68bc5ebf2884c9f88772c8c6a54f836310d3f3cdf043f039a"},
+    {file = "sep-1.2.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:32f8dee1ad9c5fe9e8ee501000b86d6d8f359c1643b47bfa43e1ad5ba41f9d12"},
+    {file = "sep-1.2.0-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:5fde8a4fac6d830b4437f5336e8ce1d6dbc7031ee26dbbfc044bae7b1fea1308"},
+    {file = "sep-1.2.0-cp37-cp37m-manylinux2014_i686.whl", hash = "sha256:d8a544f64cd719c15b929ec9608ace5de7b30ed3282536e8f980c05c5a437a8f"},
+    {file = "sep-1.2.0-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:5722d58b8eb224b24e9dbc45e1cd8cfea4cd99ac5c1e142638c061f23501593d"},
+    {file = "sep-1.2.0-cp37-cp37m-win32.whl", hash = "sha256:ad4990fd86b51dae150d2a13378e81216ad8ecdc7ba0ccc117d00e7e3d30ca60"},
+    {file = "sep-1.2.0-cp37-cp37m-win_amd64.whl", hash = "sha256:bc71b02f8b32c1de551021417c215c37406c1c599afec83dd18175c639b5671a"},
+    {file = "sep-1.2.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:3f745bbb43d78eac4cced63557e55006e1e6de685bf7e681ad52343efee4507c"},
+    {file = "sep-1.2.0-cp38-cp38-manylinux1_i686.whl", hash = "sha256:976de3ac50516413d847614da3a04687f435d45800f4eb53838cd7b5b8234cac"},
+    {file = "sep-1.2.0-cp38-cp38-manylinux2014_i686.whl", hash = "sha256:20f7cb171d24cc65a08869a1ba94f4e1792ba923eee1f9c657c9800f4e8a6028"},
+    {file = "sep-1.2.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:87ec99248b101892596c5bb45e54864b8485faa2ebe52212d4bc3eeaeda81a6d"},
+    {file = "sep-1.2.0-cp38-cp38-win32.whl", hash = "sha256:a26b22d6110bec1e85577bcb329c208a7d05e9ec60be28e3b2aef21a81c39208"},
+    {file = "sep-1.2.0-cp38-cp38-win_amd64.whl", hash = "sha256:738e1a1eaee885ebe2469a5fff8dd64a637c4a204bceb53981e758a238d8b81c"},
+    {file = "sep-1.2.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:028c244016865f0894fae920deaa8db65f68f55a178a8e52e1654e33055082ab"},
+    {file = "sep-1.2.0-cp39-cp39-manylinux1_i686.whl", hash = "sha256:5f1f0847db35efc7c2b5c259ddc4f975651addfae333d9b93b63abc661bce1da"},
+    {file = "sep-1.2.0-cp39-cp39-manylinux2014_i686.whl", hash = "sha256:dc6d545ae0791291244680add4525ac8109529bb078f12fab8eb92124f6c3dda"},
+    {file = "sep-1.2.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:5fecbe17b049af490b9849b2334110e18aed6f9654d1703d49fd242336b75438"},
+    {file = "sep-1.2.0-cp39-cp39-win32.whl", hash = "sha256:6445b78e863f9ac3f15f9b3abe2d6f535af2467fdfba8a840727652945082fc7"},
+    {file = "sep-1.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:acbc55ad941a8b9f3b02f89ae893853caef5ae1885b0917480268405f403e033"},
+    {file = "sep-1.2.0.tar.gz", hash = "sha256:fb9915b0a5db761619f4cba6f18b989ebce2c7070b59291775c7905325d3f70b"},
 ]
 shapely = [
     {file = "Shapely-1.8.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1c5632cedea6d815b61eb4c264da1c3f24a8ce2ceba2f74e30fba340ca230563"},
