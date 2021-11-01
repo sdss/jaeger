@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 
     from jaeger.actor import JaegerActor
 
+
 __all__ = ["take_image"]
 
 
