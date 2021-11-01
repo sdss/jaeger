@@ -39,7 +39,7 @@ from coordio.defaults import (
 )
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
-from jaeger import config, log
+from jaeger import config
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 
 
@@ -49,8 +49,11 @@ if TYPE_CHECKING:
 
 __all__ = [
     "Design",
+    "BaseConfiguration",
     "Configuration",
-    "AssignmentData",
+    "ManualConfiguration",
+    "TargetAssignmentData",
+    "ManualAssignmentData",
     "unwind_or_explode",
     "get_robot_grid",
 ]
@@ -87,8 +90,12 @@ def get_robot_grid(seed: int = 0):
     return robot_grid
 
 
-def decollide_grid(robot_grid: RobotGridCalib):
-    """Decollides a potentially collided grid. Raises on fail."""
+def decollide_grid(robot_grid: RobotGridCalib, simple=False):
+    """Decollides a potentially collided grid. Raises on fail.
+
+    If ``simple=True``, just runs a ``decollideGrid()`` and returns silently.
+
+    """
 
     def get_collided():
         collided = [rid for rid in robot_grid.robotDict if robot_grid.isCollided(rid)]
@@ -96,6 +103,12 @@ def decollide_grid(robot_grid: RobotGridCalib):
             return False
         else:
             return collided
+
+    if simple:
+        robot_grid.decollideGrid()
+        if get_collided() is not False:
+            raise JaegerError("Failed decolliding grid.")
+        return
 
     # First pass. If collided, decollide each robot one by one.
     # TODO: Probably this should be done in order of less to more important targets
@@ -126,6 +139,7 @@ def unwind_or_explode(
     only_connected: bool = False,
     explode=False,
     explode_deg=20.0,
+    simple_decollision=False,
 ):
     """Folds all the robots to the lattice position."""
 
@@ -141,7 +155,7 @@ def unwind_or_explode(
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
 
-    decollide_grid(robot_grid)
+    decollide_grid(robot_grid, simple=simple_decollision)
 
     if explode is False:
         robot_grid.pathGenGreedy()
@@ -244,8 +258,6 @@ class Design:
         if wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
 
-        log.debug(f"[Design]: loading design {design_id}.")
-
         self.design_id = design_id
 
         try:
@@ -256,30 +268,22 @@ class Design:
         self.field = self.design.field
         self.assignments: list[targetdb.Assignment] = list(self.design.assignments)
 
-        log.debug(f"[Design]: creating initial configuration for {design_id}.")
-
         self.configuration = Configuration(self)
-
-        log.debug("[Design]: finished creating initial configuration.")
 
     def __repr__(self):
         return f"<Design (design_id={self.design_id})>"
 
 
-class Configuration:
-    """A configuration based on a design."""
+class BaseConfiguration:
+    """A base configuration class."""
 
-    def __init__(self, design: Design):
+    assignment_data: ManualAssignmentData | TargetAssignmentData
+
+    def __init__(self):
 
         # Configuration ID is None until we insert in the database.
         # Once set, it cannot be changed.
         self.configuration_id: int | None = None
-
-        self.design = design
-        self.assignment_data = AssignmentData(self)
-
-        assert self.assignment_data.site.time
-        self.epoch = self.assignment_data.site.time.jd
 
         self.robot_grid = self._initialise_grid()
 
@@ -290,13 +294,72 @@ class Configuration:
         return self.robot_grid
 
     def __repr__(self):
+        return f"<Configuration (configuration_id={self.configuration_id}>"
+
+    def get_trajectory(self, simple_decollision=False):
+        """Returns a trajectory dictionary from the folded position."""
+
+        # TODO: this needs more checks and warnings when a positioner doesn't
+        # get valid coordinates or when robots are disabled.
+
+        # Just to be sure, reinitialise the grid.
+        self.robot_grid = self._initialise_grid()
+
+        a_data = self.assignment_data
+        alpha0, beta0 = config["kaiju"]["lattice_position"]
+
+        for robot in self.robot_grid.robotDict.values():
+            robot.setAlphaBeta(alpha0, beta0)
+            if robot.id in a_data.positioner_ids:
+                index = a_data.positioner_to_index[robot.id]
+                if index in a_data.valid_index:
+                    p_coords = a_data.positioner[index]
+                    robot.setAlphaBeta(p_coords[0], p_coords[1])
+                    continue
+            warn(f"Positioner {robot.id} was not assigned.")
+
+        decollide_grid(self.robot_grid, simple=simple_decollision)
+        self.robot_grid.pathGenGreedy()
+
+        if self.robot_grid.didFail:
+            raise TrajectoryError(
+                "Failed generating a valid trajectory. "
+                "This usually means a deadlock was found."
+            )
+
+        speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
+        forward = self.robot_grid.getPathPair(speed=speed)[0]
+
+        return forward
+
+
+class Configuration(BaseConfiguration):
+    """A configuration based on a target design."""
+
+    assignment_data: TargetAssignmentData
+
+    def __init__(self, design: Design):
+
+        self.design = design
+        self.design_id = design.design_id
+        self.assignment_data = TargetAssignmentData(self)
+
+        assert self.assignment_data.site.time
+        self.epoch = self.assignment_data.site.time.jd
+
+        super().__init__()
+
+    def __repr__(self):
         return (
             f"<Configuration (configuration_id={self.configuration_id}"
-            f"design_id={self.design.design_id})>"
+            f"design_id={self.design_id})>"
         )
 
     def recompute_coordinates(self, jd: Optional[float] = None):
         """Recalculates the coordinates. ``jd=None`` uses the current time."""
+
+        if isinstance(self.assignment_data, ManualAssignmentData):
+            return
 
         if self.configuration_id is not None:
             raise JaegerError(
@@ -322,51 +385,20 @@ class Configuration:
             .exists()
         )
 
-    def get_trajectory(self):
-        """Returns a trajectory dictionary from the folded position."""
-
-        # TODO: this needs more checks and warnings when a positioner doesn't
-        # get valid coordinates or when robots are disabled.
-
-        # Just to be sure, reinitialise the grid.
-        robot_grid = self._initialise_grid()
-
-        a_data = self.assignment_data
-        alpha0, beta0 = config["kaiju"]["lattice_position"]
-
-        for robot in robot_grid.robotDict.values():
-            robot.setAlphaBeta(alpha0, beta0)
-            if robot.id in a_data.positioner_ids:
-                index = a_data.positioner_to_index[robot.id]
-                if index in a_data.valid_index:
-                    p_coords = a_data.positioner[index]
-                    robot.setAlphaBeta(p_coords[0], p_coords[1])
-                    continue
-            warn(f"Positioner {robot.id} was not assigned.")
-
-        decollide_grid(robot_grid)
-        robot_grid.pathGenGreedy()
-
-        if robot_grid.didFail:
-            raise TrajectoryError(
-                "Failed generating a valid trajectory. "
-                "This usually means a deadlock was found."
-            )
-
-        speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        forward = robot_grid.getPathPair(speed=speed)[0]
-
-        return forward
-
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
+
+        if isinstance(self.assignment_data, ManualAssignmentData):
+            raise JaegerError("Manual configurations cannot be loaded to the database.")
+
+        assert isinstance(self.design, Design)
 
         if self.configuration_id is None:
 
             with opsdb.database.atomic():
                 configuration = opsdb.Configuration(
                     configuration_id=self.configuration_id,
-                    design_id=self.design.design_id,
+                    design_id=self.design_id,
                     epoch=self.epoch,
                     calibration_version=fps_calibs_version,
                 )
@@ -611,7 +643,82 @@ class Configuration:
         )
 
 
-class AssignmentData:
+class ManualConfiguration(BaseConfiguration):
+    """A configuration create manually."""
+
+    assignment_data: ManualAssignmentData
+
+    def __init__(self, data: pandas.DataFrame | dict, design_id: int = -999):
+
+        super().__init__()
+
+        self.design = None
+        self.design_id = design_id
+        self.epoch = None
+
+        self.assignment_data = ManualAssignmentData(data)
+
+    @classmethod
+    def create_random(
+        cls,
+        seed: int | None = None,
+        safe=True,
+        uniform: tuple[float, ...] | None = None,
+        design_id: int = -999,
+    ):
+        """Creates a random configuration using Kaiju."""
+
+        seed = seed or numpy.random.randint(0, 1000000)
+        numpy.random.seed(seed)
+
+        robot_grid = get_robot_grid(seed=seed)
+
+        alphaL, betaL = config["kaiju"]["lattice_position"]
+
+        positionerIDs = []
+        alphas = []
+        betas = []
+
+        # We use Kaiju for convenience in the non-safe mode.
+        for robot in robot_grid.robotDict.values():
+            positionerIDs.append(robot.id)
+
+            if uniform is not None:
+                alpha0, alpha1, beta0, beta1 = uniform
+                alphas.append(numpy.random.uniform(alpha0, alpha1))
+                betas.append(numpy.random.uniform(beta0, beta1))
+
+            else:
+                if safe:
+                    safe_mode = config["safe_mode"]
+                    if safe_mode is False:
+                        safe_mode = {"min_beta": 160, "max_beta": 220}
+
+                    alphas.append(numpy.random.uniform(0, 359.9))
+                    betas.append(
+                        numpy.random.uniform(
+                            safe_mode["min_beta"],
+                            safe_mode["max_beta"],
+                        )
+                    )
+
+                else:
+                    robot.setDestinationAlphaBeta(alphaL, betaL)
+                    robot.setXYUniform()
+                    alphas.append(robot.alpha)
+                    betas.append(robot.beta)
+
+        # Build an assignment dictionary.
+        data = {
+            "positionerID": positionerIDs,
+            "positioner_alpha": alphas,
+            "positioner_beta": betas,
+        }
+
+        return cls(data, design_id=design_id)
+
+
+class TargetAssignmentData:
     """Information about the target assignment along with coordinate transformation."""
 
     observed_boresight: Observed
@@ -628,14 +735,13 @@ class AssignmentData:
 
     def __init__(self, configuration: Configuration):
 
+        if not isinstance(configuration.design, Design):
+            raise JaegerError("Invalid configuration design.")
+
         self.configuration = configuration
 
         self.design = configuration.design
         self.design_id = self.design.design_id
-
-        log.debug(
-            f"[AssignmentData]: creating assignment data for design {self.design_id}"
-        )
 
         self.observatory: str = self.design.field.observatory.label.upper()
         self.site = Site(self.observatory)
@@ -807,3 +913,36 @@ class AssignmentData:
             raise JaegerError("Some beta coordinates are > 180.")
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
+
+
+class ManualAssignmentData:
+    """A manual assignment of robots to robot positions.
+
+    Parameters
+    ----------
+    data
+        Either a Pandas data frame or a dictionary that must at least contain the
+        columns ``holeID``, ``positionerID``, ``positioner_alpha``, and
+        ``positioner_beta``.
+
+    """
+
+    def __init__(self, data: pandas.DataFrame | dict):
+
+        if isinstance(data, dict):
+            data = pandas.DataFrame(data)
+
+        self.data = data
+
+        self.positioner_ids: list[int] = data["positionerID"].tolist()
+
+        if "holeID" in data:
+            self.holeids = data["holeID"].tolist()
+        else:
+            self.holeids = None
+
+        self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
+        self.valid_index = numpy.arange(len(self.positioner_ids))
+
+        self.positioner = data.loc[:, ["positioner_alpha", "positioner_beta"]]
+        self.positioner = self.positioner.to_numpy()
