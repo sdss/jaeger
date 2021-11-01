@@ -84,6 +84,10 @@ async def random(
 
     command.info("Executing random trajectory.")
 
+    # Make this the FPS configuration
+    assert command.actor
+    command.actor.fps.configuration = configuration
+
     try:
         await fps.send_trajectory(trajectory)
     except TrajectoryError as err:
