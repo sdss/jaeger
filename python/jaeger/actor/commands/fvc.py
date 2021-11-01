@@ -8,18 +8,23 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import click
 
-from clu import Command
 from drift import DriftError, Relay
 
-from jaeger import FPS
+from jaeger.fvc import take_image
 from jaeger.ieb import FVC
 
-from ..actor import JaegerActor
 from . import jaeger_parser
+
+
+if TYPE_CHECKING:
+    from clu import Command
+
+    from jaeger import FPS
+    from jaeger.actor import JaegerActor
 
 
 __all__ = ["fvc"]
@@ -30,6 +35,18 @@ def fvc():
     """Commands to command the FVC."""
 
     pass
+
+
+@fvc.command()
+@click.argument("EXPOSURE-TIME", default=1, type=float, required=False)
+async def expose(command: Command[JaegerActor], fps: FPS, exposure_time: float = 1):
+    """Takes an exposure with the FVC."""
+
+    command.info("Taking exposure with fliswarm.")
+
+    filename = await take_image(command, exposure_time=exposure_time)
+
+    return command.finish(f"Exposure path: {filename}")
 
 
 @fvc.command()
