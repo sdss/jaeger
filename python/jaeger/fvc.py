@@ -104,7 +104,8 @@ def process_fvc_image(
 
     command.info(f"Processing image {path}")
 
-    proc_path_base = path[0 : path.find(".fit")]
+    dirname, base = os.path.split(path)
+    proc_path_root = os.path.join(dirname, "proc-" + base[0 : base.find(".fit")])
 
     hdus = fits.open(path)
 
@@ -134,7 +135,7 @@ def process_fvc_image(
     xyCMMouter = xyCMM[keep, :]
 
     arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMMouter, xy_wok_rough)
-    command.debug(f"Max fiducial rough distance: {numpy.max(fid_rough_dist)}")
+    command.debug(f"Max fiducial rough distance: {numpy.max(fid_rough_dist):.3f}")
 
     xy_fiducial_CCD = xyCCD[arg_found]
     xy_fiducial_wok_rough = xy_wok_rough[arg_found]
@@ -145,7 +146,7 @@ def process_fvc_image(
             target_coords,
             xCMM,
             yCMM,
-            proc_path_base + "_roughassoc.png",
+            proc_path_root + "_roughassoc.png",
             xy_fiducial=xy_fiducial_wok_rough,
             xy_fiducial_cmm=xyCMMouter,
             title="Rough fiducial association",
@@ -157,8 +158,8 @@ def process_fvc_image(
         polids=(polids or config["fvc"]["zb_polids"]),
     )
     command.debug(
-        f"Full transform 1. Bisased RMS={ft.rms * 1000}, "
-        f"Unbiased RMS={ft.unbiasedRMS * 1000}."
+        f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
+        f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}."
     )
     xy_wok_meas = ft.apply(xyCCD, zb=False)
 
@@ -168,14 +169,14 @@ def process_fvc_image(
             target_coords,
             xCMM,
             yCMM,
-            proc_path_base + "_full1.png",
+            proc_path_root + "_full1.png",
             title="Full transform 1",
         )
 
     # Re-associate fiducials, some could have been wrongly associated in
     # first fit but second fit should be better?
     arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMM, xy_wok_meas)
-    command.debug(f"Max fiducial fit 2 distance: {numpy.max(fid_rough_dist)}")
+    command.debug(f"Max fiducial fit 2 distance: {numpy.max(fid_rough_dist):.3f}")
 
     xy_fiducial_CCD = xyCCD[arg_found]  # Overwriting
     xy_fiducial_wok_refine = xy_wok_meas[arg_found]
@@ -186,7 +187,7 @@ def process_fvc_image(
             target_coords,
             xCMM,
             yCMM,
-            proc_path_base + "_refineassoc.png",
+            proc_path_root + "_refineassoc.png",
             title="Refined fiducial association",
             xy_fiducial=xy_fiducial_wok_refine,
             xy_fiducial_cmm=xyCMM,
@@ -199,8 +200,8 @@ def process_fvc_image(
         polids=(polids or config["fvc"]["zb_polids"]),
     )
     command.debug(
-        f"Full transform 1. Bisased RMS={ft.rms * 1000}, "
-        f"Unbiased RMS={ft.unbiasedRMS * 1000}."
+        f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
+        f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}."
     )
 
     xy_wok_meas = ft.apply(xyCCD)  # Overwrite
@@ -211,7 +212,7 @@ def process_fvc_image(
             target_coords,
             xCMM,
             yCMM,
-            proc_path_base + "_full2.png",
+            proc_path_root + "_full2.png",
             title="Full transform 2",
         )
 
@@ -219,7 +220,7 @@ def process_fvc_image(
     xy_expect_pos = target_coords[["xWokMetExpect", "yWokMetExpect"]].to_numpy()
 
     arg_found, met_dist = arg_nearest_neighbor(xy_expect_pos, xy_wok_meas)
-    command.debug(f"Max metrology distance: {numpy.max(met_dist)}")
+    command.debug(f"Max metrology distance: {numpy.max(met_dist):.3f}")
     xy_wok_robot_meas = xy_wok_meas[arg_found]
 
     target_coords["xWokMetMeas"] = xy_wok_robot_meas[:, 0]
@@ -229,7 +230,7 @@ def process_fvc_image(
     dy = target_coords.yWokMetExpect - target_coords.yWokMetMeas
 
     rms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
-    command.debug(f"RMS full fit {rms * 1000} um.")
+    command.debug(f"RMS full fit {rms * 1000:.3f} um.")
 
     return (hdus[1], target_coords)
 
@@ -415,7 +416,7 @@ def plot_fvc_assignments(
         target_coords.yWokMetExpect.to_numpy(),
         "xk",
         ms=3,
-        label="expected met",
+        label="Expected MET",
     )
 
     # Overplot fiducials
@@ -427,10 +428,10 @@ def plot_fvc_assignments(
         markerfacecolor="None",
         markeredgecolor="cornflowerblue",
         markeredgewidth=1,
-        label="expected fid",
+        label="Expected FIF",
     )
 
-    if xy_fiducial and xy_fiducial_cmm:
+    if xy_fiducial is not None and xy_fiducial_cmm is not None:
         for cmm, measured in zip(xy_fiducial_cmm, xy_fiducial):
             plt.plot([cmm[0], measured[0]], [cmm[1], measured[1]], "-k")
 
