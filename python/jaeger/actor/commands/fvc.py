@@ -62,7 +62,7 @@ async def expose(
 
 
 @fvc.command()
-@click.option("--exposure-time", default=1, type=float, help="Exposure time.")
+@click.option("--exposure-time", type=float, help="Exposure time.")
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
 @click.option("--use-last", is_flag=True, help="Uses the last available exposure.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
@@ -71,7 +71,7 @@ async def expose(
 async def loop(
     command: Command[JaegerActor],
     fps: FPS,
-    exposure_time: float = 1.0,
+    exposure_time: float | None = None,
     fbi_level: float = 1.0,
     use_last: bool = False,
     one: bool = False,
@@ -84,6 +84,9 @@ async def loop(
     convergence is achieved.
 
     """
+
+    exposure_time = exposure_time or config["fvc"]["exposure_time"]
+    assert isinstance(exposure_time, float)
 
     if fps.configuration is None:
         return command.fail("Configuration not loaded.")
