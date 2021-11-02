@@ -11,13 +11,14 @@ from __future__ import annotations
 import asyncio
 from functools import partial
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 import click
 
 from clu.parsers.click import cancellable
 from drift import DriftError, Relay
 
+from jaeger import config
 from jaeger.fvc import process_fvc_image, take_image, write_proc_image
 from jaeger.ieb import FVC
 
@@ -42,9 +43,16 @@ def fvc():
 
 
 @fvc.command()
-@click.argument("EXPOSURE-TIME", default=1, type=float, required=False)
-async def expose(command: Command[JaegerActor], fps: FPS, exposure_time: float = 1):
+@click.argument("EXPOSURE-TIME", default=None, type=float, required=False)
+async def expose(
+    command: Command[JaegerActor],
+    fps: FPS,
+    exposure_time: Optional[float] = None,
+):
     """Takes an exposure with the FVC."""
+
+    exposure_time = exposure_time or config["fvc"]["exposure_time"]
+    assert isinstance(exposure_time, float)
 
     command.info("Taking exposure with fliswarm.")
 

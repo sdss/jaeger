@@ -69,6 +69,7 @@ kaiju:
 
 fvc:
     zb_polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 28, 29]
+    exposure_time: 1.5
 
 files:
     log_dir: /data/logs/jaeger
