@@ -34,6 +34,7 @@ from coordio import (
 )
 from coordio.defaults import (
     INST_TO_WAVE,
+    fiducialCoords,
     fps_calibs_version,
     positionerTable,
     wokCoords,
@@ -299,6 +300,11 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
+    def get_target_coords(self) -> pandas.DataFrame:
+        """Returns a Pandas data frame that can be passed to the FVC routines."""
+
+        raise NotImplementedError("This method needs to be overridden by a subclass.")
+
     def get_trajectory(self, simple_decollision=False):
         """Returns a trajectory dictionary from the folded position."""
 
@@ -374,6 +380,21 @@ class Configuration(BaseConfiguration):
 
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
+
+    def get_target_coords(self) -> pandas.DataFrame:
+        """Returns a Pandas data frame that can be passed to the FVC routines."""
+
+        return pandas.DataFrame(
+            {
+                "robotID": self.assignment_data.positioner_ids,
+                "xWokMetExpected": [],
+                "yWokMetExpected": [],
+                "xWokApExpected": [],
+                "yWokApExpected": [],
+                "xWokBossExpected": [],
+                "yWokBossExpected": [],
+            }
+        )
 
     @property
     def ingested(self):
@@ -676,15 +697,15 @@ class ManualConfiguration(BaseConfiguration):
     def get_target_coords(self) -> pandas.DataFrame:
         """Returns a Pandas data frame that can be passed to the FVC routines."""
 
-        return pandas.DataFrame(
+        robots = pandas.DataFrame(
             {
                 "robotID": self.assignment_data.positioner_ids,
                 "xWokMetExpected": self.assignment_data.wok_metrology[:, 0],
                 "yWokMetExpected": self.assignment_data.wok_metrology[:, 1],
-                "xWokApExpected": self.assignment_data.wok_apogee[:, 0],
-                "yWokApExpected": self.assignment_data.wok_apogee[:, 1],
-                "xWokBossExpected": self.assignment_data.wok_boss[:, 0],
-                "yWokBossExpected": self.assignment_data.wok_boss[:, 1],
+                # "xWokApExpected": self.assignment_data.wok_apogee[:, 0],
+                # "yWokApExpected": self.assignment_data.wok_apogee[:, 1],
+                # "xWokBossExpected": self.assignment_data.wok_boss[:, 0],
+                # "yWokBossExpected": self.assignment_data.wok_boss[:, 1],
             }
         )
 
@@ -1016,8 +1037,8 @@ class ManualAssignmentData:
         self.wok_metrology: numpy.ndarray
 
         if "wok_x" not in data:
-            self.wok_apogee = self._to_wok("apogee")
-            self.wok_boss = self._to_wok("boss")
+            # self.wok_apogee = self._to_wok("apogee")
+            # self.wok_boss = self._to_wok("boss")
             self.wok_metrology = self._to_wok("metrology")
 
     def _to_wok(self, fibre_type: str):
