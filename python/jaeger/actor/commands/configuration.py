@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import click
 import numpy
 
-from jaeger.design import Design
+from jaeger.design import Configuration, Design, ManualConfiguration
 from jaeger.exceptions import TrajectoryError
 
 from . import jaeger_parser
@@ -49,6 +49,7 @@ def configuration():
     is_flag=True,
     help="Replace an existing entry.",
 )
+@click.option("--folded", is_flag=True, help="Loads a folded confifuration.")
 @click.argument("DESIGNID", type=int)
 async def load(
     command: Command[JaegerActor],
@@ -56,13 +57,19 @@ async def load(
     designid: int,
     reload: bool = False,
     replace: bool = False,
+    folded: bool = False,
 ):
     """Loads and ingests a configuration from a design in the database."""
+
+    if folded:
+        fps.configuration = ManualConfiguration.create_folded()
+        print(fps.configuration.assignment_data.data)
+        return command.finish("Manual configuration loaded.")
 
     if reload is True:
         if fps.configuration is None:
             return command.fail(error="No configuration found. Cannot reload.")
-        if fps.configuration.design.design_id != designid:
+        if fps.configuration.design_id != designid:
             return command.fail(error="Loaded configuration does not match designid.")
         fps.configuration.configuration_id = None
 
@@ -73,6 +80,8 @@ async def load(
             return command.fail(error=f"Failed retrieving design: {err}")
 
         fps.configuration = design.configuration
+
+    assert isinstance(fps.configuration, Configuration)
 
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")

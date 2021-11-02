@@ -284,6 +284,8 @@ class BaseConfiguration:
         # Configuration ID is None until we insert in the database.
         # Once set, it cannot be changed.
         self.configuration_id: int | None = None
+        self.design = None
+        self.design_id = None
 
         self.robot_grid = self._initialise_grid()
 
@@ -713,6 +715,20 @@ class ManualConfiguration(BaseConfiguration):
             "positionerID": positionerIDs,
             "positioner_alpha": alphas,
             "positioner_beta": betas,
+        }
+
+        return cls(data, design_id=design_id)
+
+    @classmethod
+    def create_folded(cls, design_id: int = -999):
+        """Creates a folded configuration."""
+
+        npositioner = len(positionerTable["positionerID"])
+        alphaL, betaL = config["kaiju"]["lattice_position"]
+        data = {
+            "positionerID": [pid for pid in positionerTable["positionerID"]],
+            "positioner_alpha": [alphaL] * npositioner,
+            "positioner_beta": [betaL] * npositioner,
         }
 
         return cls(data, design_id=design_id)
