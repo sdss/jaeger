@@ -317,7 +317,7 @@ class Trajectory(object):
             if positioner.disabled:
                 self.failed = True
                 raise TrajectoryError(
-                    f"positioner_id={pos_id} is disabled but "
+                    f"positioner_id={pos_id} is disabled but was "
                     "included in the trajectory.",
                     self,
                 )
@@ -716,6 +716,7 @@ class StartTrajectory(Command):
     command_id = CommandID.START_TRAJECTORY
     broadcastable = True
     move_command = True
+    safe = True
 
 
 class StopTrajectory(Command):
