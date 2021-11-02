@@ -239,6 +239,7 @@ async def write_proc_image(
     new_filename: str | pathlib.Path,
     raw_hdu: fits.ImageHDU,
     measured_coods: pandas.DataFrame,
+    centroids: pandas.DataFrame,
 ) -> fits.HDUList:
 
     proc_hdus = fits.HDUList([fits.PrimaryHDU(), raw_hdu])
@@ -312,6 +313,8 @@ async def write_proc_image(
         rec = Table.from_pandas(current_positions)
         table = fits.BinTableHDU(rec, name="posAngles")
         proc_hdus.append(table)
+
+    proc_hdus.append(fits.BinTableHDU(Table.from_pandas(centroids), name="centroids"))
 
     await asyncio.get_event_loop().run_in_executor(
         None,

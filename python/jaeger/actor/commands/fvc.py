@@ -105,7 +105,7 @@ async def loop(
         command.debug("Taking exposure with fliswarm.")
         filename = await take_image(command, exposure_time=exposure_time)
 
-        raw_hdu, measured_coords = await asyncio.get_event_loop().run_in_executor(
+        raw_hdu, measured, centroids = await asyncio.get_event_loop().run_in_executor(
             None,
             partial(
                 process_fvc_image,
@@ -117,7 +117,7 @@ async def loop(
         )
 
         new_file = filename.with_name("proc-" + filename.name)
-        await write_proc_image(new_file, raw_hdu, fps, measured_coords)
+        await write_proc_image(new_file, raw_hdu, measured, centroids)
 
         n += 1
 
