@@ -651,7 +651,12 @@ class ManualConfiguration(BaseConfiguration):
 
     assignment_data: ManualAssignmentData
 
-    def __init__(self, data: pandas.DataFrame | dict, design_id: int = -999):
+    def __init__(
+        self,
+        data: pandas.DataFrame | dict,
+        design_id: int = -999,
+        site: str | None = None,
+    ):
 
         super().__init__()
 
@@ -659,7 +664,29 @@ class ManualConfiguration(BaseConfiguration):
         self.design_id = design_id
         self.epoch = None
 
-        self.assignment_data = ManualAssignmentData(data)
+        if site is None:
+            if config["observatory"] != "${OBSERATORY}":
+                site = config["observatory"]
+                assert isinstance(site, str)
+            else:
+                raise ValueError("Unknown site.")
+
+        self.assignment_data = ManualAssignmentData(data, site=site)
+
+    def get_target_coords(self) -> pandas.DataFrame:
+        """Returns a Pandas data frame that can be passed to the FVC routines."""
+
+        return pandas.DataFrame(
+            {
+                "robotID": self.assignment_data.positioner_ids,
+                "xWokMetExpected": self.assignment_data.wok_metrology[:, 0],
+                "yWokMetExpected": self.assignment_data.wok_metrology[:, 1],
+                "xWokApExpected": self.assignment_data.wok_apogee[:, 0],
+                "yWokApExpected": self.assignment_data.wok_apogee[:, 1],
+                "xWokBossExpected": self.assignment_data.wok_boss[:, 0],
+                "yWokBossExpected": self.assignment_data.wok_boss[:, 1],
+            }
+        )
 
     @classmethod
     def create_random(
@@ -668,6 +695,7 @@ class ManualConfiguration(BaseConfiguration):
         safe=True,
         uniform: tuple[float, ...] | None = None,
         design_id: int = -999,
+        site: str | None = None,
     ):
         """Creates a random configuration using Kaiju."""
 
@@ -718,10 +746,10 @@ class ManualConfiguration(BaseConfiguration):
             "positioner_beta": betas,
         }
 
-        return cls(data, design_id=design_id)
+        return cls(data, design_id=design_id, site=site)
 
     @classmethod
-    def create_folded(cls, design_id: int = -999):
+    def create_folded(cls, design_id: int = -999, site: str | None = None):
         """Creates a folded configuration."""
 
         npositioner = len(positionerTable["positionerID"])
@@ -732,7 +760,7 @@ class ManualConfiguration(BaseConfiguration):
             "positioner_beta": [betaL] * npositioner,
         }
 
-        return cls(data, design_id=design_id)
+        return cls(data, design_id=design_id, site=site)
 
 
 class TargetAssignmentData:
@@ -941,22 +969,28 @@ class ManualAssignmentData:
         Either a Pandas data frame or a dictionary that must at least contain the
         columns ``holeID``, ``positionerID``, ``positioner_alpha``, and
         ``positioner_beta``.
+    site
+        The observatory.
 
     """
 
-    def __init__(self, data: pandas.DataFrame | dict):
+    def __init__(self, data: pandas.DataFrame | dict, site: str = "APO"):
 
         if isinstance(data, dict):
             data = pandas.DataFrame(data)
 
         self.data = data
 
+        self.site = Site(site)
+        self.site.set_time()
+
         self.positioner_ids: list[int] = data["positionerID"].tolist()
 
         if "holeID" in data:
             self.holeids = data["holeID"].tolist()
         else:
-            self.holeids = None
+            positioner_data = positionerTable.set_index("positionerID")
+            self.holeids = positioner_data.loc[self.positioner_ids].holeID.tolist()
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
         self.valid_index = numpy.arange(len(self.positioner_ids))
@@ -964,19 +998,48 @@ class ManualAssignmentData:
         self.positioner = data.loc[:, ["positioner_alpha", "positioner_beta"]]
         self.positioner = self.positioner.to_numpy()
 
+        self.wavelengths: list[float] = [INST_TO_WAVE["GFA"]] * len(self.positioner_ids)
+
+        self.wok_apogee: numpy.ndarray
+        self.wok_boss: numpy.ndarray
         self.wok_metrology: numpy.ndarray
 
         if "wok_x" not in data:
+            self.wok_apogee = self._to_wok("apogee")
+            self.wok_boss = self._to_wok("boss")
             self.wok_metrology = self._to_wok("metrology")
 
     def _to_wok(self, fibre_type: str):
         """Returns wok coordinates from positioner."""
 
+        if fibre_type == "metrology":
+            PositionerClass = PositionerMetrology
+        elif fibre_type == "apogee":
+            PositionerClass = PositionerApogee
+        elif fibre_type == "boss":
+            PositionerClass = PositionerBoss
+        else:
+            raise ValueError(f"Invalid fibre_type {fibre_type}.")
+
         wok_coords = numpy.zeros((len(self.positioner_ids), 2), dtype=numpy.float32)
+
         for ii, (alpha, beta) in enumerate(self.positioner):
-            if fibre_type == "metrology":
-                positioner = PositionerMetrology([[alpha, beta]])
-            wok = Wok(positioner)
-            wok_coords[ii] = wok[0]
+
+            positioner = PositionerClass(
+                [[alpha, beta]],
+                site=self.site,
+                holeID=self.holeids[ii],
+            )
+
+            tangent = Tangent(
+                positioner,
+                wavelength=self.wavelengths[ii],
+                holeID=self.holeids[ii],
+                site=self.site,
+            )
+
+            wok = Wok(tangent, site=self.site)
+
+            wok_coords[ii] = wok[0][:2]
 
         return wok_coords
