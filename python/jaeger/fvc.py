@@ -8,8 +8,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import pathlib
+from functools import partial
 from unittest.mock import Mock
 
 from typing import Union
@@ -308,7 +310,16 @@ async def write_proc_image(
 
     proc_hdus.append(table)
 
-    proc_hdus.writeto(new_filename, checksum=True)
+    await asyncio.get_event_loop().run_in_executor(
+        None,
+        partial(
+            proc_hdus.writeto,
+            new_filename,
+            checksum=True,
+        ),
+    )
+
+    return proc_hdus
 
 
 def extract(
