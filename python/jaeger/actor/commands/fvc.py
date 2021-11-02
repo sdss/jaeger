@@ -105,6 +105,9 @@ async def loop(
             ),
         )
 
+        new_file = filename.with_name("proc-" + filename.name)
+        await write_proc_image(new_file, raw_hdu, fps, measured_coords)
+
         n += 1
 
         break
