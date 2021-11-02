@@ -49,7 +49,7 @@ def configuration():
     is_flag=True,
     help="Replace an existing entry.",
 )
-@click.option("--folded", is_flag=True, help="Loads a folded confifuration.")
+@click.option("--folded", is_flag=True, help="Loads a folded configuration.")
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
