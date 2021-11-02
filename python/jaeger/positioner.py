@@ -502,7 +502,7 @@ class Positioner(StatusMixIn):
         relative=False,
         force=False,
         use_trajectory=True,
-        use_sync_line=True,
+        use_sync_line=None,
     ) -> bool:
         """Moves positioner to a given position.
 

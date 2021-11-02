@@ -234,7 +234,7 @@ async def goto(
     beta: float | list | numpy.ndarray,
     speed: Optional[Tuple[float, float]] = None,
     relative: bool = False,
-    use_sync_line: bool = True,
+    use_sync_line: bool = None,
 ):
     """Send positioners to a given position using a trajectory.
 

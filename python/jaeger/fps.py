@@ -935,7 +935,7 @@ class FPS(BaseFPS):
         speed: Optional[Tuple[float, float]] = None,
         relative=False,
         force: bool = False,
-        use_sync_line=True,
+        use_sync_line: bool | None = None,
     ):
         """Sends a list of positioners to a given position.
 

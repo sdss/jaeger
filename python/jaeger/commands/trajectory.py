@@ -54,7 +54,7 @@ TrajectoryDataType = Dict[int, Dict[str, List[Tuple[float, float]]]]
 async def send_trajectory(
     fps: FPS,
     trajectories: str | pathlib.Path | TrajectoryDataType,
-    use_sync_line=True,
+    use_sync_line: bool | None = None,
     send_trajectory=True,
     start_trajectory=True,
 ) -> Trajectory:
@@ -79,7 +79,7 @@ async def send_trajectory(
     use_sync_line
         If `True`, the SYNC line will be used to synchronise the beginning of
         all trajectories. Otherwise a `.START_TRAJECTORY` command will be sent
-        over the CAN network.
+        over the CAN network. If `None`, defaults to the configuration parameter.
     send_trajectory
         If `True`, sends the trajectory to the positioners and returns the
         `.Trajectory` instance.
@@ -109,6 +109,9 @@ async def send_trajectory(
     """
 
     traj = Trajectory(fps, trajectories)
+
+    if use_sync_line is None:
+        use_sync_line = config["fps"]["use_sync_line"]
 
     if use_sync_line:
         if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
