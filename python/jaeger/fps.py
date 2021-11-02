@@ -381,6 +381,9 @@ class FPS(BaseFPS):
             positioner.fps = self
             positioner.firmware = get_fw_command.get_firmware()[reply.positioner_id]
 
+            if positioner.positioner_id in config["fps"]["disabled_positioners"]:
+                positioner.disabled = True
+
         if len(ignored_positioners) > 0:
             warnings.warn(
                 "The following connected positioners are ignored as they are "
@@ -713,10 +716,15 @@ class FPS(BaseFPS):
 
         return True
 
-    def get_positions(self) -> numpy.ndarray:
+    def get_positions(self, ignore_disabled=False) -> numpy.ndarray:
         """Returns the alpha and beta positions as an array."""
 
-        data = [(p.positioner_id, p.alpha, p.beta) for p in self.positioners.values()]
+        data = [
+            (p.positioner_id, p.alpha, p.beta)
+            for p in self.positioners.values()
+            if ignore_disabled is False or p.disabled is False
+        ]
+
         return numpy.array(data)
 
     async def update_status(
