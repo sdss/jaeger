@@ -63,7 +63,10 @@ async def load(
 
     if folded:
         designid = designid or -999
-        fps.configuration = ManualConfiguration.create_folded(design_id=designid)
+        fps.configuration = ManualConfiguration.create_folded(
+            design_id=designid,
+            fps=fps,
+        )
         return command.finish("Manual configuration loaded.")
 
     if designid is None:
@@ -125,11 +128,11 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
 
-    positions = fps.get_positions()
+    positions = fps.get_positions(ignore_disabled=True)
     if len(positions) == 0:
         return command.fail("No positioners found.")
 
-    # Check that all positioners are folded.
+    # Check that all non-disabled positioners are folded.
     if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
         return command.fail(error="Not all the positioners are folded.")
 

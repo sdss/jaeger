@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import click
 
 from jaeger.design import unwind_or_explode
-from jaeger.exceptions import TrajectoryError
+from jaeger.exceptions import JaegerError, TrajectoryError
 
 from . import jaeger_parser
 
@@ -49,6 +49,7 @@ async def unwind(
             unwind_or_explode,
             positions,
             only_connected=connected,
+            fps=fps,
         )
         trajectory = await asyncio.get_event_loop().run_in_executor(None, func)
     except ValueError as err:
@@ -68,7 +69,7 @@ async def unwind(
     command.info("Executing unwind trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory, use_sync_line=False)
+        await fps.send_trajectory(trajectory)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
@@ -97,9 +98,10 @@ async def explode(
             only_connected=connected,
             explode=True,
             explode_deg=explode_deg,
+            fps=fps,
         )
         trajectory = await asyncio.get_event_loop().run_in_executor(None, func)
-    except ValueError as err:
+    except (JaegerError, ValueError) as err:
         return command.fail(error=f"Failed calculating trajectory: {err}")
 
     if len(set(trajectory.keys()) - set(positions.keys())) > 0:
@@ -116,7 +118,7 @@ async def explode(
     command.info("Executing explode trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory, use_sync_line=False)
+        await fps.send_trajectory(trajectory)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
