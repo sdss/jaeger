@@ -780,7 +780,7 @@ class ManualConfiguration(BaseConfiguration):
                 if safe:
                     safe_mode = config["safe_mode"]
                     if safe_mode is False:
-                        safe_mode = {"min_beta": 160, "max_beta": 220}
+                        safe_mode = {"min_beta": 165, "max_beta": 195}
 
                     alphas.append(numpy.random.uniform(0, 359.9))
                     betas.append(
