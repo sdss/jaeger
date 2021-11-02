@@ -408,12 +408,12 @@ class Configuration(BaseConfiguration):
         return pandas.DataFrame(
             {
                 "robotID": self.assignment_data.positioner_ids,
-                "xWokMetExpected": [],
-                "yWokMetExpected": [],
-                "xWokApExpected": [],
-                "yWokApExpected": [],
-                "xWokBossExpected": [],
-                "yWokBossExpected": [],
+                "xWokMetExpect": [],
+                "yWokMetExpect": [],
+                "xWokApExpect": [],
+                "yWokApExpect": [],
+                "xWokBossExpect": [],
+                "yWokBossExpect": [],
             }
         )
 
@@ -722,21 +722,12 @@ class ManualConfiguration(BaseConfiguration):
         robots = pandas.DataFrame(
             {
                 "robotID": self.assignment_data.positioner_ids,
-                "xWokMetExpected": self.assignment_data.wok_metrology[:, 0],
-                "yWokMetExpected": self.assignment_data.wok_metrology[:, 1],
-                # "xWokApExpected": self.assignment_data.wok_apogee[:, 0],
-                # "yWokApExpected": self.assignment_data.wok_apogee[:, 1],
-                # "xWokBossExpected": self.assignment_data.wok_boss[:, 0],
-                # "yWokBossExpected": self.assignment_data.wok_boss[:, 1],
-            }
-        )
-
-        fiducials = fiducialCoords.loc[:, ["id", "xWok", "yWok"]]
-        fiducials = fiducials.rename(
-            columns={
-                "id": "robotID",
-                "xWok": "xWokMetExpected",
-                "yWok": "yWokMetExpected",
+                "xWokMetExpect": self.assignment_data.wok_metrology[:, 0],
+                "yWokMetExpect": self.assignment_data.wok_metrology[:, 1],
+                # "xWokApExpect": self.assignment_data.wok_apogee[:, 0],
+                # "yWokApExpect": self.assignment_data.wok_apogee[:, 1],
+                # "xWokBossExpect": self.assignment_data.wok_boss[:, 0],
+                # "yWokBossExpect": self.assignment_data.wok_boss[:, 1],
             }
         )
 
