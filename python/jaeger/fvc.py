@@ -255,6 +255,10 @@ async def write_proc_image(
         table = fits.BinTableHDU(rec, name=name)
         proc_hdus.append(table)
 
+    measured_coods.sort_values("robotID", inplace=True)
+    measured_coords_rec = Table.from_pandas(measured_coods).as_array()
+    proc_hdus.append(fits.BinTableHDU(measured_coords_rec, name="MEASURED"))
+
     # Add IEB information
     ieb_data = {
         "TEMPRTD2": -999.0,
