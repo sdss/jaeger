@@ -110,7 +110,7 @@ class TrajectoryError(JaegerError):
     """A trajectory error."""
 
     def __init__(self, message=None, trajectory: Trajectory | None = None):
-        if message and isinstance(message, str) and message[-1] == '.':
+        if message and isinstance(message, str) and message[-1] == ".":
             message = message[:-1]
 
         super().__init__(message)
