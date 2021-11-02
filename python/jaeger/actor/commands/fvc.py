@@ -12,9 +12,10 @@ from typing import TYPE_CHECKING, cast
 
 import click
 
+from clu.parsers.click import cancellable
 from drift import DriftError, Relay
 
-from jaeger.fvc import take_image
+from jaeger.fvc import process_fvc_image, take_image
 from jaeger.ieb import FVC
 
 from . import jaeger_parser
@@ -47,6 +48,52 @@ async def expose(command: Command[JaegerActor], fps: FPS, exposure_time: float =
     filename = await take_image(command, exposure_time=exposure_time)
 
     return command.finish(f"Exposure path: {filename}")
+
+
+@fvc.command()
+@click.option("--exposure-time", default=1, type=float, help="Exposure time.")
+@click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
+@click.option("--use-last", is_flag=True, help="Uses the last available exposure.")
+@click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
+@cancellable()
+async def loop(
+    command: Command[JaegerActor],
+    fps: FPS,
+    exposure_time: float = 1.0,
+    fbi_level: float = 1.0,
+    use_last: bool = False,
+    one: bool = False,
+):
+    """Executes the FVC correction loop.
+
+    This routine will turn the FBI LEDs on, take FVC exposures, process them,
+    calculate the offset correction and applies them. Loops until the desided
+    convergence is achieved.
+
+    """
+
+    n = 1
+    while True:
+        command.info(f"FVC iteration {n}")
+
+        if n == 1:
+            command.debug("Turning LEDs on.")
+            await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
+            await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
+
+        command.debug("Taking exposure with fliswarm.")
+        filename = await take_image(command, exposure_time=exposure_time)
+
+        raw_hdu, measured_coords = process_fvc_image(
+            filename,
+            target_coords,
+            plot=True,
+            command=command,
+        )
+
+        n += 1
+
+        break
 
 
 @fvc.command()
