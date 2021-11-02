@@ -75,7 +75,7 @@ def process_fvc_image(
     plot: bool = False,
     command: CommandOrFakeT = Mock(),
     polids: numpy.ndarray | list | None = None,
-) -> tuple[fits.ImageHDU, pandas.DataFrame]:
+) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
     """Processes a raw FVC image.
 
     Parameters
@@ -232,7 +232,7 @@ def process_fvc_image(
     rms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
     command.debug(f"RMS full fit {rms * 1000:.3f} um.")
 
-    return (hdus[1], target_coords)
+    return (hdus[1], target_coords, centroids)
 
 
 async def write_proc_image(
