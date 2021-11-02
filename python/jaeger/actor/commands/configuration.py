@@ -50,11 +50,11 @@ def configuration():
     help="Replace an existing entry.",
 )
 @click.option("--folded", is_flag=True, help="Loads a folded confifuration.")
-@click.argument("DESIGNID", type=int)
+@click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
     fps: FPS,
-    designid: int,
+    designid: int | None = None,
     reload: bool = False,
     replace: bool = False,
     folded: bool = False,
@@ -62,9 +62,12 @@ async def load(
     """Loads and ingests a configuration from a design in the database."""
 
     if folded:
-        fps.configuration = ManualConfiguration.create_folded()
-        print(fps.configuration.assignment_data.data)
+        designid = designid or -999
+        fps.configuration = ManualConfiguration.create_folded(design_id=designid)
         return command.finish("Manual configuration loaded.")
+
+    if designid is None:
+        return command.fail(error="Design ID is required.")
 
     if reload is True:
         if fps.configuration is None:
