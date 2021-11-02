@@ -528,7 +528,7 @@ class Trajectory(object):
                         really_not_moving.append(pid)
 
                 if len(really_not_moving) > 0:
-                    not_moving_str = ', '.join(map(str, really_not_moving))
+                    not_moving_str = ", ".join(map(str, really_not_moving))
                     # Should this be an error?
                     warnings.warn(
                         "Some positioners do not appear to be "
