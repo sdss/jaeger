@@ -49,7 +49,6 @@ async def unwind(
             unwind_or_explode,
             positions,
             only_connected=connected,
-            fps=fps,
         )
         trajectory = await asyncio.get_event_loop().run_in_executor(None, func)
     except ValueError as err:
@@ -98,7 +97,6 @@ async def explode(
             only_connected=connected,
             explode=True,
             explode_deg=explode_deg,
-            fps=fps,
         )
         trajectory = await asyncio.get_event_loop().run_in_executor(None, func)
     except (JaegerError, ValueError) as err:

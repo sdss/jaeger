@@ -34,7 +34,6 @@ from coordio import (
 )
 from coordio.defaults import (
     INST_TO_WAVE,
-    fiducialCoords,
     fps_calibs_version,
     positionerTable,
     wokCoords,
@@ -43,12 +42,11 @@ from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
+from jaeger.fps import FPS
 
 
 if TYPE_CHECKING:
     from kaiju import RobotGridCalib
-
-    from jaeger.fps import FPS
 
 
 __all__ = [
@@ -70,9 +68,15 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int = 0, fps: Optional[FPS] = None):
-    """Returns a new robot grid with the destination set to the lattice position."""
+def get_robot_grid(seed: int = 0):
+    """Returns a new robot grid with the destination set to the lattice position.
 
+    If an initialised instance of the FPS is available, disabled robots will be
+    set offline in the grid at their current positions.
+
+    """
+
+    fps = FPS.get_instance()
     if fps is None:
         warn(
             "FPS information not provided when creating the robot grid. "
@@ -161,11 +165,10 @@ def unwind_or_explode(
     explode=False,
     explode_deg=20.0,
     simple_decollision=False,
-    fps: Optional[FPS] = None,
 ):
     """Folds all the robots to the lattice position."""
 
-    robot_grid = get_robot_grid(fps=fps)
+    robot_grid = get_robot_grid()
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
@@ -300,7 +303,7 @@ class BaseConfiguration:
 
     assignment_data: ManualAssignmentData | TargetAssignmentData
 
-    def __init__(self, fps: Optional[FPS] = None):
+    def __init__(self):
 
         # Configuration ID is None until we insert in the database.
         # Once set, it cannot be changed.
@@ -308,13 +311,13 @@ class BaseConfiguration:
         self.design = None
         self.design_id = None
 
-        self.fps = fps
+        self.fps = FPS.get_instance()
 
         self.robot_grid = self._initialise_grid()
 
     def _initialise_grid(self):
 
-        self.robot_grid = get_robot_grid(fps=self.fps)
+        self.robot_grid = get_robot_grid()
 
         return self.robot_grid
 
@@ -698,10 +701,9 @@ class ManualConfiguration(BaseConfiguration):
         data: pandas.DataFrame | dict,
         design_id: int = -999,
         site: str | None = None,
-        fps: Optional[FPS] = None,
     ):
 
-        super().__init__(fps=fps)
+        super().__init__()
 
         self.design = None
         self.design_id = design_id
@@ -759,6 +761,11 @@ class ManualConfiguration(BaseConfiguration):
         # We use Kaiju for convenience in the non-safe mode.
         for robot in robot_grid.robotDict.values():
             positionerIDs.append(robot.id)
+
+            if robot.isOffline:
+                alphas.append(robot.alpha)
+                betas.append(robot.beta)
+                continue
 
             if uniform is not None:
                 alpha0, alpha1, beta0, beta1 = uniform

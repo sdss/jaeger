@@ -238,7 +238,6 @@ def process_fvc_image(
 async def write_proc_image(
     new_filename: str | pathlib.Path,
     raw_hdu: fits.ImageHDU,
-    fps: FPS,
     measured_coods: pandas.DataFrame,
 ) -> fits.HDUList:
 
@@ -260,6 +259,7 @@ async def write_proc_image(
     proc_hdus.append(fits.BinTableHDU(measured_coords_rec, name="MEASURED"))
 
     # Add IEB information
+    fps = FPS.get_instance()
     ieb_data = {
         "TEMPRTD2": -999.0,
         "TEMPT3": -999.0,
@@ -267,7 +267,7 @@ async def write_proc_image(
         "LED1": -999.0,
         "LED2": -999.0,
     }
-    if fps.ieb and isinstance(fps.ieb, IEB):
+    if fps and fps.ieb and isinstance(fps.ieb, IEB):
         ieb_data["TEMPRTD2"] = (await fps.ieb.read_device("rtd2"))[0] or -999.0
         ieb_data["TEMPT3"] = (await fps.ieb.read_device("t3"))[0] or -999.0
         ieb_data["TEMPRTD3"] = (await fps.ieb.read_device("rtd3"))[0] or -999.0
@@ -277,43 +277,41 @@ async def write_proc_image(
     for key, val in ieb_data.items():
         proc_hdus[1].header[key] = val
 
-    # proc_hdus[1].header["KAISEED"] = seed
+    if fps:
+        await fps.update_position()
+        positions = fps.get_positions()
+        current_positions = pandas.DataFrame(
+            {
+                "positionerID": positions[:, 0].astype(int),
+                "alphaReport": positions[:, 1],
+                "betaReport": positions[:, 2],
+            }
+        )
 
-    await fps.update_position()
-    positions = fps.get_positions()
-    current_positions = pandas.DataFrame(
-        {
-            "positionerID": positions[:, 0].astype(int),
-            "alphaReport": positions[:, 1],
-            "betaReport": positions[:, 2],
-        }
-    )
+        if fps.configuration:
+            robot_grid = fps.configuration.robot_grid
 
-    if fps and fps.configuration:
-        robot_grid = fps.configuration.robot_grid
+            _cmd_alpha = []
+            _cmd_beta = []
+            _start_alpha = []
+            _start_beta = []
 
-        _cmd_alpha = []
-        _cmd_beta = []
-        _start_alpha = []
-        _start_beta = []
+            if len(list(robot_grid.robotDict.values())[0].alphaPath) > 0:
+                for pid in current_positions.positionerID:
+                    robot = robot_grid.robotDict[pid]
+                    _cmd_alpha.append(robot.alphaPath[0][1])
+                    _cmd_beta.append(robot.betaPath[0][1])
+                    _start_alpha.append(robot.alphaPath[-1][1])
+                    _start_beta.append(robot.betaPath[-1][1])
 
-        if len(list(robot_grid.robotDict.values())[0].alphaPath) > 0:
-            for pid in current_positions.positionerID:
-                robot = robot_grid.robotDict[pid]
-                _cmd_alpha.append(robot.alphaPath[0][1])
-                _cmd_beta.append(robot.betaPath[0][1])
-                _start_alpha.append(robot.alphaPath[-1][1])
-                _start_beta.append(robot.betaPath[-1][1])
+                current_positions["cmdAlpha"] = _cmd_alpha
+                current_positions["cmdBeta"] = _cmd_beta
+                current_positions["startAlpha"] = _start_alpha
+                current_positions["startBeta"] = _start_beta
 
-            current_positions["cmdAlpha"] = _cmd_alpha
-            current_positions["cmdBeta"] = _cmd_beta
-            current_positions["startAlpha"] = _start_alpha
-            current_positions["startBeta"] = _start_beta
-
-    rec = Table.from_pandas(current_positions)
-    table = fits.BinTableHDU(rec, name="posAngles")
-
-    proc_hdus.append(table)
+        rec = Table.from_pandas(current_positions)
+        table = fits.BinTableHDU(rec, name="posAngles")
+        proc_hdus.append(table)
 
     await asyncio.get_event_loop().run_in_executor(
         None,

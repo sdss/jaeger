@@ -63,10 +63,7 @@ async def load(
 
     if folded:
         designid = designid or -999
-        fps.configuration = ManualConfiguration.create_folded(
-            design_id=designid,
-            fps=fps,
-        )
+        fps.configuration = ManualConfiguration.create_folded(design_id=designid)
         return command.finish("Manual configuration loaded.")
 
     if designid is None:
