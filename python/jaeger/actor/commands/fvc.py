@@ -112,6 +112,12 @@ async def loop(
 
         break
 
+    command.debug("Turning LEDs off.")
+    await command.send_command("jaeger", "ieb fbi led1 0")
+    await command.send_command("jaeger", "ieb fbi led2 0")
+
+    command.finish("All the positioners are at their desired positions.")
+
 
 @fvc.command()
 async def status(command: Command[JaegerActor], fps: FPS):
