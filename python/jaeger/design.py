@@ -719,7 +719,7 @@ class ManualConfiguration(BaseConfiguration):
     def get_target_coords(self) -> pandas.DataFrame:
         """Returns a Pandas data frame that can be passed to the FVC routines."""
 
-        robots = pandas.DataFrame(
+        return pandas.DataFrame(
             {
                 "robotID": self.assignment_data.positioner_ids,
                 "xWokMetExpect": self.assignment_data.wok_metrology[:, 0],
@@ -730,8 +730,6 @@ class ManualConfiguration(BaseConfiguration):
                 # "yWokBossExpect": self.assignment_data.wok_boss[:, 1],
             }
         )
-
-        return pandas.concat([robots, fiducials], axis=0, ignore_index=True)
 
     @classmethod
     def create_random(
