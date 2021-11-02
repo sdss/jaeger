@@ -688,6 +688,17 @@ class ManualConfiguration(BaseConfiguration):
             }
         )
 
+        fiducials = fiducialCoords.loc[:, ["id", "xWok", "yWok"]]
+        fiducials = fiducials.rename(
+            columns={
+                "id": "robotID",
+                "xWok": "xWokMetExpected",
+                "yWok": "yWokMetExpected",
+            }
+        )
+
+        return pandas.concat([robots, fiducials], axis=0, ignore_index=True)
+
     @classmethod
     def create_random(
         cls,
