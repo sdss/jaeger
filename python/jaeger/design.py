@@ -27,6 +27,7 @@ from coordio import (
     Observed,
     PositionerApogee,
     PositionerBoss,
+    PositionerMetrology,
     Site,
     Tangent,
     Wok,
@@ -962,3 +963,20 @@ class ManualAssignmentData:
 
         self.positioner = data.loc[:, ["positioner_alpha", "positioner_beta"]]
         self.positioner = self.positioner.to_numpy()
+
+        self.wok_metrology: numpy.ndarray
+
+        if "wok_x" not in data:
+            self.wok_metrology = self._to_wok("metrology")
+
+    def _to_wok(self, fibre_type: str):
+        """Returns wok coordinates from positioner."""
+
+        wok_coords = numpy.zeros((len(self.positioner_ids), 2), dtype=numpy.float32)
+        for ii, (alpha, beta) in enumerate(self.positioner):
+            if fibre_type == "metrology":
+                positioner = PositionerMetrology([[alpha, beta]])
+            wok = Wok(positioner)
+            wok_coords[ii] = wok[0]
+
+        return wok_coords
