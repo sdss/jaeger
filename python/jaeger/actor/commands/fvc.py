@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+import asyncio
+from functools import partial
+
 from typing import TYPE_CHECKING, cast
 
 import click
@@ -15,7 +18,7 @@ import click
 from clu.parsers.click import cancellable
 from drift import DriftError, Relay
 
-from jaeger.fvc import process_fvc_image, take_image
+from jaeger.fvc import process_fvc_image, take_image, write_proc_image
 from jaeger.ieb import FVC
 
 from . import jaeger_parser
@@ -55,6 +58,7 @@ async def expose(command: Command[JaegerActor], fps: FPS, exposure_time: float =
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
 @click.option("--use-last", is_flag=True, help="Uses the last available exposure.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
+@click.option("--plot/--no-plot", default=True, help="Generate and save plots.")
 @cancellable()
 async def loop(
     command: Command[JaegerActor],
@@ -63,6 +67,7 @@ async def loop(
     fbi_level: float = 1.0,
     use_last: bool = False,
     one: bool = False,
+    plot: bool = True,
 ):
     """Executes the FVC correction loop.
 
@@ -71,6 +76,11 @@ async def loop(
     convergence is achieved.
 
     """
+
+    if fps.configuration is None:
+        return command.fail("Configuration not loaded.")
+
+    target_coords = fps.configuration.get_target_coords()
 
     n = 1
     while True:
@@ -84,11 +94,15 @@ async def loop(
         command.debug("Taking exposure with fliswarm.")
         filename = await take_image(command, exposure_time=exposure_time)
 
-        raw_hdu, measured_coords = process_fvc_image(
-            filename,
-            target_coords,
-            plot=True,
-            command=command,
+        raw_hdu, measured_coords = await asyncio.get_event_loop().run_in_executor(
+            None,
+            partial(
+                process_fvc_image,
+                filename,
+                target_coords,
+                plot=plot,
+                command=command,
+            ),
         )
 
         n += 1
