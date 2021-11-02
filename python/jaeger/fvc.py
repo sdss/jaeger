@@ -158,7 +158,7 @@ def process_fvc_image(
         polids=(polids or config["fvc"]["zb_polids"]),
     )
     command.debug(
-        f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
+        f"Full transform 2. Bisased RMS={ft.rms * 1000:.3f}, "
         f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}."
     )
     xy_wok_meas = ft.apply(xyCCD, zb=False)
@@ -226,8 +226,10 @@ def process_fvc_image(
     target_coords["xWokMetMeas"] = xy_wok_robot_meas[:, 0]
     target_coords["yWokMetMeas"] = xy_wok_robot_meas[:, 1]
 
-    dx = target_coords.xWokMetExpect - target_coords.xWokMetMeas
-    dy = target_coords.yWokMetExpect - target_coords.yWokMetMeas
+    # Only use online robots for final RMS.
+    online = target_coords.loc[~target_coords.offline]
+    dx = online.xWokMetExpect - online.xWokMetMeas
+    dy = online.yWokMetExpect - online.yWokMetMeas
 
     rms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
     command.debug(f"RMS full fit {rms * 1000:.3f} um.")

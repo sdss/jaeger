@@ -722,11 +722,14 @@ class ManualConfiguration(BaseConfiguration):
         """Returns a Pandas data frame that can be passed to the FVC routines."""
 
         positioner_table = positionerTable.set_index("positionerID")
-        holeID = positioner_table.loc[self.assignment_data.positioner_ids].holeID
+
+        robotID = self.assignment_data.positioner_ids
+        holeID = positioner_table.loc[robotID].holeID
+        offline = [self.robot_grid.robotDict[pid].isOffline for pid in robotID]
 
         return pandas.DataFrame(
             {
-                "robotID": self.assignment_data.positioner_ids,
+                "robotID": robotID,
                 "holeID": holeID,
                 "xWokMetExpect": self.assignment_data.wok_metrology[:, 0],
                 "yWokMetExpect": self.assignment_data.wok_metrology[:, 1],
@@ -734,6 +737,7 @@ class ManualConfiguration(BaseConfiguration):
                 # "yWokApExpect": self.assignment_data.wok_apogee[:, 1],
                 # "xWokBossExpect": self.assignment_data.wok_boss[:, 0],
                 # "yWokBossExpect": self.assignment_data.wok_boss[:, 1],
+                "offline": offline,
             }
         )
 
