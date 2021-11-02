@@ -19,6 +19,7 @@ from typing import (
     Any,
     ClassVar,
     Dict,
+    Generic,
     List,
     Optional,
     Tuple,
@@ -61,13 +62,20 @@ __all__ = ["BaseFPS", "FPS"]
 
 MIN_BETA = 160
 
+FPS_CO = Union["BaseFPS", "FPS"]
+FPS_T = TypeVar("FPS_T", bound="BaseFPS")
 
-class BaseFPS(dict):
+
+class BaseFPS(dict, Generic[FPS_T]):
     """A class describing the Focal Plane System.
 
     This class includes methods to read the layout and construct positioner
     objects and can be used by the real `FPS` class or the
     `~jaeger.testing.VirtualFPS`.
+
+    `.BaseFPS` instances are singletons in the sense that one cannot instantiate
+    more than one. An error is raise if ``__new__`` is called with an existing
+    instance. To retrieve the running instance, use `.get_instance`.
 
     Attributes
     ----------
@@ -79,9 +87,41 @@ class BaseFPS(dict):
     """
 
     positioner_class: ClassVar[Type[Positioner]] = Positioner
+    __instance: ClassVar[FPS_T | None] = None
 
-    def __init__(self):
-        dict.__init__(self, {})
+    initialised: bool
+
+    def __new__(cls: Type[FPS_T], *args, **kwargs):
+        if cls.__instance is not None:
+            raise JaegerError(
+                "An instance of FPS is already running. "
+                "Use get_instance() to retrieve it."
+            )
+
+        new_obj = super().__new__(cls)
+
+        dict.__init__(new_obj, {})
+        new_obj.initialised = False
+
+        cls.__instance = new_obj
+
+        return new_obj
+
+    @classmethod
+    def get_instance(cls: Type[FPS_T], *args, create=True, **kwargs) -> FPS_T | None:
+        """Returns the running instance.
+
+        If ``create=True``, will instantiate a new object if one does not exist.
+
+        """
+
+        if cls.__instance is None:
+            if create:
+                return cls(*args, **kwargs)
+            else:
+                return None
+
+        return cls.__instance
 
     @property
     def positioners(self):
@@ -123,7 +163,7 @@ T = TypeVar("T", bound="FPS")
 
 
 @dataclass
-class FPS(BaseFPS):
+class FPS(BaseFPS["FPS"]):
     """A class describing the Focal Plane System.
 
     The recommended way to instantiate a new `.FPS` object is to use the `.create`
@@ -162,6 +202,8 @@ class FPS(BaseFPS):
         BETA_DISPLACEMENT_COMPLETED')>
 
     """
+
+    __instance: ClassVar[FPS | None] = None
 
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
@@ -390,6 +432,9 @@ class FPS(BaseFPS):
                 f"in the skip_positioners list: {ignored_positioners}",
                 JaegerUserWarning,
             )
+
+        # Mark as initialised here although we have some more work to do.
+        self.initialised = True
 
         pids = sorted(list(self.keys()))
         if len(pids) > 0:
@@ -1163,6 +1208,8 @@ class FPS(BaseFPS):
         await asyncio.gather(*tasks, return_exceptions=True)
 
         self.loop.stop()
+
+        self.__class__.__instance = None
 
     async def __aenter__(self):
         await self.initialise()
