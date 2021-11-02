@@ -48,6 +48,8 @@ from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 if TYPE_CHECKING:
     from kaiju import RobotGridCalib
 
+    from jaeger.fps import FPS
+
 
 __all__ = [
     "Design",
@@ -68,8 +70,14 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int = 0):
+def get_robot_grid(seed: int = 0, fps: Optional[FPS] = None):
     """Returns a new robot grid with the destination set to the lattice position."""
+
+    if fps is None:
+        warn(
+            "FPS information not provided when creating the robot grid. "
+            "Will not be able to disable robots."
+        )
 
     from kaiju.robotGrid import RobotGridCalib
 
@@ -87,6 +95,17 @@ def get_robot_grid(seed: int = 0):
     )
 
     for robot in robot_grid.robotDict.values():
+        if fps:
+            if robot.id not in fps.positioners:
+                raise JaegerError(f"Robot {robot.id} is not connected.")
+            positioner = fps[robot.id]
+            if positioner.disabled:
+                warn(f"Setting positioner {robot.id} offline in Kaiju.")
+                robot.setAlphaBeta(positioner.alpha, positioner.beta)
+                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+                robot.isOffline = True
+                continue
+
         robot.setDestinationAlphaBeta(alpha0, beta0)
 
     return robot_grid
@@ -142,10 +161,11 @@ def unwind_or_explode(
     explode=False,
     explode_deg=20.0,
     simple_decollision=False,
+    fps: Optional[FPS] = None,
 ):
     """Folds all the robots to the lattice position."""
 
-    robot_grid = get_robot_grid()
+    robot_grid = get_robot_grid(fps=fps)
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
@@ -157,14 +177,13 @@ def unwind_or_explode(
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
 
-    decollide_grid(robot_grid, simple=simple_decollision)
-
     if explode is False:
+        decollide_grid(robot_grid, simple=simple_decollision)
         robot_grid.pathGenGreedy()
     else:
         robot_grid.pathGenEscape(explode_deg)
 
-    if robot_grid.didFail:
+    if explode is False and robot_grid.didFail:
         raise TrajectoryError(
             "Failed generating a valid trajectory. "
             "This usually means a deadlock was found."
@@ -281,7 +300,7 @@ class BaseConfiguration:
 
     assignment_data: ManualAssignmentData | TargetAssignmentData
 
-    def __init__(self):
+    def __init__(self, fps: Optional[FPS] = None):
 
         # Configuration ID is None until we insert in the database.
         # Once set, it cannot be changed.
@@ -289,11 +308,13 @@ class BaseConfiguration:
         self.design = None
         self.design_id = None
 
+        self.fps = fps
+
         self.robot_grid = self._initialise_grid()
 
     def _initialise_grid(self):
 
-        self.robot_grid = get_robot_grid()
+        self.robot_grid = get_robot_grid(fps=self.fps)
 
         return self.robot_grid
 
@@ -325,7 +346,7 @@ class BaseConfiguration:
                     p_coords = a_data.positioner[index]
                     robot.setAlphaBeta(p_coords[0], p_coords[1])
                     continue
-            warn(f"Positioner {robot.id} was not assigned.")
+            raise JaegerError(f"Positioner {robot.id} was not assigned.")
 
         decollide_grid(self.robot_grid, simple=simple_decollision)
         self.robot_grid.pathGenGreedy()
@@ -347,7 +368,7 @@ class Configuration(BaseConfiguration):
 
     assignment_data: TargetAssignmentData
 
-    def __init__(self, design: Design):
+    def __init__(self, design: Design, **kwargs):
 
         self.design = design
         self.design_id = design.design_id
@@ -356,7 +377,7 @@ class Configuration(BaseConfiguration):
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-        super().__init__()
+        super().__init__(**kwargs)
 
     def __repr__(self):
         return (
@@ -677,9 +698,10 @@ class ManualConfiguration(BaseConfiguration):
         data: pandas.DataFrame | dict,
         design_id: int = -999,
         site: str | None = None,
+        fps: Optional[FPS] = None,
     ):
 
-        super().__init__()
+        super().__init__(fps=fps)
 
         self.design = None
         self.design_id = design_id
@@ -726,8 +748,7 @@ class ManualConfiguration(BaseConfiguration):
         seed: int | None = None,
         safe=True,
         uniform: tuple[float, ...] | None = None,
-        design_id: int = -999,
-        site: str | None = None,
+        **kwargs,
     ):
         """Creates a random configuration using Kaiju."""
 
@@ -778,10 +799,10 @@ class ManualConfiguration(BaseConfiguration):
             "positioner_beta": betas,
         }
 
-        return cls(data, design_id=design_id, site=site)
+        return cls(data, **kwargs)
 
     @classmethod
-    def create_folded(cls, design_id: int = -999, site: str | None = None):
+    def create_folded(cls, **kwargs):
         """Creates a folded configuration."""
 
         npositioner = len(positionerTable["positionerID"])
@@ -792,7 +813,7 @@ class ManualConfiguration(BaseConfiguration):
             "positioner_beta": [betaL] * npositioner,
         }
 
-        return cls(data, design_id=design_id, site=site)
+        return cls(data, **kwargs)
 
 
 class TargetAssignmentData:
