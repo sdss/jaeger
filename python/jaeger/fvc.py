@@ -12,7 +12,7 @@ import os
 import pathlib
 from unittest.mock import Mock
 
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import numpy
 import pandas
@@ -30,11 +30,6 @@ from jaeger.actor import JaegerActor
 from jaeger.exceptions import FVCError
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
-
-
-if TYPE_CHECKING:
-
-    from kaiju import RobotGridCalib
 
 
 __all__ = ["take_image"]
@@ -241,9 +236,8 @@ async def write_proc_image(
     new_filename: str | pathlib.Path,
     raw_hdu: fits.ImageHDU,
     fps: FPS,
-    target_coords: pandas.DataFrame,
-    robot_grid: RobotGridCalib | None = None,
-):
+    measured_coods: pandas.DataFrame,
+) -> fits.HDUList:
 
     proc_hdus = fits.HDUList([fits.PrimaryHDU(), raw_hdu])
 
@@ -288,7 +282,9 @@ async def write_proc_image(
         }
     )
 
-    if robot_grid:
+    if fps and fps.configuration:
+        robot_grid = fps.configuration.robot_grid
+
         _cmd_alpha = []
         _cmd_beta = []
         _start_alpha = []
