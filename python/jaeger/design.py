@@ -719,9 +719,13 @@ class ManualConfiguration(BaseConfiguration):
     def get_target_coords(self) -> pandas.DataFrame:
         """Returns a Pandas data frame that can be passed to the FVC routines."""
 
+        positioner_table = positionerTable.set_index("positionerID")
+        holeID = positioner_table.loc[self.assignment_data.positioner_ids].holeID
+
         return pandas.DataFrame(
             {
                 "robotID": self.assignment_data.positioner_ids,
+                "holeID": holeID,
                 "xWokMetExpect": self.assignment_data.wok_metrology[:, 0],
                 "yWokMetExpect": self.assignment_data.wok_metrology[:, 1],
                 # "xWokApExpect": self.assignment_data.wok_apogee[:, 0],
