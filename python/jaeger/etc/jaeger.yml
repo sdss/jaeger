@@ -48,6 +48,7 @@ fps:
     skip_positioners: []
     disabled_positioners: [235, 1395, 278]
     disable_collision_detection_positioners: []
+    use_sync_line: false
 
 positioner:
     reduction_ratio: 1024
