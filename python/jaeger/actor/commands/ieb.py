@@ -71,6 +71,18 @@ def ieb(command, fps):
 
 
 @ieb.command()
+async def enable(command, fps):
+    """Re-enables the IEB."""
+
+    if fps.ieb is None or not isinstance(fps.ieb, IEB):
+        return command.fail("IEB object does not exist.")
+
+    fps.ieb.disabled = False
+
+    return command.finish()
+
+
+@ieb.command()
 async def status(command, fps):
     """Outputs the status of the devices."""
 
