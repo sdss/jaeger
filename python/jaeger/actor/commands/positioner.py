@@ -258,7 +258,7 @@ async def status(command, fps, positioner_ids, full):
     if not check_positioners(positioner_ids, command, fps):
         return
 
-    await fps.update_status(positioner_ids=positioner_ids)
+    await fps.update_status(positioner_ids=0)
     await fps.update_position(positioner_ids=positioner_ids)
 
     n_trajs = (
