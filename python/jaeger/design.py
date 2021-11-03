@@ -40,7 +40,7 @@ from coordio.defaults import (
 )
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
-from jaeger import config
+from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
 
@@ -104,7 +104,7 @@ def get_robot_grid(seed: int = 0):
                 raise JaegerError(f"Robot {robot.id} is not connected.")
             positioner = fps[robot.id]
             if positioner.disabled:
-                warn(f"Setting positioner {robot.id} offline in Kaiju.")
+                log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
                 robot.setAlphaBeta(positioner.alpha, positioner.beta)
                 robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
                 robot.isOffline = True
@@ -164,7 +164,6 @@ def unwind_or_explode(
     only_connected: bool = False,
     explode=False,
     explode_deg=20.0,
-    simple_decollision=False,
 ):
     """Folds all the robots to the lattice position."""
 
@@ -180,17 +179,22 @@ def unwind_or_explode(
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
 
-    if explode is False:
-        decollide_grid(robot_grid, simple=simple_decollision)
-        robot_grid.pathGenGreedy()
-    else:
-        robot_grid.pathGenEscape(explode_deg)
+    # For unwind, check if there are collisions. If so, cancel.
+    if explode is False:  # Unwind
+        for robot in robot_grid.robotDict.values():
+            if robot_grid.isCollided(robot.id):
+                raise ValueError(f"Robot {robot.id} is kaiju-collided. Cannot unwind.")
 
-    if explode is False and robot_grid.didFail:
-        raise TrajectoryError(
-            "Failed generating a valid trajectory. "
-            "This usually means a deadlock was found."
-        )
+    if explode is False:  # Unwind
+        robot_grid.pathGenGreedy()
+        if robot_grid.didFail:
+            raise TrajectoryError(
+                "Failed generating a valid trajectory. "
+                "This usually means a deadlock was found."
+            )
+
+    else:  # explode
+        robot_grid.pathGenEscape(explode_deg)
 
     layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
     if len(set(current_positions.keys()) - set(layout_pids)) > 0:
@@ -313,6 +317,9 @@ class BaseConfiguration:
 
         self.fps = FPS.get_instance()
 
+        self._robotID = []
+        self.metWokXYZ = {}
+
         self.robot_grid = self._initialise_grid()
 
     def _initialise_grid(self):
@@ -350,6 +357,10 @@ class BaseConfiguration:
                     robot.setAlphaBeta(p_coords[0], p_coords[1])
                     continue
             raise JaegerError(f"Positioner {robot.id} was not assigned.")
+
+        for r in self.robot_grid.robotDict.values():
+            self._robotID.append(r.id)
+            self.metWokXYZ[r.id] = r.metWokXYZ
 
         decollide_grid(self.robot_grid, simple=simple_decollision)
         self.robot_grid.pathGenGreedy()
@@ -731,8 +742,8 @@ class ManualConfiguration(BaseConfiguration):
             {
                 "robotID": robotID,
                 "holeID": holeID,
-                "xWokMetExpect": self.assignment_data.wok_metrology[:, 0],
-                "yWokMetExpect": self.assignment_data.wok_metrology[:, 1],
+                "xWokMetExpect": [self.metWokXYZ[rid][0] for rid in robotID],
+                "yWokMetExpect": [self.metWokXYZ[rid][1] for rid in robotID],
                 # "xWokApExpect": self.assignment_data.wok_apogee[:, 0],
                 # "yWokApExpect": self.assignment_data.wok_apogee[:, 1],
                 # "xWokBossExpect": self.assignment_data.wok_boss[:, 0],
