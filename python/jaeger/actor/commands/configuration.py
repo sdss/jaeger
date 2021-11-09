@@ -17,7 +17,7 @@ import click
 import numpy
 
 from jaeger.design import Configuration, Design, ManualConfiguration
-from jaeger.exceptions import TrajectoryError
+from jaeger.exceptions import JaegerError, TrajectoryError
 
 from . import jaeger_parser
 
@@ -79,7 +79,7 @@ async def load(
     else:
         try:
             design = Design(designid)
-        except (ValueError, RuntimeError) as err:
+        except (ValueError, RuntimeError, JaegerError) as err:
             return command.fail(error=f"Failed retrieving design: {err}")
 
         fps.configuration = design.configuration
