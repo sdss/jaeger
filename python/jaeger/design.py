@@ -32,9 +32,12 @@ from coordio import (
     Tangent,
     Wok,
 )
+from coordio.conv import tangentToPositioner, wokToTangent
 from coordio.defaults import (
     INST_TO_WAVE,
+    POSITIONER_HEIGHT,
     fps_calibs_version,
+    getHoleOrient,
     positionerTable,
     wokCoords,
 )
@@ -352,7 +355,7 @@ class BaseConfiguration:
             robot.setAlphaBeta(alpha0, beta0)
             if robot.id in a_data.positioner_ids:
                 index = a_data.positioner_to_index[robot.id]
-                if index in a_data.valid_index:
+                if index in a_data.valid:
                     p_coords = a_data.positioner[index]
                     robot.setAlphaBeta(p_coords[0], p_coords[1])
                     continue
@@ -384,6 +387,8 @@ class Configuration(BaseConfiguration):
 
     def __init__(self, design: Design, **kwargs):
 
+        super().__init__(**kwargs)
+
         self.design = design
         self.design_id = design.design_id
         self.assignment_data = TargetAssignmentData(self)
@@ -391,11 +396,9 @@ class Configuration(BaseConfiguration):
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-        super().__init__(**kwargs)
-
     def __repr__(self):
         return (
-            f"<Configuration (configuration_id={self.configuration_id}"
+            f"<Configuration (configuration_id={self.configuration_id} "
             f"design_id={self.design_id})>"
         )
 
@@ -502,7 +505,7 @@ class Configuration(BaseConfiguration):
             assignment_pk = assignment.pk
             try:
                 data_index = a_data.assignments.index(assignment)
-                if data_index not in a_data.valid_index:
+                if data_index not in a_data.valid:
                     raise ValueError()
 
                 positioner_id = a_data.positioner_ids[data_index]
@@ -601,7 +604,7 @@ class Configuration(BaseConfiguration):
                     )
 
                 else:
-                    valid = index in a_data.valid_index
+                    valid = index in a_data.valid
                     if valid is True:
                         xFocal, yFocal = a_data.focal[index, 0:2]
                         alpha, beta = a_data.positioner[index, 0:2]
@@ -839,11 +842,14 @@ class TargetAssignmentData:
     icrs: ICRS
     observed: Observed
     focal: FocalPlane
-    tangent: Tangent
+    wok: Wok
+    tangent: numpy.ndarray
     positioner: numpy.ndarray
 
-    positioner_objs: list[PositionerType]
-    valid_index: numpy.ndarray
+    _tangent: list[Tangent]
+    _positioner: list[PositionerType]
+
+    valid: numpy.ndarray
     positioner_to_index: dict[int, int]
 
     def __init__(self, configuration: Configuration):
@@ -859,12 +865,12 @@ class TargetAssignmentData:
         self.observatory: str = self.design.field.observatory.label.upper()
         self.site = Site(self.observatory)
 
-        positioner_table = positionerTable.set_index("holeID")
+        self.positioner_table = positionerTable.set_index("holeID")
 
         # TODO: we are limiting the wok to those holes in the list of positioners.
         # For now this is useful to work with the miniwok but it may not be what
         # we want.
-        wok_table = wokCoords.set_index("holeID").loc[positioner_table.index]
+        wok_table = wokCoords.set_index("holeID").loc[self.positioner_table.index]
         self.assignments = [
             assg
             for assg in self.design.assignments
@@ -873,15 +879,14 @@ class TargetAssignmentData:
 
         self.holeids: list[str] = [assg.hole.holeid for assg in self.assignments]
 
-        self.positioner_ids = positioner_table.loc[self.holeids].positionerID.tolist()
-        self.positioner_ids = cast(list[int], self.positioner_ids)
+        self.positioner_ids = self.positioner_table.loc[self.holeids].positionerID
+        self.positioner_ids = cast(list[int], self.positioner_ids.tolist())
 
         self.targets: list[targetdb.Target] = [
             assignment.carton_to_target.target for assignment in self.assignments
         ]
 
         self.wok_data = wok_table.loc[self.holeids]
-        assert isinstance(self.wok_data, pandas.DataFrame)
 
         assert len(self.wok_data) == len(self.holeids), "invalid number of hole_ids"
 
@@ -892,6 +897,7 @@ class TargetAssignmentData:
             INST_TO_WAVE[ft.capitalize()] for ft in self.fibre_types
         ]
 
+        # Check that the fibre types are valid fibres for a given hole.
         if (
             not self.wok_data.reset_index()
             .apply(
@@ -966,63 +972,61 @@ class TargetAssignmentData:
             site=self.site,
         )
 
-        wok = Wok(
+        self.wok = Wok(
             self.focal,
             site=self.site,
             obsAngle=self.design.field.position_angle,
         )
 
-        self.tangent = Tangent(
-            wok,
-            holeID=self.holeids,
-            site=self.site,
-            wavelength=self.wavelengths,  # This just to prevent a warning.
-        )
-
-        # coordio doesn't allow a single instance of PositionerBase to contain
-        # an array of holeIDs and fibre types. For now we create a list of positioner
+        # coordio doesn't allow a single instance of Tangent or PositionerBase to
+        # contain an array of holeIDs and fibre types. For now we create a list of
         # instances for each hole and fibre. We ignore warnings since those are
         # propagated to positioner_warn anyway.
-        self.positioner_objs = []
+        self._tangent = []
+        self._positioner = []
         for ipos in range(len(self.targets)):
-            tan_coords = self.tangent[[ipos]]
 
-            ftype = self.fibre_types[ipos]
             holeid = self.holeids[ipos]
+            ftype = self.fibre_types[ipos]
 
             if ftype.upper() == "BOSS":
-                positioner_class = PositionerBoss
+                Positioner = PositionerBoss
             elif ftype.upper() == "APOGEE":
-                positioner_class = PositionerApogee
+                Positioner = PositionerApogee
             else:
                 raise ValueError(f"Invalid fibre type {ftype}.")
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
 
-                self.positioner_objs.append(
-                    positioner_class(
-                        tan_coords,
+                _tangent = Tangent(
+                    self.wok[[ipos]],
+                    holeID=holeid,
+                    site=self.site,
+                    wavelength=INST_TO_WAVE["GFA"],
+                )
+                self._tangent.append(_tangent)
+
+                self._positioner.append(
+                    Positioner(
+                        _tangent,
                         site=self.site,
                         holeID=holeid,
                     )
                 )
 
-        if any([pos.positioner_warn[0] for pos in self.positioner_objs]):
+        if any([pos.positioner_warn[0] for pos in self._positioner]):
             warn(
                 "Some coordinates failed while converting to "
                 "positioner coordinates. Skipping."
             )
 
-        self.valid_index = numpy.where(
-            [~p.positioner_warn[0] for p in self.positioner_objs]
-        )[0]
+        self.valid = numpy.where([~p.positioner_warn[0] for p in self._positioner])[0]
 
-        self.positioner = numpy.vstack(
-            [p.astype(numpy.float32) for p in self.positioner_objs]
-        )
+        self.tangent = numpy.vstack(self._tangent).astype(numpy.float32)
+        self.positioner = numpy.vstack(self._positioner).astype(numpy.float32)
 
-        if not (self.positioner[self.valid_index][:, 1] < 180).all():
+        if not (self.positioner[self.valid][:, 1] < 180).all():
             raise JaegerError("Some beta coordinates are > 180.")
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
@@ -1061,7 +1065,7 @@ class ManualAssignmentData:
             self.holeids = positioner_data.loc[self.positioner_ids].holeID.tolist()
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
-        self.valid_index = numpy.arange(len(self.positioner_ids))
+        self.valid = numpy.arange(len(self.positioner_ids))
 
         self.positioner = data.loc[:, ["positioner_alpha", "positioner_beta"]]
         self.positioner = self.positioner.to_numpy()
