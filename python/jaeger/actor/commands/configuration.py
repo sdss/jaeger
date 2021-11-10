@@ -61,6 +61,8 @@ async def load(
 ):
     """Loads and ingests a configuration from a design in the database."""
 
+    loop = asyncio.get_event_loop()
+
     if folded:
         designid = designid or -999
         fps.configuration = ManualConfiguration.create_folded(design_id=designid)
@@ -78,7 +80,7 @@ async def load(
 
     else:
         try:
-            design = Design(designid)
+            design = await Design.create_async(designid)
         except (ValueError, RuntimeError, JaegerError) as err:
             return command.fail(error=f"Failed retrieving design: {err}")
 
@@ -92,11 +94,7 @@ async def load(
     if fps.configuration.ingested is False:
         replace = False
 
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(
-        None,
-        partial(fps.configuration.write_to_database, replace=replace),
-    )
+    fps.configuration.write_to_database(replace=replace)
 
     configuration = fps.configuration
     boresight = fps.configuration.assignment_data.observed_boresight

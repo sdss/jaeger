@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import warnings
 
@@ -32,12 +33,9 @@ from coordio import (
     Tangent,
     Wok,
 )
-from coordio.conv import tangentToPositioner, wokToTangent
 from coordio.defaults import (
     INST_TO_WAVE,
-    POSITIONER_HEIGHT,
     fps_calibs_version,
-    getHoleOrient,
     positionerTable,
     wokCoords,
 )
@@ -46,6 +44,7 @@ from sdssdb.peewee.sdss5db import opsdb, targetdb
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
+from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
@@ -281,7 +280,7 @@ def get_fibermap_table() -> tuple[Table, dict]:
 class Design:
     """Loads and represents a targetdb design."""
 
-    def __init__(self, design_id: int):
+    def __init__(self, design_id: int, load_configuration=True):
 
         if targetdb.database.connected is False:
             raise RuntimeError("Database is not connected.")
@@ -297,9 +296,55 @@ class Design:
             raise ValueError(f"design_id {design_id} does not exist in the database.")
 
         self.field = self.design.field
-        self.assignments: list[targetdb.Assignment] = list(self.design.assignments)
+        self.target_data: dict[str, dict] = self.get_target_data()
 
-        self.configuration = Configuration(self)
+        self.configuration: Configuration
+        if load_configuration:
+            self.configuration = Configuration(self)
+
+    def get_target_data(self) -> dict[str, dict]:
+        """Retrieves target data as a dictionary."""
+
+        # TODO: this is all synchronous which is probably ok because this
+        # query should run in < 1s, but at some point maybe we can change
+        # this to use async-peewee and aiopg.
+
+        target_data = (
+            targetdb.Design.select(
+                targetdb.Assignment.pk.alias("assignment_pk"),
+                targetdb.Design,
+                targetdb.Assignment,
+                targetdb.CartonToTarget,
+                targetdb.Target,
+                targetdb.Magnitude,
+                targetdb.Hole.holeid,
+                targetdb.Instrument.label.alias("fibre_type"),
+            )
+            .join(targetdb.Assignment)
+            .join(targetdb.CartonToTarget)
+            .join(targetdb.Target)
+            .switch(targetdb.CartonToTarget)
+            .join(targetdb.Magnitude)
+            .switch(targetdb.Assignment)
+            .join(targetdb.Hole)
+            .switch(targetdb.Assignment)
+            .join(targetdb.Instrument)
+            .where(targetdb.Design.design_id == self.design_id)
+            .dicts()
+        )
+
+        return {data["holeid"]: data for data in target_data}
+
+    @classmethod
+    async def create_async(cls, design_id: int):
+        """Returns a design while creating the configuration in an executor."""
+
+        self = cls(design_id, load_configuration=False)
+
+        configuration = await run_in_executor(Configuration, self)
+        self.configuration = configuration
+
+        return self
 
     def __repr__(self):
         return f"<Design (design_id={self.design_id})>"
@@ -501,10 +546,9 @@ class Configuration(BaseConfiguration):
         a_data = self.assignment_data
 
         focals = []
-        for assignment in self.design.assignments:
-            assignment_pk = assignment.pk
+        for holeid, target in self.design.target_data.items():
             try:
-                data_index = a_data.assignments.index(assignment)
+                data_index = a_data.holeids.index(holeid)
                 if data_index not in a_data.valid:
                     raise ValueError()
 
@@ -521,7 +565,7 @@ class Configuration(BaseConfiguration):
 
             focals.append(
                 dict(
-                    assignment_pk=assignment_pk,
+                    assignment_pk=target["assignment_pk"],
                     xfocal=xfocal,
                     yfocal=yfocal,
                     positioner_id=positioner_id,
@@ -871,27 +915,19 @@ class TargetAssignmentData:
         # For now this is useful to work with the miniwok but it may not be what
         # we want.
         wok_table = wokCoords.set_index("holeID").loc[self.positioner_table.index]
-        self.assignments = [
-            assg
-            for assg in self.design.assignments
-            if assg.hole.holeid in wok_table.index
-        ]
+        self.target_data = self.design.target_data
 
-        self.holeids: list[str] = [assg.hole.holeid for assg in self.assignments]
+        self.holeids: list[str] = list(self.target_data.keys())
 
         self.positioner_ids = self.positioner_table.loc[self.holeids].positionerID
         self.positioner_ids = cast(list[int], self.positioner_ids.tolist())
-
-        self.targets: list[targetdb.Target] = [
-            assignment.carton_to_target.target for assignment in self.assignments
-        ]
 
         self.wok_data = wok_table.loc[self.holeids]
 
         assert len(self.wok_data) == len(self.holeids), "invalid number of hole_ids"
 
         self.fibre_types: list[str] = [
-            assg.instrument.label for assg in self.assignments
+            target["fibre_type"] for target in self.target_data.values()
         ]
         self.wavelengths: list[float] = [
             INST_TO_WAVE[ft.capitalize()] for ft in self.fibre_types
@@ -916,34 +952,27 @@ class TargetAssignmentData:
     def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems."""
 
-        target_data = (
-            targetdb.Target.select(
-                targetdb.Target.ra,
-                targetdb.Target.dec,
-                targetdb.Target.pmra,
-                targetdb.Target.pmdec,
-                targetdb.Target.parallax,
-            )
-            .join(targetdb.CartonToTarget)
-            .join(targetdb.Assignment)
-            .join(targetdb.Design)
-            .switch(targetdb.Assignment)
-            .join(targetdb.Hole)
-            .where(
-                targetdb.Design.design_id == self.design_id,
-                targetdb.Hole.holeid.in_(self.holeids),
-            )
-            .tuples()
+        target_coords = numpy.array(
+            [
+                [
+                    target["ra"],
+                    target["dec"],
+                    target["pmra"],
+                    target["pmdec"],
+                    target["parallax"],
+                ]
+                for target in self.target_data.values()
+            ],
+            dtype=numpy.float64,
         )
-        target_data = numpy.array(target_data, dtype=numpy.float64)
 
-        assert numpy.all(~numpy.isnan(target_data[:, 0:2]))
+        assert numpy.all(~numpy.isnan(target_coords[:, 0:2]))
 
         self.icrs = ICRS(
-            target_data[:, 0:2],
-            pmra=numpy.nan_to_num(target_data[:, 2], nan=0),
-            pmdec=numpy.nan_to_num(target_data[:, 3], nan=0),
-            parallax=numpy.nan_to_num(target_data[:, 4]),
+            target_coords[:, 0:2],
+            pmra=numpy.nan_to_num(target_coords[:, 2], nan=0),
+            pmdec=numpy.nan_to_num(target_coords[:, 3], nan=0),
+            parallax=numpy.nan_to_num(target_coords[:, 4]),
         )
 
         self.site.set_time(jd)
@@ -984,7 +1013,7 @@ class TargetAssignmentData:
         # propagated to positioner_warn anyway.
         self._tangent = []
         self._positioner = []
-        for ipos in range(len(self.targets)):
+        for ipos in range(len(self.holeids)):
 
             holeid = self.holeids[ipos]
             ftype = self.fibre_types[ipos]
