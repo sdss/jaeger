@@ -57,7 +57,8 @@ __all__ = [
     "ManualConfiguration",
     "TargetAssignmentData",
     "ManualAssignmentData",
-    "unwind_or_explode",
+    "unwind",
+    "explode",
     "get_robot_grid",
 ]
 
@@ -160,42 +161,54 @@ def decollide_grid(robot_grid: RobotGridCalib, simple=False):
             warn("The grid was decollided.")
 
 
-def unwind_or_explode(
-    current_positions: dict[int, tuple[float, float]],
-    only_connected: bool = False,
-    explode=False,
-    explode_deg=20.0,
-):
+def unwind(current_positions: dict[int, tuple[float, float]]):
     """Folds all the robots to the lattice position."""
 
     robot_grid = get_robot_grid()
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
-            if only_connected:
-                continue
-            else:
-                raise ValueError(f"Positioner {robot.id} is not connected.")
+            raise ValueError(f"Positioner {robot.id} is not connected.")
 
         robot_position = current_positions[robot.id]
         robot.setAlphaBeta(robot_position[0], robot_position[1])
 
-    # For unwind, check if there are collisions. If so, cancel.
-    if explode is False:  # Unwind
-        for robot in robot_grid.robotDict.values():
-            if robot_grid.isCollided(robot.id):
-                raise ValueError(f"Robot {robot.id} is kaiju-collided. Cannot unwind.")
+    for robot in robot_grid.robotDict.values():
+        if robot_grid.isCollided(robot.id):
+            raise ValueError(f"Robot {robot.id} is kaiju-collided. Cannot unwind.")
 
-    if explode is False:  # Unwind
-        robot_grid.pathGenGreedy()
-        if robot_grid.didFail:
-            raise TrajectoryError(
-                "Failed generating a valid trajectory. "
-                "This usually means a deadlock was found."
-            )
+    robot_grid.pathGenGreedy()
+    if robot_grid.didFail:
+        raise TrajectoryError(
+            "Failed generating a valid trajectory. "
+            "This usually means a deadlock was found."
+        )
 
-    else:  # explode
-        robot_grid.pathGenEscape(explode_deg)
+    layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
+    if len(set(current_positions.keys()) - set(layout_pids)) > 0:
+        # Some connected positioners are not in the layout.
+        raise ValueError("Some connected positioners are not in the grid layout.")
+
+    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
+
+    _, reverse = robot_grid.getPathPair(speed=speed)
+
+    return reverse
+
+
+def explode(current_positions: dict[int, tuple[float, float]], explode_deg=20.0):
+    """Explodes the grid by a number of degrees."""
+
+    robot_grid = get_robot_grid()
+
+    for robot in robot_grid.robotDict.values():
+        if robot.id not in current_positions:
+            raise ValueError(f"Positioner {robot.id} is not connected.")
+
+        robot_position = current_positions[robot.id]
+        robot.setAlphaBeta(robot_position[0], robot_position[1])
+
+    robot_grid.pathGenEscape(explode_deg)
 
     layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
     if len(set(current_positions.keys()) - set(layout_pids)) > 0:
