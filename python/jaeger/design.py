@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import warnings
 
@@ -240,6 +239,7 @@ def get_fibermap_table() -> tuple[Table, dict]:
         ("rp_mag", numpy.float32),
         ("h_mag", numpy.float32),
         ("catalogid", numpy.int64),
+        ("carton_to_target_pk", numpy.int64),
         ("cadence", "S20"),
         ("firstcarton", "S25"),
         ("program", "S20"),
@@ -282,9 +282,6 @@ class Design:
 
     def __init__(self, design_id: int, load_configuration=True):
 
-        if targetdb.database.connected is False:
-            raise RuntimeError("Database is not connected.")
-
         if wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
 
@@ -309,20 +306,31 @@ class Design:
         # query should run in < 1s, but at some point maybe we can change
         # this to use async-peewee and aiopg.
 
+        if targetdb.database.connected is False:
+            raise RuntimeError("Database is not connected.")
+
         target_data = (
             targetdb.Design.select(
                 targetdb.Assignment.pk.alias("assignment_pk"),
-                targetdb.Design,
-                targetdb.Assignment,
-                targetdb.CartonToTarget,
+                targetdb.CartonToTarget.pk.alias("carton_to_target_pk"),
+                targetdb.CartonToTarget.lambda_eff,
                 targetdb.Target,
                 targetdb.Magnitude,
                 targetdb.Hole.holeid,
                 targetdb.Instrument.label.alias("fibre_type"),
+                targetdb.Cadence.label.alias("cadence"),
+                targetdb.Carton.carton,
+                targetdb.Category.label.alias("category"),
+                targetdb.Carton.program,
             )
             .join(targetdb.Assignment)
             .join(targetdb.CartonToTarget)
             .join(targetdb.Target)
+            .switch(targetdb.CartonToTarget)
+            .join(targetdb.Carton)
+            .join(targetdb.Category)
+            .switch(targetdb.CartonToTarget)
+            .join(targetdb.Cadence)
             .switch(targetdb.CartonToTarget)
             .join(targetdb.Magnitude)
             .switch(targetdb.Assignment)
@@ -602,7 +610,7 @@ class Configuration(BaseConfiguration):
             epoch=self.epoch,
             obstime=time.strftime("%a %b %d %H:%M:%S %Y"),
             MJD=int(time.mjd),  # TODO: this should be SJD
-            observatory=a_data.observatory,
+            observatory=self.design.field.observatory.label,
             temperature=-999,  # TODO
             raCen=self.design.field.racen,
             decCen=self.design.field.deccen,
@@ -610,13 +618,13 @@ class Configuration(BaseConfiguration):
 
         fibermap, default = get_fibermap_table()
 
-        positioners = positionerTable.reset_index("positionerID")
-        wok = wokCoords.reset_index("holeID")
+        positioners = positionerTable.set_index("positionerID")
+        wok = wokCoords.set_index("holeID")
 
-        for pid in positioners.positionerID.tolist():
+        for pid in positioners.index.tolist():
 
-            holeID = positioners.loc[pid].holeID.values[0]
-            holeType = wok.loc[holeID].holeType.values[0].upper()
+            holeID = positioners.loc[pid].holeID
+            holeType = wok.loc[holeID].holeType.upper()
 
             for fibre in ["APOGEE", "BOSS"]:
 
@@ -655,13 +663,7 @@ class Configuration(BaseConfiguration):
                     else:
                         xFocal = yFocal = alpha = beta = -999.0
 
-                    target = a_data.targets[index]
-                    c2t = a_data.assignments[index].carton_to_target
-
-                    try:
-                        cadence = c2t.cadence.label
-                    except peewee.DoesNotExist:
-                        cadence = ""
+                    target = a_data.design.target_data[holeID]
 
                     row.update(
                         {
@@ -674,46 +676,37 @@ class Configuration(BaseConfiguration):
                             "yFocal": yFocal,
                             "alpha": alpha,
                             "beta": beta,
-                            "racat": target.ra,
-                            "deccat": target.dec,
-                            "pmra": target.pmra or -999.0,
-                            "pmdec": target.pmdec or -999.0,
-                            "parallax": target.parallax or -999.0,
-                            "coord_epoch": target.epoch or -999.0,
+                            "racat": target["ra"],
+                            "deccat": target["dec"],
+                            "pmra": target["pmra"] or -999.0,
+                            "pmdec": target["pmdec"] or -999.0,
+                            "parallax": target["parallax"] or -999.0,
+                            "coord_epoch": target["epoch"] or -999.0,
                             "ra": a_data.icrs[index, 0],
                             "dec": a_data.icrs[index, 1],
-                            "lambda_eff": c2t.lambda_eff or -999.0,
+                            "lambda_eff": target["lambda_eff"] or -999.0,
                             "spectrographId": 0 if fibre == "APOGEE" else 1,
-                            "catalogid": target.catalogid,
-                            "cadence": cadence,
-                            "firstcarton": c2t.carton.carton,
-                            "program": c2t.carton.program,
-                            "category": c2t.carton.category.label,
+                            "catalogid": target["catalogid"],
+                            "carton_to_target_pk": target["carton_to_target_pk"],
+                            "cadence": target["cadence"],
+                            "firstcarton": target["carton"],
+                            "program": target["program"],
+                            "category": target["category"],
                         }
                     )
 
-                    mag = c2t.magnitudes
-                    if len(mag) > 0:
-                        mag = mag[0]
-                        optical_mag = [
-                            getattr(mag, m) or -999.0 for m in ["g", "r", "i", "z"]
-                        ]
-                        optical_mag = [-999.0] + optical_mag
-                    else:
-                        optical_mag = [-999.0] * 5
-                        mag = None
-
-                    if mag:
-                        row.update(
-                            {
-                                "mag": optical_mag,
-                                "optical_prov": mag.optical_prov or "",
-                                "bp_mag": mag.bp or -999.0,
-                                "gaia_g_mag": mag.gaia_g or -999.0,
-                                "rp_mag": mag.rp or -999.0,
-                                "h_mag": mag.h or -999.0,
-                            }
-                        )
+                    optical_mag = [target[m] or -999.0 for m in ["g", "r", "i", "z"]]
+                    optical_mag = [-999.0] + optical_mag  # u band
+                    row.update(
+                        {
+                            "mag": optical_mag,
+                            "optical_prov": target["optical_prov"] or "",
+                            "bp_mag": target["bp"] or -999.0,
+                            "gaia_g_mag": target["gaia_g"] or -999.0,
+                            "rp_mag": target["rp"] or -999.0,
+                            "h_mag": target["h"] or -999.0,
+                        }
+                    )
 
                 fibermap.add_row(row)
 
