@@ -14,8 +14,8 @@ import click
 import numpy
 
 from jaeger import config
-from jaeger.design import ManualConfiguration
 from jaeger.exceptions import TrajectoryError
+from jaeger.target.configuration import ManualConfiguration
 
 from . import jaeger_parser
 

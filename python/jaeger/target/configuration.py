@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #
 # @Author: José Sánchez-Gallego (gallegoj@uw.edu)
-# @Date: 2021-10-13
-# @Filename: design.py
+# @Date: 2021-11-10
+# @Filename: configuration.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Optional, Union, cast
 
 import numpy
 import pandas
-import peewee
 from astropy.table import Table
 from astropy.time import Time
 from pydl.pydlutils.yanny import write_ndarray_to_yanny
@@ -38,188 +37,27 @@ from coordio.defaults import (
     positionerTable,
     wokCoords,
 )
-from sdssdb.peewee.sdss5db import opsdb, targetdb
+from sdssdb.peewee.sdss5db import opsdb
 
-from jaeger import config, log
-from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
-from jaeger.fps import FPS
-from jaeger.utils.helpers import run_in_executor
+from jaeger import FPS, config
+from jaeger.exceptions import JaegerError, TrajectoryError
+
+from .tools import decollide_grid, get_robot_grid, warn
 
 
 if TYPE_CHECKING:
-    from kaiju import RobotGridCalib
+    from .design import Design
 
 
 __all__ = [
-    "Design",
     "BaseConfiguration",
     "Configuration",
     "ManualConfiguration",
     "TargetAssignmentData",
     "ManualAssignmentData",
-    "unwind",
-    "explode",
-    "get_robot_grid",
 ]
 
-
 PositionerType = Union[PositionerApogee, PositionerBoss]
-
-
-def warn(message):
-    warnings.warn(message, JaegerUserWarning)
-
-
-def get_robot_grid(seed: int = 0):
-    """Returns a new robot grid with the destination set to the lattice position.
-
-    If an initialised instance of the FPS is available, disabled robots will be
-    set offline in the grid at their current positions.
-
-    """
-
-    fps = FPS.get_instance()
-    if fps is None:
-        warn(
-            "FPS information not provided when creating the robot grid. "
-            "Will not be able to disable robots."
-        )
-
-    from kaiju.robotGrid import RobotGridCalib
-
-    kaiju_config = config["kaiju"]
-    ang_step = kaiju_config["ang_step"]
-    collision_buffer = kaiju_config["collision_buffer"]
-    alpha0, beta0 = kaiju_config["lattice_position"]
-    epsilon = ang_step * 2
-
-    robot_grid = RobotGridCalib(
-        stepSize=ang_step,
-        collisionBuffer=collision_buffer,
-        epsilon=epsilon,
-        seed=seed,
-    )
-
-    for robot in robot_grid.robotDict.values():
-        if fps:
-            if robot.id not in fps.positioners:
-                raise JaegerError(f"Robot {robot.id} is not connected.")
-            positioner = fps[robot.id]
-            if positioner.disabled:
-                log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
-                robot.setAlphaBeta(positioner.alpha, positioner.beta)
-                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
-                robot.isOffline = True
-                continue
-
-        robot.setDestinationAlphaBeta(alpha0, beta0)
-
-    return robot_grid
-
-
-def decollide_grid(robot_grid: RobotGridCalib, simple=False):
-    """Decollides a potentially collided grid. Raises on fail.
-
-    If ``simple=True``, just runs a ``decollideGrid()`` and returns silently.
-
-    """
-
-    def get_collided():
-        collided = [rid for rid in robot_grid.robotDict if robot_grid.isCollided(rid)]
-        if len(collided) == 0:
-            return False
-        else:
-            return collided
-
-    if simple:
-        robot_grid.decollideGrid()
-        if get_collided() is not False:
-            raise JaegerError("Failed decolliding grid.")
-        return
-
-    # First pass. If collided, decollide each robot one by one.
-    # TODO: Probably this should be done in order of less to more important targets
-    # to throw out the less critical ones first.
-    collided = get_collided()
-    if collided is not False:
-        warn("The grid is collided. Attempting one-by-one decollision.")
-        for robot_id in collided:
-            if robot_grid.isCollided(robot_id):
-                robot_grid.decollideRobot(robot_id)
-                if robot_grid.isCollided(robot_id):
-                    warn(f"Failed decolliding positioner {robot_id}.")
-                else:
-                    warn(f"Positioner {robot_id} was successfully decollided.")
-
-    # Second pass. If still collided, try a grid decollision.
-    if get_collided() is not False:
-        warn("Grid is still colliding. Attempting full grid decollision.")
-        robot_grid.decollideGrid()
-        if get_collided() is not False:
-            raise JaegerError("Failed decolliding grid.")
-        else:
-            warn("The grid was decollided.")
-
-
-def unwind(current_positions: dict[int, tuple[float, float]]):
-    """Folds all the robots to the lattice position."""
-
-    robot_grid = get_robot_grid()
-
-    for robot in robot_grid.robotDict.values():
-        if robot.id not in current_positions:
-            raise ValueError(f"Positioner {robot.id} is not connected.")
-
-        robot_position = current_positions[robot.id]
-        robot.setAlphaBeta(robot_position[0], robot_position[1])
-
-    for robot in robot_grid.robotDict.values():
-        if robot_grid.isCollided(robot.id):
-            raise ValueError(f"Robot {robot.id} is kaiju-collided. Cannot unwind.")
-
-    robot_grid.pathGenGreedy()
-    if robot_grid.didFail:
-        raise TrajectoryError(
-            "Failed generating a valid trajectory. "
-            "This usually means a deadlock was found."
-        )
-
-    layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
-    if len(set(current_positions.keys()) - set(layout_pids)) > 0:
-        # Some connected positioners are not in the layout.
-        raise ValueError("Some connected positioners are not in the grid layout.")
-
-    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-
-    _, reverse = robot_grid.getPathPair(speed=speed)
-
-    return reverse
-
-
-def explode(current_positions: dict[int, tuple[float, float]], explode_deg=20.0):
-    """Explodes the grid by a number of degrees."""
-
-    robot_grid = get_robot_grid()
-
-    for robot in robot_grid.robotDict.values():
-        if robot.id not in current_positions:
-            raise ValueError(f"Positioner {robot.id} is not connected.")
-
-        robot_position = current_positions[robot.id]
-        robot.setAlphaBeta(robot_position[0], robot_position[1])
-
-    robot_grid.pathGenEscape(explode_deg)
-
-    layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
-    if len(set(current_positions.keys()) - set(layout_pids)) > 0:
-        # Some connected positioners are not in the layout.
-        raise ValueError("Some connected positioners are not in the grid layout.")
-
-    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-
-    _, reverse = robot_grid.getPathPair(speed=speed)
-
-    return reverse
 
 
 def get_fibermap_table() -> tuple[Table, dict]:
@@ -288,87 +126,6 @@ def get_fibermap_table() -> tuple[Table, dict]:
     default["sdssv_apogee_target0"] = 0
 
     return (fibermap, default)
-
-
-class Design:
-    """Loads and represents a targetdb design."""
-
-    def __init__(self, design_id: int, load_configuration=True):
-
-        if wokCoords is None:
-            raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
-
-        self.design_id = design_id
-
-        try:
-            self.design = targetdb.Design.get(design_id=design_id)
-        except peewee.DoesNotExist:
-            raise ValueError(f"design_id {design_id} does not exist in the database.")
-
-        self.field = self.design.field
-        self.target_data: dict[str, dict] = self.get_target_data()
-
-        self.configuration: Configuration
-        if load_configuration:
-            self.configuration = Configuration(self)
-
-    def get_target_data(self) -> dict[str, dict]:
-        """Retrieves target data as a dictionary."""
-
-        # TODO: this is all synchronous which is probably ok because this
-        # query should run in < 1s, but at some point maybe we can change
-        # this to use async-peewee and aiopg.
-
-        if targetdb.database.connected is False:
-            raise RuntimeError("Database is not connected.")
-
-        target_data = (
-            targetdb.Design.select(
-                targetdb.Assignment.pk.alias("assignment_pk"),
-                targetdb.CartonToTarget.pk.alias("carton_to_target_pk"),
-                targetdb.CartonToTarget.lambda_eff,
-                targetdb.Target,
-                targetdb.Magnitude,
-                targetdb.Hole.holeid,
-                targetdb.Instrument.label.alias("fibre_type"),
-                targetdb.Cadence.label.alias("cadence"),
-                targetdb.Carton.carton,
-                targetdb.Category.label.alias("category"),
-                targetdb.Carton.program,
-            )
-            .join(targetdb.Assignment)
-            .join(targetdb.CartonToTarget)
-            .join(targetdb.Target)
-            .switch(targetdb.CartonToTarget)
-            .join(targetdb.Carton)
-            .join(targetdb.Category)
-            .switch(targetdb.CartonToTarget)
-            .join(targetdb.Cadence)
-            .switch(targetdb.CartonToTarget)
-            .join(targetdb.Magnitude)
-            .switch(targetdb.Assignment)
-            .join(targetdb.Hole)
-            .switch(targetdb.Assignment)
-            .join(targetdb.Instrument)
-            .where(targetdb.Design.design_id == self.design_id)
-            .dicts()
-        )
-
-        return {data["holeid"]: data for data in target_data}
-
-    @classmethod
-    async def create_async(cls, design_id: int):
-        """Returns a design while creating the configuration in an executor."""
-
-        self = cls(design_id, load_configuration=False)
-
-        configuration = await run_in_executor(Configuration, self)
-        self.configuration = configuration
-
-        return self
-
-    def __repr__(self):
-        return f"<Design (design_id={self.design_id})>"
 
 
 class BaseConfiguration:
@@ -612,22 +369,22 @@ class Configuration(BaseConfiguration):
         time = Time.now()
         rs_run = self.design.field.version.plan
 
-        header = dict(
-            configuration_id=self.configuration_id,
-            targeting_version=-999,
-            robostrategy_run=rs_run,
-            fps_calibrations_version=fps_calibs_version,
-            design_id=self.design.design_id,
-            field_id=self.design.field.field_id,
-            instruments="BOSS APOGEE",
-            epoch=self.epoch,
-            obstime=time.strftime("%a %b %d %H:%M:%S %Y"),
-            MJD=int(time.mjd),  # TODO: this should be SJD
-            observatory=self.design.field.observatory.label,
-            temperature=-999,  # TODO
-            raCen=self.design.field.racen,
-            decCen=self.design.field.deccen,
-        )
+        header = {
+            "configuration_id": self.configuration_id,
+            "targeting_version": -999,
+            "robostrategy_run": rs_run,
+            "fps_calibrations_version": fps_calibs_version,
+            "design_id": self.design.design_id,
+            "field_id": self.design.field.field_id,
+            "instruments": "BOSS APOGEE",
+            "epoch": self.epoch,
+            "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
+            "MJD": int(time.mjd),  # TODO: this should be SJD
+            "observatory": self.design.field.observatory.label,
+            "temperature": -999,  # TODO
+            "raCen": self.design.field.racen,
+            "decCen": self.design.field.deccen,
+        }
 
         fibermap, default = get_fibermap_table()
 

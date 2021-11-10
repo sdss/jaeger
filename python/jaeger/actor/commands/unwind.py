@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING
 
 import click
 
-from jaeger.design import explode, unwind
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.target.tools import explode, unwind
 from jaeger.utils import run_in_executor
 
 from . import jaeger_parser

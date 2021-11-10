@@ -67,6 +67,7 @@ docs/sphinx/_build/
 
 # PyBuilder
 target/
+!python/jaeger/target
 
 # Jupyter Notebook
 .ipynb_checkpoints

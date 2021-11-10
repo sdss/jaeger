@@ -13,8 +13,9 @@ from typing import TYPE_CHECKING
 import click
 import numpy
 
-from jaeger.design import Configuration, Design, ManualConfiguration
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.target.configuration import Configuration, ManualConfiguration
+from jaeger.target.design import Design
 from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
@@ -57,7 +58,7 @@ async def load(
     replace: bool = False,
     folded: bool = False,
 ):
-    """Loads and ingests a configuration from a design in the database."""
+    """Creates and ingests a configuration from a design in the database."""
 
     if folded:
         designid = designid or -999
