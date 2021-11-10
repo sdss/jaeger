@@ -8,9 +8,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from functools import partial
-
 from typing import TYPE_CHECKING
 
 import click
@@ -18,6 +15,7 @@ import numpy
 
 from jaeger.design import Configuration, Design, ManualConfiguration
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
 
@@ -60,8 +58,6 @@ async def load(
     folded: bool = False,
 ):
     """Loads and ingests a configuration from a design in the database."""
-
-    loop = asyncio.get_event_loop()
 
     if folded:
         designid = designid or -999
@@ -133,10 +129,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
 
     command.info(text="Calculating trajectory.")
     try:
-        trajectory = await asyncio.get_event_loop().run_in_executor(
-            None,
-            fps.configuration.get_trajectory,
-        )
+        trajectory = await run_in_executor(fps.configuration.get_trajectory)
     except Exception as err:
         return command.fail(error=f"Failed getting trajectory: {err}")
 
