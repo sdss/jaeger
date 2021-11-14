@@ -95,7 +95,7 @@ async def load(
     fps.configuration.write_to_database(replace=replace)
 
     configuration = fps.configuration
-    boresight = fps.configuration.assignment_data.observed_boresight
+    boresight = fps.configuration.assignment_data.boresight
     command.debug(
         configuration_loaded=[
             configuration.configuration_id,
