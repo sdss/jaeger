@@ -285,6 +285,7 @@ class FPS(BaseFPS["FPS"]):
         ieb=None,
         initialise=True,
         start_pollers: bool | None = None,
+        enable_low_temperature: bool = True,
     ) -> "FPS":
         """Starts the CAN bus and .
 
@@ -303,7 +304,10 @@ class FPS(BaseFPS["FPS"]):
         await instance.start_can()
 
         if initialise:
-            await instance.initialise(start_pollers=start_pollers)
+            await instance.initialise(
+                start_pollers=start_pollers,
+                enable_low_temperature=enable_low_temperature,
+            )
 
         return instance
 
