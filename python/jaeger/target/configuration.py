@@ -144,7 +144,6 @@ class BaseConfiguration:
         self.design_id = None
 
         self.fps = FPS.get_instance()
-        print(self.fps)
 
         self.robot_grid = self._initialise_grid()
 
@@ -465,7 +464,6 @@ class Configuration(BaseConfiguration):
 
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
-        print(fibermap)
         write_ndarray_to_yanny(
             path,
             [fibermap],
