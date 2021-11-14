@@ -144,6 +144,7 @@ class BaseConfiguration:
         self.design_id = None
 
         self.fps = FPS.get_instance()
+        print(self.fps)
 
         self.robot_grid = self._initialise_grid()
 

@@ -54,7 +54,7 @@ from jaeger.utils import Poller, PollerList
 
 
 if TYPE_CHECKING:
-    from jaeger.design import BaseConfiguration
+    from jaeger.target.configuration import BaseConfiguration
 
 
 __all__ = ["BaseFPS", "FPS"]
@@ -87,41 +87,33 @@ class BaseFPS(dict, Generic[FPS_T]):
     """
 
     positioner_class: ClassVar[Type[Positioner]] = Positioner
-    __instance: ClassVar[FPS_T | None] = None
+    _instance: ClassVar[dict[Type[BaseFPS], FPS_T]] = {}
 
     initialised: bool
 
     def __new__(cls: Type[FPS_T], *args, **kwargs):
-        if cls.__instance is not None:
+        if cls in cls._instance and kwargs == {}:
             raise JaegerError(
                 "An instance of FPS is already running. "
                 "Use get_instance() to retrieve it."
             )
 
         new_obj = super().__new__(cls)
-
         dict.__init__(new_obj, {})
         new_obj.initialised = False
 
-        cls.__instance = new_obj
+        cls._instance[cls] = new_obj
 
         return new_obj
 
     @classmethod
-    def get_instance(cls: Type[FPS_T], *args, create=True, **kwargs) -> FPS_T | None:
-        """Returns the running instance.
+    def get_instance(cls: Type[FPS_T], *args, **kwargs) -> FPS_T:
+        """Returns the running instance."""
 
-        If ``create=True``, will instantiate a new object if one does not exist.
+        if cls not in cls._instance or kwargs:
+            return cls(*args, **kwargs)
 
-        """
-
-        if cls.__instance is None:
-            if create:
-                return cls(*args, **kwargs)
-            else:
-                return None
-
-        return cls.__instance
+        return cls._instance[cls]
 
     @property
     def positioners(self):
@@ -203,7 +195,7 @@ class FPS(BaseFPS["FPS"]):
 
     """
 
-    __instance: ClassVar[FPS | None] = None
+    # __instance: ClassVar[dict[Type[FPS], FPS]] = {}
 
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
@@ -1213,7 +1205,7 @@ class FPS(BaseFPS["FPS"]):
 
         self.loop.stop()
 
-        self.__class__.__instance = None
+        del self.__class__._instance[self.__class__]
 
     async def __aenter__(self):
         await self.initialise()
