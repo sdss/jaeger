@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import peewee
 
-from coordio.defaults import wokCoords
+from coordio.defaults import calibration
 from sdssdb.peewee.sdss5db import targetdb
 
 from jaeger.utils.helpers import run_in_executor
@@ -26,7 +26,7 @@ class Design:
 
     def __init__(self, design_id: int, load_configuration=True):
 
-        if wokCoords is None:
+        if calibration.wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
 
         self.design_id = design_id

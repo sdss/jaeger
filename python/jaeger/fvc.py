@@ -24,7 +24,7 @@ from astropy.table import Table
 from matplotlib import pyplot as plt
 
 from clu.command import Command
-from coordio.defaults import fiducialCoords, positionerTable, wokCoords
+from coordio.defaults import calibration
 from coordio.transforms import RoughTransform, ZhaoBurgeTransform
 
 from jaeger import config
@@ -115,8 +115,10 @@ def process_fvc_image(
 
     centroids = extract(image_data)
 
-    xCMM = fiducialCoords.xWok.to_numpy()
-    yCMM = fiducialCoords.yWok.to_numpy()
+    assert calibration.fiducialCoords is not None, "FPS calibrations not available."
+
+    xCMM = calibration.fiducialCoords.xWok.to_numpy()
+    yCMM = calibration.fiducialCoords.yWok.to_numpy()
     xyCMM = numpy.array([xCMM, yCMM]).T
 
     xyCCD = centroids[["x", "y"]].to_numpy()
@@ -247,9 +249,9 @@ async def write_proc_image(
     proc_hdus = fits.HDUList([fits.PrimaryHDU(), raw_hdu])
 
     dfs = [
-        ("positionerTable", positionerTable),
-        ("wokCoords", wokCoords),
-        ("fiducialCoords", fiducialCoords),
+        ("positionerTable", calibration.positionerTable),
+        ("wokCoords", calibration.wokCoords),
+        ("fiducialCoords", calibration.fiducialCoords),
     ]
 
     for name, df in dfs:
@@ -359,7 +361,13 @@ def extract(
     objects = objects.loc[objects["npix"] > 100]
 
     command.debug(f"Found {len(objects)} centroids")
-    command.debug(f"Expected {len(positionerTable) + len(fiducialCoords)} centroids")
+
+    assert (
+        calibration.positionerTable is not None
+        and calibration.fiducialCoords is not None
+    )
+    ncentroids = len(calibration.positionerTable) + len(calibration.fiducialCoords)
+    command.debug(f"Expected {ncentroids} centroids")
 
     return objects
 

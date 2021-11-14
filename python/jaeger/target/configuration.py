@@ -37,14 +37,7 @@ from coordio.conv import (
     tangentToWok,
     wokToTangent,
 )
-from coordio.defaults import (
-    INST_TO_WAVE,
-    POSITIONER_HEIGHT,
-    fps_calibs_version,
-    getHoleOrient,
-    positionerTable,
-    wokCoords,
-)
+from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration, getHoleOrient
 from sdssdb.peewee.sdss5db import opsdb
 
 from jaeger import FPS, config
@@ -272,7 +265,7 @@ class Configuration(BaseConfiguration):
                     configuration_id=self.configuration_id,
                     design_id=self.design_id,
                     epoch=self.epoch,
-                    calibration_version=fps_calibs_version,
+                    calibration_version=calibration.fps_calibs_version,
                 )
                 configuration.save()
 
@@ -363,7 +356,7 @@ class Configuration(BaseConfiguration):
             "configuration_id": self.configuration_id,
             "targeting_version": -999,
             "robostrategy_run": rs_run,
-            "fps_calibrations_version": fps_calibs_version,
+            "fps_calibrations_version": calibration.fps_calibs_version,
             "design_id": self.design.design_id,
             "field_id": self.design.field.field_id,
             "instruments": "BOSS APOGEE",
@@ -576,10 +569,13 @@ class ManualConfiguration(BaseConfiguration):
     def create_folded(cls, **kwargs):
         """Creates a folded configuration."""
 
-        npositioner = len(positionerTable["positionerID"])
+        assert calibration.positionerTable is not None, "FPS calibrations not loaded."
+
+        positionerTable = calibration.positionerTable.set_index("positionerID")
+        npositioner = len(positionerTable.loc["positionerID"])
         alphaL, betaL = config["kaiju"]["lattice_position"]
         data = {
-            "positionerID": [pid for pid in positionerTable["positionerID"]],
+            "positionerID": [pid for pid in positionerTable.loc["positionerID"]],
             "positioner_alpha": [alphaL] * npositioner,
             "positioner_beta": [betaL] * npositioner,
         }
@@ -635,7 +631,16 @@ class TargetAssignmentData:
         self.observatory: str = self.design.field.observatory.label.upper()
         self.site = Site(self.observatory)
 
-        self.wok_data = pandas.merge(positionerTable, wokCoords, on="holeID")
+        assert (
+            calibration.positionerTable is not None
+            and calibration.wokCoords is not None
+        ), "FPS calibrations not loaded."
+
+        self.wok_data = pandas.merge(
+            calibration.positionerTable.reset_index(),
+            calibration.wokCoords.reset_index(),
+            on="holeID",
+        )
         self.wok_data.set_index("positionerID", inplace=True)
 
         self.target_data = self.design.target_data
@@ -788,18 +793,18 @@ class TargetAssignmentData:
             focal = FocalPlane(field, wavelength=wavelength, site=self.site)
             wok = Wok(focal, site=self.site, obsAngle=position_angle)
 
-            positioner_data = positionerTable.loc[positionerTable.holeID == hole_id]
-            hole_orient = getHoleOrient(self.site, hole_id)
+            positioner_data = self.wok_data.loc[positioner_id]
+            hole_orient = getHoleOrient(self.site.name, hole_id)
 
             if fibre_type == "APOGEE":
-                xBeta = positioner_data.apX.values[0]
-                yBeta = positioner_data.apY.values[0]
+                xBeta = positioner_data.apX
+                yBeta = positioner_data.apY
             elif fibre_type == "BOSS":
-                xBeta = positioner_data.bossX.values[0]
-                yBeta = positioner_data.bossY.values[0]
+                xBeta = positioner_data.bossX
+                yBeta = positioner_data.bossY
             elif fibre_type == "Metrology":
-                xBeta = positioner_data.metX.values[0]
-                yBeta = positioner_data.metY.values[0]
+                xBeta = positioner_data.metX
+                yBeta = positioner_data.metY
             else:
                 raise ValueError(f"Invalid fibre type {fibre_type}.")
 
@@ -975,7 +980,8 @@ class ManualAssignmentData:
         if "holeID" in data:
             self.holeids = data["holeID"].tolist()
         else:
-            positioner_data = positionerTable.set_index("positionerID")
+            assert calibration.positionerTable is not None
+            positioner_data = calibration.positionerTable.set_index("positionerID")
             self.holeids = positioner_data.loc[self.positioner_ids].holeID.tolist()
 
         self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
