@@ -10,10 +10,14 @@ from __future__ import annotations
 
 import warnings
 
-from kaiju import RobotGridCalib
+from typing import TYPE_CHECKING
 
 from jaeger import FPS, config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
+
+
+if TYPE_CHECKING:
+    from kaiju import RobotGridCalib
 
 
 __all__ = ["warn", "get_robot_grid", "decollide_grid", "unwind", "explode"]
