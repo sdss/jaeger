@@ -43,6 +43,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           poetry install
+          pip install git+https://github.com/csayres/kaiju
 
       - name: Lint with flake8
         run: |
