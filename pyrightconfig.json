@@ -1,5 +1,5 @@
 {
-    "extraPaths": ["../clu/python", "../coordio/src", "../sdssdb/python"],
+    "extraPaths": ["../sdssdb/python"],
     "typeCheckingMode": "basic",
     "exclude": ["**/__pycache_"],
     "ignore": [],

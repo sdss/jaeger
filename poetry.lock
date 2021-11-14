@@ -328,6 +328,17 @@ optional = false
 python-versions = ">=3.5"
 
 [[package]]
+name = "descartes"
+version = "1.1.0"
+description = "Use geometric objects as matplotlib paths and patches"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+matplotlib = "*"
+
+[[package]]
 name = "distlib"
 version = "0.3.3"
 description = "Distribution utilities"
@@ -368,6 +379,17 @@ python-versions = ">=3.6"
 [package.extras]
 docs = ["furo (>=2021.8.17b43)", "sphinx (>=4.1)", "sphinx-autodoc-typehints (>=1.12)"]
 testing = ["covdefaults (>=1.2.0)", "coverage (>=4)", "pytest (>=4)", "pytest-cov", "pytest-timeout (>=1.4.2)"]
+
+[[package]]
+name = "fitsio"
+version = "1.1.5"
+description = "A full featured python library to read from and write to FITS files."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+numpy = "*"
 
 [[package]]
 name = "flake8"
@@ -1343,7 +1365,7 @@ sdsstools = ">=0.4.13,<0.5.0"
 
 [[package]]
 name = "sdss-coordio"
-version = "1.1.2b0"
+version = "1.1.2"
 description = "Coordinate conversion for SDSS-V"
 category = "main"
 optional = false
@@ -1372,6 +1394,25 @@ python-versions = ">=3.7,<4.0"
 [package.dependencies]
 pymodbus = ">=2.5.0,<3.0.0"
 sdsstools = ">=0.4.1"
+
+[[package]]
+name = "sdss-kaiju"
+version = "1.1.0"
+description = "Collision Avoidance for SDSS-V Positioners"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+descartes = ">=1.1.0"
+fitsio = ">=1.0.5"
+matplotlib = ">=2.2.3"
+numpy = ">=1.14.3"
+psutil = ">=5.8.0"
+pybind11 = ">=2.2.4"
+sdss-coordio = ">=1.1.2"
+seaborn = "*"
+shapely = ">=1.6.4.post1"
 
 [[package]]
 name = "sdssdb"
@@ -1416,6 +1457,20 @@ semantic-version = ">=2.8.4,<3.0.0"
 six = ">=1.14.0,<2.0.0"
 
 [[package]]
+name = "seaborn"
+version = "0.11.2"
+description = "seaborn: statistical data visualization"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+matplotlib = ">=2.2"
+numpy = ">=1.15"
+pandas = ">=0.23"
+scipy = ">=1.0"
+
+[[package]]
 name = "semantic-version"
 version = "2.8.5"
 description = "A library implementing the 'SemVer' scheme."
@@ -1433,6 +1488,19 @@ python-versions = ">=3.5"
 
 [package.dependencies]
 numpy = "*"
+
+[[package]]
+name = "shapely"
+version = "1.8.0"
+description = "Geometric objects, predicates, and operations"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.extras]
+all = ["pytest", "pytest-cov", "numpy"]
+test = ["pytest", "pytest-cov"]
+vectorized = ["numpy"]
 
 [[package]]
 name = "six"
@@ -1535,7 +1603,7 @@ rtd = ["sphinx", "ipython", "sphinx-book-theme"]
 
 [[package]]
 name = "sphinx-jsonschema"
-version = "1.16.11"
+version = "1.17.0"
 description = "Sphinx extension to display JSON Schema"
 category = "dev"
 optional = false
@@ -1730,11 +1798,11 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "typing-extensions"
-version = "3.10.0.2"
-description = "Backported and Experimental Type Hints for Python 3.5+"
+version = "4.0.0"
+description = "Backported and Experimental Type Hints for Python 3.6+"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.6"
 
 [[package]]
 name = "urllib3"
@@ -1805,7 +1873,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1,<4.0"
-content-hash = "c9c41b2e6ac09ee61cc0511c52004ac68eef1c076b4ef7e24e400f4e0a339737"
+content-hash = "6a7d4a43bd3643febfc7a3eb9ac987f8b3285439bcdd7cb9b0402756566fdeeb"
 
 [metadata.files]
 aio-pika = [
@@ -1974,6 +2042,11 @@ decorator = [
     {file = "decorator-5.1.0-py3-none-any.whl", hash = "sha256:7b12e7c3c6ab203a29e157335e9122cb03de9ab7264b137594103fd4a683b374"},
     {file = "decorator-5.1.0.tar.gz", hash = "sha256:e59913af105b9860aa2c8d3272d9de5a56a4e608db9a2f167a8480b323d529a7"},
 ]
+descartes = [
+    {file = "descartes-1.1.0-py2-none-any.whl", hash = "sha256:b7e412e7e6e294412f1d0f661f187babc970088c2456089e6801eebb043c2e1b"},
+    {file = "descartes-1.1.0-py3-none-any.whl", hash = "sha256:4c62dc41109689d03e4b35de0a2bcbdeeb81047badc607c4415d5c753bd683af"},
+    {file = "descartes-1.1.0.tar.gz", hash = "sha256:135a502146af5ed6ff359975e2ebc5fa4b71b5432c355c2cafdc6dea1337035b"},
+]
 distlib = [
     {file = "distlib-0.3.3-py2.py3-none-any.whl", hash = "sha256:c8b54e8454e5bf6237cc84c20e8264c3e991e824ef27e8f1e81049867d861e31"},
     {file = "distlib-0.3.3.zip", hash = "sha256:d982d0751ff6eaaab5e2ec8e691d949ee80eddf01a62eaa96ddb11531fe16b05"},
@@ -1989,6 +2062,9 @@ docutils = [
 filelock = [
     {file = "filelock-3.3.2-py3-none-any.whl", hash = "sha256:bb2a1c717df74c48a2d00ed625e5a66f8572a3a30baacb7657add1d7bac4097b"},
     {file = "filelock-3.3.2.tar.gz", hash = "sha256:7afc856f74fa7006a289fd10fa840e1eebd8bbff6bffb69c26c54a0512ea8cf8"},
+]
+fitsio = [
+    {file = "fitsio-1.1.5.tar.gz", hash = "sha256:3460184af18d8ae10d2920a91c7755574f80feb6a5cb80689b34e56ea2a098d2"},
 ]
 flake8 = [
     {file = "flake8-4.0.1-py2.py3-none-any.whl", hash = "sha256:479b1304f72536a55948cb40a32dce8bb0ffe3501e26eaf292c7e60eb5e0428d"},
@@ -2866,12 +2942,14 @@ sdss-clu = [
     {file = "sdss_clu-1.5.2-py3-none-any.whl", hash = "sha256:942745fe5bee2d485f3622d3fb1ec03183ee7d17dd8020b2dd315df6f28b43bc"},
 ]
 sdss-coordio = [
-    {file = "sdss-coordio-1.1.2b0.tar.gz", hash = "sha256:28291d27f6063ca90feebd42734856454a108750b1ae2e8f8ddd18ddb7ec716f"},
-    {file = "sdss_coordio-1.1.2b0-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:d0b7076943ee4dd0a5a49dfcc53c22f73bfe542276ae64866013c300d3522d63"},
+    {file = "sdss-coordio-1.1.2.tar.gz", hash = "sha256:fe431de55dc62a01157df26ac0a903c1f629544163b7553a436d939bc285a065"},
 ]
 sdss-drift = [
     {file = "sdss-drift-0.3.0.tar.gz", hash = "sha256:2eb068d2a7113814a317bebf3e3825d2dad20bf2f7ff0746f14158b2b90ca420"},
     {file = "sdss_drift-0.3.0-py3-none-any.whl", hash = "sha256:2ed79c00c5c5f2ec7c1110badbcf4ef5f585a366ec47e7cf9d29e88e6d00f8aa"},
+]
+sdss-kaiju = [
+    {file = "sdss-kaiju-1.1.0.tar.gz", hash = "sha256:ccfca9862c804b706d8381d88020e038f6dec55b83f3c14596fc6c203f6bfeac"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.11-py3-none-any.whl", hash = "sha256:0fb6bd6d5728b5aebcc1957032809ab0ee4e5cfd66e7af06540210df56c1abb8"},
@@ -2880,6 +2958,10 @@ sdssdb = [
 sdsstools = [
     {file = "sdsstools-0.4.13-py3-none-any.whl", hash = "sha256:758ce248bf5794cfd62eacf053f2cda2e05d3aeb561919b9db5811d76d2aed59"},
     {file = "sdsstools-0.4.13.tar.gz", hash = "sha256:f7d2463017e71c4dcb9a6647192f8258f0242a1ae511d731b88f1fdd1ad33656"},
+]
+seaborn = [
+    {file = "seaborn-0.11.2-py3-none-any.whl", hash = "sha256:85a6baa9b55f81a0623abddc4a26b334653ff4c6b18c418361de19dbba0ef283"},
+    {file = "seaborn-0.11.2.tar.gz", hash = "sha256:cf45e9286d40826864be0e3c066f98536982baf701a7caa386511792d61ff4f6"},
 ]
 semantic-version = [
     {file = "semantic_version-2.8.5-py2.py3-none-any.whl", hash = "sha256:45e4b32ee9d6d70ba5f440ec8cc5221074c7f4b0e8918bdab748cc37912440a9"},
@@ -2918,6 +3000,29 @@ sep = [
     {file = "sep-1.2.0-cp39-cp39-win_amd64.whl", hash = "sha256:acbc55ad941a8b9f3b02f89ae893853caef5ae1885b0917480268405f403e033"},
     {file = "sep-1.2.0.tar.gz", hash = "sha256:fb9915b0a5db761619f4cba6f18b989ebce2c7070b59291775c7905325d3f70b"},
 ]
+shapely = [
+    {file = "Shapely-1.8.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1c5632cedea6d815b61eb4c264da1c3f24a8ce2ceba2f74e30fba340ca230563"},
+    {file = "Shapely-1.8.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d4ce1f18a0c9bb6b483c73bd7a0eb3a5e90676bcc29b9c27120236e662195c9d"},
+    {file = "Shapely-1.8.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:4e8cdffeec6d0c47ed1eb215ec4e80c024ac05be6ded982061c1e1188034f22f"},
+    {file = "Shapely-1.8.0-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:83d10f8b47a7568fc90063f72da62cda201dc92ecadf80cc00c015babc48e11f"},
+    {file = "Shapely-1.8.0-cp36-cp36m-win32.whl", hash = "sha256:78b3a46dadd47c27e658d5e8d9006b4b1eb9b7ab947b450059225dcee799a18f"},
+    {file = "Shapely-1.8.0-cp36-cp36m-win_amd64.whl", hash = "sha256:0e640d6da59172d679270f0dfd88128b6ae7c57df864a030dd858ff924c307fc"},
+    {file = "Shapely-1.8.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:68bdf463f7a609fbed42bbded18fa74c82a5741251984a5597d070060f4286f4"},
+    {file = "Shapely-1.8.0-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:2c3cc87e66cbffd00ce0457c03969b64935752824bf43a1cd61f21cf606997d6"},
+    {file = "Shapely-1.8.0-cp37-cp37m-win32.whl", hash = "sha256:bd84d993a0e8e07f5ebb4c67794d5392fdd23ce59a7ccc121900f2080f57989a"},
+    {file = "Shapely-1.8.0-cp37-cp37m-win_amd64.whl", hash = "sha256:796b15a483ac37c2dc757654186d0e064a42fb6f43cb9d1ff65d81cd0c92a84e"},
+    {file = "Shapely-1.8.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:622f62d2b2da81dd40841a56db0f78bcf9f9af7a83c7d5f5dc9bcb234aa650ba"},
+    {file = "Shapely-1.8.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:26b43b69dfeb8a8cb27aacf5597134baf12337845c2bacb01809540c20d3d904"},
+    {file = "Shapely-1.8.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:cfb9d72d255af1a484e3859f4c9bb737950faf1d16c21d2b949ffc4ba5f46147"},
+    {file = "Shapely-1.8.0-cp38-cp38-win32.whl", hash = "sha256:f304243b1f4d7bca9b3c9fdeec6565171e1b611fb4a3d6c93efc870c8a75958c"},
+    {file = "Shapely-1.8.0-cp38-cp38-win_amd64.whl", hash = "sha256:8917a91430126165cfa4bc2b4cf168121e37ff0c8657134e7398c597ca1fe934"},
+    {file = "Shapely-1.8.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:19b54cd840883fd71cce98fd94916d1731eed8a32c115eb082b3ed24e631be02"},
+    {file = "Shapely-1.8.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:13cbb959863cec32d48e2cffdc4bb81828bc3b0fa4256c9b2b32edac5021a0e4"},
+    {file = "Shapely-1.8.0-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:7e1aebf4f1b2fbef40152fd531216387fcf6fe4ff2d777268381979b63c7c779"},
+    {file = "Shapely-1.8.0-cp39-cp39-win32.whl", hash = "sha256:83145eda2e582c2046d1ecc6a0d7dbfe97f492434311124f65ea60f4e87a6b65"},
+    {file = "Shapely-1.8.0-cp39-cp39-win_amd64.whl", hash = "sha256:9b54ebd8fa4b78320f6d87032fe91363c7c1bf0f8d4a30eb93bca6413f787fd5"},
+    {file = "Shapely-1.8.0.tar.gz", hash = "sha256:f5307ee14ba4199f8bbcf6532ca33064661c1433960c432c84f0daa73b47ef9c"},
+]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
@@ -2947,7 +3052,7 @@ sphinx-copybutton = [
     {file = "sphinx_copybutton-0.4.0-py3-none-any.whl", hash = "sha256:4340d33c169dac6dd82dce2c83333412aa786a42dd01a81a8decac3b130dc8b0"},
 ]
 sphinx-jsonschema = [
-    {file = "sphinx-jsonschema-1.16.11.tar.gz", hash = "sha256:94f21c6920f9e09334f96e7ec1042d16ef4578383f625b687922fedd5e4efac5"},
+    {file = "sphinx-jsonschema-1.17.0.tar.gz", hash = "sha256:2588ebb065add44f867b866300c2c2d645b5577b89fc6036c06f1ac69f8cb8de"},
 ]
 sphinxcontrib-applehelp = [
     {file = "sphinxcontrib-applehelp-1.0.2.tar.gz", hash = "sha256:a072735ec80e7675e3f432fcae8610ecf509c5f1869d17e2eecff44389cdbc58"},
@@ -3099,9 +3204,7 @@ typed-ast = [
     {file = "typed_ast-1.5.0.tar.gz", hash = "sha256:ff4ad88271aa7a55f19b6a161ed44e088c393846d954729549e3cde8257747bb"},
 ]
 typing-extensions = [
-    {file = "typing_extensions-3.10.0.2-py2-none-any.whl", hash = "sha256:d8226d10bc02a29bcc81df19a26e56a9647f8b0a6d4a83924139f4a8b01f17b7"},
-    {file = "typing_extensions-3.10.0.2-py3-none-any.whl", hash = "sha256:f1d25edafde516b146ecd0613dabcc61409817af4766fbbcfb8d1ad4ec441a34"},
-    {file = "typing_extensions-3.10.0.2.tar.gz", hash = "sha256:49f75d16ff11f1cd258e1b988ccff82a3ca5570217d7ad8c5f48205dd99a677e"},
+    {file = "typing_extensions-4.0.0-py3-none-any.whl", hash = "sha256:829704698b22e13ec9eaf959122315eabb370b0884400e9818334d8b677023d9"},
 ]
 urllib3 = [
     {file = "urllib3-1.26.7-py2.py3-none-any.whl", hash = "sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844"},
