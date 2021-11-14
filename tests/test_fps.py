@@ -105,6 +105,7 @@ async def test_ieb(vfps):
     assert (await sync.read())[0] == "open"
 
 
+@pytest.mark.xfail()
 async def test_positioner_disabled_send_command_fails_broadcast(vfps):
 
     await vfps.initialise()
@@ -183,15 +184,6 @@ async def test_fps_add_positioner():
 
     fps.add_positioner(5, interface=0, bus=1)  # Add positioner zero to first interface
     assert fps.positioner_to_bus[5] == (vbus.interfaces[0], 1)
-
-
-async def test_initialise_locked(vfps, vpositioners):
-
-    vfps._locked = True
-
-    with pytest.raises(JaegerError) as err:
-        await vfps.initialise()
-        assert "FPS is locked" in str(err)
 
 
 async def test_disable_collision(vfps, vpositioners, monkeypatch):
