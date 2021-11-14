@@ -26,9 +26,7 @@ from coordio import (
     Observed,
     PositionerApogee,
     PositionerBoss,
-    PositionerMetrology,
     Site,
-    Tangent,
     Wok,
 )
 from coordio.conv import (
@@ -54,8 +52,7 @@ __all__ = [
     "BaseConfiguration",
     "Configuration",
     "ManualConfiguration",
-    "TargetAssignmentData",
-    "ManualAssignmentData",
+    "AssignmentData",
 ]
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
@@ -133,7 +130,7 @@ def get_fibermap_table() -> tuple[Table, dict]:
 class BaseConfiguration:
     """A base configuration class."""
 
-    assignment_data: ManualAssignmentData | TargetAssignmentData
+    assignment_data: AssignmentData
 
     def __init__(self):
 
@@ -203,7 +200,7 @@ class BaseConfiguration:
 class Configuration(BaseConfiguration):
     """A configuration based on a target design."""
 
-    assignment_data: TargetAssignmentData
+    assignment_data: AssignmentData
 
     def __init__(self, design: Design, **kwargs):
 
@@ -211,7 +208,7 @@ class Configuration(BaseConfiguration):
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment_data = TargetAssignmentData(self)
+        self.assignment_data = AssignmentData(self)
 
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
@@ -224,9 +221,6 @@ class Configuration(BaseConfiguration):
 
     def recompute_coordinates(self, jd: Optional[float] = None):
         """Recalculates the coordinates. ``jd=None`` uses the current time."""
-
-        if isinstance(self.assignment_data, ManualAssignmentData):
-            return
 
         if self.configuration_id is not None:
             raise JaegerError(
@@ -254,9 +248,6 @@ class Configuration(BaseConfiguration):
 
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
-
-        if isinstance(self.assignment_data, ManualAssignmentData):
-            raise JaegerError("Manual configurations cannot be loaded to the database.")
 
         if self.configuration_id is None:
 
@@ -476,7 +467,7 @@ class Configuration(BaseConfiguration):
 class ManualConfiguration(BaseConfiguration):
     """A configuration create manually."""
 
-    assignment_data: ManualAssignmentData
+    assignment_data: AssignmentData
 
     def __init__(
         self,
@@ -498,7 +489,7 @@ class ManualConfiguration(BaseConfiguration):
             else:
                 raise ValueError("Unknown site.")
 
-        self.assignment_data = ManualAssignmentData(data, site=site)
+        # self.assignment_data = ManualAssignmentData(data, site=site)
 
     @classmethod
     def create_random(
@@ -582,7 +573,7 @@ class ManualConfiguration(BaseConfiguration):
         return cls(data, **kwargs)
 
 
-class TargetAssignmentData:
+class AssignmentData:
     """Information about the target assignment along with coordinate transformation."""
 
     boresight: Observed
@@ -948,89 +939,3 @@ class TargetAssignmentData:
             self.fibre_table.loc[(positioner_id, fibre_type)] = pandas.Series(row)
 
         return row
-
-
-class ManualAssignmentData:
-    """A manual assignment of robots to robot positions.
-
-    Parameters
-    ----------
-    data
-        Either a Pandas data frame or a dictionary that must at least contain the
-        columns ``holeID``, ``positionerID``, ``positioner_alpha``, and
-        ``positioner_beta``.
-    site
-        The observatory.
-
-    """
-
-    def __init__(self, data: pandas.DataFrame | dict, site: str = "APO"):
-
-        if isinstance(data, dict):
-            data = pandas.DataFrame(data)
-
-        self.data = data
-
-        self.site = Site(site)
-        self.site.set_time()
-
-        self.positioner_ids: list[int] = data["positionerID"].tolist()
-
-        if "holeID" in data:
-            self.holeids = data["holeID"].tolist()
-        else:
-            assert calibration.positionerTable is not None
-            positioner_data = calibration.positionerTable.set_index("positionerID")
-            self.holeids = positioner_data.loc[self.positioner_ids].holeID.tolist()
-
-        self.positioner_to_index = {pid: i for i, pid in enumerate(self.positioner_ids)}
-        self.valid = numpy.arange(len(self.positioner_ids))
-
-        self.positioner = data.loc[:, ["positioner_alpha", "positioner_beta"]]
-        self.positioner = self.positioner.to_numpy()
-
-        self.wavelengths: list[float] = [INST_TO_WAVE["GFA"]] * len(self.positioner_ids)
-
-        self.wok_apogee: numpy.ndarray
-        self.wok_boss: numpy.ndarray
-        self.wok_metrology: numpy.ndarray
-
-        if "wok_x" not in data:
-            self.wok_apogee = self._to_wok("apogee")
-            self.wok_boss = self._to_wok("boss")
-            self.wok_metrology = self._to_wok("metrology")
-
-    def _to_wok(self, fibre_type: str):
-        """Returns wok coordinates from positioner."""
-
-        if fibre_type == "metrology":
-            PositionerClass = PositionerMetrology
-        elif fibre_type == "apogee":
-            PositionerClass = PositionerApogee
-        elif fibre_type == "boss":
-            PositionerClass = PositionerBoss
-        else:
-            raise ValueError(f"Invalid fibre_type {fibre_type}.")
-
-        wok_coords = numpy.zeros((len(self.positioner_ids), 2), dtype=numpy.float32)
-
-        for ii, (alpha, beta) in enumerate(self.positioner):
-
-            positioner = PositionerClass(
-                [[alpha, beta]],
-                site=self.site,
-                holeID=self.holeids[ii],
-            )
-
-            tangent = Tangent(
-                positioner,
-                wavelength=self.wavelengths[ii],
-                holeID=self.holeids[ii],
-                site=self.site,
-            )
-
-            wok = Wok(tangent, site=self.site)
-
-            wok_coords[ii] = wok[0][:2]
-
-        return wok_coords

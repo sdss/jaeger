@@ -8,9 +8,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from functools import partial
-
 from typing import TYPE_CHECKING, Optional, cast
 
 import click
@@ -19,8 +16,10 @@ from clu.parsers.click import cancellable
 from drift import DriftError, Relay
 
 from jaeger import config
-from jaeger.fvc import process_fvc_image, take_image, write_proc_image
-from jaeger.ieb import FVC
+from jaeger.exceptions import FVCError
+from jaeger.fvc import FVC
+from jaeger.ieb import FVC as FVC_IEB
+from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
 
@@ -32,17 +31,21 @@ if TYPE_CHECKING:
     from jaeger.actor import JaegerActor
 
 
-__all__ = ["fvc"]
+__all__ = ["fvc_parser"]
 
 
-@jaeger_parser.group()
-def fvc():
+# Reusable FVC instance. Do not reinitialise so that we don't lose PID info.
+fvc = FVC(config["observatory"])
+
+
+@jaeger_parser.group(name="fvc")
+def fvc_parser():
     """Commands to command the FVC."""
 
     pass
 
 
-@fvc.command()
+@fvc_parser.command()
 @click.argument("EXPOSURE-TIME", default=None, type=float, required=False)
 async def expose(
     command: Command[JaegerActor],
@@ -54,14 +57,18 @@ async def expose(
     exposure_time = exposure_time or config["fvc"]["exposure_time"]
     assert isinstance(exposure_time, float)
 
-    command.info("Taking exposure with fliswarm.")
+    command.info("Taking FVC exposure with fliswarm.")
 
-    filename = await take_image(command, exposure_time=exposure_time)
+    try:
+        fvc.set_command(command)
+        filename = await fvc.expose(exposure_time=exposure_time)
+    except FVCError as err:
+        return command.fail(error=f"Failed taking FVC exposure: {err}")
 
-    return command.finish(f"Exposure path: {filename}")
+    return command.finish(fvc_filename=str(filename))
 
 
-@fvc.command()
+@fvc_parser.command()
 @click.option("--exposure-time", type=float, help="Exposure time.")
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
 @click.option("--use-last", is_flag=True, help="Uses the last available exposure.")
@@ -91,7 +98,7 @@ async def loop(
     if fps.configuration is None:
         return command.fail("Configuration not loaded.")
 
-    target_coords = fps.configuration.get_target_coords()
+    fvc.set_command(command)
 
     n = 1
     while True:
@@ -103,21 +110,16 @@ async def loop(
             await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
 
         command.debug("Taking exposure with fliswarm.")
-        filename = await take_image(command, exposure_time=exposure_time)
+        filename = await fvc.expose(exposure_time=exposure_time)
 
-        raw_hdu, measured, centroids = await asyncio.get_event_loop().run_in_executor(
-            None,
-            partial(
-                process_fvc_image,
-                filename,
-                target_coords,
-                plot=plot,
-                command=command,
-            ),
+        raw_hdu, measured, centroids = await run_in_executor(
+            fvc.process_fvc_image,
+            filename,
+            plot=plot,
         )
 
         new_file = filename.with_name("proc-" + filename.name)
-        await write_proc_image(new_file, raw_hdu, measured, centroids)
+        await fvc.write_proc_image(new_file, raw_hdu, measured, centroids)
 
         n += 1
 
@@ -127,14 +129,14 @@ async def loop(
     await command.send_command("jaeger", "ieb fbi led1 0")
     await command.send_command("jaeger", "ieb fbi led2 0")
 
-    command.finish("All the positioners are at their desired positions.")
+    command.finish("FVC loop complete.")
 
 
-@fvc.command()
+@fvc_parser.command()
 async def status(command: Command[JaegerActor], fps: FPS):
     """Reports the status of the FVC."""
 
-    fvc_ieb = FVC.create()
+    fvc_ieb = FVC_IEB.create()
 
     try:
         status = {}
@@ -161,7 +163,7 @@ async def status(command: Command[JaegerActor], fps: FPS):
 async def _power_device(device: str, mode: str):
     """Power on/off the device."""
 
-    fvc_ieb = FVC.create()
+    fvc_ieb = FVC_IEB.create()
 
     dev: Relay = cast(Relay, fvc_ieb.get_device(device))
     if mode == "on":
@@ -183,13 +185,12 @@ async def _execute_on_off_command(
     except DriftError:
         return command.fail(error=f"Failed to turn {device} {mode}.")
 
-    status_cmd = Command("fvc status", parent=command)
-    await status_cmd.parse()
+    await command.send_command("jaeger", "fvc status")
 
     return command.finish()
 
 
-@fvc.command()
+@fvc_parser.command()
 @click.argument("MODE", type=click.Choice(["on", "off"], case_sensitive=False))
 async def camera(command: Command[JaegerActor], fps: FPS, mode: str):
     """Turns camera on/off."""
@@ -197,7 +198,7 @@ async def camera(command: Command[JaegerActor], fps: FPS, mode: str):
     await _execute_on_off_command(command, "FVC", mode)
 
 
-@fvc.command()
+@fvc_parser.command()
 @click.argument("MODE", type=click.Choice(["on", "off"], case_sensitive=False))
 async def NUC(command: Command[JaegerActor], fps: FPS, mode: str):
     """Turns NUC on/off."""
@@ -205,18 +206,17 @@ async def NUC(command: Command[JaegerActor], fps: FPS, mode: str):
     await _execute_on_off_command(command, "NUC", mode)
 
 
-@fvc.command()
+@fvc_parser.command()
 @click.argument("LEVEL", type=int)
 async def led(command: Command[JaegerActor], fps: FPS, level: int):
     """Sets the level of the FVC LED."""
 
-    fvc_ieb = FVC.create()
+    fvc_ieb = FVC_IEB.create()
     led = fvc_ieb.get_device("LED1")
 
     raw_value = 32 * int(1023 * (level / 100))
     await led.write(raw_value)
 
-    status_cmd = Command("fvc status", parent=command)
-    await status_cmd.parse()
+    await command.send_command("jaeger", "fvc status")
 
     return command.finish()
