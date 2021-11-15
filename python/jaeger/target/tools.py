@@ -76,7 +76,7 @@ def get_robot_grid(seed: int = 0):
     )
 
     for robot in robot_grid.robotDict.values():
-        if fps:
+        if fps is not None:
             if robot.id not in fps.positioners:
                 raise JaegerError(f"Robot {robot.id} is not connected.")
             positioner = fps[robot.id]
