@@ -1181,18 +1181,23 @@ class ManualAssignmentData(BaseAssignmentData):
                         alpha,
                         beta,
                     )
-                    data[(pid, ftype)] = {
-                        "alpha": alpha,
-                        "beta": beta,
-                        "xwok": wok[0],
-                        "ywok": wok[1],
-                        "zwok": wok[2],
-                        "xtangent": tangent[0],
-                        "ytangent": tangent[1],
-                        "ztangent": tangent[2],
-                        "assigned": assigned,
-                        "on_target": assigned,
-                    }
+
+                    row = self._defaults.copy()
+                    row.update(
+                        {
+                            "alpha": alpha,
+                            "beta": beta,
+                            "xwok": wok[0],
+                            "ywok": wok[1],
+                            "zwok": wok[2],
+                            "xtangent": tangent[0],
+                            "ytangent": tangent[1],
+                            "ztangent": tangent[2],
+                            "assigned": assigned,
+                            "on_target": assigned,
+                        }
+                    )
+                    data[(pid, ftype)] = row
 
         # Now do a single update of the whole fibre table.
         self.fibre_table.update(pandas.DataFrame.from_dict(data, orient="index"))
