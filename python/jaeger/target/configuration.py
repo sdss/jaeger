@@ -738,11 +738,16 @@ class BaseAssignmentData:
     def _create_fibre_table(self):
         """Creates an empty fibre table."""
 
-        names, dtypes, _ = zip(*self._columns)
+        names, dtypes, defaults = zip(*self._columns)
 
         # Create empty dataframe with zero values. Fill out all the index data.
         npositioner = len(self.wok_data)
         base = numpy.zeros((npositioner * 3,), dtype=list(zip(names, dtypes)))
+
+        for i in range(len(defaults)):
+            if defaults[i] is None:
+                continue
+            base[names[i]] = defaults[i]
 
         i = 0
         for pid in self.wok_data.index.tolist():
@@ -755,7 +760,7 @@ class BaseAssignmentData:
         fibre_table = pandas.DataFrame(base)
 
         fibre_table.fibre_type = fibre_table.fibre_type.astype("category")
-        fibre_table.hole_id = fibre_table.hole_id.astype("string")
+        fibre_table.hole_id = fibre_table.hole_id.astype("category")
 
         fibre_table.set_index(["positioner_id", "fibre_type"], inplace=True)
         fibre_table = fibre_table.sort_index()
