@@ -36,6 +36,7 @@ jobs:
         uses: actions/checkout@master
         with:
           repository: sdss/fps_calibrations
+          ref: APO.2021.11.14
           path: fps_calibrations
 
       - name: Set up Python
