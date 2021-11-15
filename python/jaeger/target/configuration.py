@@ -762,7 +762,7 @@ class BaseAssignmentData:
         fibre_table = pandas.DataFrame(base)
 
         fibre_table.fibre_type = fibre_table.fibre_type.astype("category")
-        fibre_table.hole_id = fibre_table.hole_id.astype("category")
+        fibre_table.hole_id = fibre_table.hole_id.astype("string")
 
         fibre_table.set_index(["positioner_id", "fibre_type"], inplace=True)
         fibre_table = fibre_table.sort_index()
