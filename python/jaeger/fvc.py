@@ -127,7 +127,7 @@ class FVC:
         self,
         path: pathlib.Path | str,
         fibre_data: Optional[pandas.DataFrame] = None,
-        plot: bool = False,
+        plot: bool | str = False,
         polids: numpy.ndarray | list | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
         """Processes a raw FVC image.
@@ -145,6 +145,8 @@ class FVC:
             table from the configuration loaded into the FPS instace is used.
         plot
             Whether to save additional debugging plots along with the processed image.
+            If ``plot`` is a string, it will be used as the directory to which to
+            save the plots.
 
         Returns
         -------
@@ -171,6 +173,13 @@ class FVC:
 
         dirname, base = os.path.split(path)
         proc_path_root = os.path.join(dirname, "proc-" + base[0 : base.find(".fit")])
+
+        if plot is True:
+            plot_path_root = proc_path_root
+        elif isinstance(plot, str):
+            plot_path_root = os.path.join(plot, "proc-" + base[0 : base.find(".fit")])
+        else:
+            plot_path_root = ""
 
         hdus = fits.open(path)
 
@@ -218,7 +227,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                proc_path_root + "_roughassoc.png",
+                plot_path_root + "_roughassoc.png",
                 xy_fiducial=xy_fiducial_wok_rough,
                 xy_fiducial_cmm=xyCMMouter,
                 title="Rough fiducial association",
@@ -242,7 +251,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                proc_path_root + "_full1.png",
+                plot_path_root + "_full1.png",
                 title="Full transform 1",
             )
 
@@ -263,7 +272,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                proc_path_root + "_refineassoc.png",
+                plot_path_root + "_refineassoc.png",
                 title="Refined fiducial association",
                 xy_fiducial=xy_fiducial_wok_refine,
                 xy_fiducial_cmm=xyCMM,
@@ -289,7 +298,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                proc_path_root + "_full2.png",
+                plot_path_root + "_full2.png",
                 title="Full transform 2",
             )
 
