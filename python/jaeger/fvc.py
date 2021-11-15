@@ -327,6 +327,8 @@ class FVC:
         rms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {rms * 1000:.3f} um.")
 
+        hdus[1].header["FITRMS"] = (rms * 1000, "RMS full fit [um]")
+
         return (hdus[1], fibre_data, centroids)
 
     async def write_proc_image(
