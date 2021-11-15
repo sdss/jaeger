@@ -134,6 +134,9 @@ class BaseConfiguration:
 
     def __init__(self):
 
+        if len(calibration.positionerTable) == 0:
+            raise ValueError("FPS calibrations not loaded or the array is empty.")
+
         # Configuration ID is None until we insert in the database.
         # Once set, it cannot be changed.
         self.configuration_id: int | None = None

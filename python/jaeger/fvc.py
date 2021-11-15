@@ -43,6 +43,9 @@ class FVC:
 
     def __init__(self, site: str, command: Optional[Command[JaegerActor]] = None):
 
+        if len(calibration.positionerTable) == 0:
+            raise ValueError("FPS calibrations not loaded or the array is empty.")
+
         self.site = site
 
         self.command = command
@@ -172,9 +175,6 @@ class FVC:
         image_data = hdus[1].data
 
         centroids = self.extract(image_data)
-
-        if calibration.fiducialCoords is None:
-            raise FVCError("FPS calibrations not available.")
 
         fiducialCoords = calibration.fiducialCoords.loc[self.site]
 
@@ -330,8 +330,6 @@ class FVC:
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
         fiducialCoords = calibration.fiducialCoords
-        if positionerTable is None or wokCoords is None or fiducialCoords is None:
-            raise FVCError("FPS calibrations not set.")
 
         dfs = [
             ("POSITIONERTABLE", positionerTable.reset_index()),
@@ -438,9 +436,6 @@ class FVC:
         objects = objects.loc[objects["npix"] > config["fvc"]["centroid_min_npix"]]
 
         self.log(f"Found {len(objects)} centroids", level=logging.DEBUG)
-
-        if calibration.positionerTable is None or calibration.fiducialCoords is None:
-            raise FVCError("FVC calibration not set.")
 
         ncentroids = len(calibration.positionerTable) + len(calibration.fiducialCoords)
         self.log(f"Expected {ncentroids} centroids", level=logging.DEBUG)
