@@ -678,6 +678,8 @@ class BaseAssignmentData:
         ("xwok_kaiju", numpy.float64, -999.0),
         ("ywok_kaiju", numpy.float64, -999.0),
         ("zwok_kaiju", numpy.float64, -999.0),
+        ("xwok_measured", numpy.float64, -999.0),
+        ("ywok_measured", numpy.float64, -999.0),
         ("xtangent", numpy.float64, -999.0),
         ("ytangent", numpy.float64, -999.0),
         ("ztangent", numpy.float64, -999.0),
