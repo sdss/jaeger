@@ -205,6 +205,11 @@ def wok_to_positioner(
     ywok: float,
     zwok: float = POSITIONER_HEIGHT,
 ) -> tuple[float, float, tuple]:
+    """Converts from wok to positioner coordinates.
+
+    Returns ``(alpha, beta, tangent_coords)``.
+
+    """
 
     positioner_data = calibration.positionerTable.loc[(site, hole_id)]
 
@@ -251,7 +256,11 @@ def positioner_to_wok(
     alpha: float,
     beta: float,
 ):
-    """Convert from positioner to wok coordinates."""
+    """Convert from positioner to wok coordinates.
+
+    Returns xyz wok and tangent coordinates as a tuple of arrays.
+
+    """
 
     positioner_data = calibration.positionerTable.loc[(site, hole_id)]
     wok_data = calibration.wokCoords.loc[(site, hole_id)]
