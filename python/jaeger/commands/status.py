@@ -186,7 +186,7 @@ class GetNumberTrajectories(Command):
 
     command_id = CommandID.GET_NUMBER_TRAJECTORIES
     broadcastable = False
-    safe = False
+    safe = True
 
     def get_replies(self):
         return self.get_number_trajectories()

@@ -19,6 +19,7 @@ from typing import (
     Any,
     ClassVar,
     Dict,
+    Generic,
     List,
     Optional,
     Tuple,
@@ -53,7 +54,7 @@ from jaeger.utils import Poller, PollerList
 
 
 if TYPE_CHECKING:
-    from jaeger.design import Configuration
+    from jaeger.target.configuration import BaseConfiguration
 
 
 __all__ = ["BaseFPS", "FPS"]
@@ -61,13 +62,20 @@ __all__ = ["BaseFPS", "FPS"]
 
 MIN_BETA = 160
 
+FPS_CO = Union["BaseFPS", "FPS"]
+FPS_T = TypeVar("FPS_T", bound="BaseFPS")
 
-class BaseFPS(dict):
+
+class BaseFPS(dict, Generic[FPS_T]):
     """A class describing the Focal Plane System.
 
     This class includes methods to read the layout and construct positioner
     objects and can be used by the real `FPS` class or the
     `~jaeger.testing.VirtualFPS`.
+
+    `.BaseFPS` instances are singletons in the sense that one cannot instantiate
+    more than one. An error is raise if ``__new__`` is called with an existing
+    instance. To retrieve the running instance, use `.get_instance`.
 
     Attributes
     ----------
@@ -79,9 +87,33 @@ class BaseFPS(dict):
     """
 
     positioner_class: ClassVar[Type[Positioner]] = Positioner
+    _instance: ClassVar[dict[Type[BaseFPS], FPS_T]] = {}
 
-    def __init__(self):
-        dict.__init__(self, {})
+    initialised: bool
+
+    def __new__(cls: Type[FPS_T], *args, **kwargs):
+        if cls in cls._instance and kwargs == {}:
+            raise JaegerError(
+                "An instance of FPS is already running. "
+                "Use get_instance() to retrieve it."
+            )
+
+        new_obj = super().__new__(cls)
+        dict.__init__(new_obj, {})
+        new_obj.initialised = False
+
+        cls._instance[cls] = new_obj
+
+        return new_obj
+
+    @classmethod
+    def get_instance(cls: Type[FPS_T], *args, **kwargs) -> FPS_T:
+        """Returns the running instance."""
+
+        if cls not in cls._instance or kwargs:
+            return cls(*args, **kwargs)
+
+        return cls._instance[cls]
 
     @property
     def positioners(self):
@@ -123,7 +155,7 @@ T = TypeVar("T", bound="FPS")
 
 
 @dataclass
-class FPS(BaseFPS):
+class FPS(BaseFPS["FPS"]):
     """A class describing the Focal Plane System.
 
     The recommended way to instantiate a new `.FPS` object is to use the `.create`
@@ -163,9 +195,11 @@ class FPS(BaseFPS):
 
     """
 
+    # __instance: ClassVar[dict[Type[FPS], FPS]] = {}
+
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
-    configuration: Configuration | None = None
+    configuration: BaseConfiguration | None = None
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
@@ -243,6 +277,7 @@ class FPS(BaseFPS):
         ieb=None,
         initialise=True,
         start_pollers: bool | None = None,
+        enable_low_temperature: bool = True,
     ) -> "FPS":
         """Starts the CAN bus and .
 
@@ -261,7 +296,10 @@ class FPS(BaseFPS):
         await instance.start_can()
 
         if initialise:
-            await instance.initialise(start_pollers=start_pollers)
+            await instance.initialise(
+                start_pollers=start_pollers,
+                enable_low_temperature=enable_low_temperature,
+            )
 
         return instance
 
@@ -381,12 +419,18 @@ class FPS(BaseFPS):
             positioner.fps = self
             positioner.firmware = get_fw_command.get_firmware()[reply.positioner_id]
 
+            if positioner.positioner_id in config["fps"]["disabled_positioners"]:
+                positioner.disabled = True
+
         if len(ignored_positioners) > 0:
             warnings.warn(
                 "The following connected positioners are ignored as they are "
                 f"in the skip_positioners list: {ignored_positioners}",
                 JaegerUserWarning,
             )
+
+        # Mark as initialised here although we have some more work to do.
+        self.initialised = True
 
         pids = sorted(list(self.keys()))
         if len(pids) > 0:
@@ -713,10 +757,15 @@ class FPS(BaseFPS):
 
         return True
 
-    def get_positions(self) -> numpy.ndarray:
+    def get_positions(self, ignore_disabled=False) -> numpy.ndarray:
         """Returns the alpha and beta positions as an array."""
 
-        data = [(p.positioner_id, p.alpha, p.beta) for p in self.positioners.values()]
+        data = [
+            (p.positioner_id, p.alpha, p.beta)
+            for p in self.positioners.values()
+            if ignore_disabled is False or p.disabled is False
+        ]
+
         return numpy.array(data)
 
     async def update_status(
@@ -927,7 +976,7 @@ class FPS(BaseFPS):
         speed: Optional[Tuple[float, float]] = None,
         relative=False,
         force: bool = False,
-        use_sync_line=True,
+        use_sync_line: bool | None = None,
     ):
         """Sends a list of positioners to a given position.
 
@@ -1155,6 +1204,8 @@ class FPS(BaseFPS):
         await asyncio.gather(*tasks, return_exceptions=True)
 
         self.loop.stop()
+
+        del self.__class__._instance[self.__class__]
 
     async def __aenter__(self):
         await self.initialise()

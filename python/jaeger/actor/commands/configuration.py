@@ -8,16 +8,15 @@
 
 from __future__ import annotations
 
-import asyncio
-from functools import partial
-
 from typing import TYPE_CHECKING
 
 import click
 import numpy
 
-from jaeger.design import Design
-from jaeger.exceptions import TrajectoryError
+from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.target.configuration import Configuration, ManualConfiguration
+from jaeger.target.design import Design
+from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
 
@@ -49,30 +48,43 @@ def configuration():
     is_flag=True,
     help="Replace an existing entry.",
 )
-@click.argument("DESIGNID", type=int)
+@click.option("--folded", is_flag=True, help="Loads a folded configuration.")
+@click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
     fps: FPS,
-    designid: int,
+    designid: int | None = None,
     reload: bool = False,
     replace: bool = False,
+    folded: bool = False,
 ):
-    """Loads and ingests a configuration from a design in the database."""
+    """Creates and ingests a configuration from a design in the database."""
+
+    if folded:
+        designid = designid or -999
+        fps.configuration = ManualConfiguration.create_folded(design_id=designid)
+        return command.finish("Manual configuration loaded.")
+
+    if designid is None:
+        return command.fail(error="Design ID is required.")
 
     if reload is True:
         if fps.configuration is None:
             return command.fail(error="No configuration found. Cannot reload.")
-        if fps.configuration.design.design_id != designid:
+        if fps.configuration.design_id != designid:
             return command.fail(error="Loaded configuration does not match designid.")
         fps.configuration.configuration_id = None
 
     else:
         try:
-            design = Design(designid)
-        except (ValueError, RuntimeError) as err:
+            design = await Design.create_async(designid)
+        except (ValueError, RuntimeError, JaegerError) as err:
+            raise
             return command.fail(error=f"Failed retrieving design: {err}")
 
         fps.configuration = design.configuration
+
+    assert isinstance(fps.configuration, Configuration)
 
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
@@ -80,21 +92,20 @@ async def load(
     if fps.configuration.ingested is False:
         replace = False
 
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(
-        None,
-        partial(fps.configuration.write_to_database, replace=replace),
-    )
+    fps.configuration.write_to_database(replace=replace)
 
     configuration = fps.configuration
-    boresight = fps.configuration.assignment_data.observed_boresight
+    assert configuration.design
+
+    boresight = fps.configuration.assignment_data.boresight
+
     command.debug(
         configuration_loaded=[
             configuration.configuration_id,
             configuration.design.design_id,
             boresight.ra[0],
             boresight.dec[0],
-            configuration.design.field.position_angle,
+            configuration.design.field["position_angle"],
             boresight[0, 0],
             boresight[0, 1],
         ]
@@ -110,23 +121,20 @@ async def load(
 async def execute(command: Command[JaegerActor], fps: FPS):
     """Executes a configuration trajectory."""
 
-    if fps.configuration is None:
+    if fps.configuration is None or fps.configuration.ingested is False:
         return command.fail(error="A configuration must first be loaded.")
 
-    positions = fps.get_positions()
+    positions = fps.get_positions(ignore_disabled=True)
     if len(positions) == 0:
         return command.fail("No positioners found.")
 
-    # Check that all positioners are folded.
+    # Check that all non-disabled positioners are folded.
     if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
         return command.fail(error="Not all the positioners are folded.")
 
     command.info(text="Calculating trajectory.")
     try:
-        trajectory = await asyncio.get_event_loop().run_in_executor(
-            None,
-            fps.configuration.get_trajectory,
-        )
+        trajectory = await run_in_executor(fps.configuration.get_trajectory)
     except Exception as err:
         return command.fail(error=f"Failed getting trajectory: {err}")
 

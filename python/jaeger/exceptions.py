@@ -120,6 +120,12 @@ class TrajectoryError(JaegerError):
             self.trajectory.failed = True
 
 
+class FVCError(JaegerError):
+    """An error handling the FVC or the FVC loop."""
+
+    pass
+
+
 class JaegerWarning(Warning):
     """Base warning for Jaeger."""
 

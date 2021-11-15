@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import os
 import sys
+import urllib.request
 from unittest.mock import MagicMock
 
 import pytest
@@ -47,12 +48,19 @@ if jaeger.can_log.fh:
     jaeger.can_log.removeHandler(jaeger.can_log.fh)
 
 
-# @pytest.fixture()
-# def event_loop(request):
-#     """A module-scoped event loop."""
+@pytest.fixture(scope="session", autouse=True)
+def download_data():
+    """Download large files needed for testing."""
 
-#     loop = asyncio.get_event_loop_policy().new_event_loop()
-#     yield loop
+    FILES = {"fimg-fvcn-0059.fits": "s/utedos4d6sjlvek/fimg-fvcn-0059.fits?dl=0"}
+
+    for fname in FILES:
+        outpath = os.path.join(os.path.dirname(__file__), "data", fname)
+        if os.path.exists(outpath):
+            continue
+
+        url = os.path.join("https://dl.dropboxusercontent.com", FILES[fname])
+        urllib.request.urlretrieve(url, outpath)
 
 
 @pytest.fixture(scope="session")

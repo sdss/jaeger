@@ -14,8 +14,8 @@ import click
 import numpy
 
 from jaeger import config
-from jaeger.design import get_robot_grid
 from jaeger.exceptions import TrajectoryError
+from jaeger.target.configuration import ManualConfiguration
 
 from . import jaeger_parser
 
@@ -51,61 +51,45 @@ async def random(
     if safe is True and uniform is not None:
         return command.fail(error="--safe and --uniform are mutually exclusive.")
 
-    command.debug(text="Creating robot grid.")
-
-    seed = seed or numpy.random.randint(0, 1000000)
-    numpy.random.seed(seed)
-
-    robot_grid = get_robot_grid(seed=seed)
-
     command.debug(text="Checking that all positioners are folded.")
 
     # Check that all positioners are folded.
-    alphaL, betaL = config["kaiju"]["lattice_position"]
     await fps.update_position()
-    if not numpy.allclose(fps.get_positions()[:, 1:] - [alphaL, betaL], 0, atol=0.1):
+    positions = fps.get_positions()
+
+    if len(positions) == 0:
+        return command.fail("No positioners connected")
+
+    alphaL, betaL = config["kaiju"]["lattice_position"]
+    if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=0.1):
         return command.fail(error="Not all the positioners are folded.")
 
-    command.info(text="Calculating random trajectory.")
+    command.info(text="Creating random configuration.")
 
-    for robot in robot_grid.robotDict.values():
-        robot.setDestinationAlphaBeta(alphaL, betaL)
+    uniform_unpack: tuple[float, ...] | None
+    if uniform:
+        try:
+            uniform_unpack = tuple(map(float, uniform.split(",")))
+        except Exception as err:
+            return command.fail(error=f"Failed calculating uniform ranges: {err}")
+    else:
+        uniform_unpack = None
 
-        if uniform is not None:
-            try:
-                alpha0, alpha1, beta0, beta1 = map(float, uniform.split(","))
-                alpha = numpy.random.uniform(alpha0, alpha1)
-                beta = numpy.random.uniform(beta0, beta1)
-                robot.setAlphaBeta(alpha, beta)
-            except Exception as err:
-                return command.fail(error=f"Failed calculating uniform ranges: {err}")
-
-        else:
-            if safe:
-                safe_mode = config["safe_mode"]
-                if safe_mode is False:
-                    safe_mode = {"min_beta": 160, "max_beta": 220}
-
-                alpha = numpy.random.uniform(0, 359.9)
-                beta = numpy.random.uniform(
-                    safe_mode["min_beta"],
-                    safe_mode["max_beta"],
-                )
-
-                robot.setAlphaBeta(alpha, beta)
-            else:
-                robot.setXYUniform()
-
-    robot_grid.decollideGrid()
-    robot_grid.pathGenGreedy()
-
-    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-    forward, _ = robot_grid.getPathPair(speed=speed)
+    configuration = ManualConfiguration.create_random(
+        seed=seed,
+        uniform=uniform_unpack,
+        safe=safe,
+    )
+    trajectory = configuration.get_trajectory(simple_decollision=True)
 
     command.info("Executing random trajectory.")
 
+    # Make this the FPS configuration
+    assert command.actor
+    command.actor.fps.configuration = configuration
+
     try:
-        await fps.send_trajectory(forward)
+        await fps.send_trajectory(trajectory)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 

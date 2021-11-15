@@ -318,7 +318,7 @@ class PreciseMoveAlphaOn(Command):
     command_id = CommandID.SWITCH_ON_PRECISE_MOVE_ALPHA
     broadcastable = False
     move_command = False
-    safe = False
+    safe = True
 
 
 class PreciseMoveAlphaOff(Command):
@@ -327,7 +327,7 @@ class PreciseMoveAlphaOff(Command):
     command_id = CommandID.SWITCH_OFF_PRECISE_MOVE_ALPHA
     broadcastable = False
     move_command = False
-    safe = False
+    safe = True
 
 
 class PreciseMoveBetaOn(Command):
@@ -336,7 +336,7 @@ class PreciseMoveBetaOn(Command):
     command_id = CommandID.SWITCH_ON_PRECISE_MOVE_BETA
     broadcastable = False
     move_command = False
-    safe = False
+    safe = True
 
 
 class PreciseMoveBetaOff(Command):
@@ -345,7 +345,7 @@ class PreciseMoveBetaOff(Command):
     command_id = CommandID.SWITCH_OFF_PRECISE_MOVE_BETA
     broadcastable = False
     move_command = False
-    safe = False
+    safe = True
 
 
 class SetIncreaseCollisionMargin(Command):

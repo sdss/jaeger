@@ -10,14 +10,23 @@ from __future__ import annotations
 
 import asyncio
 import enum
+import warnings
 from concurrent.futures import Executor
 from contextlib import suppress
+from functools import partial
 from threading import Thread
 
 from typing import Callable, Generic, Optional, Type, TypeVar
 
 
-__all__ = ["AsyncQueue", "StatusMixIn", "PollerList", "Poller", "AsyncioExecutor"]
+__all__ = [
+    "AsyncQueue",
+    "StatusMixIn",
+    "PollerList",
+    "Poller",
+    "AsyncioExecutor",
+    "run_in_executor",
+]
 
 
 class AsyncQueue(asyncio.Queue):
@@ -430,3 +439,33 @@ class AsyncioExecutor(Executor):
         self._loop.call_soon_threadsafe(self._loop.stop)
         if wait:
             self._thread.join()
+
+
+async def run_in_executor(fn, *args, catch_warnings=True, **kwargs):
+    """Runs a function in an executor.
+
+    In addition to streamlining the use of the executor, this function
+    catches any warning issued during the execution and reissues them
+    after the executor is done. This is important when using the
+    actor log handler since inside the executor there is no loop that
+    CLU can use to output the warnings.
+
+    In general, note that the function must not try to do anything with
+    the actor since they run on different loops.
+
+    """
+
+    fn = partial(fn, *args, **kwargs)
+
+    if catch_warnings:
+        with warnings.catch_warnings(record=True) as records:
+            result = await asyncio.get_event_loop().run_in_executor(None, fn)
+
+        for ww in records:
+            warnings.warn(ww.message, ww.category)
+
+    else:
+
+        result = await asyncio.get_event_loop().run_in_executor(None, fn)
+
+    return result

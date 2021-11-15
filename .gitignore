@@ -67,6 +67,7 @@ docs/sphinx/_build/
 
 # PyBuilder
 target/
+!python/jaeger/target
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -104,3 +105,6 @@ ENV/
 setup.py
 
 .nox/
+
+# Large data files
+tests/data/*.fits
