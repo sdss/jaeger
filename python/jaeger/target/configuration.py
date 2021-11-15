@@ -1187,6 +1187,7 @@ class ManualAssignmentData(BaseAssignmentData):
                     row = self._defaults.copy()
                     row.update(
                         {
+                            "hole_id": hole_id,
                             "alpha": alpha,
                             "beta": beta,
                             "xwok": wok[0],
