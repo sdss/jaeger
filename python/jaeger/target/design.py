@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import peewee
 
 from coordio.defaults import calibration
@@ -36,7 +38,14 @@ class Design:
         except peewee.DoesNotExist:
             raise ValueError(f"design_id {design_id} does not exist in the database.")
 
-        self.field = self.design.field
+        self.field: dict[str, Any] = dict(
+            field_id=self.design.field.field_id,
+            rs_run=self.design.field.version.plan if self.design else "NA",
+            observatory=self.design.field.observatory.label,
+            racen=self.design.field.racen,
+            deccen=self.design.field.deccen,
+            position_angle=self.design.field.position_angle,
+        )
         self.target_data: dict[str, dict] = self.get_target_data()
 
         self.configuration: Configuration

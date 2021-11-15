@@ -95,14 +95,17 @@ async def load(
     fps.configuration.write_to_database(replace=replace)
 
     configuration = fps.configuration
+    assert configuration.design
+
     boresight = fps.configuration.assignment_data.boresight
+
     command.debug(
         configuration_loaded=[
             configuration.configuration_id,
             configuration.design.design_id,
             boresight.ra[0],
             boresight.dec[0],
-            configuration.design.field.position_angle,
+            configuration.design.field["position_angle"],
             boresight[0, 0],
             boresight[0, 1],
         ]
@@ -118,7 +121,7 @@ async def load(
 async def execute(command: Command[JaegerActor], fps: FPS):
     """Executes a configuration trajectory."""
 
-    if fps.configuration is None:
+    if fps.configuration is None or fps.configuration.ingested is False:
         return command.fail(error="A configuration must first be loaded.")
 
     positions = fps.get_positions(ignore_disabled=True)

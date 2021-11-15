@@ -58,13 +58,13 @@ __all__ = [
 PositionerType = Union[PositionerApogee, PositionerBoss]
 
 
-def get_fibermap_table() -> tuple[Table, dict]:
+def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
     """Returns a stub for the FIBERMAP table and a default entry,"""
 
     fiber_map_data = [
         ("positionerId", numpy.int16),
-        ("holeId", "S7"),
-        ("fiberType", "S10"),
+        ("holeId", "U7"),
+        ("fiberType", "U10"),
         ("assigned", numpy.int16),
         ("on_target", numpy.int16),
         ("valid", numpy.int16),
@@ -83,30 +83,30 @@ def get_fibermap_table() -> tuple[Table, dict]:
         ("coord_epoch", numpy.float32),
         ("spectrographId", numpy.int16),
         ("mag", numpy.dtype(("<f4", (5,)))),
-        ("optical_prov", "S10"),
+        ("optical_prov", "U10"),
         ("bp_mag", numpy.float32),
         ("gaia_g_mag", numpy.float32),
         ("rp_mag", numpy.float32),
         ("h_mag", numpy.float32),
         ("catalogid", numpy.int64),
         ("carton_to_target_pk", numpy.int64),
-        ("cadence", "S20"),
-        ("firstcarton", "S25"),
-        ("program", "S20"),
-        ("category", "S20"),
+        ("cadence", "U20"),
+        ("firstcarton", "U25"),
+        ("program", "U20"),
+        ("category", "U20"),
         ("sdssv_boss_target0", numpy.int64),
         ("sdssv_apogee_target0", numpy.int64),
     ]
 
-    names, dtype = zip(*fiber_map_data)
+    names, formats = zip(*fiber_map_data)
 
-    fibermap = Table(rows=None, names=names, dtype=dtype)
+    fibermap = numpy.empty((length,), dtype={"names": names, "formats": formats})
 
     # Define a default row with all set to "" or -999. depending on column data type.
     default = {}
     for i in range(len(names)):
         name = names[i]
-        dd = numpy.dtype(dtype[i])
+        dd = numpy.dtype(formats[i])
         if name == "mag":
             value = [-999.0] * 5
         elif dd.char in ["h", "i"]:
@@ -141,8 +141,8 @@ class BaseConfiguration:
         # Once set, it cannot be changed.
         self.configuration_id: int | None = None
 
-        self.design = None
-        self.design_id = None
+        self.design: Design | None = None
+        self.design_id: int | None = None
 
         self.fps = FPS.get_instance()
 
@@ -330,12 +330,11 @@ class BaseConfiguration:
         time = Time.now()
 
         design = self.design
-        rs_run = design.field.version.plan if design else "NA"
 
         header = {
             "configuration_id": self.configuration_id,
             "targeting_version": -999,
-            "robostrategy_run": rs_run,
+            "robostrategy_run": "NA",
             "fps_calibrations_version": calibration.fps_calibs_version,
             "design_id": self.design_id,
             "field_id": -999,
@@ -352,14 +351,16 @@ class BaseConfiguration:
         if design:
             header.update(
                 {
-                    "field_id": design.field.field_id,
-                    "raCen": design.field.racen,
-                    "decCen": design.field.deccen,
+                    "robostrategy_run": design.field["rs_run"],
+                    "field_id": design.field["field_id"],
+                    "raCen": design.field["racen"],
+                    "decCen": design.field["deccen"],
                 }
             )
 
-        fibermap, default = get_fibermap_table()
+        fibermap, default = get_fibermap_table(len(fdata))
 
+        i = 0
         for index, row_data in fdata.iterrows():
 
             index = cast(tuple, index)
@@ -408,12 +409,12 @@ class BaseConfiguration:
                         "parallax": target["parallax"] or -999.0,
                         "coord_epoch": target["epoch"] or -999.0,
                         "lambda_eff": target["lambda_eff"] or -999.0,
-                        "catalogid": target["catalogid"],
-                        "carton_to_target_pk": target["carton_to_target_pk"],
-                        "cadence": target["cadence"],
-                        "firstcarton": target["carton"],
-                        "program": target["program"],
-                        "category": target["category"],
+                        "catalogid": target["catalogid"] or -999.0,
+                        "carton_to_target_pk": target["carton_to_target_pk"] or -999.0,
+                        "cadence": target["cadence"] or "",
+                        "firstcarton": target["carton"] or "",
+                        "program": target["program"] or "",
+                        "category": target["category"] or "",
                     }
                 )
 
@@ -430,8 +431,11 @@ class BaseConfiguration:
                     }
                 )
 
-            fibermap.add_row(row)
+            fibermap[i] = tuple(row.values())
 
+            i += 1
+
+        fibermap = Table(fibermap)
         fibermap.sort(["positionerId", "fiberType"])
 
         if "SDSSCORE_DIR" not in os.environ:
@@ -696,7 +700,7 @@ class BaseAssignmentData:
         if observatory is None:
             if self.design is None:
                 raise ValueError("Cannot determine observatory.")
-            self.observatory = self.design.field.observatory.label.upper()
+            self.observatory = self.design.field["observatory"].upper()
         else:
             self.observatory = observatory
 
@@ -717,7 +721,7 @@ class BaseAssignmentData:
 
         if self.design:
             self.target_data = self.design.target_data
-            self.position_angle = self.design.field.position_angle
+            self.position_angle = self.design.field["position_angle"]
         else:
             self.target_data = {}
 
@@ -980,7 +984,7 @@ class AssignmentData(BaseAssignmentData):
         self.fibre_table = self._create_fibre_table()
         self.site.set_time(jd)
 
-        icrs_bore = ICRS([[self.design.field.racen, self.design.field.deccen]])
+        icrs_bore = ICRS([[self.design.field["racen"], self.design.field["deccen"]]])
         self.boresight = Observed(
             icrs_bore,
             site=self.site,
