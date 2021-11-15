@@ -88,7 +88,9 @@ class FVC:
             elif level == logging.ERROR:
                 self.command.error(msg)
 
-    async def expose(self, exposure_time: float = 5.0) -> pathlib.Path:
+    async def expose(
+        self, exposure_time: float = 5.0
+    ) -> pathlib.Path:  # pragma: no cover
         """Takes an exposure with the FVC and blocks until the exposure is complete.
 
         Returns the path to the new image.
@@ -335,7 +337,7 @@ class FVC:
         raw_hdu: fits.ImageHDU,
         measured_coords: pandas.DataFrame,
         centroids: pandas.DataFrame,
-    ) -> fits.HDUList:
+    ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data."""
 
         proc_hdus = fits.HDUList([fits.PrimaryHDU(), raw_hdu])
