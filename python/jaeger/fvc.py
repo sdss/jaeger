@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import pathlib
+import warnings
 
 from typing import TYPE_CHECKING, Optional
 
@@ -26,7 +27,7 @@ from coordio.defaults import calibration
 from coordio.transforms import RoughTransform, ZhaoBurgeTransform
 
 from jaeger import config, log
-from jaeger.exceptions import FVCError
+from jaeger.exceptions import FVCError, JaegerUserWarning
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.utils import run_in_executor
@@ -44,7 +45,10 @@ class FVC:
     def __init__(self, site: str, command: Optional[Command[JaegerActor]] = None):
 
         if len(calibration.positionerTable) == 0:
-            raise ValueError("FPS calibrations not loaded or the array is empty.")
+            warnings.warn(
+                "FPS calibrations not loaded or the array is empty.",
+                JaegerUserWarning,
+            )
 
         self.site = site
 
