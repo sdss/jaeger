@@ -12,6 +12,16 @@ import warnings
 
 from typing import TYPE_CHECKING
 
+import numpy
+
+from coordio.conv import (
+    positionerToTangent,
+    tangentToPositioner,
+    tangentToWok,
+    wokToTangent,
+)
+from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
+
 from jaeger import FPS, config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 
@@ -20,7 +30,15 @@ if TYPE_CHECKING:
     from kaiju import RobotGridCalib
 
 
-__all__ = ["warn", "get_robot_grid", "decollide_grid", "unwind", "explode"]
+__all__ = [
+    "warn",
+    "get_robot_grid",
+    "decollide_grid",
+    "unwind",
+    "explode",
+    "wok_to_positioner",
+    "positioner_to_wok",
+]
 
 
 def warn(message):
@@ -177,3 +195,104 @@ def explode(current_positions: dict[int, tuple[float, float]], explode_deg=20.0)
     _, reverse = robot_grid.getPathPair(speed=speed)
 
     return reverse
+
+
+def wok_to_positioner(
+    hole_id: str,
+    site: str,
+    fibre_type: str,
+    xwok: float,
+    ywok: float,
+    zwok: float = POSITIONER_HEIGHT,
+) -> tuple[float, float, tuple]:
+
+    positioner_data = calibration.positionerTable.loc[(site, hole_id)]
+
+    hole_orient = getHoleOrient(site, hole_id)
+
+    if fibre_type == "APOGEE":
+        xBeta = positioner_data.apX
+        yBeta = positioner_data.apY
+    elif fibre_type == "BOSS":
+        xBeta = positioner_data.bossX
+        yBeta = positioner_data.bossY
+    elif fibre_type == "Metrology":
+        xBeta = positioner_data.metX
+        yBeta = positioner_data.metY
+    else:
+        raise ValueError(f"Invalid fibre type {fibre_type}.")
+
+    tangent = wokToTangent(
+        xwok,
+        ywok,
+        zwok,
+        *hole_orient,
+        dx=positioner_data.dx,
+        dy=positioner_data.dy,
+    )
+
+    alpha, beta, _ = tangentToPositioner(
+        tangent[0][0],
+        tangent[1][0],
+        xBeta,
+        yBeta,
+        la=positioner_data.alphaArmLen,
+        alphaOffDeg=positioner_data.alphaOffset,
+        betaOffDeg=positioner_data.betaOffset,
+    )
+
+    return alpha, beta, tangent
+
+
+def positioner_to_wok(
+    hole_id: str,
+    site: str,
+    fibre_type: str,
+    alpha: float,
+    beta: float,
+):
+    """Convert from positioner to wok coordinates."""
+
+    positioner_data = calibration.positionerTable.loc[(site, hole_id)]
+    wok_data = calibration.wokCoords.loc[(site, hole_id)]
+
+    b = wok_data[["xWok", "yWok", "zWok"]]
+    iHat = wok_data[["ix", "iy", "iz"]]
+    jHat = wok_data[["jx", "jy", "jz"]]
+    kHat = wok_data[["kx", "ky", "kz"]]
+
+    if fibre_type == "APOGEE":
+        xBeta = positioner_data.apX
+        yBeta = positioner_data.apY
+    elif fibre_type == "BOSS":
+        xBeta = positioner_data.bossX
+        yBeta = positioner_data.bossY
+    elif fibre_type == "Metrology":
+        xBeta = positioner_data.metX
+        yBeta = positioner_data.metY
+    else:
+        raise ValueError(f"Invlid fibre type {fibre_type}.")
+
+    tangent = positionerToTangent(
+        alpha,
+        beta,
+        xBeta,
+        yBeta,
+        la=positioner_data.alphaArmLen,
+        alphaOffDeg=positioner_data.alphaOffset,
+        betaOffDeg=positioner_data.betaOffset,
+    )
+
+    wok = tangentToWok(
+        tangent[0],
+        tangent[1],
+        POSITIONER_HEIGHT,
+        b,
+        iHat,
+        jHat,
+        kHat,
+        dx=positioner_data.dx,
+        dy=positioner_data.dy,
+    )
+
+    return numpy.array(wok), numpy.array([tangent[0], tangent[1], POSITIONER_HEIGHT])
