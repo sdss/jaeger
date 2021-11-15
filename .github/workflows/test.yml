@@ -17,6 +17,10 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9]
 
+    env:
+      WOKCALIB_DIR: "/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanFlatCMM"
+      PYTHONPATH: "/home/runner/work/jaeger/jaeger/fps_calibrations"
+
     steps:
       - uses: actions/checkout@v2
 
@@ -27,6 +31,12 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
+      - name: Clone fps_calibrations
+        uses: actions/checkout@master
+        with:
+          repository: sdss/fps_calibrations
+          path: fps_calibrations
 
       - name: Set up Python
         uses: actions/setup-python@v2
