@@ -312,17 +312,15 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        fibre_data = fibre_data.reset_index()
-
-        met_index = fibre_data.fibre_type == "Metology"
-
-        fibre_data.loc[met_index, "xwok_measured"] = xy_wok_robot_meas[:, 0]
-        fibre_data.loc[met_index, "ywok_measured"] = xy_wok_robot_meas[:, 1]
+        fibre_data.loc["Metrology", "xwok_measured"] = xy_wok_robot_meas[:, 0]
+        fibre_data.loc["Metrology", "ywok_measured"] = xy_wok_robot_meas[:, 1]
 
         # Only use online robots for final RMS.
-        online = fibre_data.loc[~fibre_data.offline]
-        dx = online.xWokMetExpect - online.xWokMetMeas
-        dy = online.yWokMetExpect - online.yWokMetMeas
+        online = fibre_data.loc[
+            (fibre_data.index == "Metrology") & (fibre_data.offline == 0)
+        ]
+        dx = online.xwok - online.xwok_measured
+        dy = online.ywok - online.ywok_measured
 
         rms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {rms * 1000:.3f} um.")
