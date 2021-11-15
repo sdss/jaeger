@@ -1181,6 +1181,8 @@ class ManualAssignmentData(BaseAssignmentData):
                         "xtangent": tangent[0],
                         "ytangent": tangent[1],
                         "ztangent": tangent[2],
+                        "assigned": assigned,
+                        "on_target": assigned,
                     }
 
         # Now do a single update of the whole fibre table.
