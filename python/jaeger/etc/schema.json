@@ -189,6 +189,12 @@
                 { "title": "alt_boresight", "type": "number" },
                 { "title": "az_boresight", "type": "number" }
             ]
+        },
+        "fvc_filename": {
+            "type": "string"
+        },
+        "fitrms": {
+            "type": "number"
         }
     },
     "additionalProperties": false
