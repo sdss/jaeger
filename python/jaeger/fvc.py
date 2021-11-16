@@ -27,10 +27,10 @@ from coordio.defaults import calibration
 from coordio.transforms import RoughTransform, ZhaoBurgeTransform
 
 from jaeger import config, log
-from jaeger.exceptions import FVCError, JaegerUserWarning
+from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
-from jaeger.target.tools import wok_to_positioner
+from jaeger.target.tools import get_robot_grid, wok_to_positioner
 from jaeger.utils import run_in_executor
 
 
@@ -586,6 +586,60 @@ class FVC:
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 
         return proc_hdus
+
+    async def apply_correction(
+        self,
+        offsets: Optional[pandas.DataFrame] = None,
+    ):  # pragma: no cover
+        """Applies the offsets. Fails if the trajectory is collided or deadlock."""
+
+        if self.offsets is None and offsets is None:
+            raise FVCError("Offsets not set or passed. Cannot apply correction.")
+
+        if offsets is None:
+            offsets = self.offsets
+            assert offsets
+
+        await self.fps.update_position()
+
+        # Setup robot grid.
+        grid = get_robot_grid()
+        for robot in grid.robotDict.values():
+            positioner = self.fps[robot.id]
+            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+
+            row: pandas.Series = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
+            if row.isna().any():
+                log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
+                robot.setAlphaBeta(positioner.alpha, positioner.beta)
+            else:
+                robot.setAlphaBeta(row.alpha_new, row.beta_new)
+
+        # Check for collisions.
+        collided = [rid for rid in grid.robotDict if grid.isCollided(rid)]
+        if len(collided) > 0:
+            raise FVCError(
+                f"Cannot apply corrections. {len(collided)} robots are collided."
+            )
+
+        # Generate trajectories.
+        grid.pathGenGreedy()
+
+        # Check for deadlocks.
+        if grid.didFail:
+            raise FVCError(
+                "Failed generating a valid trajectory. "
+                "This usually means a deadlock was found."
+            )
+
+        speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
+        forward = grid.getPathPair(speed=speed)[0]
+
+        self.log("Sending correction trajectory.")
+        try:
+            await self.fps.send_trajectory(forward)
+        except TrajectoryError as err:
+            raise FVCError(f"Failed executing the correction trajectory: {err}")
 
     def extract(self, image_data: numpy.ndarray) -> pandas.DataFrame:
         """Extract image data using SExtractor. Returns the extracted centroids."""
