@@ -204,10 +204,10 @@ def wok_to_positioner(
     xwok: float,
     ywok: float,
     zwok: float = POSITIONER_HEIGHT,
-) -> tuple[float, float, tuple]:
+) -> tuple[numpy.ndarray, numpy.ndarray]:
     """Converts from wok to positioner coordinates.
 
-    Returns ``(alpha, beta, tangent_coords)``.
+    Returns arrays with the positioner and tangent coordinates.
 
     """
 
@@ -246,7 +246,10 @@ def wok_to_positioner(
         betaOffDeg=positioner_data.betaOffset,
     )
 
-    return alpha, beta, tangent
+    return (
+        numpy.array([alpha, beta]),
+        numpy.array([tangent[0][0], tangent[1][0], tangent[2][0]]),
+    )
 
 
 def positioner_to_wok(
