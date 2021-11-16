@@ -169,7 +169,7 @@ class BaseConfiguration:
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         for robot in self.robot_grid.robotDict.values():
-            robot.setAlphaBeta(alpha0, beta0)
+            robot.setDestinationAlphaBeta(alpha0, beta0)
             if robot.id not in ftable.index.get_level_values(0):
                 raise JaegerError(f"Positioner {robot.id} is not assigned.")
 
