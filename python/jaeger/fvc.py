@@ -42,6 +42,16 @@ __all__ = ["FVC"]
 class FVC:
     """Focal View Camera class."""
 
+    fibre_data: Optional[pandas.DataFrame]
+    centroids: Optional[pandas.DataFrame]
+    offsets: Optional[pandas.DataFrame]
+
+    raw_hdu: Optional[fits.ImageHDU]
+    proc_hdu: Optional[fits.ImageHDU]
+
+    fitrms: float
+    k: float
+
     def __init__(self, site: str, command: Optional[Command[JaegerActor]] = None):
 
         if len(calibration.positionerTable) == 0:
@@ -54,6 +64,21 @@ class FVC:
 
         self.command = command
         self.fps = FPS.get_instance()
+
+        self.reset()
+
+    def reset(self):
+        """Resets the instance."""
+
+        self.fibre_data = None
+        self.centroids = None
+        self.offsets = None
+
+        self.raw_hdu = None
+        self.proc_hdu = None
+
+        self.k = 1
+        self.fitrms = -999.0
 
     def set_command(self, command: Command[JaegerActor]):
         """Sets the command."""
@@ -160,6 +185,9 @@ class FVC:
 
         """
 
+        # Reset the instance
+        self.reset()
+
         path = str(path)
         if not os.path.exists(path):
             raise FVCError(f"FVC image {path} does not exist.")
@@ -169,7 +197,7 @@ class FVC:
                 raise FVCError("No fibre data and no configuration has been loaded.")
             fibre_data = self.fps.configuration.assignment_data.fibre_table
 
-        fibre_data = fibre_data.copy().reset_index().set_index("fibre_type")
+        self.fibre_data = fibre_data.copy().reset_index().set_index("fibre_type")
 
         self.log(f"Processing raw image {path}")
 
@@ -185,11 +213,13 @@ class FVC:
 
         hdus = fits.open(path)
 
+        self.raw_hdu = hdus[1].copy()
+
         # Invert columns
         hdus[1].data = hdus[1].data[:, ::-1]
         image_data = hdus[1].data
 
-        centroids = self.extract(image_data)
+        self.centroids = self.extract(image_data)
 
         fiducialCoords = calibration.fiducialCoords.loc[self.site]
 
@@ -197,9 +227,9 @@ class FVC:
         yCMM = fiducialCoords.yWok.to_numpy()
         xyCMM = numpy.array([xCMM, yCMM]).T
 
-        xyCCD = centroids[["x", "y"]].to_numpy()
+        xyCCD = self.centroids[["x", "y"]].to_numpy()
 
-        fibre_data_met = fibre_data.loc["Metrology"]
+        fibre_data_met = self.fibre_data.loc["Metrology"]
 
         # Get close enough to associate the correct centroid with the correct fiducial.
         x_wok_expect = numpy.concatenate([xCMM, fibre_data_met.xwok.to_numpy()])
@@ -314,18 +344,27 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        fibre_data.loc["Metrology", "xwok_measured"] = xy_wok_robot_meas[:, 0]
-        fibre_data.loc["Metrology", "ywok_measured"] = xy_wok_robot_meas[:, 1]
+        self.fibre_data.loc["Metrology", "xwok_measured"] = xy_wok_robot_meas[:, 0]
+        self.fibre_data.loc["Metrology", "ywok_measured"] = xy_wok_robot_meas[:, 1]
 
         # Only use online robots for final RMS.
-        online = fibre_data.loc[
-            (fibre_data.index == "Metrology") & (fibre_data.offline == 0)
+        online = self.fibre_data.loc[
+            (self.fibre_data.index == "Metrology") & (self.fibre_data.offline == 0)
         ]
         dx = online.xwok - online.xwok_measured
         dy = online.ywok - online.ywok_measured
 
-        rms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
-        self.log(f"RMS full fit {rms * 1000:.3f} um.")
+        self.fitrms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
+        self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
+
+        hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
+
+        self.fibre_data.reset_index(inplace=True)
+        self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
+        self.proc_hdu = hdus[1]
+
+        return (self.proc_hdu, self.fibre_data, self.centroids)
+
 
         hdus[1].header["FITRMS"] = (rms * 1000, "RMS full fit [um]")
 
@@ -334,13 +373,18 @@ class FVC:
     async def write_proc_image(
         self,
         new_filename: str | pathlib.Path,
-        raw_hdu: fits.ImageHDU,
-        measured_coords: pandas.DataFrame,
-        centroids: pandas.DataFrame,
     ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data."""
 
-        proc_hdus = fits.HDUList([fits.PrimaryHDU(), raw_hdu])
+        if (
+            self.fibre_data is None
+            or self.centroids is None
+            or self.raw_hdu
+            or self.proc_hdu is None
+        ):
+            raise FVCError("Need to run process_fvc_image before writing the image.")
+
+        proc_hdus = fits.HDUList([fits.PrimaryHDU(), self.proc_hdu])
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
@@ -357,6 +401,7 @@ class FVC:
             table = fits.BinTableHDU(rec, name=name)
             proc_hdus.append(table)
 
+        measured_coords = self.fibre_data.copy()
         measured_coords.reset_index(inplace=True)
         measured_coords.sort_values("positioner_id", inplace=True)
         measured_coords_rec = Table.from_pandas(measured_coords).as_array()
@@ -411,10 +456,10 @@ class FVC:
                     current_positions["startAlpha"] = _start_alpha
                     current_positions["startBeta"] = _start_beta
 
-            rec = Table.from_pandas(current_positions).as_array()
+            rec = Table.from_pandas(current_positions.reset_index()).as_array()
             proc_hdus.append(fits.BinTableHDU(rec, name="POSANGLES"))
 
-        rec = Table.from_pandas(centroids).as_array()
+        rec = Table.from_pandas(self.centroids.reset_index()).as_array()
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)

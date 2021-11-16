@@ -112,14 +112,12 @@ async def loop(
         command.debug("Taking exposure with fliswarm.")
         filename = await fvc.expose(exposure_time=exposure_time)
 
-        raw_hdu, measured, centroids = await run_in_executor(
-            fvc.process_fvc_image,
-            filename,
-            plot=plot,
-        )
+        await run_in_executor(fvc.process_fvc_image, filename, plot=plot)
 
-        new_file = filename.with_name("proc-" + filename.name)
-        await fvc.write_proc_image(new_file, raw_hdu, measured, centroids)
+
+        proc_path = filename.with_name("proc-" + filename.name)
+        command.debug(f"Saving processed image {proc_path}")
+        await fvc.write_proc_image(proc_path)
 
         n += 1
 
