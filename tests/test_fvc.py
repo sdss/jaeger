@@ -18,11 +18,14 @@ from coordio import calibration
 
 from jaeger import FPS
 from jaeger.fvc import FVC
+from jaeger.positioner import Positioner
 from jaeger.target import ManualConfiguration
 
 
-class FakePositioner:
-    disabled = False
+class FakePositioner(Positioner):
+    def __ini__(self, pid: int):
+        self.positioner_id = pid
+        self.disabled = False
 
 
 @pytest.fixture(scope="module")
@@ -40,7 +43,7 @@ def configuration(test_data):
     # from failing when it checks if all the positioners exist.
     fps = FPS.get_instance()
     for pid in calibration.positionerTable.positionerID:
-        fps[pid] = FakePositioner()
+        fps[pid] = FakePositioner(pid)
 
     posangles, measured = test_data
     pid, alpha, beta = (

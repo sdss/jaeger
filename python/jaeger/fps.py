@@ -66,7 +66,7 @@ FPS_CO = Union["BaseFPS", "FPS"]
 FPS_T = TypeVar("FPS_T", bound="BaseFPS")
 
 
-class BaseFPS(dict, Generic[FPS_T]):
+class BaseFPS(dict[int, Positioner], Generic[FPS_T]):
     """A class describing the Focal Plane System.
 
     This class includes methods to read the layout and construct positioner
