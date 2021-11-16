@@ -71,7 +71,6 @@ async def expose(
 @fvc_parser.command()
 @click.option("--exposure-time", type=float, help="Exposure time.")
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
-@click.option("--use-last", is_flag=True, help="Uses the last available exposure.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
 @click.option("--plot/--no-plot", default=True, help="Generate and save plots.")
 @cancellable()
@@ -80,7 +79,6 @@ async def loop(
     fps: FPS,
     exposure_time: float | None = None,
     fbi_level: float = 1.0,
-    use_last: bool = False,
     one: bool = False,
     plot: bool = True,
 ):
@@ -100,37 +98,74 @@ async def loop(
 
     fvc.set_command(command)
 
-    n = 1
-    while True:
-        command.info(f"FVC iteration {n}")
+    command.debug("Turning LEDs on.")
+    await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
+    await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
 
-        if n == 1:
-            command.debug("Turning LEDs on.")
-            await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
-            await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
+    current_rms = None
+    delta_rms = None
 
-        command.debug("Taking exposure with fliswarm.")
-        filename = await fvc.expose(exposure_time=exposure_time)
+    try:
 
-        await run_in_executor(fvc.process_fvc_image, filename, plot=plot)
+        n = 1
+        while True:
+            command.info(f"FVC iteration {n}")
 
-        command.debug("Calculating offsets.")
-        await fps.update_position()
-        await run_in_executor(fvc.calculate_new_alpha_beta, fps.get_positions())
+            # 1. Expose the FVC
+            command.debug("Taking exposure with fliswarm.")
+            filename = await fvc.expose(exposure_time=exposure_time)
+            command.debug(fvc_filename=str(filename))
 
-        proc_path = filename.with_name("proc-" + filename.name)
-        command.debug(f"Saving processed image {proc_path}")
-        await fvc.write_proc_image(proc_path)
+            # 2. Process the new image.
+            await run_in_executor(fvc.process_fvc_image, filename, plot=plot)
 
-        n += 1
+            # 3. Set current RMS and delta.
+            if delta_rms is None and current_rms is None:
+                pass
+            elif delta_rms is None and current_rms is not None:
+                delta_rms = abs(current_rms - fvc.fitrms)
 
-        break
+            current_rms = fvc.fitrms
+            command.info(fvc_fitrms=fvc.fitrms)
 
-    command.debug("Turning LEDs off.")
-    await command.send_command("jaeger", "ieb fbi led1 0")
-    await command.send_command("jaeger", "ieb fbi led2 0")
+            # 4. Check if the RMS or delta RMS criteria are met.
+            if current_rms < config["fvc"]["target_rms"]:
+                return command.finish("FVC target RMS reached.")
+            elif delta_rms < config["fvc"]["target_delta_rms"]:
+                command.warning("Target RMS not reached.")
+                return command.finish("FVC delta RMS reached. Cancelling the FVC loop.")
 
-    command.finish("FVC loop complete.")
+            # 4. Update current positions and calculate offsets.
+            command.debug("Calculating offsets.")
+            await fps.update_position()
+            await run_in_executor(fvc.calculate_new_alpha_beta, fps.get_positions())
+
+            # 5. Save processed image with additional tables.
+            proc_path = filename.with_name("proc-" + filename.name)
+            command.debug(f"Saving processed image {proc_path}")
+            await fvc.write_proc_image(proc_path)
+
+            # 6. Apply corrections.
+            await fvc.apply_correction()
+
+            if one:
+                command.warning("Cancelling FVC loop after one iteration.")
+                return command.finish()
+
+            if n == config["fvc"]["max_fvc_iterations"]:
+                command.warning("Maximum number of iterations reached.")
+                return command.finish("Finishing FVC loop.")
+
+            n += 1
+
+    except FVCError as err:
+        return command.fail(error=f"Failed processing image: {err}")
+
+    finally:
+
+        command.debug("Turning LEDs off.")
+        await command.send_command("jaeger", "ieb fbi led1 0")
+        await command.send_command("jaeger", "ieb fbi led2 0")
 
 
 @fvc_parser.command()

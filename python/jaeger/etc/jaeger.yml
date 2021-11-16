@@ -72,6 +72,9 @@ fvc:
     exposure_time: 1.5
     background_sigma: 3.5
     centroid_min_npix: 100
+    target_rms: 10
+    target_delta_rms: 1
+    max_fvc_iterations: 5
     k: 0.7
     ieb_keys:
         TEMPRTD2: rtd2
