@@ -873,7 +873,7 @@ class BaseAssignmentData:
             focal = FocalPlane(field, wavelength=wavelength, site=self.site)
             wok = Wok(focal, site=self.site, obsAngle=position_angle)
 
-            alpha, beta, tangent = wok_to_positioner(
+            positioner, tangent = wok_to_positioner(
                 hole_id,
                 self.site.name,
                 fibre_type,
@@ -897,11 +897,11 @@ class BaseAssignmentData:
                 "xwok": wok[0, 0],
                 "ywok": wok[0, 1],
                 "zwok": wok[0, 2],
-                "xtangent": tangent[0][0],
-                "ytangent": tangent[1][0],
-                "ztangent": tangent[2][0],
-                "alpha": alpha,
-                "beta": beta,
+                "xtangent": tangent[0],
+                "ytangent": tangent[1],
+                "ztangent": tangent[2],
+                "alpha": positioner[0],
+                "beta": positioner[1],
             }
         )
         row.update(kwargs)
@@ -1107,7 +1107,7 @@ class ManualAssignmentData(BaseAssignmentData):
             zwok = data.get("zwok", POSITIONER_HEIGHT)
             fibre_type = data["fibre_type"]
 
-            alpha, beta, _ = wok_to_positioner(
+            (alpha, beta), _ = wok_to_positioner(
                 hole_id,
                 self.site.name,
                 fibre_type,
