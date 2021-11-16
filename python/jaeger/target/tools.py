@@ -298,7 +298,7 @@ def positioner_to_wok(
     wok = tangentToWok(
         tangent[0],
         tangent[1],
-        POSITIONER_HEIGHT,
+        0,
         b,
         iHat,
         jHat,
@@ -307,4 +307,4 @@ def positioner_to_wok(
         dy=positioner_data.dy,
     )
 
-    return numpy.array(wok), numpy.array([tangent[0], tangent[1], POSITIONER_HEIGHT])
+    return numpy.array(wok), numpy.array([tangent[0], tangent[1], 0])
