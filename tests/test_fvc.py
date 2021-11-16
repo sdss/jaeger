@@ -39,9 +39,8 @@ def configuration(test_data):
     # Ugly hack to add fake positioners to the FPS and prevent get_robot_grid
     # from failing when it checks if all the positioners exist.
     fps = FPS.get_instance()
-    for i in range(1, 1500):
-        if i not in fps:
-            fps[i] = FakePositioner()
+    for pid in calibration.positionerTable.positionerID:
+        fps[pid] = FakePositioner()
 
     posangles, measured = test_data
     pid, alpha, beta = (

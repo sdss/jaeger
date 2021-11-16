@@ -75,10 +75,11 @@ def get_robot_grid(seed: int = 0):
         seed=seed,
     )
 
+    if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
+        raise JaegerError("Mismatch between connected positioners and robot grid.")
+
     for robot in robot_grid.robotDict.values():
         if fps is not None:
-            if robot.id not in fps.positioners:
-                raise JaegerError(f"Robot {robot.id} is not connected.")
             positioner = fps[robot.id]
             if positioner.disabled:
                 log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
