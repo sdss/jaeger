@@ -114,6 +114,9 @@ async def loop(
 
         await run_in_executor(fvc.process_fvc_image, filename, plot=plot)
 
+        command.debug("Calculating offsets.")
+        await fps.update_position()
+        await run_in_executor(fvc.calculate_new_alpha_beta, fps.get_positions())
 
         proc_path = filename.with_name("proc-" + filename.name)
         command.debug(f"Saving processed image {proc_path}")

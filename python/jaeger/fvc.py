@@ -30,6 +30,7 @@ from jaeger import config, log
 from jaeger.exceptions import FVCError, JaegerUserWarning
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
+from jaeger.target.tools import wok_to_positioner
 from jaeger.utils import run_in_executor
 
 
@@ -365,10 +366,126 @@ class FVC:
 
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
+    def calculate_new_alpha_beta(
+        self,
+        reported_positions: numpy.ndarray,
+        fibre_data: Optional[pandas.DataFrame] = None,
+        k: Optional[float] = None,
+    ) -> pandas.DataFrame:
+        """Determines the offset to apply to the currently reported positions.
 
-        hdus[1].header["FITRMS"] = (rms * 1000, "RMS full fit [um]")
+        Measured wok positions from the fibre data are converted to positioner
+        coordinates. An alpha/beta offset is calculated with respect to the
+        expected positions. The offsets is then applied to the current positions
+        as self-reported by the positioners. Optionally, the offset can be
+        adjusted using a PID loop.
 
-        return (hdus[1], fibre_data, centroids)
+        Parameters
+        ----------
+        reported_positions
+            Reported positions for the positioners as a numpy array. Usually
+            the output of `.FPS.get_positions`.
+        fibre_data
+            The fibre data table. Only the metrology entries are used. Must
+            have the ``xwok_measured`` and ``ywok_measured`` column populated.
+            If `None`, uses the data frame calculated when `.process_fvc_image`
+            last run.
+        k
+            The fraction of the correction to apply.
+
+        Returns
+        -------
+        new_positions
+            The new alpha and beta positions as a Pandas dataframe indexed by
+            positions ID. If `None`, uses the value ``fvc.k`` from the configuration.
+
+        """
+
+        site = config["observatory"]
+        self.k = k or config["fvc"]["k"]
+
+        if fibre_data is None and self.fibre_data is None:
+            raise FVCError("No fibre data passed or stored in the instance.")
+
+        if fibre_data is None:
+            fibre_data = self.fibre_data
+            assert fibre_data is not None
+
+        fibre_data = fibre_data.copy().reset_index()
+        met: pandas.DataFrame = fibre_data.loc[fibre_data.fibre_type == "Metrology"]
+
+        # TODO: deal with missing data
+        if (met.loc[:, ["xwok_measured", "ywok_measured"]] == -999.0).any().any():
+            raise FVCError("Some metrology fibres have not been measured.")
+
+        # Calculate alpha/beta from measured wok coordinates.
+        _new = []
+        for _, row in met.iterrows():
+            (alpha_new, beta_new), _ = wok_to_positioner(
+                row.hole_id,
+                site,
+                "Metrology",
+                row.xwok_measured,
+                row.ywok_measured,
+            )
+
+            _new.append(
+                (
+                    row.hole_id,
+                    row.positioner_id,
+                    row.alpha,
+                    row.beta,
+                    alpha_new,
+                    beta_new,
+                )
+            )
+
+        new = pandas.DataFrame(
+            _new,
+            columns=[
+                "hole_id",
+                "positioner_id",
+                "alpha_expected",
+                "beta_expected",
+                "alpha_measured",
+                "beta_measured",
+            ],
+        )
+        new.set_index("positioner_id", inplace=True)
+
+        # Merge the reported positions.
+        reported = pandas.DataFrame(
+            reported_positions,
+            columns=["positioner_id", "alpha_reported", "beta_reported"],
+        )
+        reported.positioner_id = reported.positioner_id.astype("int32")
+        reported.set_index("positioner_id", inplace=True)
+
+        new = pandas.concat([new, reported], axis=1)
+
+        # If there are measured alpha/beta that are NaN, replace those with the
+        # previous value.
+        new["conversion_valid"] = 1
+        pos_na = new["alpha_measured"].isna()
+        if pos_na.sum() > 0:
+            self.log(
+                "Failed to calculated corrected positioner coordinates for "
+                f"{pos_na.sum()} positioners.",
+                level=logging.WARNING,
+            )
+            expected = new.loc[pos_na, ["alpha_expected", "beta_expected"]]
+            new.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected.to_numpy()
+            new.loc[pos_na, "conversion_valid"] = 0
+
+        new["alpha_offset"] = k * (new["alpha_expected"] - new["alpha_measured"])
+        new["beta_offset"] = k * (new["beta_expected"] - new["beta_measured"])
+
+        new["alpha_new"] = new["alpha_reported"] + new["alpha_offset"]
+        new["beta_new"] = new["beta_reported"] + new["beta_offset"]
+
+        self.offsets = new
+
+        return new
 
     async def write_proc_image(
         self,
@@ -461,6 +578,10 @@ class FVC:
 
         rec = Table.from_pandas(self.centroids.reset_index()).as_array()
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
+
+        if self.offsets is not None:
+            rec = Table.from_pandas(self.offsets.reset_index()).as_array()
+            proc_hdus.append(fits.BinTableHDU(rec, name="OFFSETS"))
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 

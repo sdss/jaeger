@@ -107,3 +107,26 @@ def test_process_image(configuration: ManualConfiguration, tmp_path: pathlib.Pat
     numpy.allclose(rms, 25.03, atol=0.01)
 
     assert len(list(tmp_path.glob("*.png"))) > 0
+
+
+def test_calculate_offsets(configuration: ManualConfiguration, test_data):
+
+    posangles, _ = test_data
+
+    fvc = FVC("APO")
+    fvc.fps.configuration = configuration
+
+    image = pathlib.Path(__file__).parent / "data/fimg-fvcn-0059.fits"
+    _, measured, _ = fvc.process_fvc_image(image.as_posix(), plot=False)
+
+    # Need to remove cases where beta > 180 since the test data used a random
+    # configuration with some of those cases.
+    measured = measured.loc[measured.beta < 180]
+
+    # Make a mock of the output of FVC.get_positions()
+    positions = posangles[["positionerID", "alphaReport", "betaReport"]].to_numpy()
+    positions = positions[positions[:, 2] < 180.0]
+
+    new = fvc.calculate_new_alpha_beta(positions, measured, k=1)
+
+    assert len(new) > 0
