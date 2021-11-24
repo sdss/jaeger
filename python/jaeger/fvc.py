@@ -492,8 +492,8 @@ class FVC:
             new.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected.to_numpy()
             new.loc[pos_na, "conversion_valid"] = 0
 
-        new["alpha_offset"] = k * (new["alpha_expected"] - new["alpha_measured"])
-        new["beta_offset"] = k * (new["beta_expected"] - new["beta_measured"])
+        new["alpha_offset"] = self.k * (new["alpha_expected"] - new["alpha_measured"])
+        new["beta_offset"] = self.k * (new["beta_expected"] - new["beta_measured"])
 
         new["alpha_new"] = new["alpha_reported"] + new["alpha_offset"]
         new["beta_new"] = new["beta_reported"] + new["beta_offset"]
