@@ -23,6 +23,7 @@ from astropy.table import Table
 from matplotlib import pyplot as plt
 
 from clu.command import Command
+from clu.legacy.tron import TronConnection
 from coordio.defaults import calibration
 from coordio.transforms import RoughTransform, ZhaoBurgeTransform
 
@@ -115,26 +116,37 @@ class FVC:
                 self.command.error(msg)
 
     async def expose(
-        self, exposure_time: float = 5.0
+        self,
+        exposure_time: float = 5.0,
+        use_tron_fallback=True,
     ) -> pathlib.Path:  # pragma: no cover
         """Takes an exposure with the FVC and blocks until the exposure is complete.
 
-        Returns the path to the new image.
+        Returns the path to the new image. If ``use_tron_fallback=True`` and the
+        command has not been set, creates a Tron client to command the FVC.
 
         """
 
         if self.command is None:
-            raise FVCError("Command must be set.")
+            if use_tron_fallback is False:
+                raise FVCError("Command must be set.")
 
-        if self.command.status.is_done:
-            raise FVCError("Command is done.")
+        else:
+            if self.command.status.is_done:
+                raise FVCError("Command is done.")
 
         self.log(f"Taking {exposure_time} s FVC exposure.", to_command=False)
 
-        expose_command = self.command.send_command(
-            "fliswarm",
-            f"talk -c fvc expose {exposure_time}",
-        )
+        cmd_str = f"talk -c fvc expose {exposure_time}"
+
+        if self.command:
+            expose_command = self.command.send_command("fliswarm", cmd_str)
+        else:
+            tron = TronConnection(
+                config["actor"]["tron_host"],
+                config["actor"]["tron_port"],
+            )
+            expose_command = tron.send_command("fliswarm", cmd_str)
 
         assert isinstance(expose_command, Command)
         await expose_command
