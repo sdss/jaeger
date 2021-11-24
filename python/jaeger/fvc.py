@@ -167,6 +167,7 @@ class FVC:
         self,
         path: pathlib.Path | str,
         fibre_data: Optional[pandas.DataFrame] = None,
+        fibre_type: str = "Metrology",
         plot: bool | str = False,
         polids: numpy.ndarray | list | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
@@ -178,11 +179,13 @@ class FVC:
             The path to the raw FVC image.
         fibre_data
             A Pandas data frame with the expected coordinates of the targets. It
-            is expected the data frame will have columns ``positioner_id``,
-            ``fibre_type``, ``xwok``, and ``ywok``. Only the rows that correspond
-            to ``fibre_type='Metrology'`` are used. This frame is appended to the
+            is expected the data frame will have columns ``hole_id``,
+            ``fibre_type``, ``xwok``, and ``ywok``. This frame is appended to the
             processed image. Normally this parameters is left empty and the fibre
             table from the configuration loaded into the FPS instace is used.
+        fibre_type
+            The ``fibre_type`` rows in ``fibre_data`` to use. Defaults to
+            ``fibre_type='Metrology'``.
         plot
             Whether to save additional debugging plots along with the processed image.
             If ``plot`` is a string, it will be used as the directory to which to
@@ -242,7 +245,7 @@ class FVC:
 
         xyCCD = self.centroids[["x", "y"]].to_numpy()
 
-        fibre_data_met = self.fibre_data.loc["Metrology"]
+        fibre_data_met = self.fibre_data.loc[fibre_type]
 
         # Get close enough to associate the correct centroid with the correct fiducial.
         x_wok_expect = numpy.concatenate([xCMM, fibre_data_met.xwok.to_numpy()])
@@ -357,12 +360,12 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        self.fibre_data.loc["Metrology", "xwok_measured"] = xy_wok_robot_meas[:, 0]
-        self.fibre_data.loc["Metrology", "ywok_measured"] = xy_wok_robot_meas[:, 1]
+        self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
+        self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
 
         # Only use online robots for final RMS.
         online = self.fibre_data.loc[
-            (self.fibre_data.index == "Metrology") & (self.fibre_data.offline == 0)
+            (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
         ]
         dx = online.xwok - online.xwok_measured
         dy = online.ywok - online.ywok_measured
