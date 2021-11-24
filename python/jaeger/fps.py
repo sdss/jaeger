@@ -829,10 +829,11 @@ class FPS(BaseFPS["FPS"]):
         pbits = numpy.array([int(p.status) for p in self.values()])
 
         coll_bits = PositionerStatus.COLLISION_ALPHA | PositionerStatus.COLLISION_BETA
-        if (pbits & coll_bits).any():
+
+        if ((pbits & coll_bits) > 0).any():
             self.set_status(current | FPSStatus.COLLIDED)
 
-        elif (pbits & PositionerStatus.DISPLACEMENT_COMPLETED).all():
+        elif ((pbits & PositionerStatus.DISPLACEMENT_COMPLETED) > 0).all():
             self.set_status(current | FPSStatus.IDLE)
 
         else:
