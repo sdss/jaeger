@@ -7,7 +7,7 @@ actor:
     status:
         port: 19991
         delay: 5
-    tron_host: 127.0.0.1
+    tron_host: sdss5-hub
     tron_port: 6093
     ieb_status_delay: 60
     schema: etc/schema.json
