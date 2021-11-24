@@ -48,6 +48,7 @@ class FVC:
     centroids: Optional[pandas.DataFrame]
     offsets: Optional[pandas.DataFrame]
 
+    image_path: Optional[str]
     raw_hdu: Optional[fits.ImageHDU]
     proc_hdu: Optional[fits.ImageHDU]
 
@@ -76,6 +77,7 @@ class FVC:
         self.centroids = None
         self.offsets = None
 
+        self.image_path = None
         self.raw_hdu = None
         self.proc_hdu = None
 
@@ -229,6 +231,7 @@ class FVC:
 
         hdus = fits.open(path)
 
+        self.image_path = path
         self.raw_hdu = hdus[1].copy()
 
         # Invert columns
@@ -504,9 +507,24 @@ class FVC:
 
     async def write_proc_image(
         self,
-        new_filename: str | pathlib.Path,
+        new_filename: Optional[str | pathlib.Path] = None,
     ) -> fits.HDUList:  # pragma: no cover
-        """Writes the processed image along with additional table data."""
+        """Writes the processed image along with additional table data.
+
+        If ``new_filename`` is not passed, defaults to adding the prefix ``proc-``
+        to the last processed image file path.
+
+        """
+
+        if self.image_path is None or self.proc_hdu is None:
+            raise FVCError(
+                "No current image. Take and process "
+                "an image before callin write_proc_image()."
+            )
+
+        if new_filename is None:
+            image_path = pathlib.Path(self.image_path)
+            new_filename = image_path.with_name("proc-" + image_path.name)
 
         if (
             self.fibre_data is None
