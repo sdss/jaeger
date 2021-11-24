@@ -545,7 +545,7 @@ class FVC:
 
         for key in ieb_keys:
             device_name = ieb_keys[key]
-            if self.fps and self.fps.ieb and isinstance(self.fps.ieb, IEB):
+            if self.fps and isinstance(self.fps.ieb, IEB):
                 try:
                     device = self.fps.ieb.get_device(device_name)
                     ieb_data[key] = (await device.read())[0] or -999.0
@@ -623,7 +623,7 @@ class FVC:
             positioner = self.fps[robot.id]
             robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
 
-            row: pandas.Series = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
+            row = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
             if row.isna().any():
                 log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
                 robot.setAlphaBeta(positioner.alpha, positioner.beta)
