@@ -457,9 +457,6 @@ class Trajectory(object):
         if self.move_time is None:
             raise TrajectoryError("move_time not set.", self)
 
-        for positioner_id in list(self.trajectories.keys()):
-            self.fps[positioner_id].move_time = self.move_time
-
         if use_sync_line:
 
             if not isinstance(self.fps.ieb, IEB) or self.fps.ieb.disabled:
@@ -500,48 +497,51 @@ class Trajectory(object):
 
         self.start_time = time.time()
 
+        min_trajectory_time = 2.0
+        PS = PositionerStatus
+
         try:
 
-            await asyncio.sleep(1)
-            await self.fps.update_status()
+            # The positioners take a bit to report that they are moving so if the
+            # move time is too short, we don't try to check if the positioners started
+            # moving (but we'll check later that they arrived to their positions.)
+            if self.move_time >= min_trajectory_time:
+                await asyncio.sleep(min_trajectory_time)
+                await self.fps.update_status()
 
-            if self.fps.status & FPSStatus.IDLE:
-                if self.move_time < 1:
-                    log.warning("It's not possible to determine if the FPS moved.")
-                    return
-                else:
+                if self.fps.status & FPSStatus.IDLE:
                     raise TrajectoryError("Move failed to start.")
 
-            statuses = numpy.array([p.status for p in self.fps.positioners.values()])
-            not_moving = numpy.where(statuses & PositionerStatus.DISPLACEMENT_COMPLETED)
-            if not_moving[0].any():
-                not_moving_pids = numpy.array(list(self.fps.positioners))[not_moving[0]]
+                sbits = numpy.array([p.status for p in self.fps.values()])
+                not_moving = numpy.where(sbits & PS.DISPLACEMENT_COMPLETED)
+                if not_moving[0].any():
+                    not_moving_pids = numpy.array(list(self.fps))[not_moving[0]]
 
-                # Before reporting that the positioner is not moving, check if it's
-                # already there.
-                await self.fps.update_position()
-                positions = self.fps.get_positions()
+                    # Before reporting that the positioner is not moving, check if it's
+                    # already there.
+                    await self.fps.update_position()
+                    positions = self.fps.get_positions()
 
-                really_not_moving = []
-                for pid in not_moving_pids:
-                    if pid not in self.trajectories:
-                        continue
+                    really_not_moving = []
+                    for pid in not_moving_pids:
+                        if pid not in self.trajectories:
+                            continue
 
-                    current = positions[positions[:, 0] == pid][0, 1:]
-                    alpha = self.trajectories[pid]["alpha"][-1][0]
-                    beta = self.trajectories[pid]["beta"][-1][0]
+                        current = positions[positions[:, 0] == pid][0, 1:]
+                        alpha = self.trajectories[pid]["alpha"][-1][0]
+                        beta = self.trajectories[pid]["beta"][-1][0]
 
-                    if not numpy.allclose(current - [alpha, beta], 0, atol=0.1):
-                        really_not_moving.append(pid)
+                        if not numpy.allclose(current - [alpha, beta], 0, atol=0.1):
+                            really_not_moving.append(pid)
 
-                if len(really_not_moving) > 0:
-                    not_moving_str = ", ".join(map(str, really_not_moving))
-                    # Should this be an error?
-                    warnings.warn(
-                        "Some positioners do not appear to be "
-                        f"moving: {not_moving_str}.",
-                        JaegerUserWarning,
-                    )
+                    if len(really_not_moving) > 0:
+                        not_moving_str = ", ".join(map(str, really_not_moving))
+                        # Should this be an error?
+                        warnings.warn(
+                            "Some positioners do not appear to be "
+                            f"moving: {not_moving_str}.",
+                            JaegerUserWarning,
+                        )
 
             while True:
 
@@ -580,7 +580,8 @@ class Trajectory(object):
             for pid in self.trajectories:
                 alpha = self.trajectories[pid]["alpha"][-1][0]
                 beta = self.trajectories[pid]["beta"][-1][0]
-                if not numpy.allclose(self.fps[pid].position, [alpha, beta], atol=0.1):
+                current_position = numpy.array(self.fps[pid].position)
+                if not numpy.allclose(current_position, [alpha, beta], atol=0.1):
                     warnings.warn(
                         f"Positioner {pid} may not have reached its position.",
                         JaegerUserWarning,

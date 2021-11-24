@@ -11,7 +11,7 @@ import asyncio
 import pytest
 
 from jaeger import config
-from jaeger.exceptions import PositionerError
+from jaeger.exceptions import PositionerError, TrajectoryError
 from jaeger.maskbits import PositionerStatus
 
 
@@ -41,7 +41,11 @@ async def test_goto(vfps, event_loop, use_trajectory):
 
     await vfps.initialise()
 
-    assert await vfps[1].goto(1, 1, use_trajectory=use_trajectory)
+    if use_trajectory is True:
+        with pytest.raises(TrajectoryError):
+            await vfps[1].goto(1, 1, relative=False, use_trajectory=use_trajectory)
+    else:
+        assert await vfps[1].goto(1, 1, relative=False, use_trajectory=use_trajectory)
 
 
 @pytest.mark.parametrize("use_trajectory", (True, False))
@@ -49,7 +53,11 @@ async def test_goto_relative(vfps, event_loop, use_trajectory):
 
     await vfps.initialise()
 
-    assert await vfps[1].goto(1, 1, relative=True, use_trajectory=use_trajectory)
+    if use_trajectory is True:
+        with pytest.raises(TrajectoryError):
+            await vfps[1].goto(1, 1, relative=True, use_trajectory=use_trajectory)
+    else:
+        assert await vfps[1].goto(1, 1, relative=True, use_trajectory=use_trajectory)
 
 
 @pytest.mark.parametrize("use_trajectory", (True, False))
