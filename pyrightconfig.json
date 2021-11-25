@@ -1,7 +1,7 @@
 {
     "extraPaths": ["../sdssdb/python"],
     "typeCheckingMode": "basic",
-    "exclude": ["**/__pycache_", "python/jaeger/scripts/robotcalib"],
-    "ignore": ["python/jaeger/scripts/robotcalib"],
+    "exclude": ["**/__pycache_"],
+    "ignore": [],
     "useLibraryCodeForTypes": true
 }

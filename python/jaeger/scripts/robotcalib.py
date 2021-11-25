@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # flake8: noqa
+# type: ignore
 
 import asyncio
 import time
