@@ -30,15 +30,36 @@ __all__ = ["unwind_command", "explode_command"]
 
 
 @jaeger_parser.command(name="unwind")
-async def unwind_command(command: Command[JaegerActor], fps: FPS):
+@click.option(
+    "--collision-buffer",
+    type=click.FloatRange(1.6, 3.0),
+    help="Custom collision buffer",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Execute unwind even in presence of deadlocks.",
+)
+async def unwind_command(
+    command: Command[JaegerActor],
+    fps: FPS,
+    collision_buffer: float | None = None,
+    force: bool = False,
+):
     """Sends the FPS to folded."""
 
     command.debug(text="Calculating unwind trajectory.")
 
+    await fps.update_position()
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
 
     try:
-        trajectory = await run_in_executor(unwind, positions)
+        trajectory = await run_in_executor(
+            unwind,
+            positions,
+            collision_buffer=collision_buffer,
+            force=force,
+        )
     except ValueError as err:
         return command.fail(error=f"Failed calculating trajectory: {err}")
 
@@ -62,7 +83,11 @@ async def explode_command(command: Command[JaegerActor], fps: FPS, explode_deg: 
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
 
     try:
-        trajectory = await run_in_executor(explode, positions, explode_deg=explode_deg)
+        trajectory = await run_in_executor(
+            explode,
+            positions,
+            explode_deg=explode_deg,
+        )
     except (JaegerError, ValueError) as err:
         return command.fail(error=f"Failed calculating trajectory: {err}")
 

@@ -136,10 +136,14 @@ def decollide_grid(robot_grid: RobotGridCalib, simple=False):
             warn("The grid was decollided.")
 
 
-def unwind(current_positions: dict[int, tuple[float, float]]):
+def unwind(
+    current_positions: dict[int, tuple[float, float]],
+    collision_buffer: float | None = None,
+    force: bool = False,
+):
     """Folds all the robots to the lattice position."""
 
-    robot_grid = get_robot_grid()
+    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
@@ -154,10 +158,13 @@ def unwind(current_positions: dict[int, tuple[float, float]]):
 
     robot_grid.pathGenGreedy()
     if robot_grid.didFail:
-        raise TrajectoryError(
-            "Failed generating a valid trajectory. "
-            "This usually means a deadlock was found."
-        )
+        if force is False:
+            raise TrajectoryError(
+                "Failed generating a valid trajectory. "
+                "This usually means a deadlock was found."
+            )
+        else:
+            log.warning("Deadlocks found in unwind but proceeding anyway.")
 
     layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
     if len(set(current_positions.keys()) - set(layout_pids)) > 0:
@@ -171,10 +178,14 @@ def unwind(current_positions: dict[int, tuple[float, float]]):
     return reverse
 
 
-def explode(current_positions: dict[int, tuple[float, float]], explode_deg=20.0):
+def explode(
+    current_positions: dict[int, tuple[float, float]],
+    explode_deg=20.0,
+    collision_buffer: float | None = None,
+):
     """Explodes the grid by a number of degrees."""
 
-    robot_grid = get_robot_grid()
+    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in current_positions:
