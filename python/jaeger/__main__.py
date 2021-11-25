@@ -6,6 +6,8 @@
 # @Filename: cli.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -29,6 +31,7 @@ from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.fps import FPS
 from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
+from jaeger.utils import run_in_executor
 
 
 __FPS__ = None
@@ -647,6 +650,70 @@ async def status(fps_maker: FPSWrapper, positioner_id: int):
             print(f"Position: {pos.position}")
         except Exception as err:
             raise JaegerError(f"Failed retrieving position: {err}")
+
+
+@jaeger.command()
+@click.option(
+    "--collision-buffer",
+    type=click.FloatRange(1.6, 3.0),
+    help="Custom collision buffer",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Execute unwind even in presence of deadlocks.",
+)
+@pass_fps
+@cli_coro
+async def unwind(fps_maker, collision_buffer: float | None = None, force: bool = False):
+    """Unwinds the array."""
+
+    from jaeger.target.tools import unwind
+
+    async with fps_maker as fps:
+
+        await fps.update_position()
+        positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}
+
+        log.info("Calculating trajectory.")
+        trajectory = await run_in_executor(
+            unwind,
+            positions,
+            collision_buffer=collision_buffer,
+            force=force,
+        )
+
+        log.info("Executing unwind trajectory.")
+        await fps.send_trajectory(trajectory)
+
+    return
+
+
+@jaeger.command()
+@click.argument("EXPLODE-DEG", type=float)
+@pass_fps
+@cli_coro
+async def explode(fps_maker, explode_deg: float):
+    """Explodes the array."""
+
+    from jaeger.target.tools import explode
+
+    async with fps_maker as fps:
+
+        await fps.update_position()
+        positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}
+
+        log.info("Calculating trajectory.")
+        trajectory = await run_in_executor(
+            explode,
+            positions,
+            explode_deg=explode_deg,
+        )
+
+        log.info("Executing explode trajectory.")
+        await fps.send_trajectory(trajectory)
+
+    return
 
 
 if __name__ == "__main__":
