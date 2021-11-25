@@ -104,9 +104,6 @@ class FVC:
         level = int(level)
         msg = "[FVC]: " + msg
 
-        if level == logging.DEBUG:
-            level = logging.INFO
-
         if log and to_log:
             log.log(level, msg)
 
@@ -140,7 +137,7 @@ class FVC:
             if self.command.status.is_done:
                 raise FVCError("Command is done.")
 
-        self.log(f"Taking {exposure_time} s FVC exposure.", to_command=False)
+        self.log(f"Taking {exposure_time} seconds FVC exposure.", to_command=False)
 
         tron = None
         cmd_str = f"talk -c fvc expose {exposure_time}"
@@ -246,7 +243,7 @@ class FVC:
         hdus[1].data = hdus[1].data[:, ::-1]
         image_data = hdus[1].data
 
-        self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.DEBUG)
+        self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.INFO)
 
         self.centroids = self.extract(image_data)
 
@@ -276,7 +273,7 @@ class FVC:
         arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMMouter, xy_wok_rough)
         self.log(
             f"Max fiducial rough distance: {numpy.max(fid_rough_dist):.3f}",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
 
         xy_fiducial_CCD = xyCCD[arg_found]
@@ -302,7 +299,7 @@ class FVC:
         self.log(
             f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
             f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}.",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
         xy_wok_meas = ft.apply(xyCCD, zb=False)
 
@@ -321,7 +318,7 @@ class FVC:
         arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMM, xy_wok_meas)
         self.log(
             f"Max fiducial fit 2 distance: {numpy.max(fid_rough_dist):.3f}",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
 
         xy_fiducial_CCD = xyCCD[arg_found]  # Overwriting
@@ -348,7 +345,7 @@ class FVC:
         self.log(
             f"Full transform 2. Bisased RMS={ft.rms * 1000:.3f}, "
             f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}.",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
 
         xy_wok_meas = ft.apply(xyCCD)  # Overwrite
@@ -369,7 +366,7 @@ class FVC:
         arg_found, met_dist = arg_nearest_neighbor(xy_expect_pos, xy_wok_meas)
         self.log(
             f"Max metrology distance: {numpy.max(met_dist):.3f}",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
@@ -391,6 +388,8 @@ class FVC:
         self.fibre_data.reset_index(inplace=True)
         self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
         self.proc_hdu = hdus[1]
+
+        self.log.debug(f"Finished processing {path}", level=logging.DEBUG)
 
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
@@ -428,6 +427,8 @@ class FVC:
             positions ID. If `None`, uses the value ``fvc.k`` from the configuration.
 
         """
+
+        self.log("Calculating offset from FVC image and fit.", level=logging.DEBUG)
 
         site = config["observatory"]
         self.k = k or config["fvc"]["k"]
@@ -512,6 +513,8 @@ class FVC:
         new["beta_new"] = new["beta_reported"] + new["beta_offset"]
 
         self.offsets = new
+
+        self.log.debug(f"Finished calculating offsets.", level=logging.DEBUG)
 
         return new
 
@@ -715,10 +718,10 @@ class FVC:
         # Ignore everything less than X pixels
         objects = objects.loc[objects["npix"] > config["fvc"]["centroid_min_npix"]]
 
-        self.log(f"Found {len(objects)} centroids", level=logging.DEBUG)
+        self.log(f"Found {len(objects)} centroids", level=logging.INFO)
 
         ncentroids = len(calibration.positionerTable) + len(calibration.fiducialCoords)
-        self.log(f"Expected {ncentroids} centroids", level=logging.DEBUG)
+        self.log(f"Expected {ncentroids} centroids", level=logging.INFO)
 
         return objects
 
