@@ -16,7 +16,7 @@ from jaeger.exceptions import TrajectoryError
 from jaeger.fvc import FVC
 
 
-log.sh.setLevel(0)
+log.sh.setLevel(20)
 
 
 # hardcoded defaults
@@ -28,7 +28,7 @@ EPS = ANG_STEP * 2.2  # absolute distance used for path smoothing
 USE_SYNC_LINE = False  # whether or not to use the sync line for paths
 GREED = 0.8  # parameter for MDP
 PHOBIA = 0.2  # parameter for MDP
-SMOOTH_PTS = 10  # number of points for smoothing paths
+SMOOTH_PTS = 5  # number of points for smoothing paths
 COLLISION_SHRINK = 0.05  # mm to shrink buffers by for path smoothing/simplification
 PATH_DELAY = 1  # seconds of time in the future to send the first point
 SAFE_BETA = [165, 195]
@@ -44,6 +44,7 @@ def getTargetCoords(rg):
     hole_id = []
     xwok = []
     ywok = []
+    offline = []
 
     for r in rg.robotDict.values():
 
@@ -53,6 +54,7 @@ def getTargetCoords(rg):
         fibre_type.append("Metrology")
         xwok.append(r.metWokXYZ[0])
         ywok.append(r.metWokXYZ[1])
+        offline.append(int(r.isOffline))
 
         # append boss fiber info
         positioner_id.append(r.id)
@@ -60,6 +62,7 @@ def getTargetCoords(rg):
         fibre_type.append("BOSS")
         xwok.append(r.bossWokXYZ[0])
         ywok.append(r.bossWokXYZ[1])
+        offline.append(int(r.isOffline))
 
         # append apogee fiber info
         positioner_id.append(r.id)
@@ -67,6 +70,7 @@ def getTargetCoords(rg):
         fibre_type.append("APOGEE")
         xwok.append(r.apWokXYZ[0])
         ywok.append(r.apWokXYZ[1])
+        offline.append(int(r.isOffline))
 
     return pd.DataFrame(
         {
@@ -75,6 +79,7 @@ def getTargetCoords(rg):
             "fibre_type": fibre_type,
             "xwok": xwok,
             "ywok": ywok,
+            "offline": offline,
         }
     )
 
@@ -130,7 +135,7 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
 
 async def setKaijuCurrent(fps, rg):
     """Get a kaiju robot grid initialized to the jaeger reported robot positions"""
-    await fps.update_positions()
+    await fps.update_position()
     posArray = fps.get_positions()
     for rID, alpha, beta in posArray:
         robot = rg.robotDict[int(rID)]
@@ -154,8 +159,10 @@ async def exposeFVC(fvc, exptime, fibre_data):
     print("exposing FVC")
     rawfname = await fvc.expose(exposure_time=exptime)
     print("exposure complete: %s" % rawfname)
-    await fvc.process_fvc_image(rawfname, fibre_data)
+    fvc.process_fvc_image(rawfname, fibre_data, plot=True)
     print("image processing complete")
+    await fvc.write_proc_image()
+    print('image write complete')
 
 
 @click.command()
@@ -163,12 +170,14 @@ async def exposeFVC(fvc, exptime, fibre_data):
     "--niter",
     default=1,
     type=click.IntRange(min=1),
+    show_default=True,
     help="number of move iterations to perform",
 )
 @click.option(
     "--exptime",
     default=1.6,
     type=click.FloatRange(min=0),
+    show_default=True,
     help="fvc exposure time, if 0, no exposures are taken",
 )
 @click.option("--seed", type=click.IntRange(min=0), help="random seed to use")
@@ -176,6 +185,7 @@ async def exposeFVC(fvc, exptime, fibre_data):
     "--speed",
     default=2,
     type=click.FloatRange(0.1, 2.9),
+    show_default=True,
     help="speed of robot in RPM at output",
 )
 @click.option("--lh", is_flag=True, help="if passed, use lefthand robot kinematics")
@@ -183,29 +193,37 @@ async def exposeFVC(fvc, exptime, fibre_data):
     "--cb",
     default=2.4,
     type=click.FloatRange(1.5, 2.5),
+    show_default=True,
     help="set collision buffer for all robots in grid",
 )
 @click.option(
     "--danger",
     is_flag=True,
+    show_default=True,
     help="if passed, use full workspace for each robot, else limit to safe moves only",
 )
 @click.option(
     "--met",
     is_flag=True,
+    show_default=True,
     help="if passed, get image of back illuminated metrology fibers",
 )
 @click.option(
-    "--boss", is_flag=True, help="if passed, get image of back illuminated boss fibers"
+    "--boss",
+    is_flag=True,
+    show_default=True,
+    help="if passed, get image of back illuminated boss fibers",
 )
 @click.option(
     "--apogee",
     is_flag=True,
+    show_default=True,
     help="if passed, get image of back illuminated apogee fibers",
 )
 @click.option(
     "--mdp",
     is_flag=True,
+    show_default=True,
     help="if passed, use markov decision process for path generation, otherwise a greedy algorithm is used",
 )
 @cli_coro()
@@ -234,7 +252,7 @@ async def robotcalib(
     rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
 
     # set the robot grid to the current jaeger positions
-    setKaijuCurrent(fps, rg)
+    await setKaijuCurrent(fps, rg)
 
     # generate the path to fold
     tstart = time.time()
@@ -382,7 +400,7 @@ async def robotcalib(
         tstart = time.time()
         print("sending path target-->fold")
         try:
-            await fps.send_trajectory(fromDestination, use_sync_line=USE_SYNC_LINE)
+            await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
             print("move complete, duration %.1f" % (time.time() - tstart))
         except TrajectoryError as e:
             print("TRAJECTORY ERROR moving target-->fold")
