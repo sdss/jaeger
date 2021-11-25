@@ -180,8 +180,8 @@ The `.Positioner` class stores information about a single positioner, its `statu
 
 .. _positioner-initialise:
 
-Initialisation
-^^^^^^^^^^^^^^
+Positioner initialisation
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When a `.Positioner` is instantiated it contains no information about its position (angle of the alpha and beta arms) and its status is set to `~.maskbits.PositionerStatusV4_1.UNKNOWN`. By calling and awaiting `.Positioner.initialise`, the following steps are executed:
 
