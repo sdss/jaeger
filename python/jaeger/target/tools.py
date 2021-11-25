@@ -45,7 +45,7 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int = 0):
+def get_robot_grid(seed: int = 0, collision_buffer=None):
     """Returns a new robot grid with the destination set to the lattice position.
 
     If an initialised instance of the FPS is available, disabled robots will be
@@ -64,16 +64,15 @@ def get_robot_grid(seed: int = 0):
 
     kaiju_config = config["kaiju"]
     ang_step = kaiju_config["ang_step"]
-    collision_buffer = kaiju_config["collision_buffer"]
+    collision_buffer = collision_buffer or kaiju_config["collision_buffer"]
     alpha0, beta0 = kaiju_config["lattice_position"]
     epsilon = ang_step * 2
 
-    robot_grid = RobotGridCalib(
-        stepSize=ang_step,
-        collisionBuffer=collision_buffer,
-        epsilon=epsilon,
-        seed=seed,
-    )
+    if collision_buffer < 1.5:
+        raise JaegerError("Invalid collision buffer < 1.5.")
+
+    robot_grid = RobotGridCalib(stepSize=ang_step, epsilon=epsilon, seed=seed)
+    robot_grid.setCollisionBuffer(collision_buffer)
 
     if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
         raise JaegerError("Mismatch between connected positioners and robot grid.")
