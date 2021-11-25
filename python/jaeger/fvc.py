@@ -631,6 +631,8 @@ class FVC:
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 
+        self.log(f'Processed HDU written to {new_filename}')
+
         return proc_hdus
 
     async def apply_correction(
