@@ -246,10 +246,7 @@ class FVC:
         hdus[1].data = hdus[1].data[:, ::-1]
         image_data = hdus[1].data
 
-        self.log(
-            f"Max counts in image: {numpy.max(image_data)}",
-            level=logging.DEBUG
-        )
+        self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.DEBUG)
 
         self.centroids = self.extract(image_data)
 
@@ -631,7 +628,7 @@ class FVC:
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 
-        self.log(f'Processed HDU written to {new_filename}')
+        self.log(f"Processed HDU written to {new_filename}")
 
         return proc_hdus
 

@@ -162,7 +162,7 @@ async def exposeFVC(fvc, exptime, fibre_data):
     fvc.process_fvc_image(rawfname, fibre_data, plot=True)
     print("image processing complete")
     await fvc.write_proc_image()
-    print('image write complete')
+    print("image write complete")
 
 
 @click.command()
