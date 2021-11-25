@@ -139,6 +139,7 @@ class FVC:
 
         self.log(f"Taking {exposure_time} s FVC exposure.", to_command=False)
 
+        tron = None
         cmd_str = f"talk -c fvc expose {exposure_time}"
 
         if self.command:
@@ -148,10 +149,14 @@ class FVC:
                 config["actor"]["tron_host"],
                 config["actor"]["tron_port"],
             )
+            await tron.start()
             expose_command = tron.send_command("fliswarm", cmd_str)
 
         assert isinstance(expose_command, Command)
         await expose_command
+
+        if tron:
+            tron.stop()
 
         if expose_command.status.did_fail:
             raise FVCError("The FVC exposure failed.")
