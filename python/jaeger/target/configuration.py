@@ -568,6 +568,7 @@ class ManualConfiguration(BaseConfiguration):
         seed: int | None = None,
         safe=True,
         uniform: tuple[float, ...] | None = None,
+        collision_buffer: float | None = None,
         **kwargs,
     ):
         """Creates a random configuration using Kaiju."""
@@ -575,7 +576,7 @@ class ManualConfiguration(BaseConfiguration):
         seed = seed or numpy.random.randint(0, 1000000)
         numpy.random.seed(seed)
 
-        robot_grid = get_robot_grid(seed=seed)
+        robot_grid = get_robot_grid(seed=seed, collision_buffer=collision_buffer)
 
         alphaL, betaL = config["kaiju"]["lattice_position"]
 

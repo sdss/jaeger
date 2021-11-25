@@ -18,6 +18,5 @@ from .fvc import *
 from .ieb import *
 from .pollers import *
 from .positioner import *
-from .random import *
 from .talk import *
 from .unwind import *

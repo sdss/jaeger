@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import click
 import numpy
 
+from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.target.configuration import Configuration, ManualConfiguration
 from jaeger.target.design import Design
@@ -146,6 +147,79 @@ async def execute(command: Command[JaegerActor], fps: FPS):
             )
 
     command.info(text="Sending and executing trajectory.")
+
+    try:
+        await fps.send_trajectory(trajectory)
+    except TrajectoryError as err:
+        return command.fail(error=f"Trajectory failed with error: {err}")
+
+    command.finish(text="All positioners reached their new positions.")
+
+
+@configuration.command()
+@click.argument("SEED", type=int, required=False)
+@click.option("--safe", is_flag=True, help="Limit beta to a safe range.")
+@click.option(
+    "--uniform",
+    type=str,
+    default=None,
+    help="Comma-separated alpha and beta ranges.",
+)
+@click.option(
+    "--collision-buffer",
+    type=click.FloatRange(1.6, 3.0),
+    help="Custom collision buffer",
+)
+async def random(
+    command: Command[JaegerActor],
+    fps: FPS,
+    seed: int | None = None,
+    safe: bool = False,
+    uniform: str | None = None,
+    collision_buffer: float | None = None,
+):
+    """Executes a random, valid configuration."""
+
+    if safe is True and uniform is not None:
+        return command.fail(error="--safe and --uniform are mutually exclusive.")
+
+    command.debug(text="Checking that all positioners are folded.")
+
+    # Check that all positioners are folded.
+    await fps.update_position()
+    positions = fps.get_positions()
+
+    if len(positions) == 0:
+        return command.fail("No positioners connected")
+
+    alphaL, betaL = config["kaiju"]["lattice_position"]
+    if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=0.1):
+        return command.fail(error="Not all the positioners are folded.")
+
+    command.info(text="Creating random configuration.")
+
+    uniform_unpack: tuple[float, ...] | None
+    if uniform:
+        try:
+            uniform_unpack = tuple(map(float, uniform.split(",")))
+        except Exception as err:
+            return command.fail(error=f"Failed calculating uniform ranges: {err}")
+    else:
+        uniform_unpack = None
+
+    configuration = ManualConfiguration.create_random(
+        seed=seed,
+        uniform=uniform_unpack,
+        safe=safe,
+        collision_buffer=collision_buffer,
+    )
+    trajectory = configuration.get_trajectory(simple_decollision=True)
+
+    command.info("Executing random trajectory.")
+
+    # Make this the FPS configuration
+    assert command.actor
+    command.actor.fps.configuration = configuration
 
     try:
         await fps.send_trajectory(trajectory)
