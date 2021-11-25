@@ -104,6 +104,9 @@ class FVC:
         level = int(level)
         msg = "[FVC]: " + msg
 
+        if level == logging.DEBUG:
+            level = logging.INFO
+
         if log and to_log:
             log.log(level, msg)
 
