@@ -299,7 +299,7 @@ class JaegerCAN(Generic[Bus_co]):
 
             log.error(
                 f"A collision was detected in positioner {positioner_id}. "
-                "Sending STOP_TRAJECTORIES and locking the FPS."
+                "Sending SEND_TRAJECTORY_ABORT and locking the FPS."
             )
 
             if self.fps:

@@ -37,7 +37,7 @@ __all__ = [
     "SendNewTrajectory",
     "SendTrajectoryData",
     "TrajectoryDataEnd",
-    "TrajectoryTransmissionAbort",
+    "SendTrajectoryAbort",
     "StartTrajectory",
     "StopTrajectory",
     "Trajectory",
@@ -569,7 +569,7 @@ class Trajectory(object):
             # TODO: There seems to be bug in the firmware. Sometimes when a positioner
             # fails to start its trajectory, at the end of the trajectory time it
             # does believe it has reached the commanded position, although it's still
-            # at the initial position. In those cases issuing a STOP_TRAJECTORY
+            # at the initial position. In those cases issuing a SEND_TRAJECTORY_ABORT
             # followed by a position update seems to return correct positions.
             await self.fps.stop_trajectory()
 
@@ -612,7 +612,7 @@ class Trajectory(object):
         """Aborts the trajectory transmission."""
 
         cmd = await self.fps.send_command(
-            "TRAJECTORY_TRANSMISSION_ABORT",
+            "SEND_TRAJECTORY_ABORT",
             positioner_ids=list(self.trajectories.keys()),
         )
 
@@ -706,10 +706,10 @@ class TrajectoryDataEnd(Command):
     move_command = True
 
 
-class TrajectoryTransmissionAbort(Command):
+class SendTrajectoryAbort(Command):
     """Aborts sending a trajectory."""
 
-    command_id = CommandID.TRAJECTORY_TRANSMISSION_ABORT
+    command_id = CommandID.SEND_TRAJECTORY_ABORT
     broadcastable = False
     move_command = False
     safe = True

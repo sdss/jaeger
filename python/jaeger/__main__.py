@@ -41,7 +41,7 @@ def shutdown(sign):
     """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
 
     if __FPS__ is not None:
-        __FPS__.send_command("STOP_TRAJECTORY", positioner_ids=0, now=True)
+        __FPS__.send_command("SEND_TRAJECTORY_ABORT", positioner_ids=None, now=True)
         log.error(f"stopping positioners and cancelling due to {sign.name}")
         sys.exit(0)
     else:

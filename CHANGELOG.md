@@ -10,6 +10,7 @@
 
 ### ✨ Improved
 
+* [#157](https://github.com/sdss/jaeger/issues/157) Prevents clearing the collided flags when the array is stopped during a collision or when initialised. Issues `SEND_TRAJECTORY_ABORT` instead of `STOP_TRAJECTORY`. They both stop all the positioners but the former does not clear the collided status flags.
 * Added additional checks to confirm that a trajectory starts correctly and succeeds. After one second, the code checks that the FPS is moving and that `DISPLACEMENT_COMPLETED` is not present on any positioner status. At the end of the trajectory a check confirms that all the positioners are within 0.1 degrees of their destinations.
 * Add `--no-gfas` to the `ieb power on` command to avoid powering the GFAs during the power on sequence.
 * Allows to call `FVC.expose()` without an active command by creating an ad-hoc Tron connection.

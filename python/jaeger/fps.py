@@ -43,7 +43,6 @@ from jaeger.commands import (
 )
 from jaeger.exceptions import (
     FPSLockedError,
-    JaegerDeprecationWarning,
     JaegerError,
     JaegerUserWarning,
     PositionerError,
@@ -449,7 +448,7 @@ class FPS(BaseFPS["FPS"]):
                 JaegerUserWarning,
             )
 
-        # Stop all positioners just in case.
+        # Stop all positioners just in case. This won't clear collided flags.
         if not self.is_bootloader():
             await self.stop_trajectory()
 
@@ -601,7 +600,6 @@ class FPS(BaseFPS["FPS"]):
         self,
         command: str | int | CommandID | Command,
         positioner_ids: int | List[int] | None = None,
-        positioner_id: int | List[int] | None = None,
         data: Any = None,
         now: bool = False,
         **kwargs,
@@ -642,15 +640,6 @@ class FPS(BaseFPS["FPS"]):
         """
 
         assert isinstance(self.can, JaegerCAN), "CAN connection not established."
-
-        if positioner_id is not None:
-            warnings.warn(
-                "positioner_id is deprecated and will be removed soon. "
-                "Use positioner_ids.",
-                JaegerDeprecationWarning,
-            )
-            if positioner_ids is None:
-                positioner_ids = positioner_id
 
         if positioner_ids is None:
             positioner_ids = [p for p in self if not self[p].disabled]
@@ -728,7 +717,8 @@ class FPS(BaseFPS["FPS"]):
         Parameters
         ----------
         stop_trajectories
-            Whether to stop trajectories when locking.
+            Whether to stop trajectories when locking. This will not
+            clear any collided flags.
 
         """
 
@@ -745,6 +735,9 @@ class FPS(BaseFPS["FPS"]):
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        # Send STOP_TRAJECTORY. This clears the collided flags.
+        await self.stop_trajectory(clear_flags=True)
 
         await self.update_status(timeout=0.1)
 
@@ -943,27 +936,31 @@ class FPS(BaseFPS["FPS"]):
 
         return True
 
-    async def stop_trajectory(self):
-        """Stops all the positioners.
+    async def stop_trajectory(self, clear_flags=False):
+        """Stops all the positioners without clearing collided flags.
 
         Parameters
         ----------
-        positioner_ids
-            The list of positioners to abort. If `None`, abort all positioners.
-        timeout
-            How long to wait before timing out the command. By default, just
-            sends the command and does not wait for replies.
+        clear_flags
+            If `True`, sends ``STOP_TRAJECTORY`` which clears collided
+            flags. Otherwise sends ``SEND_TRAJECTORY_ABORT``.
 
         """
 
-        await self.send_command(
-            "STOP_TRAJECTORY",
-            positioner_ids=0,
-            timeout=0,
-            now=True,
-        )
-
-        await self.send_command("TRAJECTORY_TRANSMISSION_ABORT", positioner_ids=None)
+        if clear_flags is False:
+            await self.send_command(
+                "SEND_TRAJECTORY_ABORT",
+                positioner_ids=None,
+                timeout=0,
+                now=True,
+            )
+        else:
+            await self.send_command(
+                "STOP_TRAJECTORY",
+                positioner_ids=0,
+                timeout=0,
+                now=True,
+            )
 
         # Check running command that are "move" and cancel them.
         assert isinstance(self.can, JaegerCAN)
@@ -1055,10 +1052,9 @@ class FPS(BaseFPS["FPS"]):
         return await send_trajectory(self, *args, **kwargs)
 
     def abort(self):
-        """Aborts trajectories and stops positioners."""
+        """Aborts trajectories and stops positioners. Alias for `.stop_trajectory`."""
 
-        cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_ids=0)
-        return asyncio.create_task(cmd)
+        return asyncio.create_task(self.stop_trajectory())
 
     async def send_to_all(self, *args, **kwargs):
         """Sends a command to all connected positioners.
