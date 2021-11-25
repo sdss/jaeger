@@ -13,6 +13,7 @@ import os
 import pathlib
 import warnings
 from dataclasses import dataclass
+from glob import glob
 
 from typing import (
     TYPE_CHECKING,
@@ -29,6 +30,7 @@ from typing import (
 )
 
 import numpy
+from astropy.time import Time
 
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import JaegerCAN
@@ -50,10 +52,14 @@ from jaeger.ieb import IEB
 from jaeger.interfaces import BusABC
 from jaeger.maskbits import FPSStatus, PositionerStatus
 from jaeger.positioner import Positioner
+from jaeger.target.tools import get_robot_grid
 from jaeger.utils import Poller, PollerList
+from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
     from jaeger.target.configuration import BaseConfiguration
 
 
@@ -1098,6 +1104,58 @@ class FPS(BaseFPS["FPS"]):
                 status["ieb"] = await self.ieb.get_status()
 
         return status
+
+    async def save_snapshot(
+        self,
+        path: Optional[str | pathlib.Path] = None,
+        return_axes: bool = False,
+    ) -> None | Axes:
+        """Creates a plot with the current arrangement of the FPS array.
+
+        Parameters
+        ----------
+        path
+            The path where to save the plot. Defaults to
+            ``/data/fps/snapshots/MJD/fps_snapshot_<SEQ>.pdf``.
+        return_axes
+            If `True`, returns the matplotlib axes instead of saving the plot.
+
+        """
+
+        await self.update_position()
+
+        # Create a robot grid and set the current positions.
+        robot_grid = get_robot_grid()
+
+        for robot in robot_grid.robotDict.values():
+            if robot.id not in self.positioners.keys():
+                raise ValueError(f"Positioner {robot.id} is not connected.")
+
+            robot.setAlphaBeta(self[robot.id].alpha, self[robot.id].beta)
+
+        ax: Axes = await run_in_executor(robot_grid.plot_state)
+
+        if return_axes is True:
+            return ax
+
+        if path is not None:
+            ax.figure.savefig(path)
+
+        mjd = int(Time.now().mjd)
+        dirpath = f"/data/fps/snapshots/{mjd}"
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+
+        path_pattern = dirpath + "/fps_snapshot_*.pdf"
+        files = sorted(glob(path_pattern))
+
+        if len(files) == 0:
+            seq = 1
+        else:
+            seq = int(files[-1].split("_")[1][0:4]) + 1
+
+        path = path_pattern.replace("*", f"{seq:04d}")
+        ax.figure.savefig(path)
 
     async def _handle_temperature(self):
         """Handle positioners in low temperature."""
