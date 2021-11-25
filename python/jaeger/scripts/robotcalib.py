@@ -1,19 +1,22 @@
 #!/usr/bin/env python
+# flake8: noqa
+
 import asyncio
+import time
+
 import click
 import numpy
-import time
 import pandas as pd
 
+from kaiju.robotGrid import RobotGridCalib
 from sdsstools.daemonizer import cli_coro
 
 from jaeger import config, log
-log.sh.setLevel(0)
-
 from jaeger.exceptions import TrajectoryError
 from jaeger.fvc import FVC
 
-from kaiju.robotGrid import RobotGridCalib
+
+log.sh.setLevel(0)
 
 
 # hardcoded defaults
@@ -26,7 +29,7 @@ USE_SYNC_LINE = False  # whether or not to use the sync line for paths
 GREED = 0.8  # parameter for MDP
 PHOBIA = 0.2  # parameter for MDP
 SMOOTH_PTS = 10  # number of points for smoothing paths
-COLLISION_SHRINK = 0.05  # mm of space to shrink buffers by for path smoothing/simplification
+COLLISION_SHRINK = 0.05  # mm to shrink buffers by for path smoothing/simplification
 PATH_DELAY = 1  # seconds of time in the future to send the first point
 SAFE_BETA = [165, 195]
 MAX_ALPHA = 358  # set here for the one robot without full range alpha travel
@@ -76,10 +79,7 @@ def getTargetCoords(rg):
     )
 
 
-def getRandomGrid(
-    seed, danger=False,
-    collisionBuffer=None, lefthand=False
-):
+def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
     numpy.random.seed(seed)
     if lefthand:
         alphaDestination = 350
@@ -129,8 +129,7 @@ def getRandomGrid(
 
 
 async def setKaijuCurrent(fps, rg):
-    """Get a kaiju robot grid initialized to the jaeger reported robot positions
-    """
+    """Get a kaiju robot grid initialized to the jaeger reported robot positions"""
     await fps.update_positions()
     posArray = fps.get_positions()
     for rID, alpha, beta in posArray:
@@ -138,6 +137,7 @@ async def setKaijuCurrent(fps, rg):
         if robot.isOffline:
             continue
         robot.setAlphaBeta(alpha, beta)
+
 
 async def ledOn(fps, devName, ledpower):
     on_value = 32 * int(1023 * (ledpower) / 100)
@@ -153,39 +153,77 @@ async def ledOff(fps, devName):
 async def exposeFVC(fvc, exptime, fibre_data):
     print("exposing FVC")
     rawfname = await fvc.expose(exposure_time=exptime)
-    print("exposure complete: %s"%rawfname)
+    print("exposure complete: %s" % rawfname)
     await fvc.process_fvc_image(rawfname, fibre_data)
     print("image processing complete")
 
 
 @click.command()
-@click.option("--niter", default=1, type=click.IntRange(min=1), help="number of move iterations to perform")
-@click.option("--exptime", default=1.6, type=click.FloatRange(min=0), help="fvc exposure time, if 0, no exposures are taken")
+@click.option(
+    "--niter",
+    default=1,
+    type=click.IntRange(min=1),
+    help="number of move iterations to perform",
+)
+@click.option(
+    "--exptime",
+    default=1.6,
+    type=click.FloatRange(min=0),
+    help="fvc exposure time, if 0, no exposures are taken",
+)
 @click.option("--seed", type=click.IntRange(min=0), help="random seed to use")
-@click.option("--speed", default=2, type=click.FloatRange(0.1, 2.9), help="speed of robot in RPM at output")
+@click.option(
+    "--speed",
+    default=2,
+    type=click.FloatRange(0.1, 2.9),
+    help="speed of robot in RPM at output",
+)
 @click.option("--lh", is_flag=True, help="if passed, use lefthand robot kinematics")
-@click.option("--cb", default=2.4, type=click.FloatRange(1.5, 2.5), help="set collision buffer for all robots in grid")
-@click.option("--danger", is_flag=True, help="if passed, use full workspace for each robot, else limit to safe moves only")
-@click.option("--met", is_flag=True, help="if passed, get image of back illuminated metrology fibers")
-@click.option("--boss", is_flag=True, help="if passed, get image of back illuminated boss fibers")
-@click.option("--apogee", is_flag=True, help="if passed, get image of back illuminated apogee fibers")
-@click.option("--mdp", is_flag=True, help="if passed, use markov decision process for path generation, otherwise a greedy algorithm is used")
+@click.option(
+    "--cb",
+    default=2.4,
+    type=click.FloatRange(1.5, 2.5),
+    help="set collision buffer for all robots in grid",
+)
+@click.option(
+    "--danger",
+    is_flag=True,
+    help="if passed, use full workspace for each robot, else limit to safe moves only",
+)
+@click.option(
+    "--met",
+    is_flag=True,
+    help="if passed, get image of back illuminated metrology fibers",
+)
+@click.option(
+    "--boss", is_flag=True, help="if passed, get image of back illuminated boss fibers"
+)
+@click.option(
+    "--apogee",
+    is_flag=True,
+    help="if passed, get image of back illuminated apogee fibers",
+)
+@click.option(
+    "--mdp",
+    is_flag=True,
+    help="if passed, use markov decision process for path generation, otherwise a greedy algorithm is used",
+)
 @cli_coro()
-async def main(
-        niter,
-        exptime,
-        speed,
-        cb,
-        danger=False,
-        lh=True,
-        seed=None,
-        met=False,
-        boss=False,
-        apogee=False,
-        mdp=False
-    ):
+async def robotcalib(
+    niter,
+    exptime,
+    speed,
+    cb,
+    danger=False,
+    lh=True,
+    seed=None,
+    met=False,
+    boss=False,
+    apogee=False,
+    mdp=False,
+):
 
-    fvc = await FVC(config["observatory"])
+    fvc = FVC(config["observatory"])
     fps = fvc.fps
     await fps.initialise()
 
@@ -193,9 +231,7 @@ async def main(
         seed = numpy.random.randint(0, 30000)
 
     ######## UNWIND GRID #############
-    rg = getRandomGrid(
-        seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh
-    )
+    rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
 
     # set the robot grid to the current jaeger positions
     setKaijuCurrent(fps, rg)
@@ -207,7 +243,7 @@ async def main(
     else:
         rg.pathGenGreedy()
 
-    print("unwind path generation took %.1f seconds"%(time.time()-tstart))
+    print("unwind path generation took %.1f seconds" % (time.time() - tstart))
 
     # verify that the path generation was successful if not exit
     if rg.didFail:
@@ -216,8 +252,10 @@ async def main(
 
     # smooth the paths
     toDestination, fromDestination = rg.getPathPair(
-        speed=speed, smoothPoints=SMOOTH_PTS,
-        collisionShrink=COLLISION_SHRINK, pathDelay=PATH_DELAY
+        speed=speed,
+        smoothPoints=SMOOTH_PTS,
+        collisionShrink=COLLISION_SHRINK,
+        pathDelay=PATH_DELAY,
     )
 
     # check for collisions in path smoothing
@@ -230,27 +268,25 @@ async def main(
     tstart = time.time()
     print("sending unwind trajectory")
     await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
-    print("unwind finished, took %.1f seconds"%(time.time()-tstart))
+    print("unwind finished, took %.1f seconds" % (time.time() - tstart))
 
     ########### UNWIND FINISHED ##############
 
     ########### BEGIN CALIBRATION LOOP #######
     for ii in range(niter):
         seed += 1
-        print("\n MOVE ITER %i of %i(seed=%i)\n-----------"%(ii, niter, seed))
+        print("\n MOVE ITER %i of %i(seed=%i)\n-----------" % (ii, niter, seed))
 
         # begin searching for a valid path
         # this is easy when things are safe
         # and easier for smaller collision buffers using the MDP algorithm
         replacedRobotList = []
-        rg = getRandomGrid(
-            seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh
-        )
+        rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
 
         # try 5 times to find valid path
         # before giving up and moving on
         for jj in range(5):
-            print("path gen attempt %i"%jj)
+            print("path gen attempt %i" % jj)
 
             # get the expected coords for each fiber on each robot
             targetCoords = getTargetCoords(rg)
@@ -260,7 +296,10 @@ async def main(
                 rg.pathGenMDP(GREED, PHOBIA)
             else:
                 rg.pathGenGreedy()
-            print("attempt %i path generation took %.1f seconds" % (jj, (time.time()-tstart)))
+            print(
+                "attempt %i path generation took %.1f seconds"
+                % (jj, (time.time() - tstart))
+            )
             if not rg.didFail:
                 break
             nDeadlocks = rg.deadlockedRobots()
@@ -285,19 +324,24 @@ async def main(
 
         print("valid paths found")
         toDestination, fromDestination = rg.getPathPair(
-            speed=speed, smoothPoints=SMOOTH_PTS,
-            collisionShrink=COLLISION_SHRINK, pathDelay=PATH_DELAY
+            speed=speed,
+            smoothPoints=SMOOTH_PTS,
+            collisionShrink=COLLISION_SHRINK,
+            pathDelay=PATH_DELAY,
         )
 
         if rg.smoothCollisions:
-            print("%i smooth collisions, skipping to next iteration"%(rg.smoothCollisions))
+            print(
+                "%i smooth collisions, skipping to next iteration"
+                % (rg.smoothCollisions)
+            )
             continue
 
         tstart = time.time()
         print("sending path fold-->target")
         try:
             await fps.send_trajectory(fromDestination, use_sync_line=USE_SYNC_LINE)
-            print("move complete, duration %.1f"%(time.time()-tstart))
+            print("move complete, duration %.1f" % (time.time() - tstart))
         except TrajectoryError as e:
             print("TRAJECTORY ERROR moving fold-->target")
             print("failed positioners: ", str(e.trajectory.failed_positioners))
@@ -310,7 +354,7 @@ async def main(
         await ledOff(fps, "led4")
 
         if exptime > 0:
-            if not True in [met, apogee, boss]:
+            if True not in [met, apogee, boss]:
                 # no fibers illuminated, expose anyway
                 await exposeFVC(fvc, exptime, targetCoords)
 
@@ -339,11 +383,12 @@ async def main(
         print("sending path target-->fold")
         try:
             await fps.send_trajectory(fromDestination, use_sync_line=USE_SYNC_LINE)
-            print("move complete, duration %.1f"%(time.time()-tstart))
+            print("move complete, duration %.1f" % (time.time() - tstart))
         except TrajectoryError as e:
             print("TRAJECTORY ERROR moving target-->fold")
             print("failed positioners: ", str(e.trajectory.failed_positioners))
             return
 
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(robotcalib())

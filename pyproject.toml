@@ -71,6 +71,7 @@ tables = "^3.6.1"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
+robotcalib = "jaeger.scripts.robotcalib:robotcalib"
 
 [tool.black]
 line-length = 88
