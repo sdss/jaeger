@@ -52,9 +52,7 @@ from jaeger.ieb import IEB
 from jaeger.interfaces import BusABC
 from jaeger.maskbits import FPSStatus, PositionerStatus
 from jaeger.positioner import Positioner
-from jaeger.target.tools import get_robot_grid
 from jaeger.utils import Poller, PollerList
-from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
@@ -1122,18 +1120,9 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
-        await self.update_position()
+        from jaeger.target.tools import get_snapshot
 
-        # Create a robot grid and set the current positions.
-        robot_grid = get_robot_grid()
-
-        for robot in robot_grid.robotDict.values():
-            if robot.id not in self.positioners.keys():
-                raise ValueError(f"Positioner {robot.id} is not connected.")
-
-            robot.setAlphaBeta(self[robot.id].alpha, self[robot.id].beta)
-
-        ax: Axes = await run_in_executor(robot_grid.plot_state)
+        ax = await get_snapshot()
 
         if return_axes is True:
             return ax

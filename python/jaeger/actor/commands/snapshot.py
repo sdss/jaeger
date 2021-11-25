@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import click
+
 from . import jaeger_parser
 
 
@@ -24,9 +26,13 @@ __all__ = ["snapshot"]
 
 
 @jaeger_parser.command()
-async def snapshot(command: Command[JaegerActor], fps: FPS):
+@click.argument("PATH", required=False, type=click.Path(exists=False, dir_okay=False))
+async def snapshot(command: Command[JaegerActor], fps: FPS, path: str | None = None):
     """Takes a snapshot image."""
 
-    filename = await fps.save_snapshot()
+    if path is not None:
+        path = str(path)
+
+    filename = await fps.save_snapshot(path)
 
     return command.finish(snapshot=filename)
