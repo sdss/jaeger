@@ -728,7 +728,8 @@ class FPS(BaseFPS["FPS"]):
         Parameters
         ----------
         stop_trajectories
-            Whether to stop trajectories when locking.
+            Whether to stop trajectories when locking. This will not
+            clear any collided flags.
 
         """
 
@@ -944,7 +945,7 @@ class FPS(BaseFPS["FPS"]):
         return True
 
     async def stop_trajectory(self):
-        """Stops all the positioners.
+        """Stops all the positioners without clearing collided flags.
 
         Parameters
         ----------
@@ -957,13 +958,11 @@ class FPS(BaseFPS["FPS"]):
         """
 
         await self.send_command(
-            "STOP_TRAJECTORY",
-            positioner_ids=0,
+            "SEND_TRAJECTORY_ABORT",
+            positioner_ids=None,
             timeout=0,
             now=True,
         )
-
-        await self.send_command("TRAJECTORY_TRANSMISSION_ABORT", positioner_ids=None)
 
         # Check running command that are "move" and cancel them.
         assert isinstance(self.can, JaegerCAN)
@@ -1055,10 +1054,9 @@ class FPS(BaseFPS["FPS"]):
         return await send_trajectory(self, *args, **kwargs)
 
     def abort(self):
-        """Aborts trajectories and stops positioners."""
+        """Aborts trajectories and stops positioners. Alias for `.stop_trajectory`."""
 
-        cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_ids=0)
-        return asyncio.create_task(cmd)
+        return asyncio.create_task(self.stop_trajectory())
 
     async def send_to_all(self, *args, **kwargs):
         """Sends a command to all connected positioners.
