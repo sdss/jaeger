@@ -1142,7 +1142,7 @@ class FPS(BaseFPS["FPS"]):
         if len(files) == 0:
             seq = 1
         else:
-            seq = int(files[-1].split("_")[1][0:4]) + 1
+            seq = int(files[-1].split("_")[-1][0:4]) + 1
 
         path = path_pattern.replace("*", f"{seq:04d}")
         ax.figure.savefig(path)
