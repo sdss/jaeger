@@ -243,6 +243,11 @@ class FVC:
         hdus[1].data = hdus[1].data[:, ::-1]
         image_data = hdus[1].data
 
+        self.log(
+            f"Max counts in image: {numpy.max(image_data)}",
+            level=logging.DEBUG
+        )
+
         self.centroids = self.extract(image_data)
 
         fiducialCoords = calibration.fiducialCoords.loc[self.site]
