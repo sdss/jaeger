@@ -225,7 +225,8 @@ async def exposeFVC(fvc, exptime, fibre_data):
     "--mdp",
     is_flag=True,
     show_default=True,
-    help="if passed, use markov decision process for path generation, otherwise a greedy algorithm is used",
+    help="if passed, use markov decision process "
+    "for path generation, otherwise a greedy algorithm is used",
 )
 @cli_coro()
 async def robotcalib(
