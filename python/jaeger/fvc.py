@@ -291,7 +291,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_roughassoc.png",
+                plot_path_root + "_roughassoc.pdf",
                 xy_fiducial=xy_fiducial_wok_rough,
                 xy_fiducial_cmm=xyCMMouter,
                 title="Rough fiducial association",
@@ -303,7 +303,7 @@ class FVC:
             polids=(polids or config["fvc"]["zb_polids"]),
         )
         self.log(
-            f"Full transform 2. Bisased RMS={ft.rms * 1000:.3f}, "
+            f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
             f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}.",
             level=logging.DEBUG,
         )
@@ -315,7 +315,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_full1.png",
+                plot_path_root + "_full1.pdf",
                 title="Full transform 1",
             )
 
@@ -336,7 +336,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_refineassoc.png",
+                plot_path_root + "_refineassoc.pdf",
                 title="Refined fiducial association",
                 xy_fiducial=xy_fiducial_wok_refine,
                 xy_fiducial_cmm=xyCMM,
@@ -349,7 +349,7 @@ class FVC:
             polids=(polids or config["fvc"]["zb_polids"]),
         )
         self.log(
-            f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
+            f"Full transform 2. Bisased RMS={ft.rms * 1000:.3f}, "
             f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}.",
             level=logging.DEBUG,
         )
@@ -362,7 +362,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_full2.png",
+                plot_path_root + "_full2.pdf",
                 title="Full transform 2",
             )
 
@@ -754,7 +754,7 @@ class FVC:
 
         plt.plot(
             target_coords.xwok.to_numpy(),
-            target_coords.xwok.to_numpy(),
+            target_coords.ywok.to_numpy(),
             "xk",
             ms=3,
             label="Expected MET",
