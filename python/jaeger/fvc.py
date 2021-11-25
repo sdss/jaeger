@@ -394,7 +394,7 @@ class FVC:
 
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
-    def calculate_new_alpha_beta(
+    def calculate_offsets(
         self,
         reported_positions: numpy.ndarray,
         fibre_data: Optional[pandas.DataFrame] = None,

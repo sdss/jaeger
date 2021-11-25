@@ -138,7 +138,7 @@ async def loop(
             # 4. Update current positions and calculate offsets.
             command.debug("Calculating offsets.")
             await fps.update_position()
-            await run_in_executor(fvc.calculate_new_alpha_beta, fps.get_positions())
+            await run_in_executor(fvc.calculate_offsets, fps.get_positions())
 
             # 5. Save processed image with additional tables.
             proc_path = filename.with_name("proc-" + filename.name)
