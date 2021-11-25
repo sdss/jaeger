@@ -195,6 +195,9 @@
         },
         "fitrms": {
             "type": "number"
+        },
+        "snapshot": {
+            "type": "string"
         }
     },
     "additionalProperties": false

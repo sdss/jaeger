@@ -1109,7 +1109,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         path: Optional[str | pathlib.Path] = None,
         return_axes: bool = False,
-    ) -> None | Axes:
+    ) -> str | Axes:
         """Creates a plot with the current arrangement of the FPS array.
 
         Parameters
@@ -1140,6 +1140,7 @@ class FPS(BaseFPS["FPS"]):
 
         if path is not None:
             ax.figure.savefig(path)
+            return str(path)
 
         mjd = int(Time.now().mjd)
         dirpath = f"/data/fps/snapshots/{mjd}"
@@ -1156,6 +1157,8 @@ class FPS(BaseFPS["FPS"]):
 
         path = path_pattern.replace("*", f"{seq:04d}")
         ax.figure.savefig(path)
+
+        return path
 
     async def _handle_temperature(self):
         """Handle positioners in low temperature."""
