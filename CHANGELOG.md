@@ -6,6 +6,7 @@
 
 * Code to load robostrategy designs to `targetdb` and create configurations. Added actor commands to use `kaiju` to calculate and send a valid trajectory and to unwind, explode, and send a random configuration to the array.
 * [#153](https://github.com/sdss/jaeger/issues/153) Handling of low temperature now happens in `FPS` instead of in the actor. Added an `FPS.status` attribute with the global status of the system (idle, moving, collided, and temperature status). The actor subscribes to status changes using `FPS.async_status()` and broadcasts them.
+* Add `FPS.save_snapshot()` along with actor command `snapshot` to use kaiju to save a plot with the current arrangement of the FPS array.
 
 ### ✨ Improved
 

@@ -24,9 +24,12 @@ from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
 
 from jaeger import FPS, config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
+from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
     from kaiju import RobotGridCalib
 
 
@@ -38,6 +41,7 @@ __all__ = [
     "explode",
     "wok_to_positioner",
     "positioner_to_wok",
+    "get_snapshot",
 ]
 
 
@@ -319,3 +323,26 @@ def positioner_to_wok(
     )
 
     return numpy.array(wok), numpy.array([tangent[0], tangent[1], 0])
+
+
+async def get_snapshot(fps: FPS | None = None) -> Axes:
+    """Returns matplotlib axes with the current arrangement of the FPS array."""
+
+    fps = fps or FPS.get_instance()
+    if fps.initialised is False:
+        await fps.initialise()
+
+    await fps.update_position()
+
+    # Create a robot grid and set the current positions.
+    robot_grid = get_robot_grid()
+
+    for robot in robot_grid.robotDict.values():
+        if robot.id not in fps.positioners.keys():
+            raise ValueError(f"Positioner {robot.id} is not connected.")
+
+        robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
+
+    ax: Axes = await run_in_executor(robot_grid.plot_state)
+
+    return ax
