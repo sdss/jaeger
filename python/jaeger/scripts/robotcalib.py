@@ -40,7 +40,7 @@ def getTargetCoords(rg):
     # return the desired xyWok positions for the metrology
     # fiber for each robot, move this stuff to robot grid...
     positioner_id = []
-    fiber_type = []
+    fibre_type = []
     hole_id = []
     xwok = []
     ywok = []
@@ -50,21 +50,21 @@ def getTargetCoords(rg):
         # append metrology fiber info
         positioner_id.append(r.id)
         hole_id.append(r.holeID)
-        fiber_type.append("Metrology")
+        fibre_type.append("Metrology")
         xwok.append(r.metWokXYZ[0])
         ywok.append(r.metWokXYZ[1])
 
         # append boss fiber info
         positioner_id.append(r.id)
         hole_id.append(r.holeID)
-        fiber_type.append("BOSS")
+        fibre_type.append("BOSS")
         xwok.append(r.bossWokXYZ[0])
         ywok.append(r.bossWokXYZ[1])
 
         # append apogee fiber info
         positioner_id.append(r.id)
         hole_id.append(r.holeID)
-        fiber_type.append("APOGEE")
+        fibre_type.append("APOGEE")
         xwok.append(r.apWokXYZ[0])
         ywok.append(r.apWokXYZ[1])
 
@@ -72,7 +72,7 @@ def getTargetCoords(rg):
         {
             "positioner_id": positioner_id,
             "hole_id": hole_id,
-            "fiber_type": fiber_type,
+            "fibre_type": fibre_type,
             "xwok": xwok,
             "ywok": ywok,
         }
