@@ -542,7 +542,7 @@ class FVC:
         if (
             self.fibre_data is None
             or self.centroids is None
-            or self.raw_hdu
+            or self.raw_hdu is None
             or self.proc_hdu is None
         ):
             raise FVCError("Need to run process_fvc_image before writing the image.")
