@@ -23,6 +23,7 @@ from astropy.table import Table
 from matplotlib import pyplot as plt
 
 from clu.command import Command
+from clu.legacy.tron import TronConnection
 from coordio.defaults import calibration
 from coordio.transforms import RoughTransform, ZhaoBurgeTransform
 
@@ -47,6 +48,7 @@ class FVC:
     centroids: Optional[pandas.DataFrame]
     offsets: Optional[pandas.DataFrame]
 
+    image_path: Optional[str]
     raw_hdu: Optional[fits.ImageHDU]
     proc_hdu: Optional[fits.ImageHDU]
 
@@ -75,6 +77,7 @@ class FVC:
         self.centroids = None
         self.offsets = None
 
+        self.image_path = None
         self.raw_hdu = None
         self.proc_hdu = None
 
@@ -115,29 +118,45 @@ class FVC:
                 self.command.error(msg)
 
     async def expose(
-        self, exposure_time: float = 5.0
+        self,
+        exposure_time: float = 5.0,
+        use_tron_fallback=True,
     ) -> pathlib.Path:  # pragma: no cover
         """Takes an exposure with the FVC and blocks until the exposure is complete.
 
-        Returns the path to the new image.
+        Returns the path to the new image. If ``use_tron_fallback=True`` and the
+        command has not been set, creates a Tron client to command the FVC.
 
         """
 
         if self.command is None:
-            raise FVCError("Command must be set.")
+            if use_tron_fallback is False:
+                raise FVCError("Command must be set.")
 
-        if self.command.status.is_done:
-            raise FVCError("Command is done.")
+        else:
+            if self.command.status.is_done:
+                raise FVCError("Command is done.")
 
         self.log(f"Taking {exposure_time} s FVC exposure.", to_command=False)
 
-        expose_command = self.command.send_command(
-            "fliswarm",
-            f"talk -c fvc expose {exposure_time}",
-        )
+        tron = None
+        cmd_str = f"talk -c fvc expose {exposure_time}"
+
+        if self.command:
+            expose_command = self.command.send_command("fliswarm", cmd_str)
+        else:
+            tron = TronConnection(
+                config["actor"]["tron_host"],
+                config["actor"]["tron_port"],
+            )
+            await tron.start()
+            expose_command = tron.send_command("fliswarm", cmd_str)
 
         assert isinstance(expose_command, Command)
         await expose_command
+
+        if tron:
+            tron.stop()
 
         if expose_command.status.did_fail:
             raise FVCError("The FVC exposure failed.")
@@ -155,6 +174,7 @@ class FVC:
         self,
         path: pathlib.Path | str,
         fibre_data: Optional[pandas.DataFrame] = None,
+        fibre_type: str = "Metrology",
         plot: bool | str = False,
         polids: numpy.ndarray | list | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
@@ -166,11 +186,13 @@ class FVC:
             The path to the raw FVC image.
         fibre_data
             A Pandas data frame with the expected coordinates of the targets. It
-            is expected the data frame will have columns ``positioner_id``,
-            ``fibre_type``, ``xwok``, and ``ywok``. Only the rows that correspond
-            to ``fibre_type='Metrology'`` are used. This frame is appended to the
+            is expected the data frame will have columns ``hole_id``,
+            ``fibre_type``, ``xwok``, and ``ywok``. This frame is appended to the
             processed image. Normally this parameters is left empty and the fibre
             table from the configuration loaded into the FPS instace is used.
+        fibre_type
+            The ``fibre_type`` rows in ``fibre_data`` to use. Defaults to
+            ``fibre_type='Metrology'``.
         plot
             Whether to save additional debugging plots along with the processed image.
             If ``plot`` is a string, it will be used as the directory to which to
@@ -214,6 +236,7 @@ class FVC:
 
         hdus = fits.open(path)
 
+        self.image_path = path
         self.raw_hdu = hdus[1].copy()
 
         # Invert columns
@@ -230,7 +253,7 @@ class FVC:
 
         xyCCD = self.centroids[["x", "y"]].to_numpy()
 
-        fibre_data_met = self.fibre_data.loc["Metrology"]
+        fibre_data_met = self.fibre_data.loc[fibre_type]
 
         # Get close enough to associate the correct centroid with the correct fiducial.
         x_wok_expect = numpy.concatenate([xCMM, fibre_data_met.xwok.to_numpy()])
@@ -345,12 +368,12 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        self.fibre_data.loc["Metrology", "xwok_measured"] = xy_wok_robot_meas[:, 0]
-        self.fibre_data.loc["Metrology", "ywok_measured"] = xy_wok_robot_meas[:, 1]
+        self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
+        self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
 
         # Only use online robots for final RMS.
         online = self.fibre_data.loc[
-            (self.fibre_data.index == "Metrology") & (self.fibre_data.offline == 0)
+            (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
         ]
         dx = online.xwok - online.xwok_measured
         dy = online.ywok - online.ywok_measured
@@ -477,8 +500,8 @@ class FVC:
             new.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected.to_numpy()
             new.loc[pos_na, "conversion_valid"] = 0
 
-        new["alpha_offset"] = k * (new["alpha_expected"] - new["alpha_measured"])
-        new["beta_offset"] = k * (new["beta_expected"] - new["beta_measured"])
+        new["alpha_offset"] = self.k * (new["alpha_expected"] - new["alpha_measured"])
+        new["beta_offset"] = self.k * (new["beta_expected"] - new["beta_measured"])
 
         new["alpha_new"] = new["alpha_reported"] + new["alpha_offset"]
         new["beta_new"] = new["beta_reported"] + new["beta_offset"]
@@ -489,9 +512,24 @@ class FVC:
 
     async def write_proc_image(
         self,
-        new_filename: str | pathlib.Path,
+        new_filename: Optional[str | pathlib.Path] = None,
     ) -> fits.HDUList:  # pragma: no cover
-        """Writes the processed image along with additional table data."""
+        """Writes the processed image along with additional table data.
+
+        If ``new_filename`` is not passed, defaults to adding the prefix ``proc-``
+        to the last processed image file path.
+
+        """
+
+        if self.image_path is None or self.proc_hdu is None:
+            raise FVCError(
+                "No current image. Take and process "
+                "an image before callin write_proc_image()."
+            )
+
+        if new_filename is None:
+            image_path = pathlib.Path(self.image_path)
+            new_filename = image_path.with_name("proc-" + image_path.name)
 
         if (
             self.fibre_data is None
@@ -530,7 +568,7 @@ class FVC:
 
         for key in ieb_keys:
             device_name = ieb_keys[key]
-            if self.fps and self.fps.ieb and isinstance(self.fps.ieb, IEB):
+            if self.fps and isinstance(self.fps.ieb, IEB):
                 try:
                     device = self.fps.ieb.get_device(device_name)
                     ieb_data[key] = (await device.read())[0] or -999.0
@@ -608,7 +646,7 @@ class FVC:
             positioner = self.fps[robot.id]
             robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
 
-            row: pandas.Series = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
+            row = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
             if row.isna().any():
                 log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
                 robot.setAlphaBeta(positioner.alpha, positioner.beta)
