@@ -43,7 +43,6 @@ from jaeger.commands import (
 )
 from jaeger.exceptions import (
     FPSLockedError,
-    JaegerDeprecationWarning,
     JaegerError,
     JaegerUserWarning,
     PositionerError,
@@ -449,7 +448,7 @@ class FPS(BaseFPS["FPS"]):
                 JaegerUserWarning,
             )
 
-        # Stop all positioners just in case.
+        # Stop all positioners just in case. This won't clear collided flags.
         if not self.is_bootloader():
             await self.stop_trajectory()
 
@@ -737,6 +736,9 @@ class FPS(BaseFPS["FPS"]):
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
 
+        # Send STOP_TRAJECTORY. This clears the collided flags.
+        await self.stop_trajectory(clear_flags=True)
+
         await self.update_status(timeout=0.1)
 
         for positioner in self.positioners.values():
@@ -934,25 +936,31 @@ class FPS(BaseFPS["FPS"]):
 
         return True
 
-    async def stop_trajectory(self):
+    async def stop_trajectory(self, clear_flags=False):
         """Stops all the positioners without clearing collided flags.
 
         Parameters
         ----------
-        positioner_ids
-            The list of positioners to abort. If `None`, abort all positioners.
-        timeout
-            How long to wait before timing out the command. By default, just
-            sends the command and does not wait for replies.
+        clear_flags
+            If `True`, sends ``STOP_TRAJECTORY`` which clears collided
+            flags. Otherwise sends ``SEND_TRAJECTORY_ABORT``.
 
         """
 
-        await self.send_command(
-            "SEND_TRAJECTORY_ABORT",
-            positioner_ids=None,
-            timeout=0,
-            now=True,
-        )
+        if clear_flags is False:
+            await self.send_command(
+                "SEND_TRAJECTORY_ABORT",
+                positioner_ids=None,
+                timeout=0,
+                now=True,
+            )
+        else:
+            await self.send_command(
+                "STOP_TRAJECTORY",
+                positioner_ids=0,
+                timeout=0,
+                now=True,
+            )
 
         # Check running command that are "move" and cancel them.
         assert isinstance(self.can, JaegerCAN)
