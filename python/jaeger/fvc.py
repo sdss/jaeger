@@ -514,7 +514,7 @@ class FVC:
 
         self.offsets = new
 
-        self.log.debug(f"Finished calculating offsets.", level=logging.DEBUG)
+        self.log.debug("Finished calculating offsets.", level=logging.DEBUG)
 
         return new
 
