@@ -121,6 +121,8 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
         else:
             alpha = numpy.random.uniform(0, MAX_ALPHA)
             beta = numpy.random.uniform(SAFE_BETA[0], SAFE_BETA[1])
+            if robot.id == 999:
+                print("robot 999 alpha", alpha)
             robot.setAlphaBeta(alpha, beta)
 
         robot.setDestinationAlphaBeta(alphaDestination, betaDestination)
