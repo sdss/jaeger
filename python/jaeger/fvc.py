@@ -389,7 +389,7 @@ class FVC:
         self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
         self.proc_hdu = hdus[1]
 
-        self.log.debug(f"Finished processing {path}", level=logging.DEBUG)
+        self.log(f"Finished processing {path}", level=logging.DEBUG)
 
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
@@ -514,7 +514,7 @@ class FVC:
 
         self.offsets = new
 
-        self.log.debug("Finished calculating offsets.", level=logging.DEBUG)
+        self.log("Finished calculating offsets.", level=logging.DEBUG)
 
         return new
 
