@@ -153,7 +153,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their new positions.")
+    command.finish(text="All positioners reached their destinations.")
 
 
 @configuration.command()
@@ -226,4 +226,4 @@ async def random(
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their new positions.")
+    command.finish(text="All positioners reached their destinations.")

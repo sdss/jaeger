@@ -842,7 +842,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 1,
-    ) -> bool:
+    ) -> numpy.ndarray | bool:
         """Updates positions.
 
         Parameters
@@ -862,7 +862,7 @@ class FPS(BaseFPS["FPS"]):
                 if pos.initialised and not pos.is_bootloader() and not pos.disabled
             ]
             if positioner_ids == []:
-                return True
+                return numpy.array([])
 
         command = await self.send_command(
             CommandID.GET_ACTUAL_POSITION,
@@ -883,7 +883,7 @@ class FPS(BaseFPS["FPS"]):
 
         await asyncio.gather(*update_position_commands)
 
-        return True
+        return self.get_positions()
 
     async def update_firmware_version(
         self,

@@ -176,7 +176,7 @@ async def goto(
     except JaegerError as err:
         return command.fail(error=f"Goto command failed: {err}")
 
-    command.finish(text="Position reached")
+    command.finish(text="Destination reached")
 
 
 @jaeger_parser.command()

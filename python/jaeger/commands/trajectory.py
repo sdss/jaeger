@@ -154,7 +154,7 @@ async def send_trajectory(
             err.trajectory,
         )
 
-    log.info("All positioners have successfully reached their positions.")
+    log.info("All positioners have successfully reached their destinations.")
 
     return traj
 
@@ -583,14 +583,14 @@ class Trajectory(object):
                 current_position = numpy.array(self.fps[pid].position)
                 if not numpy.allclose(current_position, [alpha, beta], atol=0.1):
                     warnings.warn(
-                        f"Positioner {pid} may not have reached its position.",
+                        f"Positioner {pid} may not have reached its destination.",
                         JaegerUserWarning,
                     )
                     failed_reach = True
 
             if failed_reach:
                 raise TrajectoryError(
-                    "Some positioners did not reach their positioners",
+                    "Some positioners did not reach their destinations.",
                     self,
                 )
 
