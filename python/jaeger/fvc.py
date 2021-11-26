@@ -536,11 +536,35 @@ class FVC:
         alpha_offset = offsets["alpha_expected"] - offsets["alpha_measured"]
         beta_offset = offsets["beta_expected"] - offsets["beta_measured"]
 
-        offsets["alpha_offset"] = self.k * alpha_offset
-        offsets["beta_offset"] = self.k * beta_offset
+        offsets["alpha_offset"] = alpha_offset
+        offsets["beta_offset"] = beta_offset
 
-        offsets["alpha_new"] = offsets["alpha_reported"] + offsets["alpha_offset"]
-        offsets["beta_new"] = offsets["beta_reported"] + offsets["beta_offset"]
+        max_offset = config["fvc"]["max_offset"]
+        alpha_offset_c = numpy.clip(self.k * alpha_offset, -max_offset, max_offset)
+        beta_offset_c = numpy.clip(self.k * beta_offset, -max_offset, max_offset)
+
+        offsets["alpha_offset_corrected"] = alpha_offset_c
+        offsets["beta_offset_corrected"] = beta_offset_c
+
+        alpha_new = offsets["alpha_reported"] + offsets["alpha_offset_corrected"]
+        beta_new = offsets["beta_reported"] + offsets["beta_offset_corrected"]
+
+        # Get new positions that are out of range (0 < alpha < 360, 0 < beta < 180)
+        # and clip them.
+        alpha_oor = (alpha_new < 0.0) | (alpha_new > 360.0)
+        beta_oor = (beta_new < 0.0) | (beta_new > 180.0)
+
+        alpha_new.loc[alpha_oor] = numpy.clip(alpha_new.loc[alpha_oor], 0, 360)
+        beta_new.loc[beta_oor] = numpy.clip(beta_new.loc[beta_oor], 0, 180)
+
+        alpha_corr = alpha_new.loc[alpha_oor] - offsets.loc[alpha_oor, "alpha_reported"]
+        offsets.loc[alpha_oor, "alpha_offset_corrected"] = alpha_corr
+
+        beta_corr = beta_new.loc[beta_oor] - offsets.loc[beta_oor, "beta_reported"]
+        offsets.loc[beta_oor, "beta_offset_corrected"] = beta_corr
+
+        offsets["alpha_new"] = alpha_new
+        offsets["beta_new"] = beta_new
 
         # Set the invalid alpha/beta_measured back to NaN.
         invalid = offsets["transformation_valid"] == 0
