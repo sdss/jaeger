@@ -186,10 +186,11 @@ class FVC:
             The path to the raw FVC image.
         fibre_data
             A Pandas data frame with the expected coordinates of the targets. It
-            is expected the data frame will have columns ``hole_id``,
-            ``fibre_type``, ``xwok``, and ``ywok``. This frame is appended to the
-            processed image. Normally this parameters is left empty and the fibre
-            table from the configuration loaded into the FPS instace is used.
+            is expected the data frame will have columns ``positioner_id``,
+            ``hole_id``, ``fibre_type``, ``xwok``, and ``ywok``. This frame is
+            appended to the processed image. Normally this parameters is left
+            empty and the fibre table from the configuration loaded into the FPS
+            instace is used.
         fibre_type
             The ``fibre_type`` rows in ``fibre_data`` to use. Defaults to
             ``fibre_type='Metrology'``.
@@ -448,9 +449,10 @@ class FVC:
             raise FVCError("Some metrology fibres have not been measured.")
 
         # Calculate alpha/beta from measured wok coordinates.
-        _new = []
+        _measured = []
+        first = True
         for _, row in met.iterrows():
-            (alpha_new, beta_new), _ = wok_to_positioner(
+            (alpha_measured, beta_measured), _ = wok_to_positioner(
                 row.hole_id,
                 site,
                 "Metrology",
@@ -458,19 +460,41 @@ class FVC:
                 row.ywok_measured,
             )
 
-            _new.append(
+            if "alpha" in row:
+                alpha_expected = row.alpha
+                beta_expected = row.beta
+            else:
+                if first:
+                    self.log(
+                        "Fibre data does not include the expected alpha/beta "
+                        "positions. Using reported alpha/beta.",
+                        logging.WARNING,
+                    )
+                prow = reported_positions[reported_positions[:, 0] == row.positioner_id]
+                alpha_expected = prow[0][1]
+                beta_expected = prow[0][2]
+
+            # If beta >= 180, we would need a left handed configuration. For now we
+            # invalidate these values.
+            if beta_expected >= 180.0:
+                alpha_measured = numpy.nan
+                beta_measured = numpy.nan
+
+            _measured.append(
                 (
                     row.hole_id,
                     row.positioner_id,
-                    row.alpha,
-                    row.beta,
-                    alpha_new,
-                    beta_new,
+                    alpha_expected,
+                    beta_expected,
+                    alpha_measured,
+                    beta_measured,
                 )
             )
 
-        new = pandas.DataFrame(
-            _new,
+            first = False
+
+        measured = pandas.DataFrame(
+            _measured,
             columns=[
                 "hole_id",
                 "positioner_id",
@@ -480,7 +504,7 @@ class FVC:
                 "beta_measured",
             ],
         )
-        new.set_index("positioner_id", inplace=True)
+        measured.set_index("positioner_id", inplace=True)
 
         # Merge the reported positions.
         reported = pandas.DataFrame(
@@ -490,33 +514,43 @@ class FVC:
         reported.positioner_id = reported.positioner_id.astype("int32")
         reported.set_index("positioner_id", inplace=True)
 
-        new = pandas.concat([new, reported], axis=1)
+        offsets = pandas.concat([measured, reported], axis=1)
 
         # If there are measured alpha/beta that are NaN, replace those with the
         # previous value.
-        new["conversion_valid"] = 1
-        pos_na = new["alpha_measured"].isna()
+        offsets["transformation_valid"] = 1
+        pos_na = offsets["alpha_measured"].isna()
         if pos_na.sum() > 0:
             self.log(
                 "Failed to calculated corrected positioner coordinates for "
                 f"{pos_na.sum()} positioners.",
                 level=logging.WARNING,
             )
-            expected = new.loc[pos_na, ["alpha_expected", "beta_expected"]]
-            new.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected.to_numpy()
-            new.loc[pos_na, "conversion_valid"] = 0
 
-        new["alpha_offset"] = self.k * (new["alpha_expected"] - new["alpha_measured"])
-        new["beta_offset"] = self.k * (new["beta_expected"] - new["beta_measured"])
+            # For now set these values to the expected because we'll use them to
+            # calculate the offset (which will be zero for invalid conversions).
+            expected = offsets.loc[pos_na, ["alpha_expected", "beta_expected"]]
+            offsets.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected
+            offsets.loc[pos_na, "transformation_valid"] = 0
 
-        new["alpha_new"] = new["alpha_reported"] + new["alpha_offset"]
-        new["beta_new"] = new["beta_reported"] + new["beta_offset"]
+        alpha_offset = offsets["alpha_expected"] - offsets["alpha_measured"]
+        beta_offset = offsets["beta_expected"] - offsets["beta_measured"]
 
-        self.offsets = new
+        offsets["alpha_offset"] = self.k * alpha_offset
+        offsets["beta_offset"] = self.k * beta_offset
+
+        offsets["alpha_new"] = offsets["alpha_reported"] + offsets["alpha_offset"]
+        offsets["beta_new"] = offsets["beta_reported"] + offsets["beta_offset"]
+
+        # Set the invalid alpha/beta_measured back to NaN.
+        invalid = offsets["transformation_valid"] == 0
+        offsets.loc[invalid, ["alpha_measured", "beta_measured"]] = numpy.nan
+
+        self.offsets = offsets
 
         self.log("Finished calculating offsets.", level=logging.DEBUG)
 
-        return new
+        return offsets
 
     async def write_proc_image(
         self,
@@ -597,6 +631,11 @@ class FVC:
                     "betaReport": positions[:, 2],
                 }
             )
+
+            current_positions["cmdAlpha"] = numpy.nan
+            current_positions["cmdBeta"] = numpy.nan
+            current_positions["startAlpha"] = numpy.nan
+            current_positions["startBeta"] = numpy.nan
 
             if self.fps.configuration:
                 robot_grid = self.fps.configuration.robot_grid
