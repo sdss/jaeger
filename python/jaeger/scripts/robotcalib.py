@@ -375,6 +375,7 @@ async def robotcalib(
         await ledOff(fps, "led2")
         await ledOff(fps, "led3")
         await ledOff(fps, "led4")
+        await asyncio.sleep(1)
 
         if exptime > 0:
             if True not in [met, apogee, boss]:
@@ -387,19 +388,25 @@ async def robotcalib(
                     print("back illuminating metrology")
                     await ledOn(fps, "led1", MET_LED)
                     await ledOn(fps, "led2", MET_LED)
+                    await asyncio.sleep(1)
                     await exposeFVC(fvc, exptime, targetCoords)
                     await ledOff(fps, "led1")
                     await ledOff(fps, "led2")
+                    await asyncio.sleep(1)
                 if boss:
                     print("back illuminating boss")
                     await ledOn(fps, "led4", BOSS_LED)
+                    await asyncio.sleep(1)
                     await exposeFVC(fvc, exptime, targetCoords)
                     await ledOff(fps, "led4")
+                    await asyncio.sleep(1)
                 if apogee:
                     print("back illuminating apogee")
                     await ledOn(fps, "led3", AP_LED)
+                    await asyncio.sleep(1)
                     await exposeFVC(fvc, exptime, targetCoords)
                     await ledOff(fps, "led3")
+                    await asyncio.sleep(1)
 
         ### send path back to lattice ####
         tstart = time.time()
