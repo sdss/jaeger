@@ -162,6 +162,9 @@ async def exposeFVC(fvc, exptime, fibre_data):
     print("exposure complete: %s" % rawfname)
     fvc.process_fvc_image(rawfname, fibre_data, plot=True)
     print("image processing complete")
+    positions = await fvc.fps.update_position()
+    fvc.calculate_offsets(positions)
+    print("calculcate offsets complete")
     await fvc.write_proc_image()
     print("image write complete")
 
