@@ -731,21 +731,20 @@ class FVC:
         grid = get_robot_grid()
         for robot in grid.robotDict.values():
             positioner = self.fps[robot.id]
-            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            robot.setAlphaBeta(positioner.alpha, positioner.beta)
 
             row = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
             if row.isna().any():
                 log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
-                robot.setAlphaBeta(positioner.alpha, positioner.beta)
+                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
             else:
-                robot.setAlphaBeta(row.alpha_new, row.beta_new)
+                robot.setDestinationAlphaBeta(row.alpha_new, row.beta_new)
 
         # Check for collisions.
         collided = [rid for rid in grid.robotDict if grid.isCollided(rid)]
-        if len(collided) > 0:
-            raise FVCError(
-                f"Cannot apply corrections. {len(collided)} robots are collided."
-            )
+        n_coll = len(collided)
+        if n_coll > 0:
+            raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
 
         # Generate trajectories.
         grid.pathGenGreedy()
@@ -758,13 +757,15 @@ class FVC:
             )
 
         speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        forward = grid.getPathPair(speed=speed)[0]
+        _, reverse = grid.getPathPair(speed=speed)[0]
 
         self.log("Sending correction trajectory.")
         try:
-            await self.fps.send_trajectory(forward)
+            await self.fps.send_trajectory(reverse)
         except TrajectoryError as err:
             raise FVCError(f"Failed executing the correction trajectory: {err}")
+
+        self.log("Correction applied.")
 
     def extract(self, image_data: numpy.ndarray) -> pandas.DataFrame:
         """Extract image data using SExtractor. Returns the extracted centroids."""
