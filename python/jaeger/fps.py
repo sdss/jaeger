@@ -757,7 +757,11 @@ class FPS(BaseFPS["FPS"]):
         await self.update_status()
 
         if snapshot:
-            filename = await self.save_snapshot()
+            if by is not None and len(by) > 0:
+                highlight = by[0]
+            else:
+                highlight = None
+            filename = await self.save_snapshot(highlight=highlight)
             warnings.warn(f"Snapshot for locked FPS: {filename}")
 
     async def unlock(self, force=False):
@@ -1131,6 +1135,7 @@ class FPS(BaseFPS["FPS"]):
         path: Optional[str | pathlib.Path] = None,
         collision_buffer: float | None = None,
         return_axes: bool = False,
+        highlight: int | None = None,
     ) -> str | Axes:
         """Creates a plot with the current arrangement of the FPS array.
 
@@ -1147,11 +1152,6 @@ class FPS(BaseFPS["FPS"]):
         """
 
         from jaeger.target.tools import get_snapshot
-
-        if self.locked:
-            highlight = self.locked_by[0] or None
-        else:
-            highlight = None
 
         ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
 
