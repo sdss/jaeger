@@ -23,7 +23,7 @@ log.sh.setLevel(20)
 # hardcoded defaults
 MET_LED = 1  # leds 1 and 2
 AP_LED = 3  # led 3
-BOSS_LED = 16  # led 4
+BOSS_LED = 8  # led 4
 ANG_STEP = 0.1  # step size in degrees for path generation
 EPS = ANG_STEP * 2.2  # absolute distance used for path smoothing
 USE_SYNC_LINE = False  # whether or not to use the sync line for paths
@@ -158,17 +158,18 @@ async def ledOff(fps, devName):
     await device.write(0)
 
 
-async def exposeFVC(fvc, exptime, fibre_data):
-    print("exposing FVC")
-    rawfname = await fvc.expose(exposure_time=exptime)
-    print("exposure complete: %s" % rawfname)
-    fvc.process_fvc_image(rawfname, fibre_data, plot=True)
-    print("image processing complete")
-    positions = await fvc.fps.update_position()
-    fvc.calculate_offsets(positions)
-    print("calculcate offsets complete")
-    await fvc.write_proc_image()
-    print("image write complete")
+async def exposeFVC(fvc, exptime, fibre_data, nexp):
+    for ii in range(nexp):
+        print("exposing FVC %i of %i"%(ii+1, nexp))
+        rawfname = await fvc.expose(exposure_time=exptime)
+        print("exposure complete: %s" % rawfname)
+        fvc.process_fvc_image(rawfname, fibre_data, plot=True)
+        print("image processing complete")
+        positions = await fvc.fps.update_position()
+        fvc.calculate_offsets(positions)
+        print("calculcate offsets complete")
+        await fvc.write_proc_image()
+        print("image write complete")
 
 
 @click.command()
@@ -178,6 +179,13 @@ async def exposeFVC(fvc, exptime, fibre_data):
     type=click.IntRange(min=1),
     show_default=True,
     help="number of move iterations to perform",
+)
+@click.option(
+    "--nexp",
+    default=1,
+    type=click.IntRange(min=0),
+    show_default=True,
+    help="number of repeated exposures for each move and backlit fiber combo",
 )
 @click.option(
     "--exptime",
@@ -227,6 +235,12 @@ async def exposeFVC(fvc, exptime, fibre_data):
     help="if passed, get image of back illuminated apogee fibers",
 )
 @click.option(
+    "--allfibers",
+    is_flag=True,
+    show_default=True,
+    help="if passed, get image of all fibers back illuminated simultaneously",
+)
+@click.option(
     "--mdp",
     is_flag=True,
     show_default=True,
@@ -245,12 +259,14 @@ async def robotcalib(
     exptime,
     speed,
     cb,
+    nexp,
     danger=False,
     lh=True,
     seed=None,
     met=False,
     boss=False,
     apogee=False,
+    allfibers=False,
     mdp=False,
     nomove=False,
 ):
@@ -307,7 +323,7 @@ async def robotcalib(
     ########### BEGIN CALIBRATION LOOP #######
     for ii in range(niter):
         seed += 1
-        print("\n ITER %i of %i (seed=%i)\n-----------" % (ii, niter, seed))
+        print("\n ITER %i of %i (seed=%i)\n-----------" % (ii+1, niter, seed))
 
         # begin searching for a valid path
         # this is easy when things are safe
@@ -395,36 +411,50 @@ async def robotcalib(
         await ledOff(fps, "led4")
         await asyncio.sleep(1)
 
-        if exptime > 0:
-            if True not in [met, apogee, boss]:
-                # no fibers illuminated, expose anyway
-                await exposeFVC(fvc, exptime, targetCoords)
+        if exptime > 0 and nexp != 0:
+                if True not in [met, apogee, boss, allfibers]:
+                    # no fibers illuminated, expose anyway
+                    await exposeFVC(fvc, exptime, targetCoords)
 
-            else:
-                # take a single exposure for each fiber wanted
-                if met:
-                    print("back illuminating metrology")
-                    await ledOn(fps, "led1", MET_LED)
-                    await ledOn(fps, "led2", MET_LED)
-                    await asyncio.sleep(1)
-                    await exposeFVC(fvc, exptime, targetCoords)
-                    await ledOff(fps, "led1")
-                    await ledOff(fps, "led2")
-                    await asyncio.sleep(1)
-                if boss:
-                    print("back illuminating boss")
-                    await ledOn(fps, "led4", BOSS_LED)
-                    await asyncio.sleep(1)
-                    await exposeFVC(fvc, exptime, targetCoords)
-                    await ledOff(fps, "led4")
-                    await asyncio.sleep(1)
-                if apogee:
-                    print("back illuminating apogee")
-                    await ledOn(fps, "led3", AP_LED)
-                    await asyncio.sleep(1)
-                    await exposeFVC(fvc, exptime, targetCoords)
-                    await ledOff(fps, "led3")
-                    await asyncio.sleep(1)
+                else:
+                    # take a single exposure for each fiber wanted
+                    if met:
+                        print("back illuminating metrology")
+                        await ledOn(fps, "led1", MET_LED)
+                        await ledOn(fps, "led2", MET_LED)
+                        await asyncio.sleep(1)
+                        await exposeFVC(fvc, exptime, targetCoords, nexp)
+                        await ledOff(fps, "led1")
+                        await ledOff(fps, "led2")
+                        await asyncio.sleep(1)
+                    if boss:
+                        print("back illuminating boss")
+                        await ledOn(fps, "led4", BOSS_LED)
+                        await asyncio.sleep(1)
+                        await exposeFVC(fvc, exptime, targetCoords, nexp)
+                        await ledOff(fps, "led4")
+                        await asyncio.sleep(1)
+                    if apogee:
+                        print("back illuminating apogee")
+                        await ledOn(fps, "led3", AP_LED)
+                        await asyncio.sleep(1)
+                        await exposeFVC(fvc, exptime, targetCoords, nexp)
+                        await ledOff(fps, "led3")
+                        await asyncio.sleep(1)
+                    if allfibers:
+                        print("back illuminating all fibers")
+                        await ledOn(fps, "led1", MET_LED)
+                        await ledOn(fps, "led2", MET_LED)
+                        await ledOn(fps, "led4", BOSS_LED)
+                        await ledOn(fps, "led3", AP_LED)
+                        await asyncio.sleep(1)
+                        await exposeFVC(fvc, exptime, targetCoords, nexp)
+                        await ledOff(fps, "led1")
+                        await ledOff(fps, "led2")
+                        await ledOff(fps, "led3")
+                        await ledOff(fps, "led4")
+                        await asyncio.sleep(1)
+
 
         ### send path back to lattice ####
         if not nomove:
