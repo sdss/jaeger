@@ -24,9 +24,12 @@ from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
 
 from jaeger import FPS, config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
+from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
     from kaiju import RobotGridCalib
 
 
@@ -38,6 +41,7 @@ __all__ = [
     "explode",
     "wok_to_positioner",
     "positioner_to_wok",
+    "get_snapshot",
 ]
 
 
@@ -124,7 +128,7 @@ def decollide_grid(robot_grid: RobotGridCalib, simple=False):
                 if robot_grid.isCollided(robot_id):
                     warn(f"Failed decolliding positioner {robot_id}.")
                 else:
-                    warn(f"Positioner {robot_id} was successfully decollided.")
+                    warn(f"Positioner {robot_id} was decollided.")
 
     # Second pass. If still collided, try a grid decollision.
     if get_collided() is not False:
@@ -173,9 +177,9 @@ def unwind(
 
     speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
 
-    _, reverse = robot_grid.getPathPair(speed=speed)
+    to_destination, _ = robot_grid.getPathPair(speed=speed)
 
-    return reverse
+    return to_destination
 
 
 def explode(
@@ -203,9 +207,9 @@ def explode(
 
     speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
 
-    _, reverse = robot_grid.getPathPair(speed=speed)
+    to_destination, _ = robot_grid.getPathPair(speed=speed)
 
-    return reverse
+    return to_destination
 
 
 def wok_to_positioner(
@@ -319,3 +323,30 @@ def positioner_to_wok(
     )
 
     return numpy.array(wok), numpy.array([tangent[0], tangent[1], 0])
+
+
+async def get_snapshot(
+    fps: FPS | None = None,
+    collision_buffer: float | None = None,
+    highlight: int | None = None,
+) -> Axes:
+    """Returns matplotlib axes with the current arrangement of the FPS array."""
+
+    fps = fps or FPS.get_instance()
+    if fps.initialised is False:
+        await fps.initialise()
+
+    await fps.update_position()
+
+    # Create a robot grid and set the current positions.
+    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
+
+    for robot in robot_grid.robotDict.values():
+        if robot.id not in fps.positioners.keys():
+            raise ValueError(f"Positioner {robot.id} is not connected.")
+
+        robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
+
+    ax: Axes = await run_in_executor(robot_grid.plot_state, highlightRobot=highlight)
+
+    return ax

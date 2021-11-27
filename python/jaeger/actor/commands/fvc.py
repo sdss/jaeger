@@ -73,6 +73,7 @@ async def expose(
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
 @click.option("--plot/--no-plot", default=True, help="Generate and save plots.")
+@click.option("--apply/--no-apply", default=True, help="Apply corrections.")
 @cancellable()
 async def loop(
     command: Command[JaegerActor],
@@ -81,6 +82,7 @@ async def loop(
     fbi_level: float = 1.0,
     one: bool = False,
     plot: bool = True,
+    apply: bool = True,
 ):
     """Executes the FVC correction loop.
 
@@ -120,25 +122,32 @@ async def loop(
             await run_in_executor(fvc.process_fvc_image, filename, plot=plot)
 
             # 3. Set current RMS and delta.
-            if delta_rms is None and current_rms is None:
-                pass
-            elif delta_rms is None and current_rms is not None:
-                delta_rms = abs(current_rms - fvc.fitrms)
+            new_rms = fvc.fitrms * 1000.0
+            command.info(fvc_rms=new_rms)
 
-            current_rms = fvc.fitrms
-            command.info(fvc_fitrms=fvc.fitrms)
+            if current_rms is None:
+                pass
+            else:
+                delta_rms = current_rms - new_rms
+                command.info(fvc_deltarms=delta_rms)
+
+            current_rms = new_rms
 
             # 4. Check if the RMS or delta RMS criteria are met.
             if current_rms < config["fvc"]["target_rms"]:
                 return command.finish("FVC target RMS reached.")
-            elif delta_rms < config["fvc"]["target_delta_rms"]:
-                command.warning("Target RMS not reached.")
-                return command.finish("FVC delta RMS reached. Cancelling the FVC loop.")
+            elif delta_rms is not None:
+                if delta_rms < config["fvc"]["target_delta_rms"]:
+                    command.warning("Target RMS not reached.")
+                    return command.finish("Delta RMS reached. Cancelling the FVC loop.")
+                elif delta_rms < 0:
+                    command.warning("RMS has increased.")
+                    return command.finish("Cancelling the FVC loop.")
 
             # 4. Update current positions and calculate offsets.
             command.debug("Calculating offsets.")
             await fps.update_position()
-            await run_in_executor(fvc.calculate_new_alpha_beta, fps.get_positions())
+            await run_in_executor(fvc.calculate_offsets, fps.get_positions())
 
             # 5. Save processed image with additional tables.
             proc_path = filename.with_name("proc-" + filename.name)
@@ -146,9 +155,10 @@ async def loop(
             await fvc.write_proc_image(proc_path)
 
             # 6. Apply corrections.
-            await fvc.apply_correction()
+            if apply:
+                await fvc.apply_correction()
 
-            if one:
+            if one is True or apply is False:
                 command.warning("Cancelling FVC loop after one iteration.")
                 return command.finish()
 

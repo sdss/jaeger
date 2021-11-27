@@ -68,9 +68,11 @@ sphinx-autobuild = ">=2021.3.14"
 sphinx-copybutton = ">=0.3.3"
 matplotlib = ">=3.4.3"
 tables = "^3.6.1"
+pandas-stubs = "^1.2.0"
 
 [tool.poetry.scripts]
 jaeger = "jaeger.__main__:jaeger"
+robotcalib = "jaeger.scripts.robotcalib:robotcalib"
 
 [tool.black]
 line-length = 88

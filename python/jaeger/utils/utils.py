@@ -6,11 +6,17 @@
 # @Filename: utils.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-from typing import Tuple
+from __future__ import annotations
+
+import os
+
+from typing import Optional, Tuple
 
 import numpy
+from astropy.time import Time
 
 from jaeger import config
+from jaeger.exceptions import JaegerError
 from jaeger.maskbits import ResponseCode
 
 
@@ -23,6 +29,7 @@ __all__ = [
     "convert_kaiju_trajectory",
     "motor_steps_to_angle",
     "get_goto_move_time",
+    "get_sjd",
 ]
 
 
@@ -371,3 +378,32 @@ def get_goto_move_time(move, speed=None):
     speed = speed or config["positioner"]["motor_speed"]
 
     return move * config["positioner"]["reduction_ratio"] / (6.0 * speed) + 0.25
+
+
+def get_sjd(observatory: Optional[str] = None) -> int:
+    """Returns the SDSS Julian Date as an integer based on the observatory.
+
+    Parameters
+    ----------
+    observatory
+        The current observatory, either APO or LCO. If `None`, uses ``$OBSERVATORY``.
+
+    """
+
+    if observatory is None:
+        try:
+            observatory = os.environ["OBSERVATORY"]
+        except KeyError:
+            raise JaegerError("Observatory not passed and $OBSERVATORY is not set.")
+
+    observatory = observatory.upper()
+    if observatory not in ["APO", "LCO"]:
+        raise JaegerError(f"Invalid observatory {observatory}.")
+
+    time = Time.now()
+    mjd = time.mjd
+
+    if observatory == "APO":
+        return int(mjd + 0.3)
+    else:
+        return int(mjd + 0.7)

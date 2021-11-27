@@ -193,8 +193,14 @@
         "fvc_filename": {
             "type": "string"
         },
-        "fitrms": {
+        "fvc_rms": {
             "type": "number"
+        },
+        "fvc_deltarms": {
+            "type": "number"
+        },
+        "snapshot": {
+            "type": "string"
         }
     },
     "additionalProperties": false

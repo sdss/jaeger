@@ -93,7 +93,7 @@ Trajectory commands
     :exclude-members:
     :undoc-members:
 
-.. autoclass:: jaeger.commands.TrajectoryTransmissionAbort
+.. autoclass:: jaeger.commands.SendTrajectoryAbort
     :exclude-members:
     :undoc-members:
 

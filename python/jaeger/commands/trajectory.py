@@ -37,7 +37,7 @@ __all__ = [
     "SendNewTrajectory",
     "SendTrajectoryData",
     "TrajectoryDataEnd",
-    "TrajectoryTransmissionAbort",
+    "SendTrajectoryAbort",
     "StartTrajectory",
     "StopTrajectory",
     "Trajectory",
@@ -132,7 +132,7 @@ async def send_trajectory(
             err.trajectory,
         )
 
-    log.debug(f"Trajectory successfully sent in {traj.data_send_time:1f} seconds.")
+    log.debug(f"Trajectory sent in {traj.data_send_time:1f} seconds.")
     log.info(f"Expected time to complete trajectory: {traj.move_time:.2f} seconds.")
 
     if start_trajectory is False:
@@ -154,7 +154,7 @@ async def send_trajectory(
             err.trajectory,
         )
 
-    log.info("All positioners have successfully reached their positions.")
+    log.info("All positioners have reached their destinations.")
 
     return traj
 
@@ -569,7 +569,7 @@ class Trajectory(object):
             # TODO: There seems to be bug in the firmware. Sometimes when a positioner
             # fails to start its trajectory, at the end of the trajectory time it
             # does believe it has reached the commanded position, although it's still
-            # at the initial position. In those cases issuing a STOP_TRAJECTORY
+            # at the initial position. In those cases issuing a SEND_TRAJECTORY_ABORT
             # followed by a position update seems to return correct positions.
             await self.fps.stop_trajectory()
 
@@ -583,14 +583,14 @@ class Trajectory(object):
                 current_position = numpy.array(self.fps[pid].position)
                 if not numpy.allclose(current_position, [alpha, beta], atol=0.1):
                     warnings.warn(
-                        f"Positioner {pid} may not have reached its position.",
+                        f"Positioner {pid} may not have reached its destination.",
                         JaegerUserWarning,
                     )
                     failed_reach = True
 
             if failed_reach:
                 raise TrajectoryError(
-                    "Some positioners did not reach their positioners",
+                    "Some positioners did not reach their destinations.",
                     self,
                 )
 
@@ -612,7 +612,7 @@ class Trajectory(object):
         """Aborts the trajectory transmission."""
 
         cmd = await self.fps.send_command(
-            "TRAJECTORY_TRANSMISSION_ABORT",
+            "SEND_TRAJECTORY_ABORT",
             positioner_ids=list(self.trajectories.keys()),
         )
 
@@ -706,10 +706,10 @@ class TrajectoryDataEnd(Command):
     move_command = True
 
 
-class TrajectoryTransmissionAbort(Command):
+class SendTrajectoryAbort(Command):
     """Aborts sending a trajectory."""
 
-    command_id = CommandID.TRAJECTORY_TRANSMISSION_ABORT
+    command_id = CommandID.SEND_TRAJECTORY_ABORT
     broadcastable = False
     move_command = False
     safe = True

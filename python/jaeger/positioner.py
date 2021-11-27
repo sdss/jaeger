@@ -655,7 +655,7 @@ class Positioner(StatusMixIn):
                 await self.set_speed(*original_speed, force=force)
 
         if result is True:
-            self._log("Position reached.", logging.INFO)
+            self._log("Destination reached.", logging.INFO)
 
         return result
 

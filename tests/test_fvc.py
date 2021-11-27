@@ -109,7 +109,7 @@ def test_process_image(configuration: ManualConfiguration, tmp_path: pathlib.Pat
     rms = cast(float, proc_hdu.header["FITRMS"])
     numpy.allclose(rms, 25.03, atol=0.01)
 
-    assert len(list(tmp_path.glob("*.png"))) > 0
+    assert len(list(tmp_path.glob("*.pdf"))) > 0
 
 
 def test_calculate_offsets(configuration: ManualConfiguration, test_data):
@@ -130,6 +130,6 @@ def test_calculate_offsets(configuration: ManualConfiguration, test_data):
     positions = posangles[["positionerID", "alphaReport", "betaReport"]].to_numpy()
     positions = positions[positions[:, 2] < 180.0]
 
-    new = fvc.calculate_new_alpha_beta(positions, measured, k=1)
+    new = fvc.calculate_offsets(positions, measured, k=1)
 
     assert len(new) > 0

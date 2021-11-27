@@ -63,9 +63,9 @@ positioner:
     firmware_messages_per_positioner: 8
 
 kaiju:
-    ang_step: 0.05
+    ang_step: 0.1
     collision_buffer: 2.4
-    lattice_position: [0., 180.]
+    lattice_position: [10., 170.]
 
 fvc:
     zb_polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 28, 29]
@@ -74,8 +74,9 @@ fvc:
     centroid_min_npix: 100
     target_rms: 10
     target_delta_rms: 1
-    max_fvc_iterations: 5
+    max_fvc_iterations: 3
     k: 0.7
+    max_offset: 1
     ieb_keys:
         TEMPRTD2: rtd2
         TEMPRTD3: rtd3
@@ -102,7 +103,7 @@ low_temperature:
 
 safe_mode:
     min_beta: 160
-    max_beta: 220
+    max_beta: 180
 
 debug: false
 

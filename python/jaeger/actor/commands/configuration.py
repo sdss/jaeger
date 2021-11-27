@@ -153,7 +153,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their new positions.")
+    command.finish(text="All positioners reached their destinations.")
 
 
 @configuration.command()
@@ -193,7 +193,7 @@ async def random(
         return command.fail("No positioners connected")
 
     alphaL, betaL = config["kaiju"]["lattice_position"]
-    if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=0.1):
+    if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=1):
         return command.fail(error="Not all the positioners are folded.")
 
     command.info(text="Creating random configuration.")
@@ -213,8 +213,11 @@ async def random(
         safe=safe,
         collision_buffer=collision_buffer,
     )
-    trajectory = configuration.get_trajectory(simple_decollision=True)
 
+    trajectory = await run_in_executor(
+        configuration.get_trajectory,
+        simple_decollision=True,
+    )
     command.info("Executing random trajectory.")
 
     # Make this the FPS configuration
@@ -226,4 +229,4 @@ async def random(
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their new positions.")
+    command.finish(text="All positioners reached their destinations.")

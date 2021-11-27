@@ -137,7 +137,7 @@ class FVC:
             if self.command.status.is_done:
                 raise FVCError("Command is done.")
 
-        self.log(f"Taking {exposure_time} s FVC exposure.", to_command=False)
+        self.log(f"Taking {exposure_time} seconds FVC exposure.", to_command=False)
 
         tron = None
         cmd_str = f"talk -c fvc expose {exposure_time}"
@@ -186,10 +186,11 @@ class FVC:
             The path to the raw FVC image.
         fibre_data
             A Pandas data frame with the expected coordinates of the targets. It
-            is expected the data frame will have columns ``hole_id``,
-            ``fibre_type``, ``xwok``, and ``ywok``. This frame is appended to the
-            processed image. Normally this parameters is left empty and the fibre
-            table from the configuration loaded into the FPS instace is used.
+            is expected the data frame will have columns ``positioner_id``,
+            ``hole_id``, ``fibre_type``, ``xwok``, and ``ywok``. This frame is
+            appended to the processed image. Normally this parameters is left
+            empty and the fibre table from the configuration loaded into the FPS
+            instace is used.
         fibre_type
             The ``fibre_type`` rows in ``fibre_data`` to use. Defaults to
             ``fibre_type='Metrology'``.
@@ -243,6 +244,8 @@ class FVC:
         hdus[1].data = hdus[1].data[:, ::-1]
         image_data = hdus[1].data
 
+        self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.INFO)
+
         self.centroids = self.extract(image_data)
 
         fiducialCoords = calibration.fiducialCoords.loc[self.site]
@@ -271,7 +274,7 @@ class FVC:
         arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMMouter, xy_wok_rough)
         self.log(
             f"Max fiducial rough distance: {numpy.max(fid_rough_dist):.3f}",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
 
         xy_fiducial_CCD = xyCCD[arg_found]
@@ -283,7 +286,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_roughassoc.png",
+                plot_path_root + "_roughassoc.pdf",
                 xy_fiducial=xy_fiducial_wok_rough,
                 xy_fiducial_cmm=xyCMMouter,
                 title="Rough fiducial association",
@@ -295,9 +298,9 @@ class FVC:
             polids=(polids or config["fvc"]["zb_polids"]),
         )
         self.log(
-            f"Full transform 2. Bisased RMS={ft.rms * 1000:.3f}, "
+            f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
             f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}.",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
         xy_wok_meas = ft.apply(xyCCD, zb=False)
 
@@ -307,7 +310,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_full1.png",
+                plot_path_root + "_full1.pdf",
                 title="Full transform 1",
             )
 
@@ -316,7 +319,7 @@ class FVC:
         arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMM, xy_wok_meas)
         self.log(
             f"Max fiducial fit 2 distance: {numpy.max(fid_rough_dist):.3f}",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
 
         xy_fiducial_CCD = xyCCD[arg_found]  # Overwriting
@@ -328,7 +331,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_refineassoc.png",
+                plot_path_root + "_refineassoc.pdf",
                 title="Refined fiducial association",
                 xy_fiducial=xy_fiducial_wok_refine,
                 xy_fiducial_cmm=xyCMM,
@@ -341,9 +344,9 @@ class FVC:
             polids=(polids or config["fvc"]["zb_polids"]),
         )
         self.log(
-            f"Full transform 1. Bisased RMS={ft.rms * 1000:.3f}, "
+            f"Full transform 2. Bisased RMS={ft.rms * 1000:.3f}, "
             f"Unbiased RMS={ft.unbiasedRMS * 1000:.3f}.",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
 
         xy_wok_meas = ft.apply(xyCCD)  # Overwrite
@@ -354,7 +357,7 @@ class FVC:
                 fibre_data_met,
                 xCMM,
                 yCMM,
-                plot_path_root + "_full2.png",
+                plot_path_root + "_full2.pdf",
                 title="Full transform 2",
             )
 
@@ -364,7 +367,7 @@ class FVC:
         arg_found, met_dist = arg_nearest_neighbor(xy_expect_pos, xy_wok_meas)
         self.log(
             f"Max metrology distance: {numpy.max(met_dist):.3f}",
-            level=logging.DEBUG,
+            level=logging.INFO,
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
@@ -387,9 +390,11 @@ class FVC:
         self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
         self.proc_hdu = hdus[1]
 
+        self.log(f"Finished processing {path}", level=logging.DEBUG)
+
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
-    def calculate_new_alpha_beta(
+    def calculate_offsets(
         self,
         reported_positions: numpy.ndarray,
         fibre_data: Optional[pandas.DataFrame] = None,
@@ -424,6 +429,8 @@ class FVC:
 
         """
 
+        self.log("Calculating offset from FVC image and fit.", level=logging.DEBUG)
+
         site = config["observatory"]
         self.k = k or config["fvc"]["k"]
 
@@ -442,9 +449,10 @@ class FVC:
             raise FVCError("Some metrology fibres have not been measured.")
 
         # Calculate alpha/beta from measured wok coordinates.
-        _new = []
+        _measured = []
+        first = True
         for _, row in met.iterrows():
-            (alpha_new, beta_new), _ = wok_to_positioner(
+            (alpha_measured, beta_measured), _ = wok_to_positioner(
                 row.hole_id,
                 site,
                 "Metrology",
@@ -452,29 +460,58 @@ class FVC:
                 row.ywok_measured,
             )
 
-            _new.append(
+            if "alpha" in row:
+                alpha_expected = row.alpha
+                beta_expected = row.beta
+            else:
+                if first:
+                    self.log(
+                        "Fibre data does not include the expected alpha/beta "
+                        "positions. Using reported alpha/beta.",
+                        logging.WARNING,
+                    )
+                prow = reported_positions[reported_positions[:, 0] == row.positioner_id]
+                alpha_expected = prow[0][1]
+                beta_expected = prow[0][2]
+
+            # If beta >= 180, we would need a left handed configuration. For now we
+            # invalidate these values.
+            if beta_expected >= 180.0:
+                alpha_measured = numpy.nan
+                beta_measured = numpy.nan
+
+            xwok_distance = row.xwok_measured - row.xwok
+            ywok_distance = row.ywok_measured - row.ywok
+
+            _measured.append(
                 (
                     row.hole_id,
                     row.positioner_id,
-                    row.alpha,
-                    row.beta,
-                    alpha_new,
-                    beta_new,
+                    xwok_distance,
+                    ywok_distance,
+                    alpha_expected,
+                    beta_expected,
+                    alpha_measured,
+                    beta_measured,
                 )
             )
 
-        new = pandas.DataFrame(
-            _new,
+            first = False
+
+        measured = pandas.DataFrame(
+            _measured,
             columns=[
                 "hole_id",
                 "positioner_id",
+                "xwok_distance",
+                "ywok_distance",
                 "alpha_expected",
                 "beta_expected",
                 "alpha_measured",
                 "beta_measured",
             ],
         )
-        new.set_index("positioner_id", inplace=True)
+        measured.set_index("positioner_id", inplace=True)
 
         # Merge the reported positions.
         reported = pandas.DataFrame(
@@ -484,31 +521,81 @@ class FVC:
         reported.positioner_id = reported.positioner_id.astype("int32")
         reported.set_index("positioner_id", inplace=True)
 
-        new = pandas.concat([new, reported], axis=1)
+        offsets = pandas.concat([measured, reported], axis=1)
 
         # If there are measured alpha/beta that are NaN, replace those with the
         # previous value.
-        new["conversion_valid"] = 1
-        pos_na = new["alpha_measured"].isna()
+        offsets["transformation_valid"] = 1
+        pos_na = offsets["alpha_measured"].isna()
         if pos_na.sum() > 0:
             self.log(
                 "Failed to calculated corrected positioner coordinates for "
                 f"{pos_na.sum()} positioners.",
                 level=logging.WARNING,
             )
-            expected = new.loc[pos_na, ["alpha_expected", "beta_expected"]]
-            new.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected.to_numpy()
-            new.loc[pos_na, "conversion_valid"] = 0
 
-        new["alpha_offset"] = self.k * (new["alpha_expected"] - new["alpha_measured"])
-        new["beta_offset"] = self.k * (new["beta_expected"] - new["beta_measured"])
+            # For now set these values to the expected because we'll use them to
+            # calculate the offset (which will be zero for invalid conversions).
+            expected = offsets.loc[pos_na, ["alpha_expected", "beta_expected"]]
+            offsets.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected
+            offsets.loc[pos_na, "transformation_valid"] = 0
 
-        new["alpha_new"] = new["alpha_reported"] + new["alpha_offset"]
-        new["beta_new"] = new["beta_reported"] + new["beta_offset"]
+        # Calculate offset between expected and measured.
+        alpha_offset = offsets["alpha_expected"] - offsets["alpha_measured"]
+        beta_offset = offsets["beta_expected"] - offsets["beta_measured"]
 
-        self.offsets = new
+        offsets["alpha_offset"] = alpha_offset
+        offsets["beta_offset"] = beta_offset
 
-        return new
+        # Clip very large offsets and apply a proportional term.
+        max_offset = config["fvc"]["max_offset"]
+        alpha_offset_c = numpy.clip(self.k * alpha_offset, -max_offset, max_offset)
+        beta_offset_c = numpy.clip(self.k * beta_offset, -max_offset, max_offset)
+
+        offsets["alpha_offset_corrected"] = alpha_offset_c
+        offsets["beta_offset_corrected"] = beta_offset_c
+
+        # Calculate new alpha and beta by applying the offset to the reported
+        # positions (i.e., the ones the positioners believe they are at).
+        alpha_new = offsets["alpha_reported"] + offsets["alpha_offset_corrected"]
+        beta_new = offsets["beta_reported"] + offsets["beta_offset_corrected"]
+
+        # Get new positions that are out of range and clip them.
+        alpha_oor = (alpha_new < 0.0) | (alpha_new > 360.0)
+        beta_oor = (beta_new < 0.0) | (beta_new > 180.0)
+
+        alpha_new.loc[alpha_oor] = numpy.clip(alpha_new.loc[alpha_oor], 0, 360)
+        beta_new.loc[beta_oor] = numpy.clip(beta_new.loc[beta_oor], 0, 180)
+
+        # For the values out of range, recompute the corrected offsets.
+        alpha_corr = alpha_new.loc[alpha_oor] - offsets.loc[alpha_oor, "alpha_reported"]
+        offsets.loc[alpha_oor, "alpha_offset_corrected"] = alpha_corr
+        beta_corr = beta_new.loc[beta_oor] - offsets.loc[beta_oor, "beta_reported"]
+        offsets.loc[beta_oor, "beta_offset_corrected"] = beta_corr
+
+        # Save new positions.
+        offsets["alpha_new"] = alpha_new
+        offsets["beta_new"] = beta_new
+
+        # Set the invalid alpha/beta_measured back to NaN.
+        invalid = offsets["transformation_valid"] == 0
+        offsets.loc[
+            invalid,
+            [
+                "alpha_measured",
+                "beta_measured",
+                "alpha_offset",
+                "beta_offset",
+                "alpha_offset_corrected",
+                "beta_offset_corrected",
+            ],
+        ] = numpy.nan
+
+        self.offsets = offsets
+
+        self.log("Finished calculating offsets.", level=logging.DEBUG)
+
+        return offsets
 
     async def write_proc_image(
         self,
@@ -534,7 +621,7 @@ class FVC:
         if (
             self.fibre_data is None
             or self.centroids is None
-            or self.raw_hdu
+            or self.raw_hdu is None
             or self.proc_hdu is None
         ):
             raise FVCError("Need to run process_fvc_image before writing the image.")
@@ -571,7 +658,7 @@ class FVC:
             if self.fps and isinstance(self.fps.ieb, IEB):
                 try:
                     device = self.fps.ieb.get_device(device_name)
-                    ieb_data[key] = (await device.read())[0] or -999.0
+                    ieb_data[key] = (await device.read())[0]
                 except Exception as err:
                     self.log(f"Failed getting IEB information: {err}", logging.WARNING)
                     break
@@ -589,6 +676,11 @@ class FVC:
                     "betaReport": positions[:, 2],
                 }
             )
+
+            current_positions["cmdAlpha"] = numpy.nan
+            current_positions["cmdBeta"] = numpy.nan
+            current_positions["startAlpha"] = numpy.nan
+            current_positions["startBeta"] = numpy.nan
 
             if self.fps.configuration:
                 robot_grid = self.fps.configuration.robot_grid
@@ -623,6 +715,8 @@ class FVC:
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 
+        self.log(f"Processed HDU written to {new_filename}")
+
         return proc_hdus
 
     async def apply_correction(
@@ -636,32 +730,31 @@ class FVC:
 
         if offsets is None:
             offsets = self.offsets
-            assert offsets
 
+        assert offsets is not None
         await self.fps.update_position()
 
         # Setup robot grid.
         grid = get_robot_grid()
         for robot in grid.robotDict.values():
             positioner = self.fps[robot.id]
-            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            robot.setAlphaBeta(positioner.alpha, positioner.beta)
 
             row = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
             if row.isna().any():
                 log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
-                robot.setAlphaBeta(positioner.alpha, positioner.beta)
+                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
             else:
-                robot.setAlphaBeta(row.alpha_new, row.beta_new)
+                robot.setDestinationAlphaBeta(row.alpha_new, row.beta_new)
 
         # Check for collisions.
         collided = [rid for rid in grid.robotDict if grid.isCollided(rid)]
-        if len(collided) > 0:
-            raise FVCError(
-                f"Cannot apply corrections. {len(collided)} robots are collided."
-            )
+        n_coll = len(collided)
+        if n_coll > 0:
+            raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
 
         # Generate trajectories.
-        grid.pathGenGreedy()
+        await run_in_executor(grid.pathGenGreedy)
 
         # Check for deadlocks.
         if grid.didFail:
@@ -671,13 +764,15 @@ class FVC:
             )
 
         speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        forward = grid.getPathPair(speed=speed)[0]
+        to_destination, _ = await run_in_executor(grid.getPathPair, speed=speed)
 
         self.log("Sending correction trajectory.")
         try:
-            await self.fps.send_trajectory(forward)
+            await self.fps.send_trajectory(to_destination)
         except TrajectoryError as err:
             raise FVCError(f"Failed executing the correction trajectory: {err}")
+
+        self.log("Correction applied.")
 
     def extract(self, image_data: numpy.ndarray) -> pandas.DataFrame:
         """Extract image data using SExtractor. Returns the extracted centroids."""
@@ -708,10 +803,10 @@ class FVC:
         # Ignore everything less than X pixels
         objects = objects.loc[objects["npix"] > config["fvc"]["centroid_min_npix"]]
 
-        self.log(f"Found {len(objects)} centroids", level=logging.DEBUG)
+        self.log(f"Found {len(objects)} centroids", level=logging.INFO)
 
         ncentroids = len(calibration.positionerTable) + len(calibration.fiducialCoords)
-        self.log(f"Expected {ncentroids} centroids", level=logging.DEBUG)
+        self.log(f"Expected {ncentroids} centroids", level=logging.INFO)
 
         return objects
 
@@ -746,7 +841,7 @@ class FVC:
 
         plt.plot(
             target_coords.xwok.to_numpy(),
-            target_coords.xwok.to_numpy(),
+            target_coords.ywok.to_numpy(),
             "xk",
             ms=3,
             label="Expected MET",

@@ -13,6 +13,7 @@ import os
 import pathlib
 import warnings
 from dataclasses import dataclass
+from glob import glob
 
 from typing import (
     TYPE_CHECKING,
@@ -29,6 +30,7 @@ from typing import (
 )
 
 import numpy
+from astropy.time import Time
 
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import JaegerCAN
@@ -41,7 +43,6 @@ from jaeger.commands import (
 )
 from jaeger.exceptions import (
     FPSLockedError,
-    JaegerDeprecationWarning,
     JaegerError,
     JaegerUserWarning,
     PositionerError,
@@ -54,6 +55,8 @@ from jaeger.utils import Poller, PollerList
 
 
 if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+
     from jaeger.target.configuration import BaseConfiguration
 
 
@@ -92,19 +95,27 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
     initialised: bool
 
     def __new__(cls: Type[FPS_T], *args, **kwargs):
+
         if cls in cls._instance and kwargs == {}:
             raise JaegerError(
                 "An instance of FPS is already running. "
                 "Use get_instance() to retrieve it."
             )
 
-        new_obj = super().__new__(cls)
-        dict.__init__(new_obj, {})
-        new_obj.initialised = False
+        if cls not in cls._instance or kwargs != {}:
 
-        cls._instance[cls] = new_obj
+            if cls not in cls._instance:
+                new_obj = super().__new__(cls)
+                cls._instance[cls] = new_obj
+            else:
+                new_obj = cls._instance[cls]
 
-        return new_obj
+            dict.__init__(new_obj, {})
+            new_obj.initialised = False
+
+            return new_obj
+
+        raise RuntimeError("Returning None in BaseFPS.__new__. This should not happen.")
 
     @classmethod
     def get_instance(cls: Type[FPS_T], *args, **kwargs) -> FPS_T:
@@ -445,15 +456,15 @@ class FPS(BaseFPS["FPS"]):
                 JaegerUserWarning,
             )
 
-        # Stop all positioners just in case.
+        # Stop all positioners just in case. This won't clear collided flags.
         if not self.is_bootloader():
             await self.stop_trajectory()
 
         # Initialise positioners
         try:
             disable_precise_moves = config["positioner"]["disable_precise_moves"]
-            if disable_precise_moves:
-                warnings.warn("Disabling precise moves.", JaegerUserWarning)
+            # if disable_precise_moves:
+            #     warnings.warn("Disabling precise moves.", JaegerUserWarning)
             pos_initialise = [
                 positioner.initialise(disable_precise_moves=disable_precise_moves)
                 for positioner in self.values()
@@ -461,6 +472,15 @@ class FPS(BaseFPS["FPS"]):
             await asyncio.gather(*pos_initialise)
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
+
+        for positioner in self.values():
+            if positioner.collision:
+                await self.lock(by=[positioner.positioner_id], do_warn=False)
+                warnings.warn(
+                    "The FPS was collided and has been locked.",
+                    JaegerUserWarning,
+                )
+                break
 
         if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
             log.error("Unable to disable precise moves for some positioners.")
@@ -597,7 +617,6 @@ class FPS(BaseFPS["FPS"]):
         self,
         command: str | int | CommandID | Command,
         positioner_ids: int | List[int] | None = None,
-        positioner_id: int | List[int] | None = None,
         data: Any = None,
         now: bool = False,
         **kwargs,
@@ -639,15 +658,6 @@ class FPS(BaseFPS["FPS"]):
 
         if not isinstance(self.can, JaegerCAN) or self.can._started is False:
             raise JaegerError("CAN connection not established.")
-
-        if positioner_id is not None:
-            warnings.warn(
-                "positioner_id is deprecated and will be removed soon. "
-                "Use positioner_ids.",
-                JaegerDeprecationWarning,
-            )
-            if positioner_ids is None:
-                positioner_ids = positioner_id
 
         if positioner_ids is None:
             positioner_ids = [p for p in self if not self[p].disabled]
@@ -719,18 +729,21 @@ class FPS(BaseFPS["FPS"]):
         self,
         stop_trajectories: bool = True,
         by: Optional[List[int]] = None,
+        do_warn: bool = True,
     ):
         """Locks the `.FPS` and prevents commands to be sent.
 
         Parameters
         ----------
         stop_trajectories
-            Whether to stop trajectories when locking.
+            Whether to stop trajectories when locking. This will not
+            clear any collided flags.
 
         """
 
         self._locked = True
-        warnings.warn("Locking the FPS.", JaegerUserWarning)
+        if do_warn:
+            warnings.warn("Locking the FPS.", JaegerUserWarning)
 
         if stop_trajectories:
             await self.stop_trajectory()
@@ -742,6 +755,9 @@ class FPS(BaseFPS["FPS"]):
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
+
+        # Send STOP_TRAJECTORY. This clears the collided flags.
+        await self.stop_trajectory(clear_flags=True)
 
         await self.update_status(timeout=0.1)
 
@@ -849,7 +865,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 1,
-    ) -> bool:
+    ) -> numpy.ndarray | bool:
         """Updates positions.
 
         Parameters
@@ -872,7 +888,7 @@ class FPS(BaseFPS["FPS"]):
                 if pos.initialised and not pos.is_bootloader() and not pos.disabled
             ]
             if positioner_ids == []:
-                return True
+                return numpy.array([])
 
         command = await self.send_command(
             CommandID.GET_ACTUAL_POSITION,
@@ -893,7 +909,7 @@ class FPS(BaseFPS["FPS"]):
 
         await asyncio.gather(*update_position_commands)
 
-        return True
+        return self.get_positions()
 
     async def update_firmware_version(
         self,
@@ -949,27 +965,31 @@ class FPS(BaseFPS["FPS"]):
 
         return True
 
-    async def stop_trajectory(self):
-        """Stops all the positioners.
+    async def stop_trajectory(self, clear_flags=False):
+        """Stops all the positioners without clearing collided flags.
 
         Parameters
         ----------
-        positioner_ids
-            The list of positioners to abort. If `None`, abort all positioners.
-        timeout
-            How long to wait before timing out the command. By default, just
-            sends the command and does not wait for replies.
+        clear_flags
+            If `True`, sends ``STOP_TRAJECTORY`` which clears collided
+            flags. Otherwise sends ``SEND_TRAJECTORY_ABORT``.
 
         """
 
-        await self.send_command(
-            "STOP_TRAJECTORY",
-            positioner_ids=0,
-            timeout=0,
-            now=True,
-        )
-
-        await self.send_command("TRAJECTORY_TRANSMISSION_ABORT", positioner_ids=None)
+        if clear_flags is False:
+            await self.send_command(
+                "SEND_TRAJECTORY_ABORT",
+                positioner_ids=None,
+                timeout=0,
+                now=True,
+            )
+        else:
+            await self.send_command(
+                "STOP_TRAJECTORY",
+                positioner_ids=0,
+                timeout=0,
+                now=True,
+            )
 
         # Check running command that are "move" and cancel them.
         assert isinstance(self.can, JaegerCAN)
@@ -1061,10 +1081,9 @@ class FPS(BaseFPS["FPS"]):
         return await send_trajectory(self, *args, **kwargs)
 
     def abort(self):
-        """Aborts trajectories and stops positioners."""
+        """Aborts trajectories and stops positioners. Alias for `.stop_trajectory`."""
 
-        cmd = self.send_command(CommandID.STOP_TRAJECTORY, positioner_ids=0)
-        return asyncio.create_task(cmd)
+        return asyncio.create_task(self.stop_trajectory())
 
     async def send_to_all(self, *args, **kwargs):
         """Sends a command to all connected positioners.
@@ -1108,6 +1127,60 @@ class FPS(BaseFPS["FPS"]):
                 status["ieb"] = await self.ieb.get_status()
 
         return status
+
+    async def save_snapshot(
+        self,
+        path: Optional[str | pathlib.Path] = None,
+        collision_buffer: float | None = None,
+        return_axes: bool = False,
+    ) -> str | Axes:
+        """Creates a plot with the current arrangement of the FPS array.
+
+        Parameters
+        ----------
+        path
+            The path where to save the plot. Defaults to
+            ``/data/fps/snapshots/MJD/fps_snapshot_<SEQ>.pdf``.
+        collision_buffer
+            The collision buffer.
+        return_axes
+            If `True`, returns the matplotlib axes instead of saving the plot.
+
+        """
+
+        from jaeger.target.tools import get_snapshot
+
+        if self.locked:
+            highlight = self.locked_by[0] or None
+        else:
+            highlight = None
+
+        ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
+
+        if return_axes is True:
+            return ax
+
+        if path is not None:
+            ax.figure.savefig(path)
+            return str(path)
+
+        mjd = int(Time.now().mjd)
+        dirpath = f"/data/fps/snapshots/{mjd}"
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+
+        path_pattern = dirpath + "/fps_snapshot_*.pdf"
+        files = sorted(glob(path_pattern))
+
+        if len(files) == 0:
+            seq = 1
+        else:
+            seq = int(files[-1].split("_")[-1][0:4]) + 1
+
+        path = path_pattern.replace("*", f"{seq:04d}")
+        ax.figure.savefig(path)
+
+        return path
 
     async def _handle_temperature(self):
         """Handle positioners in low temperature."""

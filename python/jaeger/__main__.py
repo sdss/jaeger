@@ -16,7 +16,7 @@ import sys
 import warnings
 from functools import wraps
 
-from typing import Any
+from typing import Any, Optional
 
 import click
 import numpy
@@ -41,7 +41,7 @@ def shutdown(sign):
     """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
 
     if __FPS__ is not None:
-        __FPS__.send_command("STOP_TRAJECTORY", positioner_ids=0, now=True)
+        __FPS__.send_command("SEND_TRAJECTORY_ABORT", positioner_ids=None, now=True)
         log.error(f"stopping positioners and cancelling due to {sign.name}")
         sys.exit(0)
     else:
@@ -714,6 +714,45 @@ async def explode(fps_maker, explode_deg: float):
         await fps.send_trajectory(trajectory)
 
     return
+
+
+@jaeger.command()
+@click.argument("PATH", required=False, type=click.Path(exists=False, dir_okay=False))
+@click.option("--collision-buffer", type=float, help="The collision buffer.")
+@pass_fps
+@cli_coro
+async def snapshot(
+    fps_maker: FPSWrapper,
+    path: Optional[str] = None,
+    collision_buffer: float | None = None,
+):
+    """Takes a snapshot image."""
+
+    if path is not None:
+        path = str(path)
+
+    async with fps_maker as fps:
+
+        await fps.update_position()
+        filename = await fps.save_snapshot(path, collision_buffer=collision_buffer)
+
+    print(f"Snapshot saved to {filename}")
+
+
+@jaeger.command()
+@pass_fps
+@cli_coro
+async def unlock(fps_maker: FPSWrapper):
+    """Unlocks the FPS."""
+
+    warnings.filterwarnings(
+        "ignore",
+        message=".+FPS was collided and has been locked.+",
+        category=JaegerUserWarning,
+    )
+
+    async with fps_maker as fps:
+        await fps.unlock()
 
 
 if __name__ == "__main__":
