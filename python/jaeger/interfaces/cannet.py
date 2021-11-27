@@ -146,9 +146,11 @@ class CANNetBus(BusABC):
     def close(self, buses=None):
 
         if self.writer and not self.writer.is_closing():
+            self._write_to_buses("CAN {bus} STOP")
             self.writer.close()
 
         self.connected = False
+        self.writer = self.reader = None
 
     async def get(self):
 

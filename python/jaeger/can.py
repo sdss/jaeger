@@ -165,6 +165,27 @@ class JaegerCAN(Generic[Bus_co]):
 
         return self
 
+    def stop(self):
+        """Stops the interfaces."""
+
+        if self.notifier:
+            self.notifier.stop()
+            self.notifier = None
+
+        for interface in self.interfaces:
+            interface: Any
+            try:
+                interface.close()
+            except AttributeError:
+                pass
+
+        self.interfaces = []
+
+        if self._command_queue_task:
+            self._command_queue_task.cancel()
+
+        self._started = False
+
     @classmethod
     async def create(
         cls,
@@ -504,6 +525,12 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
             delay=self.status_interval,
         )
         self.device_status_poller.start()
+
+    def stop(self):
+        """Stops the interfaces."""
+
+        super().stop()
+        asyncio.create_task(self.device_status_poller.stop())
 
     async def _process_reply_queue(self, msg: Message):
         """Processes a message checking first if it comes from the device."""
