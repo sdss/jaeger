@@ -45,6 +45,8 @@ def getTargetCoords(rg):
     hole_id = []
     xwok = []
     ywok = []
+    alpha = []
+    beta = []
     offline = []
 
     for r in rg.robotDict.values():
@@ -55,6 +57,8 @@ def getTargetCoords(rg):
         fibre_type.append("Metrology")
         xwok.append(r.metWokXYZ[0])
         ywok.append(r.metWokXYZ[1])
+        alpha.append(r.alpha)
+        beta.append(r.beta)
         offline.append(int(r.isOffline))
 
         # append boss fiber info
@@ -63,6 +67,8 @@ def getTargetCoords(rg):
         fibre_type.append("BOSS")
         xwok.append(r.bossWokXYZ[0])
         ywok.append(r.bossWokXYZ[1])
+        alpha.append(r.alpha)
+        beta.append(r.beta)
         offline.append(int(r.isOffline))
 
         # append apogee fiber info
@@ -71,6 +77,8 @@ def getTargetCoords(rg):
         fibre_type.append("APOGEE")
         xwok.append(r.apWokXYZ[0])
         ywok.append(r.apWokXYZ[1])
+        alpha.append(r.alpha)
+        beta.append(r.beta)
         offline.append(int(r.isOffline))
 
     return pd.DataFrame(
@@ -80,6 +88,8 @@ def getTargetCoords(rg):
             "fibre_type": fibre_type,
             "xwok": xwok,
             "ywok": ywok,
+            "alpha": alpha,
+            "beta": beta,
             "offline": offline,
         }
     )
