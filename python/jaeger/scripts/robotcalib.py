@@ -233,6 +233,12 @@ async def exposeFVC(fvc, exptime, fibre_data):
     help="if passed, use markov decision process "
     "for path generation, otherwise a greedy algorithm is used",
 )
+@click.option(
+    "--nomove",
+    is_flag=True,
+    show_default=True,
+    help="if passed, do not execute a move, leave array as it is",
+)
 @cli_coro()
 async def robotcalib(
     niter,
@@ -246,6 +252,7 @@ async def robotcalib(
     boss=False,
     apogee=False,
     mdp=False,
+    nomove=False,
 ):
 
     fvc = FVC(config["observatory"])
@@ -300,7 +307,7 @@ async def robotcalib(
     ########### BEGIN CALIBRATION LOOP #######
     for ii in range(niter):
         seed += 1
-        print("\n MOVE ITER %i of %i(seed=%i)\n-----------" % (ii, niter, seed))
+        print("\n ITER %i of %i (seed=%i)\n-----------" % (ii, niter, seed))
 
         # begin searching for a valid path
         # this is easy when things are safe
@@ -311,6 +318,9 @@ async def robotcalib(
         # try 5 times to find valid path
         # before giving up and moving on
         for jj in range(5):
+            if nomove:
+                # we're not moving!
+                break
             print("path gen attempt %i" % jj)
 
             # get the expected coords for each fiber on each robot
@@ -343,34 +353,38 @@ async def robotcalib(
                 robot.setXYUniform()
             rg.decollideGrid()
 
-        if rg.didFail:
-            print("failed to generate valid paths, skipping to next iteration")
-            continue
+        if not nomove:
+            if rg.didFail:
+                print("failed to generate valid paths, skipping to next iteration")
+                continue
 
-        print("valid paths found")
-        toDestination, fromDestination = rg.getPathPair(
-            speed=speed,
-            smoothPoints=SMOOTH_PTS,
-            collisionShrink=COLLISION_SHRINK,
-            pathDelay=PATH_DELAY,
-        )
-
-        if rg.smoothCollisions:
-            print(
-                "%i smooth collisions, skipping to next iteration"
-                % (rg.smoothCollisions)
+            print("valid paths found")
+            toDestination, fromDestination = rg.getPathPair(
+                speed=speed,
+                smoothPoints=SMOOTH_PTS,
+                collisionShrink=COLLISION_SHRINK,
+                pathDelay=PATH_DELAY,
             )
-            continue
 
-        tstart = time.time()
-        print("sending path fold-->target")
-        try:
-            await fps.send_trajectory(fromDestination, use_sync_line=USE_SYNC_LINE)
-            print("move complete, duration %.1f" % (time.time() - tstart))
-        except TrajectoryError as e:
-            print("TRAJECTORY ERROR moving fold-->target")
-            print("failed positioners: ", str(e.trajectory.failed_positioners))
-            return
+            if rg.smoothCollisions:
+                print(
+                    "%i smooth collisions, skipping to next iteration"
+                    % (rg.smoothCollisions)
+                )
+                continue
+
+            tstart = time.time()
+            print("sending path fold-->target")
+            try:
+                await fps.send_trajectory(fromDestination, use_sync_line=USE_SYNC_LINE)
+                print("move complete, duration %.1f" % (time.time() - tstart))
+            except TrajectoryError as e:
+                print("TRAJECTORY ERROR moving fold-->target")
+                print("failed positioners: ", str(e.trajectory.failed_positioners))
+                return
+
+        else:
+            print("not moving array --nomove flag passed")
 
         ### turn all LEDs off ###
         await ledOff(fps, "led1")
@@ -411,15 +425,16 @@ async def robotcalib(
                     await asyncio.sleep(1)
 
         ### send path back to lattice ####
-        tstart = time.time()
-        print("sending path target-->fold")
-        try:
-            await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
-            print("move complete, duration %.1f" % (time.time() - tstart))
-        except TrajectoryError as e:
-            print("TRAJECTORY ERROR moving target-->fold")
-            print("failed positioners: ", str(e.trajectory.failed_positioners))
-            return
+        if not nomove:
+            tstart = time.time()
+            print("sending path target-->fold")
+            try:
+                await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
+                print("move complete, duration %.1f" % (time.time() - tstart))
+            except TrajectoryError as e:
+                print("TRAJECTORY ERROR moving target-->fold")
+                print("failed positioners: ", str(e.trajectory.failed_positioners))
+                return
 
 
 if __name__ == "__main__":
