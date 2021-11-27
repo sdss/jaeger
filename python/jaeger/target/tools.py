@@ -128,7 +128,7 @@ def decollide_grid(robot_grid: RobotGridCalib, simple=False):
                 if robot_grid.isCollided(robot_id):
                     warn(f"Failed decolliding positioner {robot_id}.")
                 else:
-                    warn(f"Positioner {robot_id} was successfully decollided.")
+                    warn(f"Positioner {robot_id} was decollided.")
 
     # Second pass. If still collided, try a grid decollision.
     if get_collided() is not False:
