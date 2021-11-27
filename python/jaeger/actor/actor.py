@@ -50,7 +50,11 @@ def merge_json(base: str, custom: str | None, write_temporary_file=False):
 class JaegerActor(clu.LegacyActor):
     """The jaeger SDSS-style actor."""
 
+    __instance: JaegerActor | None = None
+
     def __init__(self, fps: FPS, *args, ieb_status_delay=60, **kwargs):
+
+        JaegerActor.__instance = self
 
         self.fps = fps
 
@@ -98,6 +102,12 @@ class JaegerActor(clu.LegacyActor):
         await self.status_server.start()
 
         self.log.info(f"starting status server on {self.host}:{port}")
+
+    @classmethod
+    def get_instance(cls):
+        """Returns the current instance, if any."""
+
+        return cls.__instance
 
     async def _report_status_cb(self, transport):
         """Reports the status to the status server."""
