@@ -739,5 +739,21 @@ async def snapshot(
     print(f"Snapshot saved to {filename}")
 
 
+@jaeger.command()
+@pass_fps
+@cli_coro
+async def unlock(fps_maker: FPSWrapper):
+    """Unlocks the FPS."""
+
+    warnings.filterwarnings(
+        "ignore",
+        message=".+FPS was collided and has been locked.+",
+        category=JaegerUserWarning,
+    )
+
+    async with fps_maker as fps:
+        await fps.unlock()
+
+
 if __name__ == "__main__":
     jaeger()
