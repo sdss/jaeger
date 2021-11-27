@@ -207,9 +207,9 @@ def explode(
 
     speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
 
-    _, reverse = robot_grid.getPathPair(speed=speed)
+    to_destination, _ = robot_grid.getPathPair(speed=speed)
 
-    return reverse
+    return to_destination
 
 
 def wok_to_positioner(
