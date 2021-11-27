@@ -718,9 +718,14 @@ async def explode(fps_maker, explode_deg: float):
 
 @jaeger.command()
 @click.argument("PATH", required=False, type=click.Path(exists=False, dir_okay=False))
+@click.option("--collision-buffer", type=float, help="The collision buffer.")
 @pass_fps
 @cli_coro
-async def snapshot(fps_maker: FPSWrapper, path: Optional[str] = None):
+async def snapshot(
+    fps_maker: FPSWrapper,
+    path: Optional[str] = None,
+    collision_buffer: float | None = None,
+):
     """Takes a snapshot image."""
 
     if path is not None:
@@ -729,7 +734,7 @@ async def snapshot(fps_maker: FPSWrapper, path: Optional[str] = None):
     async with fps_maker as fps:
 
         await fps.update_position()
-        filename = await fps.save_snapshot(path)
+        filename = await fps.save_snapshot(path, collision_buffer=collision_buffer)
 
     print(f"Snapshot saved to {filename}")
 

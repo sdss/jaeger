@@ -1110,6 +1110,7 @@ class FPS(BaseFPS["FPS"]):
     async def save_snapshot(
         self,
         path: Optional[str | pathlib.Path] = None,
+        collision_buffer: float | None = None,
         return_axes: bool = False,
     ) -> str | Axes:
         """Creates a plot with the current arrangement of the FPS array.
@@ -1119,6 +1120,8 @@ class FPS(BaseFPS["FPS"]):
         path
             The path where to save the plot. Defaults to
             ``/data/fps/snapshots/MJD/fps_snapshot_<SEQ>.pdf``.
+        collision_buffer
+            The collision buffer.
         return_axes
             If `True`, returns the matplotlib axes instead of saving the plot.
 
@@ -1126,7 +1129,12 @@ class FPS(BaseFPS["FPS"]):
 
         from jaeger.target.tools import get_snapshot
 
-        ax = await get_snapshot()
+        if self.locked:
+            highlight = self.locked_by[0] or None
+        else:
+            highlight = None
+
+        ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
 
         if return_axes is True:
             return ax

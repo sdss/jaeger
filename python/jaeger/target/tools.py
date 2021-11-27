@@ -325,7 +325,11 @@ def positioner_to_wok(
     return numpy.array(wok), numpy.array([tangent[0], tangent[1], 0])
 
 
-async def get_snapshot(fps: FPS | None = None) -> Axes:
+async def get_snapshot(
+    fps: FPS | None = None,
+    collision_buffer: float | None = None,
+    highlight: int | None = None,
+) -> Axes:
     """Returns matplotlib axes with the current arrangement of the FPS array."""
 
     fps = fps or FPS.get_instance()
@@ -335,7 +339,7 @@ async def get_snapshot(fps: FPS | None = None) -> Axes:
     await fps.update_position()
 
     # Create a robot grid and set the current positions.
-    robot_grid = get_robot_grid()
+    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
 
     for robot in robot_grid.robotDict.values():
         if robot.id not in fps.positioners.keys():
@@ -343,6 +347,6 @@ async def get_snapshot(fps: FPS | None = None) -> Axes:
 
         robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
 
-    ax: Axes = await run_in_executor(robot_grid.plot_state)
+    ax: Axes = await run_in_executor(robot_grid.plot_state, highlightRobot=highlight)
 
     return ax
