@@ -33,8 +33,7 @@ import numpy
 from astropy.time import Time
 from zc.lockfile import LockFile
 
-from jaeger import can_log, config, log, start_file_loggers
-from jaeger.actor import JaegerActor
+from jaeger import actor_instance, can_log, config, log, start_file_loggers
 from jaeger.can import JaegerCAN
 from jaeger.commands import (
     Command,
@@ -768,9 +767,8 @@ class FPS(BaseFPS["FPS"]):
 
         await self.update_status()
 
-        actor = JaegerActor.get_instance()
-        if actor:
-            actor.write("e", {"locked": True})
+        if actor_instance:
+            actor_instance.write("e", {"locked": True})
 
         if snapshot:
             if by is not None and len(by) > 0:
@@ -780,8 +778,8 @@ class FPS(BaseFPS["FPS"]):
             filename = await self.save_snapshot(highlight=highlight)
             warnings.warn(f"Snapshot for locked FPS: {filename}")
 
-            if actor:
-                actor.write("i", {"snapshot": filename})
+            if actor_instance:
+                actor_instance.write("i", {"snapshot": filename})
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
