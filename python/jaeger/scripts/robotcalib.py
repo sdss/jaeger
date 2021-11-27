@@ -192,7 +192,7 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
 )
 @click.option(
     "--exptime",
-    default=1.6,
+    default=2.5,
     type=click.FloatRange(min=0),
     show_default=True,
     help="fvc exposure time, if 0, no exposures are taken",
