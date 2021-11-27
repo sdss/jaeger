@@ -160,7 +160,7 @@ class BaseConfiguration:
     def get_trajectory(self, simple_decollision=False):
         """Returns a trajectory dictionary from the folded position."""
 
-        assert isinstance(self, Configuration)
+        assert isinstance(self, BaseConfiguration)
 
         # Just to be sure, reinitialise the grid.
         self.robot_grid = self._initialise_grid()
@@ -196,9 +196,9 @@ class BaseConfiguration:
             )
 
         speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        forward = self.robot_grid.getPathPair(speed=speed)[0]
+        _, from_destination = self.robot_grid.getPathPair(speed=speed)
 
-        return forward
+        return from_destination
 
     @property
     def ingested(self):
