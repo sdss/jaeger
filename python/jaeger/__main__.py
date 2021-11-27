@@ -28,7 +28,7 @@ from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.exceptions import JaegerError, JaegerUserWarning
-from jaeger.fps import FPS
+from jaeger.fps import FPS, LOCK_FILE
 from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
 from jaeger.utils import run_in_executor
@@ -753,6 +753,9 @@ async def unlock(fps_maker: FPSWrapper):
 
     async with fps_maker as fps:
         await fps.unlock()
+
+    if os.path.exists(LOCK_FILE):
+        os.remove(LOCK_FILE)
 
 
 if __name__ == "__main__":

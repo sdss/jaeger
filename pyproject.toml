@@ -37,6 +37,7 @@ sdss-kaiju = "^1.1.0"
 sdss-coordio = "^1.1.2"
 pydl = "^0.7.0"
 sep = "^1.2.0"
+"zc.lockfile" = "^2.0"
 
 [tool.poetry.dev-dependencies]
 ipython = ">=7.9.0"

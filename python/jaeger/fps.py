@@ -31,6 +31,7 @@ from typing import (
 
 import numpy
 from astropy.time import Time
+from zc.lockfile import LockFile
 
 from jaeger import can_log, config, log, start_file_loggers
 from jaeger.can import JaegerCAN
@@ -64,6 +65,7 @@ __all__ = ["BaseFPS", "FPS"]
 
 
 MIN_BETA = 160
+LOCK_FILE = "/var/tmp/jaeger.lock"
 
 FPS_CO = Union["BaseFPS", "FPS"]
 FPS_T = TypeVar("FPS_T", bound="BaseFPS")
@@ -231,6 +233,8 @@ class FPS(BaseFPS["FPS"]):
         # The mapping between positioners and buses.
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
 
+        self.pid_lock: LockFile | None = None
+
         self._locked = False
         self.locked_by: List[int] = []
 
@@ -316,6 +320,12 @@ class FPS(BaseFPS["FPS"]):
 
     async def start_can(self):
         """Starts the JaegerCAN interface."""
+
+        if self.pid_lock is None:
+            try:
+                self.pid_lock = LockFile(LOCK_FILE)
+            except Exception:
+                warnings.warn("Failed creating lock file.", JaegerUserWarning)
 
         if isinstance(self.can, JaegerCAN):
             if self.can._started:
