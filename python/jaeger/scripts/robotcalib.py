@@ -13,7 +13,7 @@ from kaiju.robotGrid import RobotGridCalib
 from sdsstools.daemonizer import cli_coro
 
 from jaeger import config, log
-from jaeger.exceptions import TrajectoryError
+from jaeger.exceptions import TrajectoryError, FVCError
 from jaeger.fvc import FVC
 
 
@@ -160,16 +160,19 @@ async def ledOff(fps, devName):
 
 async def exposeFVC(fvc, exptime, fibre_data, nexp):
     for ii in range(nexp):
-        print("exposing FVC %i of %i"%(ii+1, nexp))
-        rawfname = await fvc.expose(exposure_time=exptime)
-        print("exposure complete: %s" % rawfname)
-        fvc.process_fvc_image(rawfname, fibre_data, plot=True)
-        print("image processing complete")
-        positions = await fvc.fps.update_position()
-        fvc.calculate_offsets(positions)
-        print("calculcate offsets complete")
-        await fvc.write_proc_image()
-        print("image write complete")
+        try:
+            print("exposing FVC %i of %i"%(ii+1, nexp))
+            rawfname = await fvc.expose(exposure_time=exptime)
+            print("exposure complete: %s" % rawfname)
+            fvc.process_fvc_image(rawfname, fibre_data, plot=True)
+            print("image processing complete")
+            positions = await fvc.fps.update_position()
+            fvc.calculate_offsets(positions)
+            print("calculcate offsets complete")
+            await fvc.write_proc_image()
+            print("image write complete")
+        except FVCError as e:
+            print("exposure failed with FVCError, continuing")
 
 
 @click.command()
