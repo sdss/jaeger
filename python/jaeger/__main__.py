@@ -16,7 +16,7 @@ import sys
 import warnings
 from functools import wraps
 
-from typing import Any
+from typing import Any, Optional
 
 import click
 import numpy
@@ -714,6 +714,24 @@ async def explode(fps_maker, explode_deg: float):
         await fps.send_trajectory(trajectory)
 
     return
+
+
+@jaeger.command()
+@click.argument("PATH", required=False, type=click.Path(exists=False, dir_okay=False))
+@pass_fps
+@cli_coro
+async def snapshot(fps_maker: FPSWrapper, path: Optional[str] = None):
+    """Takes a snapshot image."""
+
+    if path is not None:
+        path = str(path)
+
+    async with fps_maker as fps:
+
+        await fps.update_position()
+        filename = await fps.save_snapshot(path)
+
+    print(f"Snapshot saved to {filename}")
 
 
 if __name__ == "__main__":
