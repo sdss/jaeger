@@ -480,10 +480,15 @@ class FVC:
                 alpha_measured = numpy.nan
                 beta_measured = numpy.nan
 
+            xwok_distance = row.xwok_measured - row.xwok
+            ywok_distance = row.ywok_measured - row.ywok
+
             _measured.append(
                 (
                     row.hole_id,
                     row.positioner_id,
+                    xwok_distance,
+                    ywok_distance,
                     alpha_expected,
                     beta_expected,
                     alpha_measured,
@@ -498,6 +503,8 @@ class FVC:
             columns=[
                 "hole_id",
                 "positioner_id",
+                "xwok_distance",
+                "ywok_distance",
                 "alpha_expected",
                 "beta_expected",
                 "alpha_measured",
@@ -723,8 +730,8 @@ class FVC:
 
         if offsets is None:
             offsets = self.offsets
-            assert offsets
 
+        assert offsets is not None
         await self.fps.update_position()
 
         # Setup robot grid.
@@ -747,7 +754,7 @@ class FVC:
             raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
 
         # Generate trajectories.
-        grid.pathGenGreedy()
+        await run_in_executor(grid.pathGenGreedy)
 
         # Check for deadlocks.
         if grid.didFail:
@@ -757,11 +764,11 @@ class FVC:
             )
 
         speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        _, reverse = grid.getPathPair(speed=speed)[0]
+        to_destination, _ = await run_in_executor(grid.getPathPair, speed=speed)
 
         self.log("Sending correction trajectory.")
         try:
-            await self.fps.send_trajectory(reverse)
+            await self.fps.send_trajectory(to_destination)
         except TrajectoryError as err:
             raise FVCError(f"Failed executing the correction trajectory: {err}")
 
