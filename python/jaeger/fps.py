@@ -473,14 +473,17 @@ class FPS(BaseFPS["FPS"]):
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
+        locked_by = []
         for positioner in self.values():
             if positioner.collision:
-                await self.lock(by=[positioner.positioner_id], do_warn=False)
-                warnings.warn(
-                    "The FPS was collided and has been locked.",
-                    JaegerUserWarning,
-                )
-                break
+                locked_by.append(positioner.positioner_id)
+
+        if len(locked_by) > 0:
+            await self.lock(by=locked_by, do_warn=False, snapshot=False)
+            warnings.warn(
+                "The FPS was collided and has been locked.",
+                JaegerUserWarning,
+            )
 
         if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
             log.error("Unable to disable precise moves for some positioners.")
@@ -729,6 +732,7 @@ class FPS(BaseFPS["FPS"]):
         stop_trajectories: bool = True,
         by: Optional[List[int]] = None,
         do_warn: bool = True,
+        snapshot: bool = True,
     ):
         """Locks the `.FPS` and prevents commands to be sent.
 
@@ -751,6 +755,10 @@ class FPS(BaseFPS["FPS"]):
             self.locked_by += by
 
         await self.update_status()
+
+        if snapshot:
+            filename = await self.save_snapshot()
+            warnings.warn(f"Snapshot for locked FPS: {filename}")
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
