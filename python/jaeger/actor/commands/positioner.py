@@ -361,10 +361,6 @@ async def stop(command, fps):
 async def unlock(command, fps):
     """Unlocks the FPS."""
 
-    if not fps.locked:
-        command.info(locked=False)
-        return command.finish(text="FPS is not locked")
-
     result = await fps.unlock()
 
     if result:
