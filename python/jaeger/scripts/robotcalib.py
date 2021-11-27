@@ -33,7 +33,7 @@ SMOOTH_PTS = 5  # number of points for smoothing paths
 COLLISION_SHRINK = 0.05  # mm to shrink buffers by for path smoothing/simplification
 PATH_DELAY = 1  # seconds of time in the future to send the first point
 SAFE_BETA = [165, 195]
-MAX_ALPHA = 358  # set here for the one robot without full range alpha travel
+MAX_ALPHA = 358  # set here for robot 444 without full range alpha travel
 BAD_ROBOTS = []  # put offline robots in this list?
 
 
@@ -117,7 +117,16 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
             # full range of motion
             if lefthand:
                 robot.lefthanded = True
-            robot.setXYUniform()
+            # for now special handling for robot 444
+            # note, i'm not checking after
+            # decolliding grid, which maybe I should?
+            if robot.id == 444:
+                while True:
+                    robot.setXYUniform()
+                    if robot.alpha < MAX_ALPHA:
+                        break
+            else:
+                robot.setXYUniform()
         else:
             alpha = numpy.random.uniform(0, MAX_ALPHA)
             beta = numpy.random.uniform(SAFE_BETA[0], SAFE_BETA[1])
