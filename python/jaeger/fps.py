@@ -34,6 +34,7 @@ from astropy.time import Time
 from zc.lockfile import LockFile
 
 from jaeger import can_log, config, log, start_file_loggers
+from jaeger.actor import JaegerActor
 from jaeger.can import JaegerCAN
 from jaeger.commands import (
     Command,
@@ -483,14 +484,17 @@ class FPS(BaseFPS["FPS"]):
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
+        locked_by = []
         for positioner in self.values():
             if positioner.collision:
-                await self.lock(by=[positioner.positioner_id], do_warn=False)
-                warnings.warn(
-                    "The FPS was collided and has been locked.",
-                    JaegerUserWarning,
-                )
-                break
+                locked_by.append(positioner.positioner_id)
+
+        if len(locked_by) > 0:
+            await self.lock(by=locked_by, do_warn=False, snapshot=False)
+            warnings.warn(
+                "The FPS was collided and has been locked.",
+                JaegerUserWarning,
+            )
 
         if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
             log.error("Unable to disable precise moves for some positioners.")
@@ -740,6 +744,7 @@ class FPS(BaseFPS["FPS"]):
         stop_trajectories: bool = True,
         by: Optional[List[int]] = None,
         do_warn: bool = True,
+        snapshot: bool = True,
     ):
         """Locks the `.FPS` and prevents commands to be sent.
 
@@ -762,6 +767,21 @@ class FPS(BaseFPS["FPS"]):
             self.locked_by += by
 
         await self.update_status()
+
+        actor = JaegerActor.get_instance()
+        if actor:
+            actor.write("e", {"locked": True})
+
+        if snapshot:
+            if by is not None and len(by) > 0:
+                highlight = by[0]
+            else:
+                highlight = None
+            filename = await self.save_snapshot(highlight=highlight)
+            warnings.warn(f"Snapshot for locked FPS: {filename}")
+
+            if actor:
+                actor.write("i", {"snapshot": filename})
 
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
@@ -1143,6 +1163,7 @@ class FPS(BaseFPS["FPS"]):
         path: Optional[str | pathlib.Path] = None,
         collision_buffer: float | None = None,
         return_axes: bool = False,
+        highlight: int | None = None,
     ) -> str | Axes:
         """Creates a plot with the current arrangement of the FPS array.
 
@@ -1159,11 +1180,6 @@ class FPS(BaseFPS["FPS"]):
         """
 
         from jaeger.target.tools import get_snapshot
-
-        if self.locked:
-            highlight = self.locked_by[0] or None
-        else:
-            highlight = None
 
         ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
 
