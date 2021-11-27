@@ -637,7 +637,8 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
-        assert isinstance(self.can, JaegerCAN), "CAN connection not established."
+        if not isinstance(self.can, JaegerCAN) or self.can._started is False:
+            raise JaegerError("CAN connection not established.")
 
         if positioner_id is not None:
             warnings.warn(
@@ -785,6 +786,9 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
+        if len(self.positioners) == 0:
+            return True
+
         if positioner_ids is None:
             positioner_ids = [0]
         elif not isinstance(positioner_ids, (list, tuple)):
@@ -858,6 +862,9 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
+        if len(self.positioners) == 0:
+            return True
+
         if positioner_ids is None:
             positioner_ids = [
                 pos.positioner_id
@@ -904,6 +911,9 @@ class FPS(BaseFPS["FPS"]):
             How long to wait before timing out the command.
 
         """
+
+        if len(self.positioners) == 0:
+            return True
 
         if positioner_ids is None:
             positioner_ids = [0]
