@@ -10,14 +10,8 @@ import numpy
 import pandas as pd
 
 from kaiju.robotGrid import RobotGridCalib
+from kaiju import utils
 from sdsstools.daemonizer import cli_coro
-
-from jaeger import config, log
-from jaeger.exceptions import TrajectoryError, FVCError
-from jaeger.fvc import FVC
-
-
-log.sh.setLevel(20)
 
 
 # hardcoded defaults
@@ -27,15 +21,15 @@ BOSS_LED = 8  # led 4
 ANG_STEP = 0.1  # step size in degrees for path generation
 EPS = ANG_STEP * 2.2  # absolute distance used for path smoothing
 USE_SYNC_LINE = False  # whether or not to use the sync line for paths
-GREED = 0.8  # parameter for MDP
-PHOBIA = 0.2  # parameter for MDP
-SMOOTH_PTS = 5  # number of points for smoothing paths
-COLLISION_SHRINK = 0.05  # mm to shrink buffers by for path smoothing/simplification
+GREED = 0.9  # parameter for MDP
+PHOBIA = 0.1  # parameter for MDP
+SMOOTH_PTS = 8  # number of points for smoothing paths
+COLLISION_SHRINK = 0.08  # mm to shrink buffers by for path smoothing/simplification
 PATH_DELAY = 1  # seconds of time in the future to send the first point
 SAFE_BETA = [165, 195]
 MAX_ALPHA = 358  # set here for robot 444 without full range alpha travel
 BAD_ROBOTS = []  # put offline robots in this list?
-
+DOWNSAMPLE = 100
 
 def getTargetCoords(rg):
     # return the desired xyWok positions for the metrology
@@ -275,6 +269,13 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
     show_default=True,
     help="if passed, do not execute a move, leave array as it is",
 )
+@click.option(
+    "--simpath",
+    is_flag=True,
+    show_default=True,
+    help="if passed, simulate the trajectory but don't send it.  make a movie",
+)
+
 @cli_coro()
 async def robotcalib(
     niter,
@@ -291,61 +292,71 @@ async def robotcalib(
     allfibers=False,
     mdp=False,
     nomove=False,
+    simpath=False,
 ):
-
-    fvc = FVC(config["observatory"])
-    fps = fvc.fps
-    await fps.initialise()
-
     if seed is None:
         seed = numpy.random.randint(0, 30000)
 
-    ######## UNWIND GRID #############
-    rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
+    if not simpath:
+        # unwind if we aren't simulating!!!
+        from jaeger import config, log
+        from jaeger.exceptions import TrajectoryError, FVCError
+        from jaeger.fvc import FVC
+        log.sh.setLevel(20)
 
-    # set the robot grid to the current jaeger positions
-    await setKaijuCurrent(fps, rg)
+        fvc = FVC(config["observatory"])
+        fps = fvc.fps
+        await fps.initialise()
 
-    # generate the path to fold
-    tstart = time.time()
-    if mdp:
-        rg.pathGenMDP(GREED, PHOBIA)
-    else:
-        rg.pathGenGreedy()
 
-    print("unwind path generation took %.1f seconds" % (time.time() - tstart))
 
-    # verify that the path generation was successful if not exit
-    if rg.didFail:
-        print("failed to unwind grid. deadlock in path generation")
-        return
+        ######## UNWIND GRID #############
+        rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
 
-    # smooth the paths
-    toDestination, fromDestination = rg.getPathPair(
-        speed=speed,
-        smoothPoints=SMOOTH_PTS,
-        collisionShrink=COLLISION_SHRINK,
-        pathDelay=PATH_DELAY,
-    )
+        # set the robot grid to the current jaeger positions
+        await setKaijuCurrent(fps, rg)
 
-    # check for collisions in path smoothing
-    if rg.smoothCollisions:
-        print("failed to unwind grid. collision in path smoothing")
-        return
+        # generate the path to fold
+        tstart = time.time()
+        if mdp:
+            rg.pathGenMDP(GREED, PHOBIA)
+        else:
+            rg.pathGenGreedy()
 
-    # command the path from the initial state (set by jaeger)
-    # to the destination state (folded)
-    tstart = time.time()
-    print("sending unwind trajectory")
-    await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
-    print("unwind finished, took %.1f seconds" % (time.time() - tstart))
+        print("unwind path generation took %.1f seconds" % (time.time() - tstart))
 
-    ########### UNWIND FINISHED ##############
+        # verify that the path generation was successful if not exit
+        if rg.didFail:
+            print("failed to unwind grid. deadlock in path generation")
+            return
+
+        # smooth the paths
+        toDestination, fromDestination = rg.getPathPair(
+            speed=speed,
+            smoothPoints=SMOOTH_PTS,
+            collisionShrink=COLLISION_SHRINK,
+            pathDelay=PATH_DELAY,
+        )
+
+        # check for collisions in path smoothing
+        if rg.smoothCollisions:
+            print("failed to unwind grid. collision in path smoothing")
+            return
+
+        # command the path from the initial state (set by jaeger)
+        # to the destination state (folded)
+        tstart = time.time()
+        print("sending unwind trajectory")
+        await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
+        print("unwind finished, took %.1f seconds" % (time.time() - tstart))
+
+        ########### UNWIND FINISHED ##############
 
     ########### BEGIN CALIBRATION LOOP #######
+    movesExecuted = 0
     for ii in range(niter):
         seed += 1
-        print("\n ITER %i of %i (seed=%i)\n-----------" % (ii+1, niter, seed))
+        print("\n----------------------\nITER %i of %i (seed=%i)\n----------------------" % (ii+1, niter, seed))
 
         # begin searching for a valid path
         # this is easy when things are safe
@@ -375,14 +386,17 @@ async def robotcalib(
                 "attempt %i path generation took %.1f seconds"
                 % (jj, (time.time() - tstart))
             )
+
             if not rg.didFail:
                 break
-            nDeadlocks = rg.deadlockedRobots()
-            if len(nDeadlocks) > 6:
-                print("too many deadlocks to resolve (%i deadlocks)" % nDeadlocks)
+
+            dlrobots = rg.deadlockedRobots()
+            print("%i deadlocked robots"%len(dlrobots))
+            if len(dlrobots) > 6:
+                print("too many deadlocks to resolve")
                 break
 
-            replaceableRobots = list(set(rg.deadlockedRobots) - set(BAD_ROBOTS))
+            replaceableRobots = list(set(dlrobots) - set(BAD_ROBOTS))
             nextReplacement = numpy.random.choice(replaceableRobots)
             replacedRobotList.append(nextReplacement)
             rg = getRandomGrid(
@@ -406,6 +420,27 @@ async def robotcalib(
                 pathDelay=PATH_DELAY,
             )
 
+                    # print max steps in paths
+            maxPoints = -1
+            for alphaBetaPath in toDestination.values():
+                for path in alphaBetaPath.values():
+                    if len(path) > maxPoints:
+                        maxPoints = len(path)
+            print("maximum path points %i"%maxPoints)
+
+            if simpath:
+                ## simulate only, don't proceed further
+                movesExecuted += 1
+                interpSteps = len(list(rg.robotDict.values())[0].interpSimplifiedAlphaPath)
+                print("interpsteps", interpSteps)
+                print("simulating path with %.5e smooth collisions per step"%(rg.smoothCollisions/interpSteps))
+                print("smooth collided robots", rg.smoothCollidedRobots)
+                for rid in rg.smoothCollidedRobots:
+                    r = rg.robotDict[rid]
+                    utils.plotTraj(r, "simpath_%i"%ii, dpi=250)
+                # utils.plotPaths(rg, downsample=DOWNSAMPLE, filename="simpath_%i.mp4"%ii)
+                continue
+
             if rg.smoothCollisions:
                 print(
                     "%i smooth collisions, skipping to next iteration"
@@ -413,6 +448,7 @@ async def robotcalib(
                 )
                 continue
 
+            movesExecuted += 1
             tstart = time.time()
             print("sending path fold-->target")
             try:
@@ -421,6 +457,7 @@ async def robotcalib(
             except TrajectoryError as e:
                 print("TRAJECTORY ERROR moving fold-->target")
                 print("failed positioners: ", str(e.trajectory.failed_positioners))
+                print("moves executed", movesExecuted)
                 return
 
         else:
@@ -488,7 +525,10 @@ async def robotcalib(
             except TrajectoryError as e:
                 print("TRAJECTORY ERROR moving target-->fold")
                 print("failed positioners: ", str(e.trajectory.failed_positioners))
+                print("moves executed", movesExecuted)
                 return
+
+    print("\n-------\nend script: total moves executed: %i\n-------\n"%movesExecuted)
 
 
 if __name__ == "__main__":
