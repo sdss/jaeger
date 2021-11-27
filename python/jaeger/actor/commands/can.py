@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import click
-
 from jaeger.can import JaegerCAN
 
 from . import jaeger_parser
@@ -40,6 +38,9 @@ async def connect(command: Command[JaegerActor], fps: FPS):
         fps.can.stop()
 
     await fps.start_can()
+    if fps.pid_lock is not None:
+        fps.pid_lock.close()
+        fps.pid_lock = None
 
     return command.finish(text="CAN has been reconnected.")
 
