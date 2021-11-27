@@ -658,7 +658,7 @@ class FVC:
             if self.fps and isinstance(self.fps.ieb, IEB):
                 try:
                     device = self.fps.ieb.get_device(device_name)
-                    ieb_data[key] = (await device.read())[0] or -999.0
+                    ieb_data[key] = (await device.read())[0]
                 except Exception as err:
                     self.log(f"Failed getting IEB information: {err}", logging.WARNING)
                     break
