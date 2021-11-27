@@ -325,7 +325,10 @@ class FPS(BaseFPS["FPS"]):
             try:
                 self.pid_lock = LockFile(LOCK_FILE)
             except Exception:
-                warnings.warn("Failed creating lock file.", JaegerUserWarning)
+                raise JaegerError(
+                    "Failed creating lock file. "
+                    "Probably another instance is running."
+                )
 
         if isinstance(self.can, JaegerCAN):
             if self.can._started:
@@ -335,6 +338,7 @@ class FPS(BaseFPS["FPS"]):
                 return
 
         self.can = await JaegerCAN.create(self.can, fps=self)
+        return True
 
     def add_positioner(
         self,
