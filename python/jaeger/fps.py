@@ -473,6 +473,15 @@ class FPS(BaseFPS["FPS"]):
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
+        for positioner in self.values():
+            if positioner.collision:
+                await self.lock(by=[positioner.positioner_id], do_warn=False)
+                warnings.warn(
+                    "The FPS was collided and has been locked.",
+                    JaegerUserWarning,
+                )
+                break
+
         if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
             log.error("Unable to disable precise moves for some positioners.")
 
@@ -719,6 +728,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         stop_trajectories: bool = True,
         by: Optional[List[int]] = None,
+        do_warn: bool = True,
     ):
         """Locks the `.FPS` and prevents commands to be sent.
 
@@ -731,7 +741,8 @@ class FPS(BaseFPS["FPS"]):
         """
 
         self._locked = True
-        warnings.warn("Locking the FPS.", JaegerUserWarning)
+        if do_warn:
+            warnings.warn("Locking the FPS.", JaegerUserWarning)
 
         if stop_trajectories:
             await self.stop_trajectory()
