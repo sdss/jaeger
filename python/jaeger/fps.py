@@ -95,19 +95,27 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
     initialised: bool
 
     def __new__(cls: Type[FPS_T], *args, **kwargs):
+
         if cls in cls._instance and kwargs == {}:
             raise JaegerError(
                 "An instance of FPS is already running. "
                 "Use get_instance() to retrieve it."
             )
 
-        new_obj = super().__new__(cls)
-        dict.__init__(new_obj, {})
-        new_obj.initialised = False
+        if cls not in cls._instance or kwargs != {}:
 
-        cls._instance[cls] = new_obj
+            if cls not in cls._instance:
+                new_obj = super().__new__(cls)
+                cls._instance[cls] = new_obj
+            else:
+                new_obj = cls._instance[cls]
 
-        return new_obj
+            dict.__init__(new_obj, {})
+            new_obj.initialised = False
+
+            return new_obj
+
+        raise RuntimeError("Returning None in BaseFPS.__new__. This should not happen.")
 
     @classmethod
     def get_instance(cls: Type[FPS_T], *args, **kwargs) -> FPS_T:
