@@ -320,6 +320,8 @@ async def robotcalib(
         for jj in range(5):
             if nomove:
                 # we're not moving!
+                await setKaijuCurrent(fps, rg)
+                targetCoords = getTargetCoords(rg)
                 break
             print("path gen attempt %i" % jj)
 
