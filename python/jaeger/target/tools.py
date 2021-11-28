@@ -76,7 +76,6 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
         raise JaegerError("Invalid collision buffer < 1.5.")
 
     robot_grid = RobotGridCalib(stepSize=ang_step, epsilon=epsilon, seed=seed)
-    print("Coll buffer", collision_buffer)
     robot_grid.setCollisionBuffer(collision_buffer)
 
     if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
@@ -112,7 +111,6 @@ def get_path_pair(
         robot_grid.pathGenGreedy()
 
         # Check for deadlocks.
-        print(robot_grid.didFail)
         if robot_grid.didFail and ignore_failed is False:
             return None
 

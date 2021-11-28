@@ -158,7 +158,7 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
-    def get_trajectory(self, decollide: bool = True, simple_decollision: bool = False):
+    def get_trajectory(self, decollide: bool = False, simple_decollision: bool = False):
         """Returns a trajectory dictionary from the folded position."""
 
         assert isinstance(self, BaseConfiguration)
@@ -175,11 +175,9 @@ class BaseConfiguration:
 
             # Get the first of the three fibres since all have the same alpha, beta.
             rdata = ftable.loc[robot.id].iloc[0]
-            print(robot.id, rdata.hole_id, rdata.alpha, rdata.beta)
             if rdata.valid:
                 robot.setAlphaBeta(rdata.alpha, rdata.beta)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
-                print(rdata.alpha, rdata.beta)
                 continue
             raise JaegerError(f"Positioner {robot.id} has no valid coordinates.")
 
@@ -189,14 +187,11 @@ class BaseConfiguration:
             ftable.loc[(r.id, "BOSS"), cols] = r.bossWokXYZ
             ftable.loc[(r.id, "Metrology"), cols] = r.metWokXYZ
 
-        self.robot_grid.plot_state(returnax=False, figname="test1.pdf")
-        print(self.robot_grid.getNCollisions())
         if decollide:
             decollide_grid(self.robot_grid, simple=simple_decollision)
-        print(self.robot_grid.getNCollisions())
+
         paths = get_path_pair(self.robot_grid)
         if paths is None:
-            print(self.robot_grid.deadlockedRobots())
             raise TrajectoryError(
                 "Failed generating a valid trajectory. "
                 "This usually means a deadlock was found."
@@ -588,23 +583,15 @@ class ManualConfiguration(BaseConfiguration):
 
         alphaL, betaL = config["kaiju"]["lattice_position"]
 
-        positionerIDs = []
-        alphas = []
-        betas = []
-
         # We use Kaiju for convenience in the non-safe mode.
         for robot in robot_grid.robotDict.values():
-            positionerIDs.append(robot.id)
-
-            if robot.isOffline:
-                alphas.append(robot.alpha)
-                betas.append(robot.beta)
-                continue
 
             if uniform is not None:
                 alpha0, alpha1, beta0, beta1 = uniform
-                alphas.append(numpy.random.uniform(alpha0, alpha1))
-                betas.append(numpy.random.uniform(beta0, beta1))
+                robot.setAlphaBeta(
+                    numpy.random.uniform(alpha0, alpha1),
+                    numpy.random.uniform(beta0, beta1),
+                )
 
             else:
                 if safe:
@@ -612,19 +599,18 @@ class ManualConfiguration(BaseConfiguration):
                     if safe_mode is False:
                         safe_mode = {"min_beta": 165, "max_beta": 195}
 
-                    alphas.append(numpy.random.uniform(0, 359.9))
-                    betas.append(
+                    robot.setAlphaBeta(
+                        numpy.random.uniform(0, 359.9),
                         numpy.random.uniform(
                             safe_mode["min_beta"],
                             safe_mode["max_beta"],
-                        )
+                        ),
                     )
 
                 else:
-                    robot.setDestinationAlphaBeta(alphaL, betaL)
                     robot.setXYUniform()
-                    alphas.append(robot.alpha)
-                    betas.append(robot.beta)
+
+            robot.setDestinationAlphaBeta(alphaL, betaL)
 
         # Confirm that the configuration is valid. This should only matter
         # for full range random configurations.
@@ -656,41 +642,34 @@ class ManualConfiguration(BaseConfiguration):
             for nn in range(1, deadlock_retries + 1):
                 log.info(f"Retry {nn} out of {deadlock_retries}.")
 
+                previous_grid = {
+                    robot.id: (robot.alphaPath[0][1], robot.betaPath[0][1])
+                    for robot in robot_grid.robotDict.values()
+                }
+
                 replaceable = robot_grid.deadlockedRobots()
-                next_replace = numpy.random.choice(replaceable)
-                replaced_robots.append(next_replace)
+                replaced_robots.append(numpy.random.choice(replaceable))
+                replaced_robots = list(set(replaced_robots))
 
                 robot_grid = get_robot_grid(
                     seed=seed,
                     collision_buffer=collision_buffer,
                 )
 
-                for ii, robot_id in enumerate(positionerIDs):
+                for robot in robot_grid.robotDict.values():
 
-                    robot = robot_grid.robotDict[robot_id]
                     robot.setDestinationAlphaBeta(alphaL, betaL)
 
                     if robot.id in replaced_robots:
                         robot.setXYUniform()
-                        alphas[ii] = robot.alpha
-                        betas[ii] = robot.beta
                     else:
-                        robot.setAlphaBeta(alphas[ii], betas[ii])
+                        robot.setAlphaBeta(*previous_grid[robot.id])
 
                 try:
                     decollide_grid(robot_grid, simple=True)
                 except JaegerError:
                     pass
 
-                positionerIDs = []
-                alphas = []
-                betas = []
-                for robot in robot_grid.robotDict.values():
-                    positionerIDs.append(robot.id)
-                    alphas.append(robot.alpha)
-                    betas.append(robot.beta)
-
-                robot_grid.plot_state(returnax=False, figname="test0.pdf")
                 paths = get_path_pair(robot_grid)
                 if paths is not None:
                     log.info("Random configuration has been unlocked.")
@@ -706,19 +685,16 @@ class ManualConfiguration(BaseConfiguration):
                     )
 
         pT = calibration.positionerTable.copy().reset_index()
-        holeIDs = pT.loc[pT.positionerID.isin(positionerIDs)].holeID.tolist()
 
         # Build an assignment dictionary.
-        data = {
-            holeIDs[i]: {
-                "alpha": alphas[i],
-                "beta": betas[i],
+        data = {}
+        for robot in robot_grid.robotDict.values():
+            holeID = pT.loc[pT.positionerID == robot.id].holeID.values[0]
+            data[holeID] = {
+                "alpha": robot.alphaPath[0][1],
+                "beta": robot.betaPath[0][1],
                 "fibre_type": "Metrology",
             }
-            for i in range(len(holeIDs))
-        }
-        print(data)
-        print()
 
         return cls(data, **kwargs)
 

@@ -183,15 +183,15 @@ async def random(
     command.debug(text="Checking that all positioners are folded.")
 
     # Check that all positioners are folded.
-    await fps.update_position()
-    positions = fps.get_positions()
+    # await fps.update_position()
+    # positions = fps.get_positions()
 
-    if len(positions) == 0:
-        return command.fail("No positioners connected")
+    # if len(positions) == 0:
+    #     return command.fail("No positioners connected")
 
-    alphaL, betaL = config["kaiju"]["lattice_position"]
-    if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=1):
-        return command.fail(error="Not all the positioners are folded.")
+    # alphaL, betaL = config["kaiju"]["lattice_position"]
+    # if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=1):
+    #     return command.fail(error="Not all the positioners are folded.")
 
     command.info(text="Creating random configuration.")
 
@@ -215,8 +215,7 @@ async def random(
     try:
         trajectory = await run_in_executor(
             configuration.get_trajectory,
-            simple_decollision=True,
-            decollide=True,
+            decollide=False,
         )
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
