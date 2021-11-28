@@ -780,7 +780,7 @@ class FPS(BaseFPS["FPS"]):
             else:
                 highlight = None
             filename = await self.save_snapshot(highlight=highlight)
-            warnings.warn(f"Snapshot for locked FPS: {filename}")
+            warnings.warn(f"Snapshot for locked FPS: {filename}", JaegerUserWarning)
 
             if actor_instance:
                 actor_instance.write("i", {"snapshot": filename})
@@ -1181,7 +1181,7 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
-        from jaeger.target.tools import get_snapshot
+        from jaeger.kaiju import get_snapshot
 
         ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
 

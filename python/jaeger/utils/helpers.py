@@ -442,7 +442,7 @@ class AsyncioExecutor(Executor):
             self._thread.join()
 
 
-async def run_in_executor(fn, *args, catch_warnings=False, **kwargs):
+async def run_in_executor(fn, *args, catch_warnings=False, executor="thread", **kwargs):
     """Runs a function in an executor.
 
     In addition to streamlining the use of the executor, this function
@@ -458,15 +458,23 @@ async def run_in_executor(fn, *args, catch_warnings=False, **kwargs):
 
     fn = partial(fn, *args, **kwargs)
 
+    if executor == "thread":
+        executor = concurrent.futures.ThreadPoolExecutor
+    elif executor == "process":
+        executor = concurrent.futures.ProcessPoolExecutor
+    else:
+        raise ValueError("Invalid executor name.")
+
     if catch_warnings:
         with warnings.catch_warnings(record=True) as records:
-            result = await asyncio.get_event_loop().run_in_executor(None, fn)
+            with executor() as pool:
+                result = await asyncio.get_event_loop().run_in_executor(pool, fn)
 
         for ww in records:
             warnings.warn(ww.message, ww.category)
 
     else:
-        with concurrent.futures.ThreadPoolExecutor() as pool:
+        with executor() as pool:
             result = await asyncio.get_running_loop().run_in_executor(pool, fn)
 
     return result

@@ -31,7 +31,8 @@ from jaeger import config, log
 from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
-from jaeger.target.tools import async_get_path_pair, get_robot_grid, wok_to_positioner
+from jaeger.kaiju import get_path_pair_in_executor, get_robot_grid
+from jaeger.target.tools import wok_to_positioner
 from jaeger.utils import run_in_executor
 
 
@@ -573,6 +574,14 @@ class FVC:
         beta_corr = beta_new.loc[beta_oor] - offsets.loc[beta_oor, "beta_reported"]
         offsets.loc[beta_oor, "beta_offset_corrected"] = beta_corr
 
+        # Final check. If alpha/beta_new are NaNs, replace with reported values.
+        alpha_new[numpy.isnan(alpha_new)] = offsets.loc[
+            numpy.isnan(alpha_new), "alpha_reported"
+        ]
+        beta_new[numpy.isnan(beta_new)] = offsets.loc[
+            numpy.isnan(beta_new), "beta_reported"
+        ]
+
         # Save new positions.
         offsets["alpha_new"] = alpha_new
         offsets["beta_new"] = beta_new
@@ -754,14 +763,14 @@ class FVC:
             raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
 
         # Generate trajectories.
-        paths = await async_get_path_pair(grid)
-        if paths is None:
-            raise FVCError(
-                "Failed generating a valid trajectory. "
-                "This usually means a deadlock was found."
+        (to_destination, _, did_fail, deadlocks) = await get_path_pair_in_executor(
+            grid,
+            ignore_did_fail=True,
+        )
+        if did_fail:
+            log.warning(
+                f"Found {len(deadlocks)} deadlocks but applying correction anyway."
             )
-
-        to_destination = paths[0]
 
         self.log("Sending correction trajectory.")
         try:

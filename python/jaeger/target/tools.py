@@ -8,10 +8,6 @@
 
 from __future__ import annotations
 
-import warnings
-
-from typing import TYPE_CHECKING
-
 import numpy
 
 from coordio.conv import (
@@ -22,233 +18,16 @@ from coordio.conv import (
 )
 from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
 
-from jaeger import FPS, config, log
-from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
-from jaeger.utils.helpers import run_in_executor
+from jaeger import config, log
+from jaeger.exceptions import JaegerError
+from jaeger.kaiju import (
+    decollide_in_executor,
+    get_path_pair_in_executor,
+    get_robot_grid,
+)
 
 
-if TYPE_CHECKING:
-    from matplotlib.axes import Axes
-
-    from kaiju import RobotGridCalib
-
-
-__all__ = [
-    "warn",
-    "get_robot_grid",
-    "decollide_grid",
-    "unwind",
-    "explode",
-    "wok_to_positioner",
-    "positioner_to_wok",
-    "get_snapshot",
-]
-
-
-def warn(message):
-    warnings.warn(message, JaegerUserWarning)
-
-
-def get_robot_grid(seed: int = 0, collision_buffer=None):
-    """Returns a new robot grid with the destination set to the lattice position.
-
-    If an initialised instance of the FPS is available, disabled robots will be
-    set offline in the grid at their current positions.
-
-    """
-
-    fps = FPS.get_instance()
-    if fps is None:
-        warn(
-            "FPS information not provided when creating the robot grid. "
-            "Will not be able to disable robots."
-        )
-
-    from kaiju.robotGrid import RobotGridCalib
-
-    kaiju_config = config["kaiju"]
-    ang_step = kaiju_config["ang_step"]
-    collision_buffer = collision_buffer or kaiju_config["collision_buffer"]
-    alpha0, beta0 = kaiju_config["lattice_position"]
-    epsilon = ang_step * kaiju_config["epsilon_factor"]
-
-    if collision_buffer < 1.5:
-        raise JaegerError("Invalid collision buffer < 1.5.")
-
-    robot_grid = RobotGridCalib(stepSize=ang_step, epsilon=epsilon, seed=seed)
-    robot_grid.setCollisionBuffer(collision_buffer)
-
-    if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
-        raise JaegerError("Mismatch between connected positioners and robot grid.")
-
-    for robot in robot_grid.robotDict.values():
-        if fps is not None:
-            positioner = fps[robot.id]
-            if positioner.disabled:
-                log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
-                robot.setAlphaBeta(positioner.alpha, positioner.beta)
-                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
-                robot.isOffline = True
-                continue
-
-        robot.setDestinationAlphaBeta(alpha0, beta0)
-
-    return robot_grid
-
-
-def get_path_pair(
-    robot_grid: RobotGridCalib,
-    speed=None,
-    smooth_points=None,
-    path_delay=None,
-    collision_shrink=None,
-    ignore_failed=False,
-    skip_gen_path=False,
-) -> tuple | None:
-    """Runs ``pathGenGreedy`` and returns the to and from destination paths."""
-
-    if skip_gen_path is False:
-        robot_grid.pathGenGreedy()
-
-        # Check for deadlocks.
-        if robot_grid.didFail and ignore_failed is False:
-            return None
-
-    speed = speed or config["kaiju"]["speed"]
-    smooth_points = smooth_points or config["kaiju"]["smooth_points"]
-    collision_shrink = collision_shrink or config["kaiju"]["collision_shrink"]
-    path_delay = path_delay or config["kaiju"]["path_delay"]
-
-    to_destination, from_destination = robot_grid.getPathPair(
-        speed=speed,
-        smoothPoints=smooth_points,
-        collisionShrink=collision_shrink,
-        pathDelay=path_delay,
-    )
-
-    return to_destination, from_destination
-
-
-async def async_get_path_pair(robot_grid: RobotGridCalib, **kwargs):
-    """Calls `.get_path_pair` in an executor."""
-
-    return await run_in_executor(get_path_pair(robot_grid, **kwargs))
-
-
-def decollide_grid(robot_grid: RobotGridCalib, simple=False):
-    """Decollides a potentially collided grid. Raises on fail.
-
-    If ``simple=True``, just runs a ``decollideGrid()`` and returns silently.
-
-    """
-
-    def get_collided():
-        collided = [rid for rid in robot_grid.robotDict if robot_grid.isCollided(rid)]
-        if len(collided) == 0:
-            return False
-        else:
-            return collided
-
-    if simple:
-        robot_grid.decollideGrid()
-        if get_collided() is not False:
-            raise JaegerError("Failed decolliding grid.")
-        return
-
-    # First pass. If collided, decollide each robot one by one.
-    # TODO: Probably this should be done in order of less to more important targets
-    # to throw out the less critical ones first.
-    collided = get_collided()
-    if collided is not False:
-        warn("The grid is collided. Attempting one-by-one decollision.")
-        for robot_id in collided:
-            if robot_grid.isCollided(robot_id):
-                robot_grid.decollideRobot(robot_id)
-                if robot_grid.isCollided(robot_id):
-                    warn(f"Failed decolliding positioner {robot_id}.")
-                else:
-                    warn(f"Positioner {robot_id} was decollided.")
-
-    # Second pass. If still collided, try a grid decollision.
-    if get_collided() is not False:
-        warn("Grid is still colliding. Attempting full grid decollision.")
-        robot_grid.decollideGrid()
-        if get_collided() is not False:
-            raise JaegerError("Failed decolliding grid.")
-        else:
-            warn("The grid was decollided.")
-
-
-def unwind(
-    current_positions: dict[int, tuple[float, float]],
-    collision_buffer: float | None = None,
-    force: bool = False,
-):
-    """Folds all the robots to the lattice position."""
-
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
-
-    for robot in robot_grid.robotDict.values():
-        if robot.id not in current_positions:
-            raise ValueError(f"Positioner {robot.id} is not connected.")
-
-        robot_position = current_positions[robot.id]
-        robot.setAlphaBeta(robot_position[0], robot_position[1])
-
-    for robot in robot_grid.robotDict.values():
-        if robot_grid.isCollided(robot.id):
-            raise ValueError(f"Robot {robot.id} is kaiju-collided. Cannot unwind.")
-
-    paths = get_path_pair(robot_grid, ignore_failed=True)
-    if robot_grid.didFail:
-        if force is False:
-            raise TrajectoryError(
-                "Failed generating a valid trajectory. "
-                "This usually means a deadlock was found."
-            )
-        else:
-            log.warning("Deadlocks found in unwind but proceeding anyway.")
-
-    layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
-    if len(set(current_positions.keys()) - set(layout_pids)) > 0:
-        # Some connected positioners are not in the layout.
-        raise ValueError("Some connected positioners are not in the grid layout.")
-
-    assert paths is not None
-    to_destination, _ = paths
-
-    return to_destination
-
-
-def explode(
-    current_positions: dict[int, tuple[float, float]],
-    explode_deg=20.0,
-    collision_buffer: float | None = None,
-):
-    """Explodes the grid by a number of degrees."""
-
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
-
-    for robot in robot_grid.robotDict.values():
-        if robot.id not in current_positions:
-            raise ValueError(f"Positioner {robot.id} is not connected.")
-
-        robot_position = current_positions[robot.id]
-        robot.setAlphaBeta(robot_position[0], robot_position[1])
-
-    robot_grid.pathGenEscape(explode_deg)
-
-    layout_pids = [robot.id for robot in robot_grid.robotDict.values()]
-    if len(set(current_positions.keys()) - set(layout_pids)) > 0:
-        # Some connected positioners are not in the layout.
-        raise ValueError("Some connected positioners are not in the grid layout.")
-
-    paths = get_path_pair(robot_grid, skip_gen_path=True)
-    assert paths
-
-    to_destination, _ = paths
-
-    return to_destination
+__all__ = ["wok_to_positioner", "positioner_to_wok"]
 
 
 def wok_to_positioner(
@@ -364,28 +143,138 @@ def positioner_to_wok(
     return numpy.array(wok), numpy.array([tangent[0], tangent[1], 0])
 
 
-async def get_snapshot(
-    fps: FPS | None = None,
+async def create_random_configuration(
+    seed: int | None = None,
+    safe=True,
+    uniform: tuple[float, ...] | None = None,
     collision_buffer: float | None = None,
-    highlight: int | None = None,
-) -> Axes:
-    """Returns matplotlib axes with the current arrangement of the FPS array."""
+    max_deadlocks: int = 6,
+    deadlock_retries: int = 5,
+    **kwargs,
+):
+    """Creates a random configuration using Kaiju."""
 
-    fps = fps or FPS.get_instance()
-    if fps.initialised is False:
-        await fps.initialise()
+    from jaeger.target.configuration import ManualConfiguration
 
-    await fps.update_position()
+    seed = seed or numpy.random.randint(0, 1000000)
+    numpy.random.seed(seed)
 
-    # Create a robot grid and set the current positions.
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
+    robot_grid = get_robot_grid(seed=seed, collision_buffer=collision_buffer)
 
+    alphaL, betaL = config["kaiju"]["lattice_position"]
+
+    # We use Kaiju for convenience in the non-safe mode.
     for robot in robot_grid.robotDict.values():
-        if robot.id not in fps.positioners.keys():
-            raise ValueError(f"Positioner {robot.id} is not connected.")
 
-        robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
+        if uniform is not None:
+            alpha0, alpha1, beta0, beta1 = uniform
+            robot.setAlphaBeta(
+                numpy.random.uniform(alpha0, alpha1),
+                numpy.random.uniform(beta0, beta1),
+            )
 
-    ax: Axes = await run_in_executor(robot_grid.plot_state, highlightRobot=highlight)
+        else:
+            if safe:
+                safe_mode = config["safe_mode"]
+                if safe_mode is False:
+                    safe_mode = {"min_beta": 165, "max_beta": 195}
 
-    return ax
+                robot.setAlphaBeta(
+                    numpy.random.uniform(0, 359.9),
+                    numpy.random.uniform(
+                        safe_mode["min_beta"],
+                        safe_mode["max_beta"],
+                    ),
+                )
+
+            else:
+                robot.setXYUniform()
+
+        robot.setDestinationAlphaBeta(alphaL, betaL)
+
+    # Confirm that the configuration is valid. This should only matter
+    # for full range random configurations.
+    try:
+        robot_grid = await decollide_in_executor(robot_grid, simple=True)
+        grid_data = {
+            robot.id: (robot.alpha, robot.beta)
+            for robot in robot_grid.robotDict.values()
+        }
+    except JaegerError:
+        raise JaegerError("Decollision failed. Cannot create random configuration.")
+
+    _, _, did_fail, deadlocks = await get_path_pair_in_executor(robot_grid)
+
+    # If too many deadlocks, just try a new seed.
+    n_deadlock = len(deadlocks)
+    if did_fail and n_deadlock > max_deadlocks:
+        log.warning("Too many deadlocked robots. Trying new seed.")
+        return await create_random_configuration(
+            safe=safe,
+            uniform=uniform,
+            collision_buffer=collision_buffer,
+            deadlock_retries=deadlock_retries,
+        )
+
+    if did_fail and n_deadlock > 0:
+        # Now the fun part, if there are only a few deadlocks, try assigning them
+        # a random position.
+        log.warning(f"Found {n_deadlock} deadlocked robots. Trying to unlock.")
+        for nn in range(1, deadlock_retries + 1):
+            log.info(f"Retry {nn} out of {deadlock_retries}.")
+
+            to_replace_robot = numpy.random.choice(deadlocks)
+
+            robot_grid = get_robot_grid(
+                seed=seed + 1,
+                collision_buffer=collision_buffer,
+            )
+
+            for robot in robot_grid.robotDict.values():
+
+                if robot.id == to_replace_robot:
+                    robot.setXYUniform()
+                else:
+                    robot.setAlphaBeta(*grid_data[robot.id])
+
+            try:
+                robot_grid = await decollide_in_executor(robot_grid, simple=True)
+                grid_data = {
+                    robot.id: (robot.alpha, robot.beta)
+                    for robot in robot_grid.robotDict.values()
+                }
+            except JaegerError:
+                raise JaegerError(
+                    "Decollision failed. Cannot create random configuration."
+                )
+
+            _, _, did_fail, deadlocks = await get_path_pair_in_executor(robot_grid)
+            if did_fail is False:
+                log.info("Random configuration has been unlocked.")
+                break
+            else:
+                log.info(f"{len(deadlocks)} deadlocks remaining.")
+
+            if nn == deadlock_retries:
+                log.warning("Failed unlocking. Trying new seed.")
+                return await create_random_configuration(
+                    seed=seed + 1,
+                    safe=safe,
+                    uniform=uniform,
+                    collision_buffer=collision_buffer,
+                    deadlock_retries=deadlock_retries,
+                )
+
+    pT = calibration.positionerTable.copy().reset_index()
+
+    # Build an assignment dictionary.
+    data = {}
+    for pid in grid_data:
+        holeID = pT.loc[pT.positionerID == pid].holeID.values[0]
+        data[holeID] = {
+            "alpha": grid_data[pid][0],
+            "beta": grid_data[pid][1],
+            "fibre_type": "Metrology",
+        }
+
+    return ManualConfiguration(data, **kwargs)

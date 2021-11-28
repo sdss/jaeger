@@ -681,7 +681,7 @@ async def status(fps_maker: FPSWrapper, positioner_id: int):
 async def unwind(fps_maker, collision_buffer: float | None = None, force: bool = False):
     """Unwinds the array."""
 
-    from jaeger.target.tools import unwind
+    from jaeger.kaiju import unwind
 
     async with fps_maker as fps:
 
@@ -689,8 +689,7 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
         positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}
 
         log.info("Calculating trajectory.")
-        trajectory = await run_in_executor(
-            unwind,
+        trajectory = await unwind(
             positions,
             collision_buffer=collision_buffer,
             force=force,
@@ -709,7 +708,7 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
 async def explode(fps_maker, explode_deg: float):
     """Explodes the array."""
 
-    from jaeger.target.tools import explode
+    from jaeger.kaiju import explode
 
     async with fps_maker as fps:
 
@@ -717,11 +716,7 @@ async def explode(fps_maker, explode_deg: float):
         positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}
 
         log.info("Calculating trajectory.")
-        trajectory = await run_in_executor(
-            explode,
-            positions,
-            explode_deg=explode_deg,
-        )
+        trajectory = await explode(positions, explode_deg=explode_deg)
 
         log.info("Executing explode trajectory.")
         await fps.send_trajectory(trajectory)

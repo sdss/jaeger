@@ -34,15 +34,14 @@ from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 from jaeger import FPS, config
 from jaeger.exceptions import JaegerError, TrajectoryError
-
-from .tools import (
-    decollide_grid,
-    get_path_pair,
+from jaeger.kaiju import (
+    decollide_in_executor,
+    get_path_pair_in_executor,
     get_robot_grid,
-    positioner_to_wok,
     warn,
-    wok_to_positioner,
 )
+
+from .tools import positioner_to_wok, wok_to_positioner
 
 
 if TYPE_CHECKING:
@@ -158,7 +157,11 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
-    def get_trajectory(self, simple_decollision=False):
+    async def get_trajectory(
+        self,
+        decollide: bool = False,
+        simple_decollision: bool = False,
+    ):
         """Returns a trajectory dictionary from the folded position."""
 
         assert isinstance(self, BaseConfiguration)
@@ -170,7 +173,6 @@ class BaseConfiguration:
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         for robot in self.robot_grid.robotDict.values():
-            robot.setDestinationAlphaBeta(alpha0, beta0)
             if robot.id not in ftable.index.get_level_values(0):
                 raise JaegerError(f"Positioner {robot.id} is not assigned.")
 
@@ -178,6 +180,7 @@ class BaseConfiguration:
             rdata = ftable.loc[robot.id].iloc[0]
             if rdata.valid:
                 robot.setAlphaBeta(rdata.alpha, rdata.beta)
+                robot.setDestinationAlphaBeta(alpha0, beta0)
                 continue
             raise JaegerError(f"Positioner {robot.id} has no valid coordinates.")
 
@@ -187,16 +190,18 @@ class BaseConfiguration:
             ftable.loc[(r.id, "BOSS"), cols] = r.bossWokXYZ
             ftable.loc[(r.id, "Metrology"), cols] = r.metWokXYZ
 
-        decollide_grid(self.robot_grid, simple=simple_decollision)
+        if decollide:
+            # TODO: if this is run, the configuration will change and we don't know
+            # where positioners are placed.
+            await decollide_in_executor(self.robot_grid, simple=simple_decollision)
 
-        paths = get_path_pair(self.robot_grid)
-        if paths is None:
+        result = await get_path_pair_in_executor(self.robot_grid)
+        _, from_destination, did_fail, deadlocks = result
+        if did_fail:
             raise TrajectoryError(
                 "Failed generating a valid trajectory. "
-                "This usually means a deadlock was found."
+                f"{len(deadlocks)} deadlocks were found."
             )
-
-        from_destination = paths[1]
 
         return from_destination
 
@@ -561,77 +566,6 @@ class ManualConfiguration(BaseConfiguration):
             field_centre=field_centre,
             position_angle=position_angle,
         )
-
-    @classmethod
-    def create_random(
-        cls,
-        seed: int | None = None,
-        safe=True,
-        uniform: tuple[float, ...] | None = None,
-        collision_buffer: float | None = None,
-        **kwargs,
-    ):
-        """Creates a random configuration using Kaiju."""
-
-        seed = seed or numpy.random.randint(0, 1000000)
-        numpy.random.seed(seed)
-
-        robot_grid = get_robot_grid(seed=seed, collision_buffer=collision_buffer)
-
-        alphaL, betaL = config["kaiju"]["lattice_position"]
-
-        positionerIDs = []
-        alphas = []
-        betas = []
-
-        # We use Kaiju for convenience in the non-safe mode.
-        for robot in robot_grid.robotDict.values():
-            positionerIDs.append(robot.id)
-
-            if robot.isOffline:
-                alphas.append(robot.alpha)
-                betas.append(robot.beta)
-                continue
-
-            if uniform is not None:
-                alpha0, alpha1, beta0, beta1 = uniform
-                alphas.append(numpy.random.uniform(alpha0, alpha1))
-                betas.append(numpy.random.uniform(beta0, beta1))
-
-            else:
-                if safe:
-                    safe_mode = config["safe_mode"]
-                    if safe_mode is False:
-                        safe_mode = {"min_beta": 165, "max_beta": 195}
-
-                    alphas.append(numpy.random.uniform(0, 359.9))
-                    betas.append(
-                        numpy.random.uniform(
-                            safe_mode["min_beta"],
-                            safe_mode["max_beta"],
-                        )
-                    )
-
-                else:
-                    robot.setDestinationAlphaBeta(alphaL, betaL)
-                    robot.setXYUniform()
-                    alphas.append(robot.alpha)
-                    betas.append(robot.beta)
-
-        pT = calibration.positionerTable.copy().reset_index()
-        holeIDs = pT.loc[pT.positionerID.isin(positionerIDs)].holeID.tolist()
-
-        # Build an assignment dictionary.
-        data = {
-            holeIDs[i]: {
-                "alpha": alphas[i],
-                "beta": betas[i],
-                "fibre_type": "Metrology",
-            }
-            for i in range(len(holeIDs))
-        }
-
-        return cls(data, **kwargs)
 
     @classmethod
     def create_folded(cls, **kwargs):

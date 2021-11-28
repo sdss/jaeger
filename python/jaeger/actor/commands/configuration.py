@@ -15,9 +15,9 @@ import numpy
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.target.configuration import Configuration, ManualConfiguration
+from jaeger.target.configuration import Configuration
 from jaeger.target.design import Design
-from jaeger.utils import run_in_executor
+from jaeger.target.tools import create_random_configuration
 
 from . import jaeger_parser
 
@@ -135,7 +135,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
 
     command.info(text="Calculating trajectory.")
     try:
-        trajectory = await run_in_executor(fps.configuration.get_trajectory)
+        trajectory = await fps.configuration.get_trajectory()
     except Exception as err:
         return command.fail(error=f"Failed getting trajectory: {err}")
 
@@ -204,7 +204,7 @@ async def random(
     else:
         uniform_unpack = None
 
-    configuration = ManualConfiguration.create_random(
+    configuration = await create_random_configuration(
         seed=seed,
         uniform=uniform_unpack,
         safe=not danger,
@@ -212,10 +212,8 @@ async def random(
     )
 
     try:
-        trajectory = await run_in_executor(
-            configuration.get_trajectory,
-            simple_decollision=True,
-        )
+        command.info("Getting trajectory.")
+        trajectory = await configuration.get_trajectory(decollide=False)
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 

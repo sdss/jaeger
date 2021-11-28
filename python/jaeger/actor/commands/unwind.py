@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import click
 
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.target.tools import explode, unwind
+from jaeger.kaiju import explode, unwind
 from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
@@ -54,13 +54,12 @@ async def unwind_command(
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
 
     try:
-        trajectory = await run_in_executor(
-            unwind,
+        trajectory = await unwind(
             positions,
             collision_buffer=collision_buffer,
             force=force,
         )
-    except ValueError as err:
+    except (ValueError, TrajectoryError) as err:
         return command.fail(error=f"Failed calculating trajectory: {err}")
 
     command.info("Executing unwind trajectory.")
@@ -83,12 +82,8 @@ async def explode_command(command: Command[JaegerActor], fps: FPS, explode_deg: 
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
 
     try:
-        trajectory = await run_in_executor(
-            explode,
-            positions,
-            explode_deg=explode_deg,
-        )
-    except (JaegerError, ValueError) as err:
+        trajectory = await explode(positions, explode_deg=explode_deg)
+    except (JaegerError, ValueError, TrajectoryError) as err:
         return command.fail(error=f"Failed calculating trajectory: {err}")
 
     command.info("Executing explode trajectory.")
