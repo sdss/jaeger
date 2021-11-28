@@ -191,8 +191,6 @@ class Positioner(StatusMixIn):
 
         self.alpha, self.beta = position
 
-        self._log(f"at position ({self.alpha:.2f}, {self.beta:.2f})")
-
     async def update_status(
         self,
         status: maskbits.PositionerStatus | int = None,
