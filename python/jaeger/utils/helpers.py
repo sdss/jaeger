@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import enum
 import warnings
 from concurrent.futures import Executor
@@ -441,7 +442,7 @@ class AsyncioExecutor(Executor):
             self._thread.join()
 
 
-async def run_in_executor(fn, *args, catch_warnings=True, **kwargs):
+async def run_in_executor(fn, *args, catch_warnings=False, **kwargs):
     """Runs a function in an executor.
 
     In addition to streamlining the use of the executor, this function
@@ -465,7 +466,7 @@ async def run_in_executor(fn, *args, catch_warnings=True, **kwargs):
             warnings.warn(ww.message, ww.category)
 
     else:
-
-        result = await asyncio.get_event_loop().run_in_executor(None, fn)
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            result = await asyncio.get_running_loop().run_in_executor(pool, fn)
 
     return result
