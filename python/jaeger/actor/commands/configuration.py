@@ -158,7 +158,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
 
 @configuration.command()
 @click.argument("SEED", type=int, required=False)
-@click.option("--safe", is_flag=True, help="Limit beta to a safe range.")
+@click.option("--danger", is_flag=True, help="Use full range of alpha and beta.")
 @click.option(
     "--uniform",
     type=str,
@@ -174,14 +174,11 @@ async def random(
     command: Command[JaegerActor],
     fps: FPS,
     seed: int | None = None,
-    safe: bool = False,
+    danger: bool = False,
     uniform: str | None = None,
     collision_buffer: float | None = None,
 ):
     """Executes a random, valid configuration."""
-
-    if safe is True and uniform is not None:
-        return command.fail(error="--safe and --uniform are mutually exclusive.")
 
     command.debug(text="Checking that all positioners are folded.")
 
@@ -210,14 +207,18 @@ async def random(
     configuration = ManualConfiguration.create_random(
         seed=seed,
         uniform=uniform_unpack,
-        safe=safe,
+        safe=not danger,
         collision_buffer=collision_buffer,
     )
 
-    trajectory = await run_in_executor(
-        configuration.get_trajectory,
-        simple_decollision=True,
-    )
+    try:
+        trajectory = await run_in_executor(
+            configuration.get_trajectory,
+            simple_decollision=True,
+        )
+    except JaegerError as err:
+        return command.fail(error=f"jaeger random failed: {err}")
+
     command.info("Executing random trajectory.")
 
     # Make this the FPS configuration
