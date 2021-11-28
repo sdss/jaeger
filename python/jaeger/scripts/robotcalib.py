@@ -188,6 +188,48 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
         except FVCError as e:
             print("exposure failed with FVCError, continuing")
 
+async def unwind(fps, speed, collisionBuffer):
+    _seed = 0  # unimportant for unwind
+    rg = getRandomGrid(
+        seed=_seed, collisionBuffer=collisionBuffer)
+
+    # set the robot grid to the current jaeger positions
+    await setKaijuCurrent(fps, rg)
+    if rg.getNCollisions() > 0:
+        print("refuse to unwind, grid is kaiju collided!")
+        return False
+
+    # generate the path to fold
+    tstart = time.time()
+    rg.pathGenGreedy()
+    print("unwind path generation took %.1f seconds" % (time.time() - tstart))
+
+    # verify that the path generation was successful if not exit
+    if rg.didFail:
+        print("failed to unwind grid. deadlock in path generation")
+        return False
+
+    # smooth the paths
+    toDestination, fromDestination = rg.getPathPair(
+        speed=speed,
+        smoothPoints=SMOOTH_PTS,
+        collisionShrink=COLLISION_SHRINK,
+        pathDelay=PATH_DELAY,
+    )
+
+    # check for collisions in path smoothing
+    if rg.smoothCollisions:
+        print("failed to unwind grid. collision in path smoothing")
+        return False
+
+    # command the path from the initial state (set by jaeger)
+    # to the destination state (folded)
+    tstart = time.time()
+    print("sending unwind trajectory")
+    await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
+    print("unwind finished, took %.1f seconds" % (time.time() - tstart))
+    return True
+
 
 @click.command()
 @click.option(
@@ -302,7 +344,6 @@ async def robotcalib(
         from jaeger import config, log
         from jaeger.exceptions import FVCError, TrajectoryError
         from jaeger.fvc import FVC
-
         log.sh.setLevel(20)
 
         fvc = FVC(config["observatory"])
@@ -310,49 +351,18 @@ async def robotcalib(
         await fps.initialise()
 
         ######## UNWIND GRID #############
-        rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
 
-        # set the robot grid to the current jaeger positions
-        await setKaijuCurrent(fps, rg)
-
-        # generate the path to fold
-        tstart = time.time()
-        if mdp:
-            rg.pathGenMDP(GREED, PHOBIA)
-        else:
-            rg.pathGenGreedy()
-
-        print("unwind path generation took %.1f seconds" % (time.time() - tstart))
-
-        # verify that the path generation was successful if not exit
-        if rg.didFail:
-            print("failed to unwind grid. deadlock in path generation")
-            return
-
-        # smooth the paths
-        toDestination, fromDestination = rg.getPathPair(
-            speed=speed,
-            smoothPoints=SMOOTH_PTS,
-            collisionShrink=COLLISION_SHRINK,
-            pathDelay=PATH_DELAY,
-        )
-
-        # check for collisions in path smoothing
-        if rg.smoothCollisions:
-            print("failed to unwind grid. collision in path smoothing")
-            return
-
-        # command the path from the initial state (set by jaeger)
-        # to the destination state (folded)
-        tstart = time.time()
-        print("sending unwind trajectory")
-        await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
-        print("unwind finished, took %.1f seconds" % (time.time() - tstart))
-
+        sucess = await unwind(fps, speed, cb)
+        if not success:
+            return # unwind failed
         ########### UNWIND FINISHED ##############
 
     ########### BEGIN CALIBRATION LOOP #######
     movesExecuted = 0
+    nErrorsForward = 0
+    badRobotForward = []
+    nErrorsReverse = 0
+    badRobotReverse = []
     for ii in range(niter):
         seed += 1
         print(
@@ -462,10 +472,24 @@ async def robotcalib(
                 await fps.send_trajectory(fromDestination, use_sync_line=USE_SYNC_LINE)
                 print("move complete, duration %.1f" % (time.time() - tstart))
             except TrajectoryError as e:
+                nErrorsForward += 1
+                badRobotForward.append(e.trajectory.failed_positioners)
                 print("TRAJECTORY ERROR moving fold-->target")
                 print("failed positioners: ", str(e.trajectory.failed_positioners))
-                print("moves executed", movesExecuted)
-                return
+                print("attempting to recover from trajectory error with unwind")
+                # shrink collision buffer
+                _cbShrink = cb - 0.1
+                sucess = await unwind(fps, speed, cbShrink)
+                if success:
+                    # unwind worked move to next iteration
+                    continue
+                else:
+                    print("moves executed", movesExecuted)
+                    print("number of traj errors forward", nErrorsForward)
+                    print("forward err robots", badRobotForward)
+                    print("number of traj errors reverse", nErrorsReverse)
+                    print("forward err robots", badRobotReverse)
+                    return  # exit routine
 
         else:
             print("not moving array --nomove flag passed")
@@ -529,12 +553,31 @@ async def robotcalib(
                 await fps.send_trajectory(toDestination, use_sync_line=USE_SYNC_LINE)
                 print("move complete, duration %.1f" % (time.time() - tstart))
             except TrajectoryError as e:
+                nErrorsReverse += 1
+                badRobotReverse.append(e.trajectory.failed_positioners)
                 print("TRAJECTORY ERROR moving target-->fold")
                 print("failed positioners: ", str(e.trajectory.failed_positioners))
-                print("moves executed", movesExecuted)
-                return
+                print("attempting to recover from trajectory error with unwind")
+                # shrink collision buffer
+                _cbShrink = cb - 0.1
+                sucess = await unwind(fps, speed, cbShrink)
+                if success:
+                    # unwind worked move to next iteration
+                    continue
+                else:
+                    print("moves executed", movesExecuted)
+                    print("number of traj errors forward", nErrorsForward)
+                    print("forward err robots", badRobotForward)
+                    print("number of traj errors reverse", nErrorsReverse)
+                    print("forward err robots", badRobotReverse)
+                    return  # exit routine
 
-    print("\n-------\nend script: total moves executed: %i\n-------\n" % movesExecuted)
+    print("\n-------\nend script\n-------\n")
+    print("moves executed", movesExecuted)
+    print("number of traj errors forward", nErrorsForward)
+    print("forward err robots", badRobotForward)
+    print("number of traj errors reverse", nErrorsReverse)
+    print("forward err robots", badRobotReverse)
 
 
 if __name__ == "__main__":
