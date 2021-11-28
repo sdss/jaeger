@@ -173,6 +173,7 @@ async def ledOff(fps, devName):
 
 
 async def exposeFVC(fvc, exptime, fibre_data, nexp):
+    from jaeger.exceptions import FVCError
     for ii in range(nexp):
         try:
             print("exposing FVC %i of %i" % (ii + 1, nexp))
