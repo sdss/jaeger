@@ -32,7 +32,6 @@ from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.fps import FPS, LOCK_FILE
 from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
-from jaeger.utils import run_in_executor
 
 
 __FPS__ = None

@@ -14,7 +14,6 @@ import click
 
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import explode, unwind
-from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
 
