@@ -246,7 +246,7 @@ def explode(
     paths = get_path_pair(robot_grid, skip_gen_path=True)
     assert paths
 
-    to_destination, _ = paths[0]
+    to_destination, _ = paths
 
     return to_destination
 
