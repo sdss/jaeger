@@ -174,6 +174,7 @@ async def ledOff(fps, devName):
 
 async def exposeFVC(fvc, exptime, fibre_data, nexp):
     from jaeger.exceptions import FVCError
+
     for ii in range(nexp):
         try:
             print("exposing FVC %i of %i" % (ii + 1, nexp))
@@ -189,10 +190,10 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
         except FVCError as e:
             print("exposure failed with FVCError, continuing")
 
+
 async def unwind(fps, speed, collisionBuffer):
     _seed = 0  # unimportant for unwind
-    rg = getRandomGrid(
-        seed=_seed, collisionBuffer=collisionBuffer)
+    rg = getRandomGrid(seed=_seed, collisionBuffer=collisionBuffer)
 
     # set the robot grid to the current jaeger positions
     await setKaijuCurrent(fps, rg)
@@ -345,6 +346,7 @@ async def robotcalib(
         from jaeger import config, log
         from jaeger.exceptions import FVCError, TrajectoryError
         from jaeger.fvc import FVC
+
         log.sh.setLevel(20)
 
         fvc = FVC(config["observatory"])
@@ -354,9 +356,9 @@ async def robotcalib(
 
         ######## UNWIND GRID #############
 
-        success = await unwind(fps, speed, cb-0.1)
+        success = await unwind(fps, speed, cb - 0.1)
         if not success:
-            return # unwind failed
+            return  # unwind failed
         ########### UNWIND FINISHED ##############
 
     ########### BEGIN CALIBRATION LOOP #######
