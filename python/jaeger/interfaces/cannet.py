@@ -9,9 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-import warnings
-
-from jaeger.exceptions import JaegerUserWarning
 
 from .bus import BusABC
 from .message import Message
