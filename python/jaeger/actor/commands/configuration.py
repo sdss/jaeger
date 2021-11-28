@@ -125,13 +125,13 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None or fps.configuration.ingested is False:
         return command.fail(error="A configuration must first be loaded.")
 
-    positions = fps.get_positions(ignore_disabled=True)
-    if len(positions) == 0:
-        return command.fail("No positioners found.")
+    # positions = fps.get_positions(ignore_disabled=True)
+    # if len(positions) == 0:
+    #     return command.fail("No positioners found.")
 
-    # Check that all non-disabled positioners are folded.
-    if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
-        return command.fail(error="Not all the positioners are folded.")
+    # # Check that all non-disabled positioners are folded.
+    # if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
+    #     return command.fail(error="Not all the positioners are folded.")
 
     command.info(text="Calculating trajectory.")
     try:
@@ -213,10 +213,7 @@ async def random(
     )
 
     try:
-        trajectory = await run_in_executor(
-            configuration.get_trajectory,
-            decollide=False,
-        )
+        trajectory = await configuration.get_trajectory(decollide=False)
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 

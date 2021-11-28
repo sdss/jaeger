@@ -158,7 +158,11 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
-    def get_trajectory(self, decollide: bool = False, simple_decollision: bool = False):
+    async def get_trajectory(
+        self,
+        decollide: bool = False,
+        simple_decollision: bool = False,
+    ):
         """Returns a trajectory dictionary from the folded position."""
 
         assert isinstance(self, BaseConfiguration)
