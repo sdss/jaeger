@@ -349,6 +349,7 @@ async def robotcalib(
         fvc = FVC(config["observatory"])
         fps = fvc.fps
         await fps.initialise()
+        await fps.unlock()
 
         ######## UNWIND GRID #############
 
