@@ -15,7 +15,7 @@ import numpy
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.target.configuration import Configuration
+from jaeger.target.configuration import Configuration, ManualConfiguration
 from jaeger.target.design import Design
 from jaeger.target.tools import create_random_configuration
 
