@@ -354,7 +354,7 @@ async def robotcalib(
 
         ######## UNWIND GRID #############
 
-        success = await unwind(fps, speed, cb)
+        success = await unwind(fps, speed, cb-0.1)
         if not success:
             return # unwind failed
         ########### UNWIND FINISHED ##############
