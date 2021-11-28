@@ -791,7 +791,7 @@ class FPS(BaseFPS["FPS"]):
         # Send STOP_TRAJECTORY. This clears the collided flags.
         await self.stop_trajectory(clear_flags=True)
 
-        await self.update_status(timeout=0.1)
+        await self.update_status(timeout=2)
 
         for positioner in self.positioners.values():
             if positioner.collision:
