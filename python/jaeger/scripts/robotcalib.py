@@ -352,7 +352,7 @@ async def robotcalib(
 
         ######## UNWIND GRID #############
 
-        sucess = await unwind(fps, speed, cb)
+        success = await unwind(fps, speed, cb)
         if not success:
             return # unwind failed
         ########### UNWIND FINISHED ##############
@@ -479,9 +479,9 @@ async def robotcalib(
                 print("attempting to recover from trajectory error with unwind")
                 # shrink collision buffer
                 _cbShrink = cb - 0.1
-                sucess = await unwind(fps, speed, cbShrink)
+                success = await unwind(fps, speed, cbShrink)
                 if success:
-                    # unwind worked move to next iteration
+                    print("unwind worked skipping to next iteration")
                     continue
                 else:
                     print("moves executed", movesExecuted)
@@ -560,9 +560,10 @@ async def robotcalib(
                 print("attempting to recover from trajectory error with unwind")
                 # shrink collision buffer
                 _cbShrink = cb - 0.1
-                sucess = await unwind(fps, speed, cbShrink)
+                success = await unwind(fps, speed, cbShrink)
                 if success:
                     # unwind worked move to next iteration
+                    print("unwind worked skipping to next iteration")
                     continue
                 else:
                     print("moves executed", movesExecuted)
