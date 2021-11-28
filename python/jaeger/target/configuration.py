@@ -199,7 +199,8 @@ class BaseConfiguration:
         _, from_destination, did_fail, deadlocks = result
         if did_fail:
             raise TrajectoryError(
-                f"Failed generating a valid trajectory. {len(deadlocks)} were found."
+                "Failed generating a valid trajectory. "
+                f"{len(deadlocks)} deadlocks were found."
             )
 
         return from_destination

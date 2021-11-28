@@ -30,6 +30,10 @@ __all__ = [
     "decollide",
     "get_path_pair",
     "get_snapshot",
+    "unwind",
+    "explode",
+    "get_path_pair_in_executor",
+    "decollide_in_executor",
 ]
 
 
@@ -71,18 +75,18 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     # for when I dump and reload robot grids.
     robot_grid.collisionBuffer = collision_buffer
 
-    # if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
-    #     raise JaegerError("Mismatch between connected positioners and robot grid.")
+    if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
+        raise JaegerError("Mismatch between connected positioners and robot grid.")
 
     for robot in robot_grid.robotDict.values():
-        #     if fps is not None:
-        #         positioner = fps[robot.id]
-        #         if positioner.disabled:
-        #             log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
-        #             robot.setAlphaBeta(positioner.alpha, positioner.beta)
-        #             robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
-        #             robot.isOffline = True
-        #             continue
+        if fps is not None:
+            positioner = fps[robot.id]
+            if positioner.disabled:
+                log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
+                robot.setAlphaBeta(positioner.alpha, positioner.beta)
+                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+                robot.isOffline = True
+                continue
 
         robot.setDestinationAlphaBeta(alpha0, beta0)
 
@@ -108,7 +112,7 @@ def dump_robot_grid(robot_grid: RobotGridCalib) -> dict:
     return data
 
 
-def load_robot_grid(data: dict) -> RobotGridCalib:
+def load_robot_grid(data: dict, set_destination: bool = True) -> RobotGridCalib:
     """Restores a robot grid from a dump."""
 
     collision_buffer = data["collision_buffer"]
@@ -117,7 +121,8 @@ def load_robot_grid(data: dict) -> RobotGridCalib:
     for robot in robot_grid.robotDict.values():
         data_robot = data["grid"][robot.id]
         robot.setAlphaBeta(data_robot[0], data_robot[1])
-        robot.setDestinationAlphaBeta(data_robot[2], data_robot[3])
+        if set_destination:
+            robot.setDestinationAlphaBeta(data_robot[2], data_robot[3])
 
     return robot_grid
 
@@ -247,18 +252,21 @@ def get_path_pair(
         raise JaegerError("robot_grid and data are mutually exclusive.")
 
     if data is not None:
-        robot_grid = load_robot_grid(data)
+        set_destination = False if path_generation_mode == "escape" else True
+        robot_grid = load_robot_grid(data, set_destination=set_destination)
 
     assert robot_grid is not None
 
     if path_generation_mode == "escape":
         robot_grid.pathGenEscape(escape_deg)
+        n_deadlocks = 0
     else:
         robot_grid.pathGenGreedy()
 
-    # Check for deadlocks.
-    if robot_grid.didFail and ignore_did_fail is False:
-        return (None, None, robot_grid.didFail, robot_grid.deadlockedRobots())
+        # Check for deadlocks.
+        n_deadlocks = robot_grid.deadlockedRobots()
+        if robot_grid.didFail and ignore_did_fail is False:
+            return (None, None, robot_grid.didFail, n_deadlocks)
 
     speed = speed or config["kaiju"]["speed"]
     smooth_points = smooth_points or config["kaiju"]["smooth_points"]
@@ -276,7 +284,7 @@ def get_path_pair(
         to_destination,
         from_destination,
         robot_grid.didFail,
-        robot_grid.deadlockedRobots(),
+        n_deadlocks,
     )
 
 
@@ -309,7 +317,7 @@ async def decollide_in_executor(robot_grid: RobotGridCalib, **kwargs) -> RobotGr
 
 
 async def unwind(
-    current_positions: dict[int, tuple[float, float]],
+    current_positions: dict[int, tuple[float | None, float | None]],
     collision_buffer: float | None = None,
     force: bool = False,
 ):
@@ -330,13 +338,14 @@ async def unwind(
     (to_destination, _, did_fail, deadlocks) = await run_in_executor(
         get_path_pair,
         data=data,
-        ignore_did_fail=True,
+        ignore_did_fail=force,
         executor="process",
     )
     if did_fail:
         if force is False:
             raise TrajectoryError(
-                f"Failed generating a valid trajectory. {len(deadlocks)} were found."
+                "Failed generating a valid unwind trajectory. "
+                f"{len(deadlocks)} deadlocks were found."
             )
         else:
             log.warning("Deadlocks found in unwind but proceeding anyway.")
@@ -345,7 +354,7 @@ async def unwind(
 
 
 async def explode(
-    current_positions: dict[int, tuple[float, float]],
+    current_positions: dict[int, tuple[float | None, float | None]],
     explode_deg=20.0,
     collision_buffer: float | None = None,
 ):
@@ -361,18 +370,14 @@ async def explode(
     for pid, (alpha, beta) in current_positions.items():
         data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
 
-    (to_destination, _, did_fail, deadlocks) = await run_in_executor(
+    (to_destination, *_) = await run_in_executor(
         get_path_pair,
         data=data,
         path_generation_mode="escape",
         escape_deg=explode_deg,
-        ignore_did_fail=True,
+        ignore_did_fail=False,
         executor="process",
     )
-    if did_fail:
-        raise TrajectoryError(
-            f"Failed generating a valid trajectory. {len(deadlocks)} were found."
-        )
 
     return to_destination
 
@@ -399,6 +404,11 @@ async def get_snapshot(
 
         robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
 
-    ax: Axes = await run_in_executor(robot_grid.plot_state, highlightRobot=highlight)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".+array interface is deprecated.+")
+        ax: Axes = await run_in_executor(
+            robot_grid.plot_state,
+            highlightRobot=highlight,
+        )
 
     return ax
