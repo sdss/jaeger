@@ -574,6 +574,14 @@ class FVC:
         beta_corr = beta_new.loc[beta_oor] - offsets.loc[beta_oor, "beta_reported"]
         offsets.loc[beta_oor, "beta_offset_corrected"] = beta_corr
 
+        # Final check. If alpha/beta_new are NaNs, replace with reported values.
+        alpha_new[numpy.isnan(alpha_new)] = offsets.loc[
+            numpy.isnan(alpha_new), "alpha_reported"
+        ]
+        beta_new[numpy.isnan(beta_new)] = offsets.loc[
+            numpy.isnan(beta_new), "beta_reported"
+        ]
+
         # Save new positions.
         offsets["alpha_new"] = alpha_new
         offsets["beta_new"] = beta_new
@@ -755,11 +763,13 @@ class FVC:
             raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
 
         # Generate trajectories.
-        (to_destination, _, did_fail, _) = await get_path_pair_in_executor(grid)
+        (to_destination, _, did_fail, deadlocks) = await get_path_pair_in_executor(
+            grid,
+            ignore_did_fail=True,
+        )
         if did_fail:
-            raise FVCError(
-                "Failed generating a valid trajectory. "
-                "This usually means a deadlock was found."
+            log.warning(
+                f"Found {len(deadlocks)} deadlocks but applying correction anyway."
             )
 
         self.log("Sending correction trajectory.")
