@@ -31,7 +31,7 @@ from jaeger import config, log
 from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
-from jaeger.target.tools import get_robot_grid, wok_to_positioner
+from jaeger.target.tools import async_get_path_pair, get_robot_grid, wok_to_positioner
 from jaeger.utils import run_in_executor
 
 
@@ -754,17 +754,14 @@ class FVC:
             raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
 
         # Generate trajectories.
-        await run_in_executor(grid.pathGenGreedy)
-
-        # Check for deadlocks.
-        if grid.didFail:
+        paths = await async_get_path_pair(grid)
+        if paths is None:
             raise FVCError(
                 "Failed generating a valid trajectory. "
                 "This usually means a deadlock was found."
             )
 
-        speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        to_destination, _ = await run_in_executor(grid.getPathPair, speed=speed)
+        to_destination = paths[0]
 
         self.log("Sending correction trajectory.")
         try:

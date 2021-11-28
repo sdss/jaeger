@@ -37,6 +37,7 @@ from jaeger.exceptions import JaegerError, TrajectoryError
 
 from .tools import (
     decollide_grid,
+    get_path_pair,
     get_robot_grid,
     positioner_to_wok,
     warn,
@@ -187,16 +188,15 @@ class BaseConfiguration:
             ftable.loc[(r.id, "Metrology"), cols] = r.metWokXYZ
 
         decollide_grid(self.robot_grid, simple=simple_decollision)
-        self.robot_grid.pathGenGreedy()
 
-        if self.robot_grid.didFail:
+        paths = get_path_pair(self.robot_grid)
+        if paths is None:
             raise TrajectoryError(
                 "Failed generating a valid trajectory. "
                 "This usually means a deadlock was found."
             )
 
-        speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-        _, from_destination = self.robot_grid.getPathPair(speed=speed)
+        from_destination = paths[1]
 
         return from_destination
 

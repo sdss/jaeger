@@ -70,7 +70,7 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     ang_step = kaiju_config["ang_step"]
     collision_buffer = collision_buffer or kaiju_config["collision_buffer"]
     alpha0, beta0 = kaiju_config["lattice_position"]
-    epsilon = ang_step * 2
+    epsilon = ang_step * kaiju_config["epsilon_factor"]
 
     if collision_buffer < 1.5:
         raise JaegerError("Invalid collision buffer < 1.5.")
@@ -94,6 +94,45 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
         robot.setDestinationAlphaBeta(alpha0, beta0)
 
     return robot_grid
+
+
+def get_path_pair(
+    robot_grid: RobotGridCalib,
+    speed=None,
+    smooth_points=None,
+    path_delay=None,
+    collision_shrink=None,
+    ignore_failed=False,
+    skip_gen_path=False,
+) -> tuple | None:
+    """Runs ``pathGenGreedy`` and returns the to and from destination paths."""
+
+    if skip_gen_path is False:
+        robot_grid.pathGenGreedy()
+
+        # Check for deadlocks.
+        if robot_grid.didFail and ignore_failed is False:
+            return None
+
+    speed = speed or config["kaiju"]["speed"]
+    smooth_points = smooth_points or config["kaiju"]["smooth_points"]
+    collision_shrink = collision_shrink or config["kaiju"]["collision_shrink"]
+    path_delay = path_delay or config["kaiju"]["path_delay"]
+
+    to_destination, from_destination = robot_grid.getPathPair(
+        speed=speed,
+        smoothPoints=smooth_points,
+        collisionShrink=collision_shrink,
+        pathDelay=path_delay,
+    )
+
+    return to_destination, from_destination
+
+
+async def async_get_path_pair(robot_grid: RobotGridCalib, **kwargs):
+    """Calls `.get_path_pair` in an executor."""
+
+    return await run_in_executor(get_path_pair(robot_grid, **kwargs))
 
 
 def decollide_grid(robot_grid: RobotGridCalib, simple=False):
@@ -160,7 +199,7 @@ def unwind(
         if robot_grid.isCollided(robot.id):
             raise ValueError(f"Robot {robot.id} is kaiju-collided. Cannot unwind.")
 
-    robot_grid.pathGenGreedy()
+    paths = get_path_pair(robot_grid, ignore_failed=True)
     if robot_grid.didFail:
         if force is False:
             raise TrajectoryError(
@@ -175,9 +214,8 @@ def unwind(
         # Some connected positioners are not in the layout.
         raise ValueError("Some connected positioners are not in the grid layout.")
 
-    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
-
-    to_destination, _ = robot_grid.getPathPair(speed=speed)
+    assert paths is not None
+    to_destination, _ = paths
 
     return to_destination
 
@@ -205,9 +243,10 @@ def explode(
         # Some connected positioners are not in the layout.
         raise ValueError("Some connected positioners are not in the grid layout.")
 
-    speed = config["positioner"]["motor_speed"] / config["positioner"]["gear_ratio"]
+    paths = get_path_pair(robot_grid, skip_gen_path=True)
+    assert paths
 
-    to_destination, _ = robot_grid.getPathPair(speed=speed)
+    to_destination, _ = paths[0]
 
     return to_destination
 

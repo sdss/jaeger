@@ -63,8 +63,13 @@ positioner:
     firmware_messages_per_positioner: 8
 
 kaiju:
+    speed: 2
     ang_step: 0.1
-    collision_buffer: 2.4
+    collision_buffer: 2.1
+    smooth_points: 5
+    collision_shrink: 0.08
+    path_delay: 1
+    epsilon_factor: 2
     lattice_position: [10., 170.]
 
 fvc:
