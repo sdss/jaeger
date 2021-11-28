@@ -121,6 +121,7 @@ class FVC:
     async def expose(
         self,
         exposure_time: float = 5.0,
+        stack: int = 1,
         use_tron_fallback=True,
     ) -> pathlib.Path:  # pragma: no cover
         """Takes an exposure with the FVC and blocks until the exposure is complete.
@@ -141,7 +142,11 @@ class FVC:
         self.log(f"Taking {exposure_time} seconds FVC exposure.", to_command=False)
 
         tron = None
-        cmd_str = f"talk -c fvc expose {exposure_time}"
+
+        if stack <= 1:
+            cmd_str = f"talk -c fvc expose {exposure_time}"
+        else:
+            cmd_str = f"talk -c fvc expose --stack {stack} {exposure_time}"
 
         if self.command:
             expose_command = self.command.send_command("fliswarm", cmd_str)
@@ -430,7 +435,7 @@ class FVC:
 
         """
 
-        self.log("Calculating offset from FVC image and fit.", level=logging.DEBUG)
+        self.log("Calculating offset from FVC image and fit.")
 
         site = config["observatory"]
         self.k = k or config["fvc"]["k"]
@@ -733,6 +738,8 @@ class FVC:
         offsets: Optional[pandas.DataFrame] = None,
     ):  # pragma: no cover
         """Applies the offsets. Fails if the trajectory is collided or deadlock."""
+
+        self.log("Preparing correction trajectory.")
 
         if self.offsets is None and offsets is None:
             raise FVCError("Offsets not set or passed. Cannot apply correction.")

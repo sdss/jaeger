@@ -72,6 +72,8 @@ async def expose(
 @click.option("--exposure-time", type=float, help="Exposure time.")
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
+@click.option("--max-iterations", type=int, help="Maximum number of iterations.")
+@click.option("--stack", type=int, default=1, help="Number of FVC image to stack.")
 @click.option("--plot/--no-plot", default=True, help="Generate and save plots.")
 @click.option("--apply/--no-apply", default=True, help="Apply corrections.")
 @cancellable()
@@ -81,6 +83,8 @@ async def loop(
     exposure_time: float | None = None,
     fbi_level: float = 1.0,
     one: bool = False,
+    max_iterations: int | None = None,
+    stack: int = 3,
     plot: bool = True,
     apply: bool = True,
 ):
@@ -104,6 +108,7 @@ async def loop(
     await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
     await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
 
+    max_iterations = max_iterations or config["fvc"]["max_fvc_iterations"]
     current_rms = None
     delta_rms = None
 
@@ -115,7 +120,7 @@ async def loop(
 
             # 1. Expose the FVC
             command.debug("Taking exposure with fliswarm.")
-            filename = await fvc.expose(exposure_time=exposure_time)
+            filename = await fvc.expose(exposure_time=exposure_time, stack=stack)
             command.debug(fvc_filename=str(filename))
 
             # 2. Process the new image.
@@ -162,7 +167,7 @@ async def loop(
                 command.warning("Cancelling FVC loop after one iteration.")
                 return command.finish()
 
-            if n == config["fvc"]["max_fvc_iterations"]:
+            if n == max_iterations:
                 command.warning("Maximum number of iterations reached.")
                 return command.finish("Finishing FVC loop.")
 
