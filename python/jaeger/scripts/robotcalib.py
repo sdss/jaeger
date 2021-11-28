@@ -479,16 +479,17 @@ async def robotcalib(
                 print("attempting to recover from trajectory error with unwind")
                 # shrink collision buffer
                 _cbShrink = cb - 0.1
-                success = await unwind(fps, speed, cbShrink)
+                await fps.unlock()
+                success = await unwind(fps, speed, _cbShrink)
                 if success:
                     print("unwind worked skipping to next iteration")
                     continue
                 else:
                     print("moves executed", movesExecuted)
-                    print("number of traj errors forward", nErrorsForward)
-                    print("forward err robots", badRobotForward)
-                    print("number of traj errors reverse", nErrorsReverse)
-                    print("forward err robots", badRobotReverse)
+                    print("number of traj errors fold-->target", nErrorsForward)
+                    print("err robots fold-->target", badRobotForward)
+                    print("number of traj errors target-->fold", nErrorsReverse)
+                    print("err robots target-->fold", badRobotReverse)
                     return  # exit routine
 
         else:
@@ -560,25 +561,26 @@ async def robotcalib(
                 print("attempting to recover from trajectory error with unwind")
                 # shrink collision buffer
                 _cbShrink = cb - 0.1
-                success = await unwind(fps, speed, cbShrink)
+                await fps.unlock()
+                success = await unwind(fps, speed, _cbShrink)
                 if success:
                     # unwind worked move to next iteration
                     print("unwind worked skipping to next iteration")
                     continue
                 else:
                     print("moves executed", movesExecuted)
-                    print("number of traj errors forward", nErrorsForward)
-                    print("forward err robots", badRobotForward)
-                    print("number of traj errors reverse", nErrorsReverse)
-                    print("forward err robots", badRobotReverse)
+                    print("number of traj errors fold-->target", nErrorsForward)
+                    print("err robots fold-->target", badRobotForward)
+                    print("number of traj errors target-->fold", nErrorsReverse)
+                    print("err robots target-->fold", badRobotReverse)
                     return  # exit routine
 
     print("\n-------\nend script\n-------\n")
     print("moves executed", movesExecuted)
-    print("number of traj errors forward", nErrorsForward)
-    print("forward err robots", badRobotForward)
-    print("number of traj errors reverse", nErrorsReverse)
-    print("forward err robots", badRobotReverse)
+    print("number of traj errors fold-->target", nErrorsForward)
+    print("err robots fold-->target", badRobotForward)
+    print("number of traj errors target-->fold", nErrorsReverse)
+    print("err robots target-->fold", badRobotReverse)
 
 
 if __name__ == "__main__":
