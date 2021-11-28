@@ -32,7 +32,7 @@ from coordio import (
 from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
-from jaeger import FPS, config
+from jaeger import FPS, config, log
 from jaeger.exceptions import JaegerError, TrajectoryError
 
 from .tools import (
@@ -158,7 +158,7 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
-    def get_trajectory(self, simple_decollision=False):
+    def get_trajectory(self, decollide: bool = True, simple_decollision: bool = False):
         """Returns a trajectory dictionary from the folded position."""
 
         assert isinstance(self, BaseConfiguration)
@@ -170,14 +170,16 @@ class BaseConfiguration:
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         for robot in self.robot_grid.robotDict.values():
-            robot.setDestinationAlphaBeta(alpha0, beta0)
             if robot.id not in ftable.index.get_level_values(0):
                 raise JaegerError(f"Positioner {robot.id} is not assigned.")
 
             # Get the first of the three fibres since all have the same alpha, beta.
             rdata = ftable.loc[robot.id].iloc[0]
+            print(robot.id, rdata.hole_id, rdata.alpha, rdata.beta)
             if rdata.valid:
                 robot.setAlphaBeta(rdata.alpha, rdata.beta)
+                robot.setDestinationAlphaBeta(alpha0, beta0)
+                print(rdata.alpha, rdata.beta)
                 continue
             raise JaegerError(f"Positioner {robot.id} has no valid coordinates.")
 
@@ -187,10 +189,14 @@ class BaseConfiguration:
             ftable.loc[(r.id, "BOSS"), cols] = r.bossWokXYZ
             ftable.loc[(r.id, "Metrology"), cols] = r.metWokXYZ
 
-        decollide_grid(self.robot_grid, simple=simple_decollision)
-
+        self.robot_grid.plot_state(returnax=False, figname="test1.pdf")
+        print(self.robot_grid.getNCollisions())
+        if decollide:
+            decollide_grid(self.robot_grid, simple=simple_decollision)
+        print(self.robot_grid.getNCollisions())
         paths = get_path_pair(self.robot_grid)
         if paths is None:
+            print(self.robot_grid.deadlockedRobots())
             raise TrajectoryError(
                 "Failed generating a valid trajectory. "
                 "This usually means a deadlock was found."
@@ -569,6 +575,8 @@ class ManualConfiguration(BaseConfiguration):
         safe=True,
         uniform: tuple[float, ...] | None = None,
         collision_buffer: float | None = None,
+        max_deadlocks: int = 6,
+        deadlock_retries: int = 5,
         **kwargs,
     ):
         """Creates a random configuration using Kaiju."""
@@ -618,6 +626,85 @@ class ManualConfiguration(BaseConfiguration):
                     alphas.append(robot.alpha)
                     betas.append(robot.beta)
 
+        # Confirm that the configuration is valid. This should only matter
+        # for full range random configurations.
+        try:
+            decollide_grid(robot_grid, simple=True)
+            robot_grid.pathGenGreedy()
+        except JaegerError:
+            # This means that it's not possible to decollide the grid (regardless
+            # of deadlocks.)
+            raise JaegerError("Cannot decollide grid.")
+
+        # If too many deadlocks, just try a new seed.
+        n_deadlock = len(robot_grid.deadlockedRobots())
+        if n_deadlock > max_deadlocks:
+            log.warning("Too many deadlocked robots. Trying new seed.")
+            return cls.create_random(
+                safe=safe,
+                uniform=uniform,
+                collision_buffer=collision_buffer,
+                deadlock_retries=deadlock_retries,
+            )
+
+        # This should not happen but well ...
+        if n_deadlock > 0:
+            # Now the fun part, if there are only a few deadlocks, try assigning them
+            # a random position.
+            log.warning(f"Found {n_deadlock} deadlocked robots. Trying to unlock.")
+            replaced_robots = []
+            for nn in range(1, deadlock_retries + 1):
+                log.info(f"Retry {nn} out of {deadlock_retries}.")
+
+                replaceable = robot_grid.deadlockedRobots()
+                next_replace = numpy.random.choice(replaceable)
+                replaced_robots.append(next_replace)
+
+                robot_grid = get_robot_grid(
+                    seed=seed,
+                    collision_buffer=collision_buffer,
+                )
+
+                for ii, robot_id in enumerate(positionerIDs):
+
+                    robot = robot_grid.robotDict[robot_id]
+                    robot.setDestinationAlphaBeta(alphaL, betaL)
+
+                    if robot.id in replaced_robots:
+                        robot.setXYUniform()
+                        alphas[ii] = robot.alpha
+                        betas[ii] = robot.beta
+                    else:
+                        robot.setAlphaBeta(alphas[ii], betas[ii])
+
+                try:
+                    decollide_grid(robot_grid, simple=True)
+                except JaegerError:
+                    pass
+
+                positionerIDs = []
+                alphas = []
+                betas = []
+                for robot in robot_grid.robotDict.values():
+                    positionerIDs.append(robot.id)
+                    alphas.append(robot.alpha)
+                    betas.append(robot.beta)
+
+                robot_grid.plot_state(returnax=False, figname="test0.pdf")
+                paths = get_path_pair(robot_grid)
+                if paths is not None:
+                    log.info("Random configuration has been unlocked.")
+                    break
+
+                if nn == deadlock_retries:
+                    log.warning("Failed unlocking. Trying new seed.")
+                    return cls.create_random(
+                        safe=safe,
+                        uniform=uniform,
+                        collision_buffer=collision_buffer,
+                        deadlock_retries=deadlock_retries - 1,
+                    )
+
         pT = calibration.positionerTable.copy().reset_index()
         holeIDs = pT.loc[pT.positionerID.isin(positionerIDs)].holeID.tolist()
 
@@ -630,6 +717,8 @@ class ManualConfiguration(BaseConfiguration):
             }
             for i in range(len(holeIDs))
         }
+        print(data)
+        print()
 
         return cls(data, **kwargs)
 

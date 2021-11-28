@@ -204,7 +204,8 @@ async def random(
     else:
         uniform_unpack = None
 
-    configuration = ManualConfiguration.create_random(
+    configuration = await run_in_executor(
+        ManualConfiguration.create_random,
         seed=seed,
         uniform=uniform_unpack,
         safe=not danger,
@@ -215,6 +216,7 @@ async def random(
         trajectory = await run_in_executor(
             configuration.get_trajectory,
             simple_decollision=True,
+            decollide=True,
         )
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
