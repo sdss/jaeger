@@ -1181,7 +1181,7 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
-        from jaeger.target.tools import get_snapshot
+        from jaeger.kaiju import get_snapshot
 
         ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
 

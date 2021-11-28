@@ -15,9 +15,9 @@ import numpy
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.target.configuration import Configuration, ManualConfiguration
+from jaeger.target.configuration import Configuration
 from jaeger.target.design import Design
-from jaeger.utils import run_in_executor
+from jaeger.target.tools import create_random_configuration
 
 from . import jaeger_parser
 
@@ -125,17 +125,17 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None or fps.configuration.ingested is False:
         return command.fail(error="A configuration must first be loaded.")
 
-    # positions = fps.get_positions(ignore_disabled=True)
-    # if len(positions) == 0:
-    #     return command.fail("No positioners found.")
+    positions = fps.get_positions(ignore_disabled=True)
+    if len(positions) == 0:
+        return command.fail("No positioners found.")
 
-    # # Check that all non-disabled positioners are folded.
-    # if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
-    #     return command.fail(error="Not all the positioners are folded.")
+    # Check that all non-disabled positioners are folded.
+    if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
+        return command.fail(error="Not all the positioners are folded.")
 
     command.info(text="Calculating trajectory.")
     try:
-        trajectory = await run_in_executor(fps.configuration.get_trajectory)
+        trajectory = await fps.configuration.get_trajectory()
     except Exception as err:
         return command.fail(error=f"Failed getting trajectory: {err}")
 
@@ -204,8 +204,7 @@ async def random(
     else:
         uniform_unpack = None
 
-    configuration = await run_in_executor(
-        ManualConfiguration.create_random,
+    configuration = await create_random_configuration(
         seed=seed,
         uniform=uniform_unpack,
         safe=not danger,
