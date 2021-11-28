@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import signal
+import socket
 import sys
 import warnings
 from functools import wraps
@@ -28,7 +29,7 @@ from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
 from jaeger.exceptions import JaegerError, JaegerUserWarning
-from jaeger.fps import FPS
+from jaeger.fps import FPS, LOCK_FILE
 from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
 from jaeger.utils import run_in_executor
@@ -177,6 +178,11 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     help="Use engineering sextant instead of IEB. "
     "Modifies the internal configuration file.",
 )
+@click.option(
+    "--allow-host",
+    is_flag=True,
+    help="Allows running jager in a host other than sdss5-fps.",
+)
 @click.pass_context
 def jaeger(
     ctx,
@@ -188,12 +194,19 @@ def jaeger(
     sextant,
     virtual,
     npositioners,
+    allow_host,
 ):
     """CLI for the SDSS-V focal plane system.
 
     If called without subcommand starts the actor.
 
     """
+
+    if allow_host is False:
+        hostname = socket.getfqdn()
+        if hostname.endswith("apo.nmsu.edu") or hostname.endswith("lco.cl"):
+            if not hostname.startswith("sdss5-fps"):
+                raise RuntimeError("At the observatories jaeger must run on sdss5-fps.")
 
     if verbose > 0 and quiet:
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
@@ -753,6 +766,9 @@ async def unlock(fps_maker: FPSWrapper):
 
     async with fps_maker as fps:
         await fps.unlock()
+
+    if os.path.exists(LOCK_FILE):
+        os.remove(LOCK_FILE)
 
 
 if __name__ == "__main__":

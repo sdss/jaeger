@@ -34,9 +34,19 @@ class Notifier:
 
         self.listeners = listeners
 
+        self.tasks: list[asyncio.Task] = []
+
         self.buses: List[BusABC] = []
         for bus in buses:
             self.add_bus(bus)
+
+    def stop(self):
+        """Stops the notifier."""
+
+        for task in self.tasks:
+            task.cancel()
+
+        self.buses = []
 
     def add_listener(self, callback: Listener_co):
         """Adds a listener."""
@@ -47,7 +57,13 @@ class Notifier:
         """Adds a bus to monitor."""
 
         self.buses.append(bus)
-        asyncio.create_task(self._monitor_bus(bus))
+        self.tasks.append(asyncio.create_task(self._monitor_bus(bus)))
+
+    def remove_notifier(self, callback: Listener_co):
+        """Removes a listener."""
+
+        if callback in self.listeners:
+            self.listeners.remove(callback)
 
     async def _monitor_bus(self, bus: BusABC):
         """Monitors buses and calls the listeners when a message is received."""

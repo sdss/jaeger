@@ -258,8 +258,11 @@ async def status(command, fps, positioner_ids, full):
     if not check_positioners(positioner_ids, command, fps):
         return
 
-    await fps.update_status(positioner_ids=0)
-    await fps.update_position(positioner_ids=positioner_ids)
+    try:
+        await fps.update_status(positioner_ids=0)
+        await fps.update_position(positioner_ids=positioner_ids)
+    except JaegerError as err:
+        return command.fail(error=f"Failed reporting status: {err}")
 
     n_trajs = (
         await fps.send_command(

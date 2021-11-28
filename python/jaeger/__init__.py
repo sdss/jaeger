@@ -3,6 +3,7 @@
 
 import logging
 import os
+from typing import Union
 import warnings
 
 from sdsstools import get_config, get_logger, get_package_version
@@ -49,6 +50,9 @@ def start_file_loggers(start_log=True, start_can=True):
 
     if start_can and can_log.fh is None:
         can_log.start_file_logger(os.path.join(log_dir, "can.log"))
+
+
+actor_instance = None
 
 
 from .can import *

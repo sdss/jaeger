@@ -9,9 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-import warnings
-
-from jaeger.exceptions import JaegerUserWarning
 
 from .bus import BusABC
 from .message import Message
@@ -146,9 +143,11 @@ class CANNetBus(BusABC):
     def close(self, buses=None):
 
         if self.writer and not self.writer.is_closing():
+            self._write_to_buses("CAN {bus} STOP")
             self.writer.close()
 
         self.connected = False
+        self.writer = self.reader = None
 
     async def get(self):
 
@@ -160,14 +159,7 @@ class CANNetBus(BusABC):
         if not self.reader:
             raise ConnectionError(f"Interface {self.channel} is not connected.")
 
-        try:
-            msgStr = await self.reader.readuntil(self.LINE_TERMINATOR)
-        except asyncio.exceptions.IncompleteReadError as err:
-            warnings.warn(
-                f"Incomplete read error in CANNetBus: {err}",
-                JaegerUserWarning,
-            )
-            return None
+        msgStr = await self.reader.readuntil(self.LINE_TERMINATOR)
 
         readStr = msgStr.strip(self.LINE_TERMINATOR).decode()
         if not readStr:
