@@ -780,7 +780,7 @@ class FPS(BaseFPS["FPS"]):
             else:
                 highlight = None
             filename = await self.save_snapshot(highlight=highlight)
-            warnings.warn(f"Snapshot for locked FPS: {filename}")
+            warnings.warn(f"Snapshot for locked FPS: {filename}", JaegerUserWarning)
 
             if actor_instance:
                 actor_instance.write("i", {"snapshot": filename})
