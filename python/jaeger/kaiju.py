@@ -259,14 +259,14 @@ def get_path_pair(
 
     if path_generation_mode == "escape":
         robot_grid.pathGenEscape(escape_deg)
-        n_deadlocks = 0
+        deadlocks = []
     else:
         robot_grid.pathGenGreedy()
 
         # Check for deadlocks.
-        n_deadlocks = robot_grid.deadlockedRobots()
+        deadlocks = robot_grid.deadlockedRobots()
         if robot_grid.didFail and ignore_did_fail is False:
-            return (None, None, robot_grid.didFail, n_deadlocks)
+            return (None, None, robot_grid.didFail, deadlocks)
 
     speed = speed or config["kaiju"]["speed"]
     smooth_points = smooth_points or config["kaiju"]["smooth_points"]
@@ -284,7 +284,7 @@ def get_path_pair(
         to_destination,
         from_destination,
         robot_grid.didFail,
-        n_deadlocks,
+        deadlocks,
     )
 
 
