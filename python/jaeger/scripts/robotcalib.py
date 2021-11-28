@@ -9,8 +9,8 @@ import click
 import numpy
 import pandas as pd
 
-from kaiju.robotGrid import RobotGridCalib
 from kaiju import utils
+from kaiju.robotGrid import RobotGridCalib
 from sdsstools.daemonizer import cli_coro
 
 
@@ -30,6 +30,7 @@ SAFE_BETA = [165, 195]
 MAX_ALPHA = 358  # set here for robot 444 without full range alpha travel
 BAD_ROBOTS = []  # put offline robots in this list?
 DOWNSAMPLE = 100
+
 
 def getTargetCoords(rg):
     # return the desired xyWok positions for the metrology
@@ -174,7 +175,7 @@ async def ledOff(fps, devName):
 async def exposeFVC(fvc, exptime, fibre_data, nexp):
     for ii in range(nexp):
         try:
-            print("exposing FVC %i of %i"%(ii+1, nexp))
+            print("exposing FVC %i of %i" % (ii + 1, nexp))
             rawfname = await fvc.expose(exposure_time=exptime)
             print("exposure complete: %s" % rawfname)
             fvc.process_fvc_image(rawfname, fibre_data, plot=True)
@@ -275,7 +276,6 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
     show_default=True,
     help="if passed, simulate the trajectory but don't send it.  make a movie",
 )
-
 @cli_coro()
 async def robotcalib(
     niter,
@@ -300,15 +300,14 @@ async def robotcalib(
     if not simpath:
         # unwind if we aren't simulating!!!
         from jaeger import config, log
-        from jaeger.exceptions import TrajectoryError, FVCError
+        from jaeger.exceptions import FVCError, TrajectoryError
         from jaeger.fvc import FVC
+
         log.sh.setLevel(20)
 
         fvc = FVC(config["observatory"])
         fps = fvc.fps
         await fps.initialise()
-
-
 
         ######## UNWIND GRID #############
         rg = getRandomGrid(seed=seed, danger=danger, collisionBuffer=cb, lefthand=lh)
@@ -356,7 +355,10 @@ async def robotcalib(
     movesExecuted = 0
     for ii in range(niter):
         seed += 1
-        print("\n----------------------\nITER %i of %i (seed=%i)\n----------------------" % (ii+1, niter, seed))
+        print(
+            "\n----------------------\nITER %i of %i (seed=%i)\n----------------------"
+            % (ii + 1, niter, seed)
+        )
 
         # begin searching for a valid path
         # this is easy when things are safe
@@ -391,7 +393,7 @@ async def robotcalib(
                 break
 
             dlrobots = rg.deadlockedRobots()
-            print("%i deadlocked robots"%len(dlrobots))
+            print("%i deadlocked robots" % len(dlrobots))
             if len(dlrobots) > 6:
                 print("too many deadlocks to resolve")
                 break
@@ -420,24 +422,29 @@ async def robotcalib(
                 pathDelay=PATH_DELAY,
             )
 
-                    # print max steps in paths
+            # print max steps in paths
             maxPoints = -1
             for alphaBetaPath in toDestination.values():
                 for path in alphaBetaPath.values():
                     if len(path) > maxPoints:
                         maxPoints = len(path)
-            print("maximum path points %i"%maxPoints)
+            print("maximum path points %i" % maxPoints)
 
             if simpath:
                 ## simulate only, don't proceed further
                 movesExecuted += 1
-                interpSteps = len(list(rg.robotDict.values())[0].interpSimplifiedAlphaPath)
+                interpSteps = len(
+                    list(rg.robotDict.values())[0].interpSimplifiedAlphaPath
+                )
                 print("interpsteps", interpSteps)
-                print("simulating path with %.5e smooth collisions per step"%(rg.smoothCollisions/interpSteps))
+                print(
+                    "simulating path with %.5e smooth collisions per step"
+                    % (rg.smoothCollisions / interpSteps)
+                )
                 print("smooth collided robots", rg.smoothCollidedRobots)
                 for rid in rg.smoothCollidedRobots:
                     r = rg.robotDict[rid]
-                    utils.plotTraj(r, "simpath_%i"%ii, dpi=250)
+                    utils.plotTraj(r, "simpath_%i" % ii, dpi=250)
                 # utils.plotPaths(rg, downsample=DOWNSAMPLE, filename="simpath_%i.mp4"%ii)
                 continue
 
@@ -471,49 +478,48 @@ async def robotcalib(
         await asyncio.sleep(1)
 
         if exptime > 0 and nexp != 0:
-                if True not in [met, apogee, boss, allfibers]:
-                    # no fibers illuminated, expose anyway
-                    await exposeFVC(fvc, exptime, targetCoords)
+            if True not in [met, apogee, boss, allfibers]:
+                # no fibers illuminated, expose anyway
+                await exposeFVC(fvc, exptime, targetCoords)
 
-                else:
-                    # take a single exposure for each fiber wanted
-                    if met:
-                        print("back illuminating metrology")
-                        await ledOn(fps, "led1", MET_LED)
-                        await ledOn(fps, "led2", MET_LED)
-                        await asyncio.sleep(1)
-                        await exposeFVC(fvc, exptime, targetCoords, nexp)
-                        await ledOff(fps, "led1")
-                        await ledOff(fps, "led2")
-                        await asyncio.sleep(1)
-                    if boss:
-                        print("back illuminating boss")
-                        await ledOn(fps, "led4", BOSS_LED)
-                        await asyncio.sleep(1)
-                        await exposeFVC(fvc, exptime, targetCoords, nexp)
-                        await ledOff(fps, "led4")
-                        await asyncio.sleep(1)
-                    if apogee:
-                        print("back illuminating apogee")
-                        await ledOn(fps, "led3", AP_LED)
-                        await asyncio.sleep(1)
-                        await exposeFVC(fvc, exptime, targetCoords, nexp)
-                        await ledOff(fps, "led3")
-                        await asyncio.sleep(1)
-                    if allfibers:
-                        print("back illuminating all fibers")
-                        await ledOn(fps, "led1", MET_LED)
-                        await ledOn(fps, "led2", MET_LED)
-                        await ledOn(fps, "led4", BOSS_LED)
-                        await ledOn(fps, "led3", AP_LED)
-                        await asyncio.sleep(1)
-                        await exposeFVC(fvc, exptime, targetCoords, nexp)
-                        await ledOff(fps, "led1")
-                        await ledOff(fps, "led2")
-                        await ledOff(fps, "led3")
-                        await ledOff(fps, "led4")
-                        await asyncio.sleep(1)
-
+            else:
+                # take a single exposure for each fiber wanted
+                if met:
+                    print("back illuminating metrology")
+                    await ledOn(fps, "led1", MET_LED)
+                    await ledOn(fps, "led2", MET_LED)
+                    await asyncio.sleep(1)
+                    await exposeFVC(fvc, exptime, targetCoords, nexp)
+                    await ledOff(fps, "led1")
+                    await ledOff(fps, "led2")
+                    await asyncio.sleep(1)
+                if boss:
+                    print("back illuminating boss")
+                    await ledOn(fps, "led4", BOSS_LED)
+                    await asyncio.sleep(1)
+                    await exposeFVC(fvc, exptime, targetCoords, nexp)
+                    await ledOff(fps, "led4")
+                    await asyncio.sleep(1)
+                if apogee:
+                    print("back illuminating apogee")
+                    await ledOn(fps, "led3", AP_LED)
+                    await asyncio.sleep(1)
+                    await exposeFVC(fvc, exptime, targetCoords, nexp)
+                    await ledOff(fps, "led3")
+                    await asyncio.sleep(1)
+                if allfibers:
+                    print("back illuminating all fibers")
+                    await ledOn(fps, "led1", MET_LED)
+                    await ledOn(fps, "led2", MET_LED)
+                    await ledOn(fps, "led4", BOSS_LED)
+                    await ledOn(fps, "led3", AP_LED)
+                    await asyncio.sleep(1)
+                    await exposeFVC(fvc, exptime, targetCoords, nexp)
+                    await ledOff(fps, "led1")
+                    await ledOff(fps, "led2")
+                    await ledOff(fps, "led3")
+                    await ledOff(fps, "led4")
+                    await asyncio.sleep(1)
 
         ### send path back to lattice ####
         if not nomove:
@@ -528,7 +534,7 @@ async def robotcalib(
                 print("moves executed", movesExecuted)
                 return
 
-    print("\n-------\nend script: total moves executed: %i\n-------\n"%movesExecuted)
+    print("\n-------\nend script: total moves executed: %i\n-------\n" % movesExecuted)
 
 
 if __name__ == "__main__":
