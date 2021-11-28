@@ -79,7 +79,7 @@ class JaegerActor(clu.LegacyActor):
         # Add ActorHandler to log and to the warnings logger.
         self.actor_handler = ActorHandler(
             self,
-            level=logging.WARNING,
+            level=logging.INFO,
             filter_warnings=[JaegerUserWarning],
         )
         log.addHandler(self.actor_handler)
