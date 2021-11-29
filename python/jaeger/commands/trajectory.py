@@ -620,6 +620,7 @@ class Trajectory(object):
         finally:
             await self.fps.stop_trajectory()
             await self.fps.update_position()
+            await self.fps.save_snapshot()
             self.end_time = time.time()
             if restart_pollers:
                 self.fps.pollers.start()
