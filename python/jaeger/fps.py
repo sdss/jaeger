@@ -823,6 +823,18 @@ class FPS(BaseFPS["FPS"]):
 
         return numpy.array(data)
 
+    def get_positions_dict(
+        self,
+        ignore_disabled=False,
+    ) -> dict[int, tuple[float | None, float | None]]:
+        """Returns the alpha and beta positions as a dictionary."""
+
+        return {
+            p.positioner_id: (p.alpha, p.beta)
+            for p in self.positioners.values()
+            if ignore_disabled is False or p.disabled is False
+        }
+
     async def update_status(
         self,
         positioner_ids: Optional[int | List[int]] = None,
