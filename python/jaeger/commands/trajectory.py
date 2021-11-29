@@ -518,6 +518,7 @@ class Trajectory(object):
         min_trajectory_time = 2.0
         PS = PositionerStatus
 
+        success = False
         try:
 
             # The positioners take a bit to report that they are moving so if the
@@ -612,15 +613,23 @@ class Trajectory(object):
                     self,
                 )
 
+            success = True
+
         except BaseException:
             self.failed = True
             await self.fps.stop_trajectory()
+            await self.fps.save_snapshot()
             raise
 
         finally:
             await self.fps.stop_trajectory()
             await self.fps.update_position()
-            await self.fps.save_snapshot()
+
+            # Only save snapshot on success. If the trajectory failed it will
+            # already be saved in TrajectoryError.
+            if success is True:
+                await self.fps.save_snapshot()
+
             self.end_time = time.time()
             if restart_pollers:
                 self.fps.pollers.start()

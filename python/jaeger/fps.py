@@ -1170,8 +1170,8 @@ class FPS(BaseFPS["FPS"]):
         self,
         path: Optional[str | pathlib.Path] = None,
         collision_buffer: float | None = None,
-        return_axes: bool = False,
         highlight: int | None = None,
+        write_to_actor: bool = True,
     ) -> str | Axes:
         """Creates a plot with the current arrangement of the FPS array.
 
@@ -1179,42 +1179,42 @@ class FPS(BaseFPS["FPS"]):
         ----------
         path
             The path where to save the plot. Defaults to
-            ``/data/fps/snapshots/MJD/fps_snapshot_<SEQ>.pdf``.
+            ``/data/logs/jaeger/snapshots/MJD/fps_snapshot_<SEQ>.pdf``.
         collision_buffer
             The collision buffer.
-        return_axes
-            If `True`, returns the matplotlib axes instead of saving the plot.
+        highlight
+            A robot ID to highlight.
 
         """
 
         from jaeger.kaiju import get_snapshot
 
-        ax = await get_snapshot(collision_buffer=collision_buffer, highlight=highlight)
-
-        if return_axes is True:
-            return ax
-
         if path is not None:
-            ax.figure.savefig(path)
-            return str(path)
+            path = str(path)
 
-        mjd = int(Time.now().mjd)
-        dirpath = f"/data/logs/jaeger/snapshots/{mjd}"
-        if not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-
-        path_pattern = dirpath + "/fps_snapshot_*.pdf"
-        files = sorted(glob(path_pattern))
-
-        if len(files) == 0:
-            seq = 1
         else:
-            seq = int(files[-1].split("_")[-1][0:4]) + 1
+            mjd = int(Time.now().mjd)
+            dirpath = f"/data/logs/jaeger/snapshots/{mjd}"
+            if not os.path.exists(dirpath):
+                os.makedirs(dirpath)
 
-        path = path_pattern.replace("*", f"{seq:04d}")
-        ax.figure.savefig(path)
+            path_pattern = dirpath + "/fps_snapshot_*.pdf"
+            files = sorted(glob(path_pattern))
 
-        if jaeger.actor_instance:
+            if len(files) == 0:
+                seq = 1
+            else:
+                seq = int(files[-1].split("_")[-1][0:4]) + 1
+
+            path = path_pattern.replace("*", f"{seq:04d}")
+
+        result = await get_snapshot(
+            path,
+            collision_buffer=collision_buffer,
+            highlight=highlight,
+        )
+
+        if result is True and write_to_actor is True and jaeger.actor_instance:
             jaeger.actor_instance.write("i", {"snapshot": path})
 
         return path

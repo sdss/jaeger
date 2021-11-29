@@ -19,7 +19,6 @@ from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
-    from matplotlib.axes import Axes
 
     from kaiju import RobotGridCalib
 
@@ -382,12 +381,52 @@ async def explode(
     return to_destination
 
 
+def get_snapshot_async(
+    path: str,
+    robot_grid: Optional[RobotGridCalib] = None,
+    data: Optional[dict] = None,
+    highlight: int | None = None,
+):
+    """Creates an FPS snapshot and saves it to disk. To be used with an executor.
+
+    Parameters
+    ----------
+    path
+        The path where to save the file.
+    robot_grid
+        The Kaiju ``RobotGridCalib`` instance to plot.
+    data
+        A dictionary of data that can be used to reload a Kaiju robot grid
+        using `.load_robot_grid`. This is useful if the function is being
+        run in an executor.
+    highlight
+        Robot to highlight.
+
+    """
+
+    if robot_grid is not None and data is not None:
+        raise JaegerError("robot_grid and data are mutually exclusive.")
+
+    if data is not None:
+        robot_grid = load_robot_grid(data)
+
+    assert robot_grid is not None
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".+array interface is deprecated.+")
+        ax = robot_grid.plot_state(highlightRobot=highlight)
+
+    assert ax is not None
+    ax.figure.savefig(path)
+
+
 async def get_snapshot(
+    path: str,
     fps: FPS | None = None,
     collision_buffer: float | None = None,
     highlight: int | None = None,
-) -> Axes:
-    """Returns matplotlib axes with the current arrangement of the FPS array."""
+):
+    """Plots a snapshot of the FPS and saves it to disk."""
 
     fps = fps or FPS.get_instance()
     if fps.initialised is False:
@@ -395,20 +434,16 @@ async def get_snapshot(
 
     await fps.update_position()
 
-    # Create a robot grid and set the current positions.
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
+    data = {"collision_buffer": collision_buffer, "grid": {}}
+    for pid in fps.positioners.keys():
+        data["grid"][int(pid)] = (fps[pid].alpha, fps[pid].beta, 0, 0)
 
-    for robot in robot_grid.robotDict.values():
-        if robot.id not in fps.positioners.keys():
-            raise ValueError(f"Positioner {robot.id} is not connected.")
+    await run_in_executor(
+        get_snapshot_async,
+        path,
+        data=data,
+        highlight=highlight,
+        executor="process",
+    )
 
-        robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=".+array interface is deprecated.+")
-        ax: Axes = await run_in_executor(
-            robot_grid.plot_state,
-            highlightRobot=highlight,
-        )
-
-    return ax
+    return True

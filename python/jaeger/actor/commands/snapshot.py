@@ -33,6 +33,6 @@ async def snapshot(command: Command[JaegerActor], fps: FPS, path: str | None = N
     if path is not None:
         path = str(path)
 
-    filename = await fps.save_snapshot(path)
+    filename = await fps.save_snapshot(path, write_to_actor=False)
 
     return command.finish(snapshot=filename)
