@@ -10,9 +10,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import inspect
+import warnings
 
 from typing import TYPE_CHECKING
+
+import jaeger
 
 
 if TYPE_CHECKING:
@@ -118,6 +122,12 @@ class TrajectoryError(JaegerError):
         self.trajectory = trajectory
         if self.trajectory:
             self.trajectory.failed = True
+
+        try:
+            fps = jaeger.FPS.get_instance()
+            asyncio.create_task(fps.save_snapshot())
+        except Exception as err:
+            warnings.warn(f"Failed saving snapshot on trajectory error: {err}")
 
 
 class FVCError(JaegerError):
