@@ -495,18 +495,6 @@ class FPS(BaseFPS["FPS"]):
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
-        locked_by = []
-        for positioner in self.values():
-            if positioner.collision:
-                locked_by.append(positioner.positioner_id)
-
-        if len(locked_by) > 0:
-            await self.lock(by=locked_by, do_warn=False, snapshot=False)
-            warnings.warn(
-                "The FPS was collided and has been locked.",
-                JaegerUserWarning,
-            )
-
         if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
             log.error("Unable to disable precise moves for some positioners.")
 
@@ -531,6 +519,19 @@ class FPS(BaseFPS["FPS"]):
                 JaegerUserWarning,
             )
             return self
+
+        # Check if any of the positioners are collided and if so lock the FPS.
+        locked_by = []
+        for positioner in self.values():
+            if positioner.collision:
+                locked_by.append(positioner.positioner_id)
+
+        if len(locked_by) > 0:
+            await self.lock(by=locked_by, do_warn=False, snapshot=False)
+            warnings.warn(
+                "The FPS was collided and has been locked.",
+                JaegerUserWarning,
+            )
 
         if config.get("safe_mode", False) is not False:
             min_beta = MIN_BETA
