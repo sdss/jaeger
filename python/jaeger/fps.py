@@ -1202,7 +1202,7 @@ class FPS(BaseFPS["FPS"]):
             return str(path)
 
         mjd = int(Time.now().mjd)
-        dirpath = f"/data/fps/snapshots/{mjd}"
+        dirpath = f"/data/logs/jaeger/snapshots/{mjd}"
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
 
