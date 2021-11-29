@@ -268,8 +268,8 @@ async def goto(
     for pid in new_positions:
         if pid not in fps.positioners:
             raise JaegerError(f"Positioner ID {pid} is not connected.")
-    speed = speed or config["positioner"]["motor_speed"]
-    assert isinstance(speed, float), "Invalid speed format."
+
+    speed = float(speed or config["positioner"]["motor_speed"])
     if speed < 500 or speed > 5000:
         raise JaegerError("Invalid speed.")
 
@@ -315,11 +315,12 @@ async def goto(
             raise JaegerError("relative is not implemented for kaiju moves.")
 
         data = {"collision_buffer": None, "grid": {}}
+
         for pid, (current_alpha, current_beta) in fps.get_positions_dict().items():
 
             if current_alpha is None or current_beta is None:
                 raise JaegerError(f"Positioner {pid} does not know its position.")
-
+            print(pid, current_alpha)
             if pid in new_positions:
                 data["grid"][int(pid)] = (
                     current_alpha,
@@ -335,20 +336,20 @@ async def goto(
                     current_beta,
                 )
 
-            (to_destination, _, did_fail, deadlocks) = await run_in_executor(
-                get_path_pair,
-                data=data,
-                executor="process",
+        (to_destination, _, did_fail, deadlocks) = await run_in_executor(
+            get_path_pair,
+            data=data,
+            executor="process",
+        )
+
+        if did_fail is True:
+            raise TrajectoryError(
+                "Cannot execute trajectory. Either the final "
+                "configuration is collided or deadlocked. "
+                f"Found {len(deadlocks)} deadlocks."
             )
 
-            if did_fail is True:
-                raise TrajectoryError(
-                    "Cannot execute trajectory. Either the final "
-                    "configuration is collided or deadlocked. "
-                    f"Found {len(deadlocks)} deadlocks."
-                )
-
-            trajectories = to_destination
+        trajectories = to_destination
 
     return await send_trajectory(
         fps,
