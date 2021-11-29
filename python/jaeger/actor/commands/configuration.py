@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 import click
 import numpy
+from astropy.time import Time
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
@@ -55,6 +56,12 @@ def configuration():
     is_flag=True,
     help="Generates and stores the to and from destination paths.",
 )
+@click.option(
+    "--epoch-delay",
+    type=float,
+    default=0.0,
+    help="A delay in seconds for the epoch for which the configuration is calculated.",
+)
 @click.option("--folded", is_flag=True, help="Loads a folded configuration.")
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
@@ -65,6 +72,7 @@ async def load(
     replace: bool = False,
     folded: bool = False,
     generate_paths: bool = False,
+    epoch_delay: float = 0.0,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -85,7 +93,8 @@ async def load(
 
     else:
         try:
-            design = await Design.create_async(designid)
+            epoch = Time.now().jd + epoch_delay / 86400.0
+            design = await Design.create_async(designid, epoch=epoch)
         except (ValueError, RuntimeError, JaegerError) as err:
             return command.fail(error=f"Failed retrieving design: {err}")
 

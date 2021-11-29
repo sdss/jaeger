@@ -24,7 +24,19 @@ __all__ = ["Design"]
 
 
 class Design:
-    """Loads and represents a targetdb design."""
+    """Loads and represents a targetdb design.
+
+    Parameters
+    ----------
+    design_id
+        The ID of the design to load.
+    load_configuration
+        Create a `.Configuration` attached to this design.
+    epoch
+        The JD epoch for which to calculate the configuration coordinates. If
+        `None`, uses the current time.
+
+    """
 
     def __init__(
         self,
@@ -55,7 +67,7 @@ class Design:
 
         self.configuration: Configuration
         if load_configuration:
-            self.configuration = Configuration(self)
+            self.configuration = Configuration(self, epoch=epoch)
 
     def get_target_data(self) -> dict[str, dict]:
         """Retrieves target data as a dictionary."""
@@ -102,12 +114,12 @@ class Design:
         return {data["holeid"]: data for data in target_data}
 
     @classmethod
-    async def create_async(cls, design_id: int):
+    async def create_async(cls, design_id: int, epoch: float | None = None):
         """Returns a design while creating the configuration in an executor."""
 
         self = cls(design_id, load_configuration=False)
 
-        configuration = await run_in_executor(Configuration, self)
+        configuration = await run_in_executor(Configuration, self, epoch=epoch)
         self.configuration = configuration
 
         return self

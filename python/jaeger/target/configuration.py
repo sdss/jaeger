@@ -486,13 +486,13 @@ class Configuration(BaseConfiguration):
 
     assignment_data: AssignmentData
 
-    def __init__(self, design: Design, **kwargs):
+    def __init__(self, design: Design, epoch: float | None = None, **kwargs):
 
         super().__init__(**kwargs)
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment_data = AssignmentData(self)
+        self.assignment_data = AssignmentData(self, epoch=epoch)
 
     def __repr__(self):
         return (
@@ -922,11 +922,11 @@ class AssignmentData(BaseAssignmentData):
 
     design: Design
 
-    def __init__(self, configuration: Configuration):
+    def __init__(self, configuration: Configuration, epoch: float | None = None):
 
         super().__init__(configuration)
 
-        self.compute_coordinates()
+        self.compute_coordinates(epoch)
 
     def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems."""
