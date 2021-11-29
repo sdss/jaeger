@@ -25,7 +25,7 @@ async def test_send_trajectory(vfps):
     # This fails for now because I don't have a way to change the position of the
     # robots at the end of the trajectory, so the check for whether the positioners
     # have reached their destinations fails.
-    with pytest.raises(TrajectoryError):
+    with pytest.raises(JaegerError):
         await vfps.send_trajectory(
             {
                 1: {
