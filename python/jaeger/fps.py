@@ -791,9 +791,6 @@ class FPS(BaseFPS["FPS"]):
             filename = await self.save_snapshot(highlight=highlight)
             warnings.warn(f"Snapshot for locked FPS: {filename}", JaegerUserWarning)
 
-            if jaeger.actor_instance:
-                jaeger.actor_instance.write("i", {"snapshot": filename})
-
     async def unlock(self, force=False):
         """Unlocks the `.FPS` if all collisions have been resolved."""
 
@@ -1216,6 +1213,9 @@ class FPS(BaseFPS["FPS"]):
 
         path = path_pattern.replace("*", f"{seq:04d}")
         ax.figure.savefig(path)
+
+        if jaeger.actor_instance:
+            jaeger.actor_instance.write("i", {"snapshot": path})
 
         return path
 
