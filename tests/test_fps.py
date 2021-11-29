@@ -233,17 +233,11 @@ async def test_goto(vfps, vpositioners, positioner_ids):
     await vfps.goto(positioner_ids, 10, 10, force=True)
 
 
-async def test_goto_all_positioners_fails(vfps, vpositioners):
-
-    with pytest.raises(JaegerError):
-        await vfps.goto(None, 10, 10, force=False)
-
-
 async def test_goto_fails(vfps, vpositioners, mocker):
 
     mocker.patch("jaeger.fps.goto", side_effect=JaegerError)
     with pytest.raises(JaegerError):
-        await vfps.goto(1, 10, 10)
+        await vfps.goto({1: (10, 10)})
 
 
 async def test_report_status(vfps, vpositioners):
