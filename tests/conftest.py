@@ -40,6 +40,9 @@ config["safe_mode"] = False
 config["files"]["ieb_config"] = "etc/ieb.yaml"
 config["fps"]["start_pollers"] = True
 
+config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
+config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
+
 
 # Disable logging to file.
 if jaeger.log.fh:

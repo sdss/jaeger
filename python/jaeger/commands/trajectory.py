@@ -9,13 +9,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import pathlib
 import time
 import warnings
+from glob import glob
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 import numpy
+from astropy.time import Time
 
 import drift
 from sdsstools import read_yaml_file
@@ -61,6 +65,8 @@ async def send_trajectory(
     send_trajectory: bool = True,
     start_trajectory: bool = True,
     command: Optional[CluCommand[JaegerActor]] = None,
+    dump: bool | str = True,
+    extra_dump_data: dict[str, Any] = {},
 ) -> Trajectory:
     """Sends a set of trajectories to the positioners.
 
@@ -91,6 +97,16 @@ async def send_trajectory(
         If `True`, runs the trajectory after sending it. Otherwise, returns
         the `.Trajectory` instance after sending the data. Ignored if
         `send_trajectory=False`.
+    command
+        A command to which to output informational messages.
+    dump
+        Whether to dump a JSON with the trajectory to disk. If `True`,
+        the trajectory is stored in ``/data/logs/jaeger/trajectories/<MJD>`` with
+        a unique sequence for each trajectory. A string can be passed with a
+        custom path. The dump file is created only if `.Trajectory.start` is
+        called, regardless of whether the trajectory succeeds.
+    extra_dump_data
+        A dictionary with additional parameters to add to the dump JSON.
 
     Raises
     ------
@@ -112,7 +128,12 @@ async def send_trajectory(
 
     """
 
-    traj = Trajectory(fps, trajectories, command=command)
+    traj = Trajectory(
+        fps,
+        trajectories,
+        dump=dump,
+        extra_dump_data=extra_dump_data,
+    )
 
     if use_sync_line is None:
         use_sync_line = config["fps"]["use_sync_line"]
@@ -196,8 +217,14 @@ class Trajectory(object):
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
-    command
-        A ``CLU`` command to which to output messages.
+    dump
+        Whether to dump a JSON with the trajectory to disk. If `True`,
+        the trajectory is stored in ``/data/logs/jaeger/trajectories/<MJD>`` with
+        a unique sequence for each trajectory. A string can be passed with a
+        custom path. The dump file is created only if `.Trajectory.start` is
+        called, regardless of whether the trajectory succeeds.
+    extra_dump_data
+        A dictionary with additional parameters to add to the dump JSON.
 
     Raises
     ------
@@ -225,12 +252,12 @@ class Trajectory(object):
         self,
         fps: FPS,
         trajectories: str | pathlib.Path | TrajectoryDataType,
-        command: Optional[CluCommand[JaegerActor]] = None,
+        dump: bool | str = True,
+        extra_dump_data: dict[str, Any] = {},
     ):
 
         self.fps = fps
         self.trajectories: TrajectoryDataType
-        self.command = command
 
         if self.fps.locked:
             raise FPSLockedError(
@@ -274,7 +301,36 @@ class Trajectory(object):
         self.start_time: float | None = None
         self.end_time: float | None = None
 
+        self.use_sync_line: bool = True
         self._ready_to_start = False
+
+        self.dump_data = {
+            "start_time": time.time(),
+            "success": False,
+            "trajectory_send_time": None,
+            "trajectory_start_time": None,
+            "end_time": None,
+            "use_sync_line": True,
+            "extra": extra_dump_data,
+            "trajectory": self.trajectories,
+        }
+
+        if dump is False:
+            self.dump_file = None
+        elif isinstance(dump, (str, pathlib.Path)):
+            self.dump_file = str(dump)
+        else:
+            dirname = config["positioner"]["trajectory_dump_path"]
+            mjd = str(int(Time.now().mjd))
+            dirname = os.path.join(dirname, mjd)
+
+            files = list(sorted(glob(os.path.join(dirname, "*.json"))))
+            if len(files) == 0:
+                seq = 1
+            else:
+                seq = int(files[-1].split("-")[-1].split(".")[0]) + 1
+
+            self.dump_file = os.path.join(dirname, f"trajectory-{mjd}-{seq:04d}.json")
 
     def validate(self):
         """Validates the trajectory."""
@@ -326,8 +382,6 @@ class Trajectory(object):
             self.failed = True
             raise TrajectoryError("Some positioners did not respond.", self)
 
-        log.debug("Sending data points:")
-
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:
 
@@ -355,8 +409,6 @@ class Trajectory(object):
                 )
 
             traj_pos = self.trajectories[pos_id]
-
-            log.debug(f"{pos_id}: {traj_pos}")
 
             self.n_points[pos_id] = (len(traj_pos["alpha"]), len(traj_pos["beta"]))
 
@@ -630,11 +682,34 @@ class Trajectory(object):
             if success is True:
                 await self.fps.save_snapshot()
 
+            if self.dump_file:
+                self.dump_trajectory()
+
             self.end_time = time.time()
             if restart_pollers:
                 self.fps.pollers.start()
 
         return True
+
+    def dump_trajectory(self, path: str | None = None):
+        """Dumps the trajectory to a JSON file."""
+
+        if path is None:
+            if self.dump_file is None:
+                return
+
+            path = self.dump_file
+
+        self.dump_data["success"] = not self.failed
+        self.dump_data["trajectory_start_time"] = self.start_time
+        self.dump_data["trajectory_send_time"] = self.data_send_time
+        self.dump_data["end_time"] = time.time()
+
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
+        with open(path, "w") as f:
+            f.write(json.dumps(self.dump_data, indent=2))
 
     async def abort_trajectory(self):
         """Aborts the trajectory transmission."""
