@@ -66,7 +66,7 @@ __all__ = ["BaseFPS", "FPS"]
 
 
 MIN_BETA = 160
-LOCK_FILE = "/var/tmp/jaeger.lock"
+LOCK_FILE = "/var/tmp/sdss/jaeger.lock"
 
 FPS_CO = Union["BaseFPS", "FPS"]
 FPS_T = TypeVar("FPS_T", bound="BaseFPS")
@@ -327,8 +327,9 @@ class FPS(BaseFPS["FPS"]):
                 self.pid_lock = LockFile(LOCK_FILE)
             except Exception:
                 raise JaegerError(
-                    "Failed creating lock file. "
-                    "Probably another instance is running."
+                    f"Failed creating lock file {LOCK_FILE}. "
+                    "Probably another instance is running. "
+                    "If that is not the case, remove the lock file and retry."
                 )
 
         if isinstance(self.can, JaegerCAN):
