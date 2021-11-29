@@ -60,6 +60,7 @@ positioner:
     uid_bits: 6
     trajectory_data_n_points: 6
     firmware_messages_per_positioner: 8
+    trajectory_dump_path: /data/logs/jaeger/trajectories/
 
 kaiju:
     speed: 2
