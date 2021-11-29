@@ -73,7 +73,6 @@ class FPSWrapper(object):
         initialise=True,
         npositioners=10,
         enable_low_temperature=True,
-        use_lock=True,
     ):
 
         self.profile = profile
@@ -83,7 +82,6 @@ class FPSWrapper(object):
         self.ieb = ieb
         self.enable_low_temperature = enable_low_temperature
         self.initialise = initialise
-        self.use_lock = use_lock
 
         self.vpositioners = []
         self.npositioners = npositioners
@@ -107,8 +105,7 @@ class FPSWrapper(object):
 
         if self.initialise:
             await self.fps.initialise(
-                enable_low_temperature=self.enable_low_temperature,
-                use_lock=self.use_lock,
+                enable_low_temperature=self.enable_low_temperature
             )
             if self.enable_low_temperature is False:
                 warnings.warn(
@@ -222,6 +219,9 @@ def jaeger(
     if config_file:
         config.load(config_file)
 
+    if no_lock:
+        config["fps"]["use_lock"] = False
+
     actor_config = config.get("actor", {})
 
     if verbose == 1:
@@ -258,7 +258,6 @@ def jaeger(
         ieb=ieb,
         npositioners=npositioners,
         enable_low_temperature=enable_low_temperature,
-        use_lock=not no_lock,
     )
 
 
@@ -458,39 +457,20 @@ async def calibrate(fps_maker, positioner_id, motors, datums, cogging):
 
 @jaeger.command()
 @click.argument("positioner_id", metavar="POSITIONER", type=int)
-@click.argument("alpha", metavar="ALPHA", type=float)
-@click.argument("beta", metavar="BETA", type=float)
+@click.argument("alpha", metavar="ALPHA", type=click.FloatRange(-10, 370))
+@click.argument("beta", metavar="BETA", type=click.FloatRange(-10, 370))
 @click.option(
     "--speed",
-    type=(float, float),
-    default=(None, None),
+    type=click.FloatRange(500, 4000),
     help="The speed for the alpha and beta motors.",
-    show_default=True,
 )
 @pass_fps
 @cli_coro
 async def goto(fps_maker, positioner_id, alpha, beta, speed=None):
     """Moves a robot to a given position."""
 
-    if alpha < 0 or alpha >= 360:
-        raise click.UsageError("alpha must be in the range [0, 360)")
-
-    if beta < 0 or beta >= 360:
-        raise click.UsageError("beta must be in the range [0, 360)")
-
-    if speed[0] or speed[1]:
-        if speed[0] < 0 or speed[0] >= 3000 or speed[1] < 0 or speed[1] >= 3000:
-            raise click.UsageError("speed must be in the range [0, 3000)")
-
     async with fps_maker as fps:
-
-        positioner = fps.positioners[positioner_id]
-        result = await positioner.initialise()
-        if not result:
-            log.error("positioner is not connected or failed to initialise.")
-            return
-
-        await positioner.goto(alpha=alpha, beta=beta, speed=(speed[0], speed[1]))
+        await fps.goto({positioner_id: (alpha, beta)})
 
     return
 

@@ -10,23 +10,26 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-import numpy
-
 import jaeger
 from jaeger import config
 from jaeger.commands import Command, CommandID
-from jaeger.exceptions import FPSLockedError, JaegerError
+from jaeger.exceptions import FPSLockedError, JaegerError, TrajectoryError
+from jaeger.kaiju import get_path_pair
 from jaeger.utils import (
     bytes_to_int,
     get_goto_move_time,
     int_to_bytes,
     motor_steps_to_angle,
 )
+from jaeger.utils.helpers import run_in_executor
 
 from .trajectory import send_trajectory
 
 
 if TYPE_CHECKING:
+    from clu.command import Command as CluCommand
+
+    from jaeger.actor import JaegerActor
     from jaeger.fps import FPS
 
 
@@ -229,92 +232,129 @@ class SetCurrent(Command):
 
 async def goto(
     fps: FPS,
-    positioner_ids: List[int],
-    alpha: float | list | numpy.ndarray,
-    beta: float | list | numpy.ndarray,
-    speed: Optional[Tuple[float, float]] = None,
+    new_positions: dict[int, tuple[float, float]],
+    speed: Optional[float] = None,
     relative: bool = False,
     use_sync_line: bool = None,
+    no_kaiju: bool = False,
+    command: CluCommand[JaegerActor] | None = None,
 ):
-    """Send positioners to a given position using a trajectory.
+    """Send positioners to a given position using a trajectory with ``kaiju`` check.
 
     Parameters
     ----------
     fps
         The `.FPS` instance.
-    positioner_ids
-        The list of positioner_ids to command.
-    alpha
-        The alpha angle. Can be an array with the same size of the list of positioner
-        IDs. Otherwise sends all the positioners to the same angle.
-    beta
-        The beta angle.
+    new_positions
+        The new positions as a dictionary of positioner ID to a tuple of new
+        alpha and beta angles. Positioners not specified will be kept on the
+        same positions.
     speed
-        As a tuple, the alpha and beta speeds to use. If `None`, uses the default ones.
+        The speed to use.
     relative
         If `True`, ``alpha`` and ``beta`` are considered relative angles.
     use_sync_line
         Whether to use the SYNC line to start the trajectories.
+    no_kaiju
+        If set, does not create a ``kaiju``-safe trajectory. Use at your own risk.
+    command
+        A command to pass to `.send_trajectory` to output additional information.
 
     """
 
     if fps.locked:
         FPSLockedError("The FPS is locked.")
 
-    if not isinstance(alpha, (list, tuple, numpy.ndarray)):
-        alpha = numpy.tile(alpha, len(positioner_ids))
-    if not isinstance(beta, (list, tuple, numpy.ndarray)):
-        beta = numpy.tile(beta, len(positioner_ids))
+    for pid in new_positions:
+        if pid not in fps.positioners:
+            raise JaegerError(f"Positioner ID {pid} is not connected.")
 
-    alpha = numpy.array(alpha)
-    beta = numpy.array(beta)
+    speed = float(speed or config["positioner"]["motor_speed"])
+    if speed < 500 or speed > 5000:
+        raise JaegerError("Invalid speed.")
 
-    assert len(alpha) == len(positioner_ids) and len(beta) == len(positioner_ids)
-
-    if alpha is None or beta is None:
-        raise JaegerError("alpha and beta must be non-null.")
-
-    if speed is None:
-        default_speed = config["positioner"]["motor_speed"]
-        speed = (default_speed, default_speed)
-    else:
-        if len(speed) != 2 or speed[0] is None or speed[1] is None:
-            raise JaegerError("Invalid speed.")
-
-    speed_array = numpy.array(speed)
-    if numpy.any(speed_array <= 0) or numpy.any(speed_array > 5000):
-        raise JaegerError("Speed out of bounds.")
-
+    positioner_ids = list(new_positions.keys())
     await fps.update_position(positioner_ids=positioner_ids)
 
     trajectories = {}
-    for i, pid in enumerate(positioner_ids):
-        pos = fps[pid]
 
-        if pos.alpha is None or pos.beta is None:
-            raise JaegerError(f"Positioner {pid}: cannot goto with unknown position.")
+    if no_kaiju is True:
+        for pid in positioner_ids:
+            pos = fps[pid]
 
-        current_alpha = pos.alpha
-        current_beta = pos.beta
+            if pos.alpha is None or pos.beta is None:
+                raise JaegerError(
+                    f"Positioner {pid}: cannot goto with unknown position."
+                )
 
+            current_alpha = pos.alpha
+            current_beta = pos.beta
+
+            if relative is True:
+                alpha_end = current_alpha + new_positions[pid][0]
+                beta_end = current_beta + new_positions[pid][1]
+            else:
+                alpha_end = new_positions[pid][0]
+                beta_end = new_positions[pid][1]
+
+            alpha_delta = abs(alpha_end - current_alpha)
+            beta_delta = abs(beta_end - current_beta)
+
+            time_end = [
+                get_goto_move_time(alpha_delta, speed=speed),
+                get_goto_move_time(beta_delta, speed=speed),
+            ]
+
+            trajectories[pid] = {
+                "alpha": [(current_alpha, 0.1), (alpha_end, time_end[0] + 0.1)],
+                "beta": [(current_beta, 0.1), (beta_end, time_end[1] + 0.1)],
+            }
+
+    else:
         if relative is True:
-            alpha_end = current_alpha + alpha[i]
-            beta_end = current_beta + beta[i]
-        else:
-            alpha_end = alpha[i]
-            beta_end = beta[i]
+            raise JaegerError("relative is not implemented for kaiju moves.")
 
-        alpha_delta = abs(alpha_end - current_alpha)
-        beta_delta = abs(beta_end - current_beta)
+        data = {"collision_buffer": None, "grid": {}}
 
-        time_end = [
-            get_goto_move_time(alpha_delta, speed=speed[0]),
-            get_goto_move_time(beta_delta, speed=speed[1]),
-        ]
+        for pid, (current_alpha, current_beta) in fps.get_positions_dict().items():
 
-        trajectories[pid] = {
-            "alpha": [(current_alpha, 0.1), (alpha_end, time_end[0] + 0.1)],
-            "beta": [(current_beta, 0.1), (beta_end, time_end[1] + 0.1)],
-        }
+            if current_alpha is None or current_beta is None:
+                raise JaegerError(f"Positioner {pid} does not know its position.")
 
-    return await send_trajectory(fps, trajectories, use_sync_line=use_sync_line)
+            if pid in new_positions:
+                data["grid"][int(pid)] = (
+                    current_alpha,
+                    current_beta,
+                    new_positions[pid][0],
+                    new_positions[pid][1],
+                )
+            else:
+                data["grid"][int(pid)] = (
+                    current_alpha,
+                    current_beta,
+                    current_alpha,
+                    current_beta,
+                )
+
+        (to_destination, _, did_fail, deadlocks) = await run_in_executor(
+            get_path_pair,
+            data=data,
+            executor="process",
+        )
+
+        if did_fail is True:
+            raise TrajectoryError(
+                "Cannot execute trajectory. Either the final "
+                "configuration is collided or deadlocked. "
+                f"Found {len(deadlocks)} deadlocks."
+            )
+
+        trajectories = to_destination
+
+    return await send_trajectory(
+        fps,
+        trajectories,
+        use_sync_line=use_sync_line,
+        command=command,
+        extra_dump_data={"kaiju_trajectory": not no_kaiju},
+    )

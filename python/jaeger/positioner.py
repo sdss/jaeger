@@ -11,16 +11,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from distutils.version import StrictVersion
-from time import time
 
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Tuple
 
 import jaeger
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.commands.bootloader import GetFirmwareVersion
-from jaeger.commands.goto import GotoAbsolutePosition, GotoRelativePosition, goto
 from jaeger.commands.status import GetActualPosition
 from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
@@ -491,171 +489,6 @@ class Positioner(StatusMixIn):
             beta=float(beta),
             error="failed going to position.",
         )
-
-    async def goto(
-        self,
-        alpha: float,
-        beta: float,
-        speed: Tuple[float, float] = None,
-        relative=False,
-        force=False,
-        use_trajectory=True,
-        use_sync_line=None,
-    ) -> bool:
-        """Moves positioner to a given position.
-
-        Parameters
-        ----------
-        alpha
-            The position where to move the alpha arm, in degrees.
-        beta
-            The position where to move the beta arm, in degrees.
-        speed
-            The speed of the ``(alpha, beta)`` arms, in RPM on the input.
-        relative
-            Whether the movement is absolute or relative to the current
-            position.
-        force
-            Allows to set position and speed limits outside the normal range.
-        use_trajectory
-            If `True`, uses a trajectory to reach the position.
-        use_sync_line
-            If ``use_trajectory=True``, whether to use the SYNC line.
-
-        Returns
-        -------
-        result
-            `True` if both arms have reached the desired position, `False` if
-            a problem was found.
-
-        Examples
-        --------
-        ::
-
-            # Move alpha and beta at the currently set speed
-            >>> await goto(alpha=100, beta=10)
-
-            # Set the speed of the alpha arm
-            >>> await goto(speed=(1000, 500))
-
-        """
-
-        if self.moving:
-            raise PositionerError("Positioner is already moving.")
-
-        if force is False and not self._can_move():
-            raise PositionerError("Positioner is not in a movable state.")
-
-        if use_trajectory:
-            assert self.fps
-            try:
-                await goto(
-                    self.fps,
-                    [self.positioner_id],
-                    alpha,
-                    beta,
-                    speed=speed,
-                    relative=relative,
-                    use_sync_line=use_sync_line,
-                )
-                return True
-            except JaegerError:
-                raise
-
-        ALPHA_MAX = 360
-        BETA_MAX = 360
-        ALPHA_MIN = -ALPHA_MAX if relative else 0
-        BETA_MIN = -BETA_MAX if relative else 0
-
-        if (
-            alpha < ALPHA_MIN or alpha > ALPHA_MAX or beta < BETA_MIN or beta > BETA_MAX
-        ) and not force:
-            raise PositionerError("Position out of limits.")
-
-        if not self.initialised:
-            raise PositionerError("Not initialised.")
-
-        if None in self.speed:
-            raise PositionerError("Speed has not been set.")
-
-        # Update position
-        await self.update_position()
-        assert (
-            self.alpha is not None and self.beta is not None
-        ), "alpha or beta positions unknown."
-
-        # Check if safe mode is enabled
-        if "safe_mode" in config and config["safe_mode"] is not False:
-            if isinstance(config["safe_mode"], bool):
-                min_beta = 160
-            else:
-                min_beta = config["safe_mode"]["min_beta"]
-
-            if (relative is False and beta < min_beta) or (
-                relative is True and (self.beta + beta) < min_beta
-            ):
-                raise PositionerError(
-                    "Safe mode enabled. Cannot move beta arm that far."
-                )
-
-        original_speed = cast(Tuple[float, float], self.speed)
-
-        try:  # Wrap in try-except to restore speed if something fails.
-
-            # Set the speed
-            if speed and all(speed):
-                await self.set_speed(speed[0], speed[1], force=force)
-
-            self._log(
-                f'goto {"relative" if relative else "absolute"} '
-                f"position ({alpha:.3f}, {beta:.3f}) degrees."
-            )
-
-            goto_command = await self._goto_position(alpha, beta, relative=relative)
-            assert isinstance(
-                goto_command,
-                (GotoAbsolutePosition, GotoRelativePosition),
-            )
-
-            alpha_time, beta_time = goto_command.get_move_time()[self.positioner_id]
-            move_time = max([alpha_time, beta_time])
-            self._log(f"The move will take {move_time:.2f} seconds", logging.INFO)
-
-            assert self.fps is not None
-            assert goto_command.start_time is not None
-
-            while True:
-                await asyncio.sleep(0.2)
-
-                if self.fps.locked:
-                    # No need to be very verbose about this.
-                    self._log(
-                        "Cancelling goto because the FPS got locked",
-                        logging.DEBUG,
-                    )
-                    result = False
-                    break
-
-                elapsed = time() - goto_command.start_time
-                if elapsed > move_time + 3:
-                    raise PositionerError("Failed to reach commanded position.")
-
-                await self.update_status()
-                if maskbits.PositionerStatus.DISPLACEMENT_COMPLETED in self.status:
-                    result = True
-                    break
-
-        except BaseException:
-            raise
-
-        finally:
-            if self.speed != original_speed:
-                await self.set_speed(*original_speed, force=force)
-
-        if result is True:
-            self._log("Destination reached.", logging.INFO)
-
-        return result
 
     async def home(self):
         """Homes the positioner.

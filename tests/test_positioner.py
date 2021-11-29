@@ -10,8 +10,7 @@ import asyncio
 
 import pytest
 
-from jaeger import config
-from jaeger.exceptions import PositionerError, TrajectoryError
+from jaeger.exceptions import PositionerError
 from jaeger.maskbits import PositionerStatus
 
 
@@ -34,52 +33,6 @@ async def test_get_position(vfps, vpositioners):
     await vfps[1].update_position()
 
     assert vfps[1].position == (180.0, 180.0)
-
-
-@pytest.mark.parametrize("use_trajectory", (True, False))
-async def test_goto(vfps, event_loop, use_trajectory):
-
-    await vfps.initialise()
-
-    if use_trajectory is True:
-        with pytest.raises(TrajectoryError):
-            await vfps[1].goto(1, 1, relative=False, use_trajectory=use_trajectory)
-    else:
-        assert await vfps[1].goto(1, 1, relative=False, use_trajectory=use_trajectory)
-
-
-@pytest.mark.parametrize("use_trajectory", (True, False))
-async def test_goto_relative(vfps, event_loop, use_trajectory):
-
-    await vfps.initialise()
-
-    if use_trajectory is True:
-        with pytest.raises(TrajectoryError):
-            await vfps[1].goto(1, 1, relative=True, use_trajectory=use_trajectory)
-    else:
-        assert await vfps[1].goto(1, 1, relative=True, use_trajectory=use_trajectory)
-
-
-@pytest.mark.parametrize("use_trajectory", (True, False))
-async def test_goto_safe_mode(vfps, monkeypatch, use_trajectory):
-    monkeypatch.setitem(config, "safe_mode", True)
-
-    await vfps.initialise()
-
-    with pytest.raises(Exception) as err:
-        await vfps[1].goto(100, 150, use_trajectory=use_trajectory)
-        "safe mode is on" in str(err)
-
-
-@pytest.mark.parametrize("use_trajectory", (True, False))
-async def test_goto_safe_mode_custom_beta(vfps, monkeypatch, use_trajectory):
-    monkeypatch.setitem(config, "safe_mode", {"min_beta": 170})
-
-    await vfps.initialise()
-
-    with pytest.raises(Exception) as err:
-        await vfps[1].goto(100, 169, use_trajectory=use_trajectory)
-        "safe mode is on" in str(err)
 
 
 async def test_get_bus(vfps):

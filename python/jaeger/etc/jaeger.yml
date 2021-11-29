@@ -50,6 +50,7 @@ fps:
     disable_collision_detection_positioners: []
     use_sync_line: false
     snapshot_path: /data/logs/jaeger/snapshots/
+    use_lock: True
 
 positioner:
     reduction_ratio: 1024

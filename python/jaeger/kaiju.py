@@ -16,12 +16,13 @@ import numpy
 
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
-from jaeger.fps import FPS
 from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
     from kaiju import RobotGridCalib
+
+    from jaeger.fps import FPS
 
 
 __all__ = [
@@ -49,6 +50,8 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     set offline in the grid at their current positions.
 
     """
+
+    from jaeger.fps import FPS
 
     fps = FPS.get_instance()
     if fps is None:
@@ -429,6 +432,8 @@ async def get_snapshot(
     highlight: int | None = None,
 ):
     """Plots a snapshot of the FPS and saves it to disk."""
+
+    from jaeger.fps import FPS
 
     fps = fps or FPS.get_instance()
     if fps.initialised is False:
