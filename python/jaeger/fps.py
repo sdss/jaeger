@@ -1054,7 +1054,6 @@ class FPS(BaseFPS["FPS"]):
         new_positions: dict[int, tuple[float, float]],
         speed: Optional[float] = None,
         relative=False,
-        force: bool = False,
         use_sync_line: bool | None = None,
         no_kaiju: bool = False,
     ):
@@ -1070,9 +1069,6 @@ class FPS(BaseFPS["FPS"]):
             The speed to use.
         relative
             If `True`, ``alpha`` and ``beta`` are considered relative angles.
-        force
-            If ``positioners_ids=None``, ``force`` must be set to `True` to move
-            the entire array.
         use_sync_line
             Whether to use the SYNC line to start the trajectories.
         no_kaiju
