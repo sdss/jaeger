@@ -47,6 +47,9 @@ async def unwind_command(
 ):
     """Sends the FPS to folded."""
 
+    if fps.locked:
+        command.fail(error="The FPS is locked.")
+
     command.debug(text="Calculating unwind trajectory.")
 
     await fps.update_position()
@@ -75,6 +78,9 @@ async def unwind_command(
 @click.argument("EXPLODE-DEG", type=float)
 async def explode_command(command: Command[JaegerActor], fps: FPS, explode_deg: float):
     """Explodes the FPS."""
+
+    if fps.locked:
+        command.fail(error="The FPS is locked.")
 
     command.debug(text="Calculating explode trajectory.")
 

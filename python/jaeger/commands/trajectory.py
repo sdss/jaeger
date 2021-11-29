@@ -13,7 +13,7 @@ import pathlib
 import time
 import warnings
 
-from typing import TYPE_CHECKING, Dict, List, Tuple, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, cast
 
 import numpy
 
@@ -29,7 +29,10 @@ from jaeger.utils import int_to_bytes
 
 
 if TYPE_CHECKING:
+    from clu.command import Command as CluCommand
+
     from jaeger import FPS
+    from jaeger.actor import JaegerActor
 
 
 __all__ = [
@@ -184,15 +187,17 @@ class Trajectory(object):
 
     Parameters
     ----------
-    fps : .FPS
+    fps
         The instance of `.FPS` that will receive the trajectory.
-    trajectories : `str` or `dict`
+    trajectories
         Either a path to a YAML file to read or a dictionary with the
         trajectories. In either case the format must be a dictionary in
         which the keys are the ``positioner_ids`` and each value is a
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
+    command
+        A ``CLU`` command to which to output messages.
 
     Raises
     ------
@@ -220,10 +225,12 @@ class Trajectory(object):
         self,
         fps: FPS,
         trajectories: str | pathlib.Path | TrajectoryDataType,
+        command: Optional[CluCommand[JaegerActor]] = None,
     ):
 
         self.fps = fps
         self.trajectories: TrajectoryDataType
+        self.command = command
 
         if self.fps.locked:
             raise FPSLockedError(
@@ -290,12 +297,6 @@ class Trajectory(object):
 
             for arm in ["alpha", "beta"]:
                 data = numpy.array(list(zip(*trajectory[arm]))[0])
-
-                # if numpy.any(data > 360) or numpy.any(data < 0):
-                #     raise TrajectoryError(
-                #         f"Positioner {pid}: trajectory has points out of range.",
-                #         self,
-                #     )
 
                 if arm == "beta":
                     if config.get("safe_mode", False):

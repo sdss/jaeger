@@ -15,7 +15,7 @@ import numpy
 import jaeger
 from jaeger import config
 from jaeger.commands import Command, CommandID
-from jaeger.exceptions import JaegerError
+from jaeger.exceptions import FPSLockedError, JaegerError
 from jaeger.utils import (
     bytes_to_int,
     get_goto_move_time,
@@ -257,6 +257,9 @@ async def goto(
         Whether to use the SYNC line to start the trajectories.
 
     """
+
+    if fps.locked:
+        FPSLockedError("The FPS is locked.")
 
     if not isinstance(alpha, (list, tuple, numpy.ndarray)):
         alpha = numpy.tile(alpha, len(positioner_ids))

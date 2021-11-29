@@ -122,6 +122,9 @@ async def load(
 async def execute(command: Command[JaegerActor], fps: FPS):
     """Executes a configuration trajectory."""
 
+    if fps.locked:
+        command.fail(error="The FPS is locked.")
+
     if fps.configuration is None or fps.configuration.ingested is False:
         return command.fail(error="A configuration must first be loaded.")
 
@@ -149,11 +152,11 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     command.info(text="Sending and executing trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory)
+        await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their destinations.")
+    command.finish()
 
 
 @configuration.command()
@@ -179,6 +182,9 @@ async def random(
     collision_buffer: float | None = None,
 ):
     """Executes a random, valid configuration."""
+
+    if fps.locked:
+        command.fail(error="The FPS is locked.")
 
     command.debug(text="Checking that all positioners are folded.")
 

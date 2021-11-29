@@ -28,7 +28,7 @@ from sdsstools.daemonizer import DaemonGroup
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
-from jaeger.exceptions import JaegerError, JaegerUserWarning
+from jaeger.exceptions import FPSLockedError, JaegerError, JaegerUserWarning
 from jaeger.fps import FPS, LOCK_FILE
 from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
@@ -694,6 +694,9 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
 
     async with fps_maker as fps:
 
+        if fps.locked:
+            FPSLockedError("The FPS is locked.")
+
         await fps.update_position()
         positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}
 
@@ -720,6 +723,9 @@ async def explode(fps_maker, explode_deg: float):
     from jaeger.kaiju import explode
 
     async with fps_maker as fps:
+
+        if fps.locked:
+            FPSLockedError("The FPS is locked.")
 
         await fps.update_position()
         positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}

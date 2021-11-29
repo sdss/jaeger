@@ -739,6 +739,9 @@ class FVC:
     ):  # pragma: no cover
         """Applies the offsets. Fails if the trajectory is collided or deadlock."""
 
+        if self.fps.locked:
+            raise FVCError("The FPS is locked. Cannot apply corrections.")
+
         self.log("Preparing correction trajectory.")
 
         if self.offsets is None and offsets is None:
