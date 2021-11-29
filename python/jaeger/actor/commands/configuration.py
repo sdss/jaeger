@@ -50,6 +50,11 @@ def configuration():
     is_flag=True,
     help="Replace an existing entry.",
 )
+@click.option(
+    "--generate-paths",
+    is_flag=True,
+    help="Generates and stores the to and from destination paths.",
+)
 @click.option("--folded", is_flag=True, help="Loads a folded configuration.")
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
@@ -59,6 +64,7 @@ async def load(
     reload: bool = False,
     replace: bool = False,
     folded: bool = False,
+    generate_paths: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -111,6 +117,14 @@ async def load(
             boresight[0, 1],
         ]
     )
+
+    try:
+        await configuration.get_trajectory(decollide=True)
+    except (TrajectoryError, JaegerError) as err:
+        return command.fail(
+            error=f"Failed generating paths: {err} "
+            "The configuration has been loaded and written to the database."
+        )
 
     return command.finish(
         text=f"Configuration {fps.configuration.configuration_id} loaded "

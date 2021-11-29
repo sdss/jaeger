@@ -4,7 +4,7 @@
 
 ### 🚀 New
 
-* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.get_trajectory()` is called. The reverse path can be sent from the actor using `configuration reverse`.
+* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.get_trajectory()` is called. The reverse path can be sent from the actor using `configuration reverse`. The paths can be generated in advance when loading the design.
 
 
 ### ✨ Improved
