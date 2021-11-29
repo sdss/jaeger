@@ -1051,29 +1051,23 @@ class FPS(BaseFPS["FPS"]):
 
     async def goto(
         self,
-        positioner_ids: int | List[int] | None,
-        alpha: float | list | numpy.ndarray,
-        beta: float | list | numpy.ndarray,
-        speed: Optional[Tuple[float, float]] = None,
+        new_positions: dict[int, tuple[float, float]],
+        speed: Optional[float] = None,
         relative=False,
         force: bool = False,
         use_sync_line: bool | None = None,
+        no_kaiju: bool = False,
     ):
         """Sends a list of positioners to a given position.
 
         Parameters
         ----------
-        positioner_ids
-            The list of positioner_ids to command. If `None`, uses all conencted
-            positioners.
-        alpha
-            The alpha angle. Can be an array with the same size of the list of
-            positioner IDs. Otherwise sends all the positioners to the same angle.
-        beta
-            The beta angle.
+        new_positions
+            The new positions as a dictionary of positioner ID to a tuple of new
+            alpha and beta angles. Positioners not specified will be kept on the
+            same positions.
         speed
-            As a tuple, the alpha and beta speeds to use. If `None`, uses the default
-            ones.
+            The speed to use.
         relative
             If `True`, ``alpha`` and ``beta`` are considered relative angles.
         force
@@ -1081,28 +1075,21 @@ class FPS(BaseFPS["FPS"]):
             the entire array.
         use_sync_line
             Whether to use the SYNC line to start the trajectories.
+        no_kaiju
+            If set, does not create a ``kaiju``-safe trajectory. Use at your own risk.
 
         """
-
-        if isinstance(positioner_ids, int):
-            positioner_ids = [positioner_ids]
-
-        if (positioner_ids is None or len(positioner_ids) == 0) and force is False:
-            raise JaegerError("Moving all positioners requires force=True.")
-
-        positioner_ids = positioner_ids or list(self.keys())
 
         try:
             traj = await goto(
                 self,
-                positioner_ids,
-                alpha,
-                beta,
+                new_positions,
                 relative=relative,
                 speed=speed,
                 use_sync_line=use_sync_line,
+                no_kaiju=no_kaiju,
             )
-        except JaegerError:
+        except Exception:
             raise
         finally:
             await self.update_status()

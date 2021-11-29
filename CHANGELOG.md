@@ -9,6 +9,8 @@
 ### ✨ Improved
 
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
+* `jaeger.commands.goto.goto()` generates `kaiju`-valid trajectories by default.
+
 ### 🔥 Removed
 
 * `Positioner.goto()` has been removed. Use `jaeger.commands.goto.goto()` instead.

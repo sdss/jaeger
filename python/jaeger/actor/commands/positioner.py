@@ -18,10 +18,9 @@ import numpy
 
 import clu
 
-from jaeger import config
 from jaeger.commands import CommandID, SetCurrent, Trajectory
+from jaeger.commands.goto import goto as goto_
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.utils import get_goto_move_time
 
 from . import jaeger_parser
 
@@ -63,8 +62,8 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 
 @jaeger_parser.command()
 @click.argument("POSITIONER-IDS", type=int, nargs=-1)
-@click.argument("ALPHA", type=click.FloatRange(-360.0, 360.0))
-@click.argument("BETA", type=click.FloatRange(-360.0, 360.0))
+@click.argument("ALPHA", type=click.FloatRange(-10.0, 370.0))
+@click.argument("BETA", type=click.FloatRange(-10.0, 370.0))
 @click.option(
     "-r",
     "--relative",
@@ -75,8 +74,7 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
     "-s",
     "--speed",
     type=click.FloatRange(100.0, 4000.0),
-    nargs=2,
-    help="The speed of both alpha and beta arms, in RPS on the input.",
+    help="The speed for both alpha and beta arms, in RPS on the input.",
 )
 @click.option(
     "-a",
@@ -104,7 +102,7 @@ async def goto(
     positioner_ids: Tuple[int, ...],
     alpha: float,
     beta: float,
-    speed: Tuple[float, float],
+    speed: float | None,
     all: bool = False,
     force: bool = False,
     relative: bool = False,
@@ -113,6 +111,12 @@ async def goto(
     """Sends positioners to a given (alpha, beta) position."""
 
     assert command.actor
+
+    if fps.locked:
+        return command.fail(error="FPS is locked. Cannot send goto.")
+
+    if fps.moving:
+        return command.fail(error="FPS is moving. Cannot send goto.")
 
     if all:
         if not force:
@@ -128,55 +132,23 @@ async def goto(
     if not check_positioners(pids, command, fps, initialised=True):
         return
 
-    if fps.moving:
-        return command.fail(error="FPS is moving. Cannot send goto.")
-
-    if speed is None:
-        default_speed = config["positioner"]["motor_speed"]
-        speed = (default_speed, default_speed)
-
-    max_time = 0.0
-
-    for pid in pids:
-
-        # Manually calculate the max move time we'll encounter.
-        p_alpha, p_beta = fps[pid].position
-
-        if p_alpha is None or p_beta is None:
-            return command.fail(error="Some positioners do not know their positions.")
-
-        delta_alpha = abs(p_alpha - alpha) if not relative else alpha
-        delta_beta = abs(p_beta - beta) if not relative else beta
-
-        time_alpha = get_goto_move_time(
-            delta_alpha,
-            speed=speed[0] or fps[pid].speed[0],
-        )
-        time_beta = get_goto_move_time(
-            delta_beta,
-            speed=speed[1] or fps[pid].speed[1],
-        )
-
-        if time_alpha > max_time:
-            max_time = time_alpha
-        if time_beta > max_time:
-            max_time = time_beta
-
-    command.info(move_time=round(max_time, 2))
+    new_positions = {}
+    for pid in positioner_ids:
+        new_positions[pid] = (alpha, beta)
 
     try:
-        await command.actor.fps.goto(
-            pids,
-            alpha,
-            beta,
+        await goto_(
+            fps,
+            new_positions,
             speed=speed,
             relative=relative,
             use_sync_line=use_sync,
+            command=command,
         )
-    except JaegerError as err:
+    except (JaegerError, TrajectoryError) as err:
         return command.fail(error=f"Goto command failed: {err}")
 
-    command.finish(text="Destination reached")
+    command.finish()
 
 
 @jaeger_parser.command()
