@@ -12,6 +12,8 @@ import warnings
 
 from typing import TYPE_CHECKING, Optional
 
+import numpy
+
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
@@ -19,7 +21,6 @@ from jaeger.utils.helpers import run_in_executor
 
 
 if TYPE_CHECKING:
-
     from kaiju import RobotGridCalib
 
 
@@ -33,6 +34,7 @@ __all__ = [
     "explode",
     "get_path_pair_in_executor",
     "decollide_in_executor",
+    "check_trajectory",
 ]
 
 
@@ -447,3 +449,59 @@ async def get_snapshot(
     )
 
     return True
+
+
+async def check_trajectory(
+    trajectory: dict,
+    current_positions: dict | None = None,
+    fps: FPS | None = None,
+    atol=1.0,
+) -> bool:
+    """Checks that the current position matches the starting point of a trajectory.
+
+    Parameters
+    ----------
+    trajectory
+        The dictionary with the trajectory to check.
+    current_positions
+        A mapping of positioner ID to ``(alpha, beta)`` with the current arrangement
+        of the FPS array.
+    fps
+        If ``current_positions`` is not passed, the `.FPS` instance is used to
+        determine the current arrangement.
+
+    """
+
+    if current_positions is None:
+        if fps:
+            await fps.update_position()
+            current_positions = fps.get_positions_dict(ignore_disabled=True)
+        else:
+            raise RuntimeError("Either current_positions or fps must be passed.")
+
+    if len(current_positions) == 0:
+        return False
+
+    if len(current_positions) != len(trajectory):
+        warn("Mismatch between number of positioners and trajectory.")
+        return False
+
+    array_current = numpy.zeros((len(current_positions), 2), dtype=numpy.float32)
+    array_trajectory = numpy.zeros((len(current_positions), 2), dtype=numpy.float32)
+    for ii, pid in enumerate(current_positions):
+        array_current[ii, :] = current_positions[pid]
+
+        if pid not in trajectory:
+            warn(f"Positioner {pid} is not in the trajectory.")
+            return False
+
+        alpha0 = trajectory[pid]["alpha"][0][0]
+        beta0 = trajectory[pid]["beta"][0][0]
+
+        array_trajectory[ii, :] = (alpha0, beta0)
+
+    if numpy.allclose(array_current, array_trajectory, atol=atol):
+        return True
+    else:
+        warn("Trajectory start and current positions do not match.")
+        return False

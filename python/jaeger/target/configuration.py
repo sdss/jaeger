@@ -148,6 +148,9 @@ class BaseConfiguration:
 
         self.robot_grid = self._initialise_grid()
 
+        self.to_destination: dict | None = None
+        self.from_destination: dict | None = None
+
     def _initialise_grid(self):
 
         self.robot_grid = get_robot_grid()
@@ -162,7 +165,12 @@ class BaseConfiguration:
         decollide: bool = False,
         simple_decollision: bool = False,
     ):
-        """Returns a trajectory dictionary from the folded position."""
+        """Returns a trajectory dictionary from the folded position.
+
+        Also stores the to destination trajectory so that it can be
+        used later to return to folded position.
+
+        """
 
         assert isinstance(self, BaseConfiguration)
 
@@ -196,14 +204,14 @@ class BaseConfiguration:
             await decollide_in_executor(self.robot_grid, simple=simple_decollision)
 
         result = await get_path_pair_in_executor(self.robot_grid)
-        _, from_destination, did_fail, deadlocks = result
+        self.to_destination, self.from_destination, did_fail, deadlocks = result
         if did_fail:
             raise TrajectoryError(
                 "Failed generating a valid trajectory. "
                 f"{len(deadlocks)} deadlocks were found."
             )
 
-        return from_destination
+        return self.from_destination
 
     @property
     def ingested(self):
@@ -478,13 +486,13 @@ class Configuration(BaseConfiguration):
 
     assignment_data: AssignmentData
 
-    def __init__(self, design: Design, **kwargs):
+    def __init__(self, design: Design, epoch: float | None = None, **kwargs):
 
         super().__init__(**kwargs)
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment_data = AssignmentData(self)
+        self.assignment_data = AssignmentData(self, epoch=epoch)
 
     def __repr__(self):
         return (
@@ -914,11 +922,11 @@ class AssignmentData(BaseAssignmentData):
 
     design: Design
 
-    def __init__(self, configuration: Configuration):
+    def __init__(self, configuration: Configuration, epoch: float | None = None):
 
         super().__init__(configuration)
 
-        self.compute_coordinates()
+        self.compute_coordinates(epoch)
 
     def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems."""

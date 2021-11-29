@@ -12,9 +12,11 @@ from typing import TYPE_CHECKING
 
 import click
 import numpy
+from astropy.time import Time
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.kaiju import check_trajectory
 from jaeger.target.configuration import Configuration, ManualConfiguration
 from jaeger.target.design import Design
 from jaeger.target.tools import create_random_configuration
@@ -49,6 +51,17 @@ def configuration():
     is_flag=True,
     help="Replace an existing entry.",
 )
+@click.option(
+    "--generate-paths",
+    is_flag=True,
+    help="Generates and stores the to and from destination paths.",
+)
+@click.option(
+    "--epoch-delay",
+    type=float,
+    default=0.0,
+    help="A delay in seconds for the epoch for which the configuration is calculated.",
+)
 @click.option("--folded", is_flag=True, help="Loads a folded configuration.")
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
@@ -58,6 +71,8 @@ async def load(
     reload: bool = False,
     replace: bool = False,
     folded: bool = False,
+    generate_paths: bool = False,
+    epoch_delay: float = 0.0,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -78,9 +93,9 @@ async def load(
 
     else:
         try:
-            design = await Design.create_async(designid)
+            epoch = Time.now().jd + epoch_delay / 86400.0
+            design = await Design.create_async(designid, epoch=epoch)
         except (ValueError, RuntimeError, JaegerError) as err:
-            raise
             return command.fail(error=f"Failed retrieving design: {err}")
 
         fps.configuration = design.configuration
@@ -112,6 +127,15 @@ async def load(
         ]
     )
 
+    if generate_paths:
+        try:
+            await configuration.get_trajectory(decollide=True)
+        except (TrajectoryError, JaegerError) as err:
+            return command.fail(
+                error=f"Failed generating paths: {err} "
+                "The configuration has been loaded and written to the database."
+            )
+
     return command.finish(
         text=f"Configuration {fps.configuration.configuration_id} loaded "
         "and written to database."
@@ -120,7 +144,7 @@ async def load(
 
 @configuration.command()
 async def execute(command: Command[JaegerActor], fps: FPS):
-    """Executes a configuration trajectory."""
+    """Executes a configuration trajectory (folded to targets)."""
 
     if fps.locked:
         command.fail(error="The FPS is locked.")
@@ -128,31 +152,52 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None or fps.configuration.ingested is False:
         return command.fail(error="A configuration must first be loaded.")
 
-    positions = fps.get_positions(ignore_disabled=True)
-    if len(positions) == 0:
-        return command.fail("No positioners found.")
-
-    # Check that all non-disabled positioners are folded.
-    if not numpy.allclose(positions[:, 1:] - [0, 180], 0, atol=0.1):
-        return command.fail(error="Not all the positioners are folded.")
-
-    command.info(text="Calculating trajectory.")
+    if fps.configuration.from_destination is not None:
+        from_destination = fps.configuration.from_destination
+        command.info(text="Using stored trajectory (from destination).")
+    else:
+        command.info(text="Calculating trajectory.")
     try:
-        trajectory = await fps.configuration.get_trajectory()
+        from_destination = await fps.configuration.get_trajectory()
     except Exception as err:
         return command.fail(error=f"Failed getting trajectory: {err}")
 
-    traj_pids = trajectory.keys()
-    for pid in traj_pids:
-        if pid not in fps:
-            return command.fail(
-                error=f"Trajectory contains positioner_id={pid} which is not connected."
-            )
+    if not check_trajectory(from_destination, fps=fps, atol=1):
+        return command.fail(error="Trajectory validation failed.")
 
-    command.info(text="Sending and executing trajectory.")
+    command.info(text="Sending and executing forward trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory, command=command)
+        await fps.send_trajectory(from_destination, command=command)
+    except TrajectoryError as err:
+        return command.fail(error=f"Trajectory failed with error: {err}")
+
+    command.finish()
+
+
+@configuration.command()
+async def reverse(command: Command[JaegerActor], fps: FPS):
+    """Executes a reverse trajectory (targets to folded)."""
+
+    if fps.locked:
+        command.fail(error="The FPS is locked.")
+
+    if fps.configuration is None:
+        return command.fail(error="A configuration must first be loaded.")
+
+    to_destination = fps.configuration.to_destination
+    if to_destination is None:
+        return command.fail(
+            error="The configuration does not have a to_destination path. Use unwind."
+        )
+
+    if not check_trajectory(to_destination, fps=fps, atol=1):
+        return command.fail(error="Trajectory validation failed.")
+
+    command.info(text="Sending and executing reverse trajectory.")
+
+    try:
+        await fps.send_trajectory(to_destination, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
