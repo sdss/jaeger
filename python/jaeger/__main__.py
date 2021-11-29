@@ -107,7 +107,7 @@ class FPSWrapper(object):
 
         if self.initialise:
             await self.fps.initialise(
-                enable_low_temperature=self.enable_low_temperature
+                enable_low_temperature=self.enable_low_temperature,
                 use_lock=self.use_lock,
             )
             if self.enable_low_temperature is False:
