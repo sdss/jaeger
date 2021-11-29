@@ -26,7 +26,12 @@ __all__ = ["Design"]
 class Design:
     """Loads and represents a targetdb design."""
 
-    def __init__(self, design_id: int, load_configuration=True):
+    def __init__(
+        self,
+        design_id: int,
+        load_configuration: bool = True,
+        epoch: float | None = None,
+    ):
 
         if calibration.wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")

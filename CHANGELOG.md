@@ -2,6 +2,11 @@
 
 ## Next version
 
+### 🚀 New
+
+* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.get_trajectory()` is called. The reverse path can be sent from the actor using `configuration reverse`.
+
+
 ### ✨ Improved
 
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
