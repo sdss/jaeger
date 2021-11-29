@@ -118,13 +118,14 @@ async def load(
         ]
     )
 
-    try:
-        await configuration.get_trajectory(decollide=True)
-    except (TrajectoryError, JaegerError) as err:
-        return command.fail(
-            error=f"Failed generating paths: {err} "
-            "The configuration has been loaded and written to the database."
-        )
+    if generate_paths:
+        try:
+            await configuration.get_trajectory(decollide=True)
+        except (TrajectoryError, JaegerError) as err:
+            return command.fail(
+                error=f"Failed generating paths: {err} "
+                "The configuration has been loaded and written to the database."
+            )
 
     return command.finish(
         text=f"Configuration {fps.configuration.configuration_id} loaded "
