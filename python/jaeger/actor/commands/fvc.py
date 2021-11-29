@@ -34,10 +34,6 @@ if TYPE_CHECKING:
 __all__ = ["fvc_parser"]
 
 
-# Reusable FVC instance. Do not reinitialise so that we don't lose PID info.
-fvc = FVC(config["observatory"])
-
-
 @jaeger_parser.group(name="fvc")
 def fvc_parser():
     """Commands to command the FVC."""
@@ -58,6 +54,8 @@ async def expose(
     assert isinstance(exposure_time, float)
 
     command.info("Taking FVC exposure with fliswarm.")
+
+    fvc = FVC(config["observatory"])
 
     try:
         fvc.set_command(command)
@@ -102,7 +100,7 @@ async def loop(
     if fps.configuration is None:
         return command.fail("Configuration not loaded.")
 
-    fvc.set_command(command)
+    fvc = FVC(config["observatory"], command=command)
 
     command.debug("Turning LEDs on.")
     await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
