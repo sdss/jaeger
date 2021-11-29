@@ -121,15 +121,15 @@ async def goto(
     if all:
         if not force:
             return command.fail(error="Use --force to move all positioners at once.")
-        pids: List[int] = list(fps.positioners.keys())
+        positioner_ids: list[int] = list(fps.positioners.keys())
     else:
-        pids = list(positioner_ids)
+        positioner_ids = list(positioner_ids)
 
     if not relative:
         if alpha < 0 or beta < 0:
             return command.fail(error="Negative angles only allowed in relative mode.")
 
-    if not check_positioners(pids, command, fps, initialised=True):
+    if not check_positioners(positioner_ids, command, fps, initialised=True):
         return
 
     new_positions = {}
