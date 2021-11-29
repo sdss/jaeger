@@ -294,7 +294,6 @@ class FPS(BaseFPS["FPS"]):
         initialise=True,
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
-        use_lock: bool = True,
     ) -> "FPS":
         """Starts the CAN bus and .
 
@@ -304,15 +303,13 @@ class FPS(BaseFPS["FPS"]):
             Whether to initialise the FPS.
         start_pollers
             Whether to initialise the pollers.
-        use_lock
-            Use a lock file to prevent multiple instances of `.FPS`.
         kwargs
             Parameters to pass to `.FPS`.
 
         """
 
         instance = cls(can=can, ieb=ieb)
-        await instance.start_can(use_lock=use_lock)
+        await instance.start_can()
 
         if initialise:
             await instance.initialise(
@@ -322,8 +319,10 @@ class FPS(BaseFPS["FPS"]):
 
         return instance
 
-    async def start_can(self, use_lock: bool = True):
+    async def start_can(self):
         """Starts the JaegerCAN interface."""
+
+        use_lock = config["fps"]["use_lock"]
 
         if use_lock and self.pid_lock is None:
             try:
@@ -372,7 +371,6 @@ class FPS(BaseFPS["FPS"]):
         self: T,
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
-        use_lock: bool = True,
     ) -> T:
         """Initialises all positioners with status and firmware version.
 
@@ -396,7 +394,7 @@ class FPS(BaseFPS["FPS"]):
             await self.pollers.stop()
 
         # Make sure CAN buses are connected.
-        await self.start_can(use_lock=use_lock)
+        await self.start_can()
 
         # Test IEB connection.
         if isinstance(self.ieb, IEB):

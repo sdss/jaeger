@@ -73,7 +73,6 @@ class FPSWrapper(object):
         initialise=True,
         npositioners=10,
         enable_low_temperature=True,
-        use_lock=True,
     ):
 
         self.profile = profile
@@ -83,7 +82,6 @@ class FPSWrapper(object):
         self.ieb = ieb
         self.enable_low_temperature = enable_low_temperature
         self.initialise = initialise
-        self.use_lock = use_lock
 
         self.vpositioners = []
         self.npositioners = npositioners
@@ -107,8 +105,7 @@ class FPSWrapper(object):
 
         if self.initialise:
             await self.fps.initialise(
-                enable_low_temperature=self.enable_low_temperature,
-                use_lock=self.use_lock,
+                enable_low_temperature=self.enable_low_temperature
             )
             if self.enable_low_temperature is False:
                 warnings.warn(
@@ -222,6 +219,9 @@ def jaeger(
     if config_file:
         config.load(config_file)
 
+    if no_lock:
+        config["fps"]["use_lock"] = False
+
     actor_config = config.get("actor", {})
 
     if verbose == 1:
@@ -258,7 +258,6 @@ def jaeger(
         ieb=ieb,
         npositioners=npositioners,
         enable_low_temperature=enable_low_temperature,
-        use_lock=not no_lock,
     )
 
 

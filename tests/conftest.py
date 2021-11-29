@@ -42,6 +42,7 @@ config["fps"]["start_pollers"] = True
 
 config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
 config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
+config["fps"]["use_lock"] = False
 
 
 # Disable logging to file.
@@ -111,7 +112,7 @@ async def vfps(ieb_server, monkeypatch):
     # Make initialisation faster.
     monkeypatch.setitem(jaeger.config["fps"], "initialise_timeouts", 0.05)
 
-    fps = await VirtualFPS.create(initialise=False, use_lock=False)
+    fps = await VirtualFPS.create(initialise=False)
     fps.pid_lock = True  # type: ignore  # Hack to prevent use of lock.
 
     assert isinstance(fps.ieb, IEB)
@@ -138,7 +139,7 @@ async def vpositioners(test_config, vfps):
     for pid in test_config["positioners"]:
         vfps.add_virtual_positioner(pid)
 
-    await vfps.initialise(use_lock=False)  # Reinitialise
+    await vfps.initialise()  # Reinitialise
 
     yield vfps._vpositioners
 
