@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import pathlib
 
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING
 
 import click
 import numpy
@@ -99,7 +99,7 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 async def goto(
     command: Command[JaegerActor],
     fps: FPS,
-    positioner_ids: Tuple[int, ...],
+    positioner_ids: tuple[int, ...] | list[int],
     alpha: float,
     beta: float,
     speed: float | None,
@@ -121,7 +121,7 @@ async def goto(
     if all:
         if not force:
             return command.fail(error="Use --force to move all positioners at once.")
-        positioner_ids: list[int] = list(fps.positioners.keys())
+        positioner_ids = list(fps.positioners.keys())
     else:
         positioner_ids = list(positioner_ids)
 
