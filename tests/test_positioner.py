@@ -10,8 +10,7 @@ import asyncio
 
 import pytest
 
-from jaeger import config
-from jaeger.exceptions import PositionerError, TrajectoryError
+from jaeger.exceptions import PositionerError
 from jaeger.maskbits import PositionerStatus
 
 

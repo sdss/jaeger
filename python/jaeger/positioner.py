@@ -11,16 +11,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from distutils.version import StrictVersion
-from time import time
 
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Tuple
 
 import jaeger
 from jaeger import config, log, maskbits
 from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID
 from jaeger.commands.bootloader import GetFirmwareVersion
-from jaeger.commands.goto import GotoAbsolutePosition, GotoRelativePosition, goto
 from jaeger.commands.status import GetActualPosition
 from jaeger.exceptions import JaegerError, PositionerError
 from jaeger.utils import StatusMixIn, bytes_to_int
