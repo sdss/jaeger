@@ -382,8 +382,6 @@ class Trajectory(object):
             self.failed = True
             raise TrajectoryError("Some positioners did not respond.", self)
 
-        log.debug("Sending data points:")
-
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:
 
@@ -411,8 +409,6 @@ class Trajectory(object):
                 )
 
             traj_pos = self.trajectories[pos_id]
-
-            log.debug(f"{pos_id}: {traj_pos}")
 
             self.n_points[pos_id] = (len(traj_pos["alpha"]), len(traj_pos["beta"]))
 
