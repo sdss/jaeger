@@ -672,7 +672,7 @@ class Trajectory(object):
         except BaseException:
             self.failed = True
             await self.fps.stop_trajectory()
-            await self.fps.save_snapshot()
+            asyncio.create_task(self.fps.save_snapshot())
             raise
 
         finally:
@@ -682,7 +682,7 @@ class Trajectory(object):
             # Only save snapshot on success. If the trajectory failed it will
             # already be saved in TrajectoryError.
             if success is True:
-                await self.fps.save_snapshot()
+                asyncio.create_task(self.fps.save_snapshot())
 
             if self.dump_file:
                 self.dump_trajectory()
