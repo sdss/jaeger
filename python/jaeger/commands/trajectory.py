@@ -705,6 +705,9 @@ class Trajectory(object):
         self.dump_data["trajectory_send_time"] = self.data_send_time
         self.dump_data["end_time"] = time.time()
 
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
+
         with open(path, "w") as f:
             f.write(json.dumps(self.dump_data, indent=2))
 

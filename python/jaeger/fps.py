@@ -1194,7 +1194,7 @@ class FPS(BaseFPS["FPS"]):
 
         else:
             mjd = int(Time.now().mjd)
-            dirpath = f"/data/logs/jaeger/snapshots/{mjd}"
+            dirpath = os.path.join(config["fps"]["snapshot_path"], str(mjd))
             if not os.path.exists(dirpath):
                 os.makedirs(dirpath)
 
