@@ -356,4 +356,5 @@ async def goto(
         trajectories,
         use_sync_line=use_sync_line,
         command=command,
+        extra_dump_data={"kaiju_trajectory": not no_kaiju},
     )
