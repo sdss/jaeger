@@ -64,11 +64,11 @@ async def unwind_command(
     command.info("Executing unwind trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory)
+        await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their destinations.")
+    command.finish()
 
 
 @jaeger_parser.command(name="explode")
@@ -88,8 +88,8 @@ async def explode_command(command: Command[JaegerActor], fps: FPS, explode_deg: 
     command.info("Executing explode trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory)
+        await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their destinations.")
+    command.finish()

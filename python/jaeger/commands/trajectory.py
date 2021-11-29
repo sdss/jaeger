@@ -55,8 +55,9 @@ async def send_trajectory(
     fps: FPS,
     trajectories: str | pathlib.Path | TrajectoryDataType,
     use_sync_line: bool | None = None,
-    send_trajectory=True,
-    start_trajectory=True,
+    send_trajectory: bool = True,
+    start_trajectory: bool = True,
+    command: Optional[CluCommand[JaegerActor]] = None,
 ) -> Trajectory:
     """Sends a set of trajectories to the positioners.
 
@@ -108,7 +109,7 @@ async def send_trajectory(
 
     """
 
-    traj = Trajectory(fps, trajectories)
+    traj = Trajectory(fps, trajectories, command=command)
 
     if use_sync_line is None:
         use_sync_line = config["fps"]["use_sync_line"]
@@ -122,7 +123,10 @@ async def send_trajectory(
     if send_trajectory is False:
         return traj
 
-    log.debug("sending trajectory data.")
+    msg = "Sending trajectory data."
+    log.debug(msg)
+    if command:
+        command.debug(msg)
 
     try:
         await traj.send()
@@ -132,13 +136,23 @@ async def send_trajectory(
             err.trajectory,
         )
 
-    log.debug(f"Trajectory sent in {traj.data_send_time:1f} seconds.")
+    msg = f"Trajectory sent in {traj.data_send_time:.1f} seconds."
+    log.debug(msg)
+    if command:
+        command.debug(msg)
+
     log.info(f"Expected time to complete trajectory: {traj.move_time:.2f} seconds.")
+    if command and traj.move_time:
+        command.info(move_time=round(traj.move_time, 2))
 
     if start_trajectory is False:
         return traj
 
-    log.info("starting trajectory ...")
+    msg = "Starting trajectory ..."
+    log.info(msg)
+    if command:
+        command.info(msg)
+
     try:
         await traj.start(use_sync_line=use_sync_line)
     except TrajectoryError as err:
@@ -154,7 +168,10 @@ async def send_trajectory(
             err.trajectory,
         )
 
-    log.info("All positioners have reached their destinations.")
+    msg = "All positioners have reached their destinations."
+    log.info(msg)
+    if command:
+        command.info(msg)
 
     return traj
 

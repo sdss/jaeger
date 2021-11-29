@@ -781,7 +781,7 @@ class FVC:
 
         self.log("Sending correction trajectory.")
         try:
-            await self.fps.send_trajectory(to_destination)
+            await self.fps.send_trajectory(to_destination, command=self.command)
         except TrajectoryError as err:
             raise FVCError(f"Failed executing the correction trajectory: {err}")
 

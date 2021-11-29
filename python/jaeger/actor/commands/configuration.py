@@ -224,8 +224,8 @@ async def random(
     command.actor.fps.configuration = configuration
 
     try:
-        await fps.send_trajectory(trajectory)
+        await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    command.finish(text="All positioners reached their destinations.")
+    command.finish()
