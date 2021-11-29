@@ -55,7 +55,6 @@ positioner:
     motor_steps: 1073741824
     time_step: 0.0005
     motor_speed: 2000
-    gear_ratio: 1000
     initialise_datums_timeout: 300
     disable_precise_moves: true
     uid_bits: 6
