@@ -320,7 +320,7 @@ async def goto(
 
             if current_alpha is None or current_beta is None:
                 raise JaegerError(f"Positioner {pid} does not know its position.")
-            print(pid, current_alpha)
+
             if pid in new_positions:
                 data["grid"][int(pid)] = (
                     current_alpha,
