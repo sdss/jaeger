@@ -8,6 +8,8 @@
 * [#153](https://github.com/sdss/jaeger/issues/153) Handling of low temperature now happens in `FPS` instead of in the actor. Added an `FPS.status` attribute with the global status of the system (idle, moving, collided, and temperature status). The actor subscribes to status changes using `FPS.async_status()` and broadcasts them.
 * Add `FPS.save_snapshot()` along with actor command `snapshot` to use kaiju to save a plot with the current arrangement of the FPS array.
 * Add a lockfile to prevent multiple instance of `jaeger` running at the same time. At the observatories, `jaeger` can only run on `sdss5-fps`.
+* All functions that call CPU-intensive methods in `kaiju` are now run in a `ProcessPool` executor.
+* FVC loop is now functional.
 
 ### ✨ Improved
 
@@ -15,6 +17,7 @@
 * Added additional checks to confirm that a trajectory starts correctly and succeeds. After one second, the code checks that the FPS is moving and that `DISPLACEMENT_COMPLETED` is not present on any positioner status. At the end of the trajectory a check confirms that all the positioners are within 0.1 degrees of their destinations.
 * Add `--no-gfas` to the `ieb power on` command to avoid powering the GFAs during the power on sequence.
 * Allows to call `FVC.expose()` without an active command by creating an ad-hoc Tron connection.
+* `FVC.expose()` now can stack multiple exposures.
 * Allows to use fibre_type other than 'Metrology' when processing an FVC image.
 * Defaults to `proc-<image>` when calling `FVC.write_proc_image()`.
 
