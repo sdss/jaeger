@@ -527,6 +527,8 @@ class Trajectory(object):
         if self.move_time is None:
             raise TrajectoryError("move_time not set.", self)
 
+        self.use_sync_line = use_sync_line
+
         if use_sync_line:
 
             if not isinstance(self.fps.ieb, IEB) or self.fps.ieb.disabled:
@@ -703,6 +705,7 @@ class Trajectory(object):
         self.dump_data["success"] = not self.failed
         self.dump_data["trajectory_start_time"] = self.start_time
         self.dump_data["trajectory_send_time"] = self.data_send_time
+        self.dump_data["use_sync_line"] = self.use_sync_line
         self.dump_data["end_time"] = time.time()
 
         if not os.path.exists(os.path.dirname(path)):
