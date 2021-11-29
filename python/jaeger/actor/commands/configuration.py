@@ -81,7 +81,6 @@ async def load(
         try:
             design = await Design.create_async(designid)
         except (ValueError, RuntimeError, JaegerError) as err:
-            raise
             return command.fail(error=f"Failed retrieving design: {err}")
 
         fps.configuration = design.configuration
