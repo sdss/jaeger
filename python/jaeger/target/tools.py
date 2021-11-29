@@ -177,13 +177,13 @@ async def create_random_configuration(
             if safe:
                 safe_mode = config["safe_mode"]
                 if safe_mode is False:
-                    safe_mode = {"min_beta": 165, "max_beta": 195}
+                    safe_mode = {"min_beta": 165, "max_beta": 175}
 
                 robot.setAlphaBeta(
                     numpy.random.uniform(0, 359.9),
                     numpy.random.uniform(
                         safe_mode["min_beta"],
-                        safe_mode["max_beta"],
+                        175.0,
                     ),
                 )
 
