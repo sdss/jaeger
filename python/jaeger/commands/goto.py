@@ -258,9 +258,6 @@ async def goto(
 
     """
 
-    # Just in case.
-    await fps.start_can()
-
     if not isinstance(alpha, (list, tuple, numpy.ndarray)):
         alpha = numpy.tile(alpha, len(positioner_ids))
     if not isinstance(beta, (list, tuple, numpy.ndarray)):

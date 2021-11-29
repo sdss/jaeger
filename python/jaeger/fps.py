@@ -294,6 +294,7 @@ class FPS(BaseFPS["FPS"]):
         initialise=True,
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
+        use_lock: bool = True,
     ) -> "FPS":
         """Starts the CAN bus and .
 
@@ -303,13 +304,15 @@ class FPS(BaseFPS["FPS"]):
             Whether to initialise the FPS.
         start_pollers
             Whether to initialise the pollers.
+        use_lock
+            Use a lock file to prevent multiple instances of `.FPS`.
         kwargs
             Parameters to pass to `.FPS`.
 
         """
 
         instance = cls(can=can, ieb=ieb)
-        await instance.start_can()
+        await instance.start_can(use_lock=use_lock)
 
         if initialise:
             await instance.initialise(
@@ -319,11 +322,13 @@ class FPS(BaseFPS["FPS"]):
 
         return instance
 
-    async def start_can(self):
+    async def start_can(self, use_lock: bool = True):
         """Starts the JaegerCAN interface."""
 
-        if self.pid_lock is None:
+        if use_lock and self.pid_lock is None:
             try:
+                if not os.path.exists(os.path.dirname(LOCK_FILE)):
+                    os.makedirs(os.path.dirname(LOCK_FILE))
                 self.pid_lock = LockFile(LOCK_FILE)
             except Exception:
                 raise JaegerError(
@@ -366,7 +371,8 @@ class FPS(BaseFPS["FPS"]):
     async def initialise(
         self: T,
         start_pollers: bool | None = None,
-        enable_low_temperature=True,
+        enable_low_temperature: bool = True,
+        use_lock: bool = True,
     ) -> T:
         """Initialises all positioners with status and firmware version.
 
@@ -390,7 +396,7 @@ class FPS(BaseFPS["FPS"]):
             await self.pollers.stop()
 
         # Make sure CAN buses are connected.
-        await self.start_can()
+        await self.start_can(use_lock=use_lock)
 
         # Test IEB connection.
         if isinstance(self.ieb, IEB):

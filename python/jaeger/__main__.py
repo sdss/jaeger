@@ -73,6 +73,7 @@ class FPSWrapper(object):
         initialise=True,
         npositioners=10,
         enable_low_temperature=True,
+        use_lock=True,
     ):
 
         self.profile = profile
@@ -82,6 +83,7 @@ class FPSWrapper(object):
         self.ieb = ieb
         self.enable_low_temperature = enable_low_temperature
         self.initialise = initialise
+        self.use_lock = use_lock
 
         self.vpositioners = []
         self.npositioners = npositioners
@@ -106,6 +108,7 @@ class FPSWrapper(object):
         if self.initialise:
             await self.fps.initialise(
                 enable_low_temperature=self.enable_low_temperature
+                use_lock=self.use_lock,
             )
             if self.enable_low_temperature is False:
                 warnings.warn(
@@ -182,6 +185,11 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     is_flag=True,
     help="Allows running jager in a host other than sdss5-fps.",
 )
+@click.option(
+    "--no-lock",
+    is_flag=True,
+    help="Do not use the lock file, or ignore it if present.",
+)
 @click.pass_context
 def jaeger(
     ctx,
@@ -194,6 +202,7 @@ def jaeger(
     virtual,
     npositioners,
     allow_host,
+    no_lock,
 ):
     """CLI for the SDSS-V focal plane system.
 
@@ -249,6 +258,7 @@ def jaeger(
         ieb=ieb,
         npositioners=npositioners,
         enable_low_temperature=enable_low_temperature,
+        use_lock=not no_lock,
     )
 
 
