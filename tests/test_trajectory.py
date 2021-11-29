@@ -18,6 +18,7 @@ from jaeger.exceptions import JaegerError, TrajectoryError
 pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
+@pytest.mark.xfail()
 async def test_send_trajectory(vfps):
 
     await vfps.initialise()
