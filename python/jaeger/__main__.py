@@ -28,7 +28,13 @@ from sdsstools.daemonizer import DaemonGroup
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
 from jaeger.commands.calibration import calibrate_positioner
-from jaeger.exceptions import FPSLockedError, JaegerError, JaegerUserWarning
+from jaeger.commands.goto import goto as goto_
+from jaeger.exceptions import (
+    FPSLockedError,
+    JaegerError,
+    JaegerUserWarning,
+    TrajectoryError,
+)
 from jaeger.fps import FPS, LOCK_FILE
 from jaeger.positioner import Positioner
 from jaeger.testing import VirtualFPS
@@ -456,23 +462,90 @@ async def calibrate(fps_maker, positioner_id, motors, datums, cogging):
 
 
 @jaeger.command()
-@click.argument("positioner_id", metavar="POSITIONER", type=int)
-@click.argument("alpha", metavar="ALPHA", type=click.FloatRange(-10, 370))
-@click.argument("beta", metavar="BETA", type=click.FloatRange(-10, 370))
+@click.argument("POSITIONER-IDS", type=int, nargs=-1)
+@click.argument("ALPHA", type=click.FloatRange(-10.0, 370.0))
+@click.argument("BETA", type=click.FloatRange(-10.0, 370.0))
 @click.option(
+    "-r",
+    "--relative",
+    is_flag=True,
+    help="Whether this is a relative move",
+)
+@click.option(
+    "-s",
     "--speed",
-    type=click.FloatRange(500, 4000),
-    help="The speed for the alpha and beta motors.",
+    type=click.FloatRange(100.0, 4000.0),
+    help="The speed for both alpha and beta arms, in RPS on the input.",
+)
+@click.option(
+    "-a",
+    "--all",
+    is_flag=True,
+    default=False,
+    help="Applies to all valid positioners.",
+)
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Forces a move to happen.",
+)
+@click.option(
+    "--go-cowboy",
+    is_flag=True,
+    help="If set, does not use kaiju-validated trajectories.",
+)
+@click.option(
+    "--use-sync/-no-use-sync",
+    " /-S",
+    default=True,
+    help="Whether to use the SYNC line to start the trajectory.",
 )
 @pass_fps
 @cli_coro
-async def goto(fps_maker, positioner_id, alpha, beta, speed=None):
-    """Moves a robot to a given position."""
+async def goto(
+    fps_maker,
+    positioner_ids: tuple[int, ...] | list[int],
+    alpha: float,
+    beta: float,
+    speed: float | None,
+    all: bool = False,
+    force: bool = False,
+    relative: bool = False,
+    use_sync: bool = True,
+    go_cowboy: bool = False,
+):
+    """Sends positioners to a given (alpha, beta) position."""
 
-    async with fps_maker as fps:
-        await fps.goto({positioner_id: (alpha, beta)})
+    with fps_maker as fps:
 
-    return
+        if all:
+            if not force:
+                raise JaegerError("Use --force to move all positioners at once.")
+            positioner_ids = list(fps.positioners.keys())
+        else:
+            positioner_ids = list(positioner_ids)
+
+        if not relative:
+            if alpha < 0 or beta < 0:
+                raise JaegerError("Negative angles only allowed in relative mode.")
+
+        new_positions = {}
+        for pid in positioner_ids:
+            new_positions[pid] = (alpha, beta)
+
+        try:
+            await goto_(
+                fps,
+                new_positions,
+                speed=speed,
+                relative=relative,
+                use_sync_line=use_sync,
+                go_cowboy=go_cowboy,
+            )
+        except (JaegerError, TrajectoryError) as err:
+            raise JaegerError(f"Goto command failed: {err}")
 
 
 @jaeger.command(name="set-positions")

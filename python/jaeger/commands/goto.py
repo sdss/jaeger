@@ -8,12 +8,19 @@
 
 from __future__ import annotations
 
+import warnings
+
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import jaeger
 from jaeger import config
 from jaeger.commands import Command, CommandID
-from jaeger.exceptions import FPSLockedError, JaegerError, TrajectoryError
+from jaeger.exceptions import (
+    FPSLockedError,
+    JaegerError,
+    JaegerUserWarning,
+    TrajectoryError,
+)
 from jaeger.kaiju import get_path_pair
 from jaeger.utils import (
     bytes_to_int,
@@ -236,7 +243,8 @@ async def goto(
     speed: Optional[float] = None,
     relative: bool = False,
     use_sync_line: bool = None,
-    no_kaiju: bool = False,
+    go_cowboy: bool = False,
+    force: bool = False,
     command: CluCommand[JaegerActor] | None = None,
 ):
     """Send positioners to a given position using a trajectory with ``kaiju`` check.
@@ -255,8 +263,11 @@ async def goto(
         If `True`, ``alpha`` and ``beta`` are considered relative angles.
     use_sync_line
         Whether to use the SYNC line to start the trajectories.
-    no_kaiju
+    go_cowboy
         If set, does not create a ``kaiju``-safe trajectory. Use at your own risk.
+    force
+        If ``go_cowboy=False`` and the trajectory is deadlocked, a `.TrajectoryError`
+        will be raised. Use ``force=True`` to apply the trajectory anyway.
     command
         A command to pass to `.send_trajectory` to output additional information.
 
@@ -264,6 +275,9 @@ async def goto(
 
     if fps.locked:
         FPSLockedError("The FPS is locked.")
+
+    if fps.moving:
+        raise JaegerError("FPS is moving. Cannot send goto.")
 
     for pid in new_positions:
         if pid not in fps.positioners:
@@ -278,7 +292,7 @@ async def goto(
 
     trajectories = {}
 
-    if no_kaiju is True:
+    if go_cowboy is True:
         for pid in positioner_ids:
             pos = fps[pid]
 
@@ -339,15 +353,20 @@ async def goto(
         (to_destination, _, did_fail, deadlocks) = await run_in_executor(
             get_path_pair,
             data=data,
+            stop_if_deadlock=force,
             executor="process",
         )
 
         if did_fail is True:
-            raise TrajectoryError(
-                "Cannot execute trajectory. Either the final "
-                "configuration is collided or deadlocked. "
-                f"Found {len(deadlocks)} deadlocks."
-            )
+            if force is False:
+                raise TrajectoryError(
+                    f"Cannot execute trajectory. Found {len(deadlocks)} deadlocks."
+                )
+            else:
+                warnings.warn(
+                    f"Found {len(deadlocks)} deadlocks but applying trajectory.",
+                    JaegerUserWarning,
+                )
 
         trajectories = to_destination
 
@@ -356,5 +375,5 @@ async def goto(
         trajectories,
         use_sync_line=use_sync_line,
         command=command,
-        extra_dump_data={"kaiju_trajectory": not no_kaiju},
+        extra_dump_data={"kaiju_trajectory": not go_cowboy},
     )
