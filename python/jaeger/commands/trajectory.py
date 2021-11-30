@@ -572,7 +572,6 @@ class Trajectory(object):
         min_trajectory_time = 2.0
         PS = PositionerStatus
 
-        success = False
         try:
 
             # The positioners take a bit to report that they are moving so if the
@@ -667,22 +666,17 @@ class Trajectory(object):
                     self,
                 )
 
-            success = True
-
         except BaseException:
             self.failed = True
             await self.fps.stop_trajectory()
-            asyncio.create_task(self.fps.save_snapshot())
             raise
 
         finally:
             await self.fps.stop_trajectory()
-            await self.fps.update_position()
 
-            # Only save snapshot on success. If the trajectory failed it will
-            # already be saved in TrajectoryError.
-            if success is True:
-                asyncio.create_task(self.fps.save_snapshot())
+            # Not explicitely updating the positions here because save_snapshot()
+            # will do that and no need to waste extra time.
+            await self.fps.save_snapshot()
 
             if self.dump_file:
                 self.dump_trajectory()
