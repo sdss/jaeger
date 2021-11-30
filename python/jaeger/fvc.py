@@ -139,7 +139,10 @@ class FVC:
             if self.command.status.is_done:
                 raise FVCError("Command is done.")
 
-        self.log(f"Taking {exposure_time} seconds FVC exposure.", to_command=False)
+        self.log(
+            f"Taking {stack} x {exposure_time} seconds FVC exposure.",
+            to_command=False,
+        )
 
         tron = None
 
