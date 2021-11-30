@@ -222,6 +222,7 @@ def get_path_pair(
     smooth_points=None,
     path_delay=None,
     collision_shrink=None,
+    stop_if_deadlocked: bool = False,
 ) -> tuple:
     """Runs ``pathGenGreedy`` and returns the to and from destination paths.
 
@@ -243,6 +244,9 @@ def get_path_pair(
     speed, smooth_points, path_delay, collision_shrink
         Kaiju parameters to pass to ``getPathPair``. Otherwise uses the default
         configuration values.
+    stop_if_deadlocked
+        If `True`, detects deadlocks early in the path and returns shorter
+        trajectories (at the risk of some false positive deadlocks).
 
     Returns
     -------
@@ -262,10 +266,10 @@ def get_path_pair(
     assert robot_grid is not None
 
     if path_generation_mode == "escape":
-        robot_grid.pathGenEscape(escape_deg)
+        robot_grid.pathGenExplode(escape_deg)
         deadlocks = []
     else:
-        robot_grid.pathGenGreedy()
+        robot_grid.pathGenGreedy(stopIfDeadlock=stop_if_deadlocked)
 
         # Check for deadlocks.
         deadlocks = robot_grid.deadlockedRobots()
@@ -343,6 +347,7 @@ async def unwind(
         get_path_pair,
         data=data,
         ignore_did_fail=force,
+        stop_if_deadlocked=force,
         executor="process",
     )
     if did_fail:

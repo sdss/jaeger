@@ -776,6 +776,7 @@ class FVC:
         (to_destination, _, did_fail, deadlocks) = await get_path_pair_in_executor(
             grid,
             ignore_did_fail=True,
+            stop_if_deadlock=True,
         )
         if did_fail:
             log.warning(
