@@ -214,13 +214,16 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
 
     command.debug(power_sync=[False])
 
+    disabled = config["ieb"]["disabled_devices"]
+
     for devname in seq:
-        if devname.upper() in config["ieb"]["disabled_devices"]:
-            command.warning(text=f"{devname} is disabled. Skipping.")
-            continue
 
         do_delay = False
         if isinstance(devname, str):
+            if devname.upper() in config["ieb"]["disabled_devices"]:
+                command.warning(text=f"{devname} is disabled. Skipping.")
+                continue
+
             dev = ieb.get_device(devname)
             category = dev.category.lower()
 
@@ -239,7 +242,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
             command.debug({category: await _get_category_data(command, category)})
 
         elif isinstance(devname, (tuple, list)):
-            devname = list(devname)
+            devname = list([dn for dn in devname if dn not in disabled])
             devs = [ieb.get_device(dn) for dn in devname]
             category = devs[0].category.lower()
 
