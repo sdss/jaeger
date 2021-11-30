@@ -262,7 +262,7 @@ def get_path_pair(
     assert robot_grid is not None
 
     if path_generation_mode == "escape":
-        robot_grid.pathGenEscape(escape_deg)
+        robot_grid.pathGenExplode(escape_deg)
         deadlocks = []
     else:
         robot_grid.pathGenGreedy()
