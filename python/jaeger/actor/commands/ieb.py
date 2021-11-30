@@ -16,6 +16,7 @@ import click
 from clu.command import Command
 from clu.parsers.click import pass_args
 
+from jaeger import config
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.testing import VirtualFPS
@@ -125,6 +126,10 @@ async def switch(command, fps, devices=(), on=None, cycle=False, delay=1):
 
     for idev, device in enumerate(devices):
 
+        if device.upper() in config["ieb"]["disabled_devices"]:
+            command.warning(text=f"{device} is disabled. Skipping.")
+            continue
+
         if len(devices) > 1 and idev != 0:
             await asyncio.sleep(delay)
 
@@ -210,6 +215,10 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
     command.debug(power_sync=[False])
 
     for devname in seq:
+        if devname.upper() in config["ieb"]["disabled_devices"]:
+            command.warning(text=f"{devname} is disabled. Skipping.")
+            continue
+
         do_delay = False
         if isinstance(devname, str):
             dev = ieb.get_device(devname)

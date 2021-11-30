@@ -52,6 +52,9 @@ fps:
     snapshot_path: /data/logs/jaeger/snapshots/
     use_lock: True
 
+ieb:
+    disabled_devices: ['GFA1']
+
 positioner:
     reduction_ratio: 1024
     motor_steps: 1073741824
