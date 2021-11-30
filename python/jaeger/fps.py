@@ -1199,7 +1199,7 @@ class FPS(BaseFPS["FPS"]):
             else:
                 seq = int(files[-1].split("_")[-1][0:4]) + 1
 
-            path = path_pattern.replace("*", f"{seq:04d}")
+            path = path_pattern.replace("*", f"{mjd}_{seq:04d}")
 
         result = await get_snapshot(
             path,
