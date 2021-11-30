@@ -71,6 +71,8 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     if collision_buffer < 1.5:
         raise JaegerError("Invalid collision buffer < 1.5.")
 
+    log.debug(f"Creating RobotGridCalib with stepSize={ang_step}, epsilon={epsilon}.")
+
     robot_grid = RobotGridCalib(stepSize=ang_step, epsilon=epsilon, seed=seed)
     robot_grid.setCollisionBuffer(collision_buffer)
 
@@ -269,12 +271,18 @@ def get_path_pair(
     assert robot_grid is not None
 
     if path_generation_mode == "explode":
+        log.debug(f"Running pathGenExplode with explode_deg={explode_deg}.")
         robot_grid.pathGenExplode(explode_deg)
         deadlocks = []
     elif path_generation_mode == "explode_one":
+        log.debug(
+            f"Running pathGenExplodeOne with explode_deg={explode_deg}, "
+            f"explode_positioner_id={explode_positioner_id}."
+        )
         robot_grid.pathGenExplodeOne(explode_deg, explode_positioner_id)
         deadlocks = []
     else:
+        log.debug(f"Running pathGenGreedy with stopIfDeadlock={stop_if_deadlock}.")
         robot_grid.pathGenGreedy(stopIfDeadlock=stop_if_deadlock)
 
         # Check for deadlocks.
@@ -286,6 +294,11 @@ def get_path_pair(
     smooth_points = smooth_points or config["kaiju"]["smooth_points"]
     collision_shrink = collision_shrink or config["kaiju"]["collision_shrink"]
     path_delay = path_delay or config["kaiju"]["path_delay"]
+
+    log.debug(
+        f"Running getPathPair with speed={speed}, smoothPoints={smooth_points}, "
+        f"collisionShrink={collision_shrink}, pathDelay={path_delay}."
+    )
 
     to_destination, from_destination = robot_grid.getPathPair(
         speed=speed,
