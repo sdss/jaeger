@@ -75,8 +75,14 @@ async def unwind_command(
 
 
 @jaeger_parser.command(name="explode")
+@click.option("--one", type=int, help="Only explode this positioner.")
 @click.argument("EXPLODE-DEG", type=float)
-async def explode_command(command: Command[JaegerActor], fps: FPS, explode_deg: float):
+async def explode_command(
+    command: Command[JaegerActor],
+    fps: FPS,
+    explode_deg: float,
+    one: int | None = None,
+):
     """Explodes the FPS."""
 
     if fps.locked:
@@ -87,7 +93,11 @@ async def explode_command(command: Command[JaegerActor], fps: FPS, explode_deg: 
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
 
     try:
-        trajectory = await explode(positions, explode_deg=explode_deg)
+        trajectory = await explode(
+            positions,
+            explode_deg=explode_deg,
+            positioner_id=one,
+        )
     except (JaegerError, ValueError, TrajectoryError) as err:
         return command.fail(error=f"Failed calculating trajectory: {err}")
 

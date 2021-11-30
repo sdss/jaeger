@@ -695,9 +695,14 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
 
 @jaeger.command()
 @click.argument("EXPLODE-DEG", type=float)
+@click.option("--one", type=int, help="Only explode this positioner.")
 @pass_fps
 @cli_coro
-async def explode(fps_maker, explode_deg: float):
+async def explode(
+    fps_maker,
+    explode_deg: float,
+    one: int | None = None,
+):
     """Explodes the array."""
 
     from jaeger.kaiju import explode
@@ -711,7 +716,11 @@ async def explode(fps_maker, explode_deg: float):
         positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.values()}
 
         log.info("Calculating trajectory.")
-        trajectory = await explode(positions, explode_deg=explode_deg)
+        trajectory = await explode(
+            positions,
+            explode_deg=explode_deg,
+            positioner_id=one,
+        )
 
         log.info("Executing explode trajectory.")
         await fps.send_trajectory(trajectory)
