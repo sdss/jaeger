@@ -203,7 +203,7 @@ async def unwind(fps, speed, collisionBuffer):
 
     # generate the path to fold
     tstart = time.time()
-    rg.pathGenGreedy()
+    rg.pathGenGreedy(stopIfDeadlock=True)
     print("unwind path generation took %.1f seconds" % (time.time() - tstart))
 
     # verify that the path generation was successful if not exit
@@ -397,7 +397,7 @@ async def robotcalib(
             if mdp:
                 rg.pathGenMDP(GREED, PHOBIA)
             else:
-                rg.pathGenGreedy()
+                rg.pathGenGreedy(stopIfDeadlock=True)
             print(
                 "attempt %i path generation took %.1f seconds"
                 % (jj, (time.time() - tstart))
