@@ -62,7 +62,11 @@ def configuration():
     default=0.0,
     help="A delay in seconds for the epoch for which the configuration is calculated.",
 )
-@click.option("--folded", is_flag=True, help="Loads a folded configuration.")
+@click.option(
+    "--from-positions",
+    is_flag=True,
+    help="Loads a configuration from the current robot positions.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -70,28 +74,27 @@ async def load(
     designid: int | None = None,
     reload: bool = False,
     replace: bool = False,
-    folded: bool = False,
+    from_positions: bool = False,
     generate_paths: bool = False,
     epoch_delay: float = 0.0,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
-    if folded:
-        designid = designid or -999
-        fps.configuration = ManualConfiguration.create_folded(design_id=designid)
-        return command.finish("Manual configuration loaded.")
-
-    if designid is None:
-        return command.fail(error="Design ID is required.")
-
     if reload is True:
         if fps.configuration is None:
             return command.fail(error="No configuration found. Cannot reload.")
-        if fps.configuration.design_id != designid:
-            return command.fail(error="Loaded configuration does not match designid.")
+        designid = fps.configuration.design_id
         fps.configuration.configuration_id = None
 
+    elif from_positions is True:
+        await fps.update_position()
+        positions = fps.get_positions_dict()
+        fps.configuration = ManualConfiguration.create_from_positions(positions)
+
     else:
+        if designid is None:
+            return command.fail(error="Design ID is required.")
+
         try:
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(designid, epoch=epoch)
@@ -149,7 +152,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.locked:
         command.fail(error="The FPS is locked.")
 
-    if fps.configuration is None or fps.configuration.ingested is False:
+    if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
 
     if fps.configuration.from_destination is not None:
