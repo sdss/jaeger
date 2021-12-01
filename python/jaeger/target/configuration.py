@@ -576,15 +576,28 @@ class ManualConfiguration(BaseConfiguration):
         )
 
     @classmethod
-    def create_folded(cls, **kwargs):
-        """Creates a folded configuration."""
+    def create_from_positions(cls, positions, **kwargs):
+        """Create a manual configuration from robot positions.
+
+        Parameters
+        ----------
+        positions
+            A dictionary of positioner ID to a tuple of ``(alpha, beta)``.
+
+        """
 
         positionerTable = calibration.positionerTable.reset_index()
-        alphaL, betaL = config["kaiju"]["lattice_position"]
-        data = {
-            positionerTable.iloc[i].holeID: {"alpha": alphaL, "beta": betaL}
-            for i in range(len(positionerTable))
-        }
+        data = {}
+
+        for _, row in positionerTable.iterrows():
+            hole_id = row.holeID
+            positioner_id = row.positionerID
+
+            if positioner_id not in positions:
+                raise ValueError(f"Values for positioner {positioner_id} not provided.")
+
+            alpha, beta = positions[positioner_id]
+            data[hole_id] = {"alpha": alpha, "beta": beta, "fibre_type": "Metrology"}
 
         return cls(data, **kwargs)
 
