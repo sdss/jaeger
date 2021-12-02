@@ -27,7 +27,7 @@ python = "^3.7.1,<4.0"
 numpy = "^1.21.0"
 progressbar2 = "^3.39.3"
 sdss-drift = "^0.3.0"
-sdss-clu = "^1.0.0"
+sdss-clu = {version = "^1.1.0", allow-prereleases = true}
 sdsstools = "^0.4.13"
 click_default_group = "^1.2.2"
 sdssdb = "^0.4.11"
