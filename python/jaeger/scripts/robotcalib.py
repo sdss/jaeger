@@ -175,20 +175,19 @@ async def ledOff(fps, devName):
 async def exposeFVC(fvc, exptime, fibre_data, nexp):
     from jaeger.exceptions import FVCError
 
-    for ii in range(nexp):
-        try:
-            print("exposing FVC %i of %i" % (ii + 1, nexp))
-            rawfname = await fvc.expose(exposure_time=exptime)
-            print("exposure complete: %s" % rawfname)
-            fvc.process_fvc_image(rawfname, fibre_data, plot=True)
-            print("image processing complete")
-            positions = await fvc.fps.update_position()
-            fvc.calculate_offsets(positions)
-            print("calculcate offsets complete")
-            await fvc.write_proc_image()
-            print("image write complete")
-        except FVCError as e:
-            print("exposure failed with FVCError, continuing")
+    try:
+        print("exposing FVC stack of %i" % (nexp))
+        rawfname = await fvc.expose(exposure_time=exptime, stack=nexp)
+        print("exposure complete: %s" % rawfname)
+        fvc.process_fvc_image(rawfname, fibre_data, plot=True)
+        print("image processing complete")
+        positions = await fvc.fps.update_position()
+        fvc.calculate_offsets(positions)
+        print("calculcate offsets complete")
+        await fvc.write_proc_image()
+        print("image write complete")
+    except FVCError as e:
+        print("exposure failed with FVCError, continuing")
 
 
 async def unwind(fps, speed, collisionBuffer):
@@ -203,7 +202,7 @@ async def unwind(fps, speed, collisionBuffer):
 
     # generate the path to fold
     tstart = time.time()
-    rg.pathGenGreedy(stopIfDeadlock=True)
+    rg.pathGenGreedy(stopIfDeadlock=False)
     print("unwind path generation took %.1f seconds" % (time.time() - tstart))
 
     # verify that the path generation was successful if not exit
@@ -397,7 +396,7 @@ async def robotcalib(
             if mdp:
                 rg.pathGenMDP(GREED, PHOBIA)
             else:
-                rg.pathGenGreedy(stopIfDeadlock=True)
+                rg.pathGenGreedy(stopIfDeadlock=False)
             print(
                 "attempt %i path generation took %.1f seconds"
                 % (jj, (time.time() - tstart))
@@ -484,7 +483,8 @@ async def robotcalib(
                 # shrink collision buffer
                 _cbShrink = cb - 0.1
                 await fps.unlock()
-                success = await unwind(fps, speed, _cbShrink)
+                #success = await unwind(fps, speed, _cbShrink)
+                success = False
                 if success:
                     print("unwind worked skipping to next iteration")
                     continue
@@ -566,7 +566,8 @@ async def robotcalib(
                 # shrink collision buffer
                 _cbShrink = cb - 0.1
                 await fps.unlock()
-                success = await unwind(fps, speed, _cbShrink)
+                # success = await unwind(fps, speed, _cbShrink)
+                success = False
                 if success:
                     # unwind worked move to next iteration
                     print("unwind worked skipping to next iteration")

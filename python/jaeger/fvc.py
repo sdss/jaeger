@@ -382,24 +382,20 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        xwok_measured = xy_wok_robot_meas[:, 0]
-        ywok_measured = xy_wok_robot_meas[:, 1]
+        self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
+        self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
 
         # Only use online robots for final RMS.
-        online = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
-        dx = self.fibre_data.loc[online, "xwok"] - xwok_measured[online]
-        dy = self.fibre_data.loc[online, "ywok"] - ywok_measured[online]
+        online = self.fibre_data.loc[
+            (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
+        ]
+        dx = online.xwok - online.xwok_measured
+        dy = online.ywok - online.ywok_measured
 
         self.fitrms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
-
-        keep_cols = ["positioner_id", "hole_id"]
-        self.measurements = self.fibre_data.loc[fibre_type, keep_cols]
-        self.measurements.loc[:, "xwok_measured"] = xwok_measured
-        self.measurements.loc[:, "ywok_measured"] = ywok_measured
-        self.measurements.reset_index().set_index("positioner_id")
 
         self.fibre_data.reset_index(inplace=True)
         self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
