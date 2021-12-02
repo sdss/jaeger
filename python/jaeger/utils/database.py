@@ -67,7 +67,12 @@ def load_holes(observatory: str):
 
 
 @check_database
-def load_fields(plan: str, files: list[str] = None, pattern: str = None):
+def load_fields(
+    plan: str,
+    files: list[str] = None,
+    pattern: str = None,
+    sequential_field: bool = False,
+):
     """Loads a series of field.
 
     Parameters
@@ -79,6 +84,10 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
     pattern
         Alternative to ``files``, a pattern to be used with ``glob``
         to retrieve a list of files to load.
+    sequential_field
+        If `False`, uses the filename to determine the field ID. Otherwise
+        sequentially increments the ``field_id`` field starting with the current
+        maximum value.
     """
 
     if files is None and pattern:
@@ -111,11 +120,18 @@ def load_fields(plan: str, files: list[str] = None, pattern: str = None):
         hdul = fits.open(file_)
 
         # Create field
-        field_id = int(file_.split("-")[-1][:-5])
+        if sequential_field is False:
+            field_id = int(file_.split("-")[-1][:-5])
+        else:
+            field_id = targetdb.Field.select(
+                peewee.fn.max(targetdb.Field.field_id)
+            ).scalar()
+            field_id += 1
+
         observatory = hdul[0].header["OBS"].upper()
-        racen = hdul[0].header["RACEN"]
-        deccen = hdul[0].header["DECCEN"]
-        PA = hdul[0].header["PA"]
+        racen = float(hdul[0].header["RACEN"])
+        deccen = float(hdul[0].header["DECCEN"])
+        PA = float(hdul[0].header["PA"])
         field_cadence = hdul[0].header["FCADENCE"]
         nexp = hdul[0].header["NEXP"]
 
