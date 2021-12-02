@@ -1,0 +1,38 @@
+address: 10.25.1.162
+port: 1111
+modules:
+    CHILLER:
+        mode: holding_register
+        channels: -1
+        description: APO chiller status variables
+        devices:
+            DISPLAY_VALUE:
+                address: 8991
+                adaptor: proportional
+                adaptor_extra_params: [0.1]
+                units: celsius
+                description: Status display value SV
+            FLOW_USER_SETPOINT:
+                address: 9017
+                adaptor: proportional
+                adaptor_extra_params: [0.1]
+                units: gpm
+                description: Process fluid setpoint flow GPM
+            TEMPERATURE_USER_SETPOINT:
+                address: 9018
+                adaptor: proportional
+                adaptor_extra_params: [0.1]
+                units: celsius
+                description: Process fluid setpoint temperature C
+            STATUS_AMBIENT_AIR:
+                address: 8985
+                adaptor: proportional
+                adaptor_extra_params: [0.1]
+                units: celsius
+                description:
+            STATUS_FLUID_FLOW:
+                address: 9011
+                adaptor: proportional
+                adaptor_extra_params: [0.1]
+                units: gpm
+                description:
