@@ -8,12 +8,12 @@ modules:
         description: "E+E temperature and humidity sensors"
         devices:
             "RH1":
-                address: 40005
+                address: 4
                 category: humidity
                 adaptor: rh_dwyer
                 units: percent
             "T1":
-                address: 40006
+                address: 5
                 category: temperature
                 adaptor: t_dwyer
                 units: degC
@@ -24,13 +24,13 @@ modules:
         description: Pt RTD sensors
         devices:
             RTD1:
-                address: 40013
+                address: 12
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: Inside the controller box
             RTD2:
-                address: 40014
+                address: 13
                 category: temperature
                 adaptor: rtd
                 units: degC
@@ -42,13 +42,13 @@ modules:
         description: Pulse Width Modulator (PWM) output module for LED control
         devices:
             LED1:
-                address: 40514
+                address: 513
                 category: fbi_led
                 adaptor: pwd
                 units: percent
                 description: LED1 power
             LED2:
-                address: 40516
+                address: 515
                 category: fbi_led
                 adaptor: pwd
                 units: percent
@@ -60,25 +60,25 @@ modules:
         description: "Power relays"
         devices:
             PS1:
-                address: 40517
+                address: 516
                 type: relay
                 channel: 0
                 category: power_sextant
                 relay_type: NC
             PS5V:
-                address: 40517
+                address: 516
                 type: relay
                 channel: 1
                 category: power_5v
                 relay_type: NC
             CM1:
-                address: 40517
+                address: 516
                 type: relay
                 channel: 2
                 category: power_can
                 relay_type: NC
             SYNC:
-                address: 40517
+                address: 516
                 type: relay
                 channel: 3
                 category: power_sync

@@ -8,19 +8,19 @@ modules:
         description: Pt RTD sensors
         devices:
             RTD1:
-                address: 40005
+                address: 4
                 category: fvc_temperature
                 adaptor: rtd
                 units: degC
                 description: IEB inside air temperature
             RTD2:
-                address: 40006
+                address: 5
                 category: fvc_temperature
                 adaptor: rtd
                 units: degC
                 description:
             RTD3:
-                address: 40007
+                address: 6
                 category: fvc_temperature
                 adaptor: rtd
                 units: degC
@@ -32,7 +32,7 @@ modules:
         description: Pulse Width Modulator (PWM) output module for LED control
         devices:
             LED1:
-                address: 40514
+                address: 513
                 category: fvc_led
                 adaptor: pwd
                 units: percent
@@ -44,14 +44,14 @@ modules:
         description: Relays for AC power switching
         devices:
             NUC:
-                address: 40517
+                address: 516
                 channel: 0
                 type: relay
                 category: fvc_power_nuc
                 relay_type: NC
                 description: FVC NUC
             FVC:
-                address: 40517
+                address: 516
                 channel: 1
                 type: relay
                 category: fvc_power_camera
