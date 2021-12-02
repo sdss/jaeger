@@ -8,6 +8,7 @@
 
 ### ✨ Improved
 
+* [#166](https://github.com/sdss/jaeger/issues/166) During `BaseConfiguration.get_trajectory()` the paths are decollided and deadlocks resolved while trying to maintain as many robots on target as possible. The fibre table is updated.
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
 * `jaeger.commands.goto.goto()` generates `kaiju`-valid trajectories by default.
 
