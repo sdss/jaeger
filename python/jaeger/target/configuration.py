@@ -664,10 +664,10 @@ class ManualConfiguration(BaseConfiguration):
     target_data
         A dictionary containing the targeting information. It must be a
         mapping of hole ID to dictionary. The hole ID dictionaries must
-        include one of the following pairs: ``(ra_icrs, dec_icrs)``,
-        ``(xwok, ywok)``, or ``(alpha, beta)`` if order of priority.
+        include one of the following pairs: ``ra_icrs`` and ``dec_icrs``,
+        ``xwok`` and ywok``, or ``alpha`` and ``beta``, in order of priority.
         The remaining coordinates will be filled out using coordinate
-        transformations. If ``ra_icrs/dec_icrs`` are passed, the column
+        transformations. If ``ra_icrs/dec_icrs`` are passed, a value for
         ``epoch`` is also required. An additional key, ``fibre_type``
         must be set for each target with value ``'APOGEE'``, ``'BOSS'``,
         or ``'Metrology``.
@@ -717,15 +717,28 @@ class ManualConfiguration(BaseConfiguration):
         )
 
     @classmethod
-    def create_folded(cls, **kwargs):
-        """Creates a folded configuration."""
+    def create_from_positions(cls, positions, **kwargs):
+        """Create a manual configuration from robot positions.
+
+        Parameters
+        ----------
+        positions
+            A dictionary of positioner ID to a tuple of ``(alpha, beta)``.
+
+        """
 
         positionerTable = calibration.positionerTable.reset_index()
-        alphaL, betaL = config["kaiju"]["lattice_position"]
-        data = {
-            positionerTable.iloc[i].holeID: {"alpha": alphaL, "beta": betaL}
-            for i in range(len(positionerTable))
-        }
+        data = {}
+
+        for _, row in positionerTable.iterrows():
+            hole_id = row.holeID
+            positioner_id = row.positionerID
+
+            if positioner_id not in positions:
+                raise ValueError(f"Values for positioner {positioner_id} not provided.")
+
+            alpha, beta = positions[positioner_id]
+            data[hole_id] = {"alpha": alpha, "beta": beta, "fibre_type": "Metrology"}
 
         return cls(data, **kwargs)
 
@@ -1134,11 +1147,13 @@ class ManualAssignmentData(BaseAssignmentData):
     target_data
         A dictionary containing the targeting information. It must be a
         mapping of hole ID to dictionary. The hole ID dictionaries must
-        include one of the following pairs: ``(ra_icrs, dec_icrs)``,
-        ``(xwok, ywok)``, or ``(alpha, beta)`` if order of priority.
+        include one of the following pairs: ``ra_icrs`` and ``dec_icrs``,
+        ``xwok`` and ywok``, or ``alpha`` and ``beta``, in order of priority.
         The remaining coordinates will be filled out using coordinate
-        transformations. If ``ra_icrs/dec_icrs`` are passed, an additional
-        column ``epoch`` is required.
+        transformations. If ``ra_icrs/dec_icrs`` are passed, a value for
+        ``epoch`` is also required. An additional key, ``fibre_type``
+        must be set for each target with value ``'APOGEE'``, ``'BOSS'``,
+        or ``'Metrology``.
     observatory
         The observatory name. If `None`, uses the value from the configuration.
     field_centre
