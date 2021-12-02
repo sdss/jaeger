@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Optional, cast
 
 import click
 
-from clu.parsers.click import cancellable
 from drift import DriftError, Relay
 
 from jaeger import config
@@ -66,7 +65,7 @@ async def expose(
     return command.finish(fvc_filename=str(filename))
 
 
-@fvc_parser.command()
+@fvc_parser.command(cancellable=True)
 @click.option("--exposure-time", type=float, help="Exposure time.")
 @click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
@@ -74,7 +73,6 @@ async def expose(
 @click.option("--stack", type=int, default=1, help="Number of FVC image to stack.")
 @click.option("--plot/--no-plot", default=True, help="Generate and save plots.")
 @click.option("--apply/--no-apply", default=True, help="Apply corrections.")
-@cancellable()
 async def loop(
     command: Command[JaegerActor],
     fps: FPS,
