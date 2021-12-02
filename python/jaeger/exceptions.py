@@ -10,13 +10,9 @@
 
 from __future__ import annotations
 
-import asyncio
 import inspect
-import warnings
 
 from typing import TYPE_CHECKING
-
-import jaeger
 
 
 if TYPE_CHECKING:
