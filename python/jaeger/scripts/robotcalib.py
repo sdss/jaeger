@@ -15,7 +15,7 @@ from sdsstools.daemonizer import cli_coro
 
 
 # hardcoded defaults
-MET_LED = 1  # leds 1 and 2
+MET_LED = 10  # leds 1 and 2
 AP_LED = 3  # led 3
 BOSS_LED = 8  # led 4
 ANG_STEP = 0.1  # step size in degrees for path generation
@@ -178,7 +178,7 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
     for ii in range(nexp):
         try:
             print("exposing FVC %i of %i" % (ii + 1, nexp))
-            rawfname = await fvc.expose(exposure_time=exptime)
+            rawfname = await fvc.expose(exposure_time=exptime, stack=nexp)
             print("exposure complete: %s" % rawfname)
             fvc.process_fvc_image(rawfname, fibre_data, plot=True)
             print("image processing complete")
@@ -250,7 +250,7 @@ async def unwind(fps, speed, collisionBuffer):
 )
 @click.option(
     "--exptime",
-    default=2.5,
+    default=5,
     type=click.FloatRange(min=0),
     show_default=True,
     help="fvc exposure time, if 0, no exposures are taken",
@@ -266,7 +266,7 @@ async def unwind(fps, speed, collisionBuffer):
 @click.option("--lh", is_flag=True, help="if passed, use lefthand robot kinematics")
 @click.option(
     "--cb",
-    default=2.4,
+    default=2.1,
     type=click.FloatRange(1.5, 2.5),
     show_default=True,
     help="set collision buffer for all robots in grid",
