@@ -5,6 +5,7 @@
 ### 🚀 New
 
 * [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.get_trajectory()` is called. The reverse path can be sent from the actor using `configuration reverse`. The paths can be generated in advance when loading the design. An ``--epoch-delay`` parameter can be passed when loading the design to create a configuration for some time in the future.
+* [#167](https://github.com/sdss/jaeger/issues/167) Add the ability of loading a configuration from the current positions of the robots.
 
 ### ✨ Improved
 
