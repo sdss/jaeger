@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import warnings
 
@@ -32,12 +33,14 @@ from coordio import (
 from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
-from jaeger import FPS, config
+from jaeger import FPS, config, log
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import (
     decollide_in_executor,
+    dump_robot_grid,
     get_path_pair_in_executor,
     get_robot_grid,
+    load_robot_grid,
     warn,
 )
 
@@ -45,6 +48,10 @@ from .tools import positioner_to_wok, wok_to_positioner
 
 
 if TYPE_CHECKING:
+    from clu import Command
+
+    from jaeger.actor import JaegerActor
+
     from .design import Design
 
 
@@ -131,6 +138,7 @@ class BaseConfiguration:
     """A base configuration class."""
 
     assignment_data: BaseAssignmentData
+    epoch: float | None
 
     def __init__(self):
 
@@ -148,8 +156,30 @@ class BaseConfiguration:
 
         self.robot_grid = self._initialise_grid()
 
+        self.command: Command[JaegerActor] | None = None
+
         self.to_destination: dict | None = None
         self.from_destination: dict | None = None
+
+    def set_command(self, command: Optional[Command[JaegerActor]]):
+        """Sets the command to which to output messages."""
+
+        self.command = command
+
+    def log(self, msg: str, level=logging.INFO, to_command: bool = True):
+        """Log message to the log and command."""
+
+        log.log(level, msg)
+
+        if to_command and self.command and self.command.status.is_done is False:
+            if level == logging.DEBUG:
+                self.command.debug(msg)
+            elif level == logging.INFO:
+                self.command.info(msg)
+            elif level == logging.WARNING:
+                self.command.warning(msg)
+            elif level == logging.ERROR:
+                self.command.error(msg)
 
     def _initialise_grid(self):
 
@@ -160,10 +190,40 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
+    def recompute_coordinates(
+        self,
+        jd: Optional[float] = None,
+        positioner_ids: list[int] | None = None,
+    ):
+        """Recalculates the coordinates.
+
+        Parameters
+        ----------
+        jd
+            The Julian Date for which to compute the coordinates.
+        positioner_ids
+            If `None`, compute coordinates for all the entries in the fibre table.
+            Otherwise, only update the entries for the positioner IDs listed.
+
+        """
+
+        if self.configuration_id is not None:
+            raise JaegerError(
+                "Cannot recompute coordinates once the configuration "
+                "has been loaded to the database."
+            )
+
+        self.assignment_data.compute_coordinates(jd=jd, positioner_ids=positioner_ids)
+
+        assert self.assignment_data.site.time
+        self.epoch = self.assignment_data.site.time.jd
+
     async def get_trajectory(
         self,
         decollide: bool = False,
         simple_decollision: bool = False,
+        resolve_deadlocks: bool = True,
+        n_deadlock_retries: int = 5,
     ):
         """Returns a trajectory dictionary from the folded position.
 
@@ -192,26 +252,121 @@ class BaseConfiguration:
                 continue
             raise JaegerError(f"Positioner {robot.id} has no valid coordinates.")
 
-        for r in self.robot_grid.robotDict.values():
-            cols = ["xwok_kaiju", "ywok_kaiju", "zwok_kaiju"]
-            ftable.loc[(r.id, "APOGEE"), cols] = r.apWokXYZ
-            ftable.loc[(r.id, "BOSS"), cols] = r.bossWokXYZ
-            ftable.loc[(r.id, "Metrology"), cols] = r.metWokXYZ
-
+        decollided: list[int] = []
         if decollide:
-            # TODO: if this is run, the configuration will change and we don't know
-            # where positioners are placed.
-            await decollide_in_executor(self.robot_grid, simple=simple_decollision)
+            decollided = await decollide_in_executor(
+                self.robot_grid,
+                simple=simple_decollision,
+            )
+
+            if len(decollided) > 0:
+                self.log(
+                    f"{len(decollided)} positioners were collided and were reassigned.",
+                    level=logging.WARNING,
+                )
+
+        self._update_coordinates(decollided)
+
+        # Fix deadlocks (this sets the trajectories in the instance).
+        await self._resolve_deadlocks(
+            n_retries=n_deadlock_retries if resolve_deadlocks else -1
+        )
+
+        return self.from_destination
+
+    async def _resolve_deadlocks(self, n_retries: int = 5, attempt: int = 1):
+        """Iteratively fix deadlocks."""
+
+        # Save the grid data in case we need to decollide.
+        grid_data = dump_robot_grid(self.robot_grid)
 
         result = await get_path_pair_in_executor(self.robot_grid)
         self.to_destination, self.from_destination, did_fail, deadlocks = result
-        if did_fail:
-            raise TrajectoryError(
-                "Failed generating a valid trajectory. "
-                f"{len(deadlocks)} deadlocks were found."
-            )
 
-        return self.from_destination
+        n_deadlocks = len(deadlocks)
+
+        if did_fail:
+            if n_retries < 0:
+                # n_retries == -1 means we don't want to solve for deadlocks. Fail!
+                raise TrajectoryError(
+                    "Failed generating a valid trajectory. "
+                    f"{n_deadlocks} deadlocks were found."
+                )
+            elif n_retries == 0:
+                # We have exhausted our retries.
+                self.log(
+                    f"Attempt {attempt}: {n_deadlocks} deadlocks remain but"
+                    "the number of retries has been exhausted."
+                )
+            else:
+                # Replace one of the deadlocked robots with a random new position.
+                # TODO: maybe not call setXYUniform and do a small offset.
+
+                self.log(f"Attempt {attempt}: {n_deadlocks} deadlocks found.")
+
+                to_move = numpy.random.choice(deadlocks)
+                self.log(f"Trying to unlock positioner {to_move}.")
+
+                # Restore robot grid (it has been mangled by calling get_path_pair).
+                self.robot_grid = load_robot_grid(grid_data)
+
+                # Assign new position to the random deadlocked robot.
+                self.robot_grid.robotDict[to_move].setXYUniform()
+
+                # Now check if it's collided and decollide it.
+                if self.robot_grid.isCollided(to_move):
+                    self.robot_grid.decollideRobot(to_move)
+                    if self.robot_grid.isCollided(to_move):
+                        raise TrajectoryError("Cannot decollide deadlocked positioner.")
+
+                self._update_coordinates(positioner_ids=[to_move])
+
+                # Try again!
+                return await self._resolve_deadlocks(
+                    n_retries=n_retries - 1,
+                    attempt=attempt + 1,
+                )
+
+        else:
+            if attempt > 1:
+                self.log("All deadlocks have been fixed.")
+                return
+
+    def _update_coordinates(
+        self,
+        positioner_ids: list[int] = [],
+        mark_off_target: bool = True,
+    ):
+        """Updates the coordinates of a series of robots."""
+
+        ftable = self.assignment_data.fibre_table
+
+        # Update the [xyz]wok_kaiju columns with the values the kaiju uses.
+        # These should (!) be identical to [xyz]wok. We do this for all the
+        # positioners in the grid.
+        for robot in self.robot_grid.robotDict.values():
+            cols = ["xwok_kaiju", "ywok_kaiju", "zwok_kaiju"]
+            ftable.loc[(robot.id, "APOGEE"), cols] = robot.apWokXYZ
+            ftable.loc[(robot.id, "BOSS"), cols] = robot.bossWokXYZ
+            ftable.loc[(robot.id, "Metrology"), cols] = robot.metWokXYZ
+
+            # If the robot is in the list it means now it's at a different position
+            # so we need to update its coordinates in the table. We begin by
+            # setting the [xyz]wok coordinates to what kaiju believes.
+            if robot.id in positioner_ids:
+                cols = ["xwok", "ywok", "zwok"]
+                ftable.loc[(robot.id, "APOGEE"), cols] = robot.apWokXYZ
+                ftable.loc[(robot.id, "BOSS"), cols] = robot.bossWokXYZ
+                ftable.loc[(robot.id, "Metrology"), cols] = robot.metWokXYZ
+
+        # Now we recompute coordinates for the positioners to update.
+        n_positioners = len(positioner_ids)
+        if n_positioners > 0:
+            self.log(f"Recomputing {n_positioners} coordinates.", level=logging.DEBUG)
+            self.recompute_coordinates(jd=self.epoch, positioner_ids=positioner_ids)
+
+        if mark_off_target:
+            ftable.loc[positioner_ids, "on_target"] = 0
 
     @property
     def ingested(self):
@@ -500,20 +655,6 @@ class Configuration(BaseConfiguration):
             f"design_id={self.design_id})>"
         )
 
-    def recompute_coordinates(self, jd: Optional[float] = None):
-        """Recalculates the coordinates. ``jd=None`` uses the current time."""
-
-        if self.configuration_id is not None:
-            raise JaegerError(
-                "Cannot recompute coordinates once the configuration "
-                "has been loaded to the database."
-            )
-
-        self.assignment_data.compute_coordinates(jd=jd)
-
-        assert self.assignment_data.site.time
-        self.epoch = self.assignment_data.site.time.jd
-
 
 class ManualConfiguration(BaseConfiguration):
     """A configuration create manually.
@@ -688,10 +829,29 @@ class BaseAssignmentData:
             name: values[i] for i, name in enumerate(names) if values[i] is not None
         }
 
-        self.fibre_table: pandas.DataFrame
+        self.fibre_table = self._create_fibre_table()
 
     def __repr__(self):
         return f"<{self.__class__.__name__} (design_id={self.design_id})>"
+
+    def compute_coordinates(
+        self,
+        jd: Optional[float] = None,
+        positioner_ids: list[int] | None = None,
+    ):
+        """Computes coordinates in different systems.
+
+        Parameters
+        ----------
+        jd
+            The Julian Date for which to compute the coordinates.
+        positioner_ids
+            If `None`, compute coordinates for all the entries in the fibre table.
+            Otherwise, only update the entries for the positioner IDs listed.
+
+        """
+
+        raise NotImplementedError("Must be overridden by subclasses.")
 
     def _create_fibre_table(self):
         """Creates an empty fibre table."""
@@ -725,7 +885,7 @@ class BaseAssignmentData:
 
         return fibre_table
 
-    def _from_icrs(self):
+    def _from_icrs(self, positioner_ids: list[int] | None = None):
         """Loads fibre data from target data using ICRS coordinates."""
 
         kaiju_config = config["kaiju"]
@@ -733,6 +893,9 @@ class BaseAssignmentData:
 
         data = {}
         for pid in self.wok_data.index:
+
+            if positioner_ids is not None and pid in positioner_ids:
+                continue
 
             positioner_data = self.wok_data.loc[pid]
             hole_id = positioner_data.holeID
@@ -941,10 +1104,23 @@ class AssignmentData(BaseAssignmentData):
 
         self.compute_coordinates(epoch)
 
-    def compute_coordinates(self, jd: Optional[float] = None):
-        """Computes coordinates in different systems."""
+    def compute_coordinates(
+        self,
+        jd: Optional[float] = None,
+        positioner_ids: list[int] | None = None,
+    ):
+        """Computes coordinates in different systems.
 
-        self.fibre_table = self._create_fibre_table()
+        Parameters
+        ----------
+        jd
+            The Julian Date for which to compute the coordinates.
+        positioner_ids
+            If `None`, compute coordinates for all the entries in the fibre table.
+            Otherwise, only update the entries for the positioner IDs listed.
+
+        """
+
         self.site.set_time(jd)
 
         icrs_bore = ICRS([[self.design.field["racen"], self.design.field["deccen"]]])
@@ -955,7 +1131,7 @@ class AssignmentData(BaseAssignmentData):
         )
 
         # Load fibre data using ICRS coordinates.
-        self._from_icrs()
+        self._from_icrs(positioner_ids=positioner_ids)
 
         # Final validation
         self.validate()
@@ -1010,12 +1186,26 @@ class ManualAssignmentData(BaseAssignmentData):
 
         self.position_angle = position_angle
 
+        self.fibre_table = self._create_fibre_table()
         self.compute_coordinates()
 
-    def compute_coordinates(self, jd: Optional[float] = None):
-        """Computes coordinates in different systems."""
+    def compute_coordinates(
+        self,
+        jd: Optional[float] = None,
+        positioner_ids: list[int] | None = None,
+    ):
+        """Computes coordinates in different systems.
 
-        self.fibre_table = self._create_fibre_table()
+        Parameters
+        ----------
+        jd
+            The Julian Date for which to compute the coordinates.
+        positioner_ids
+            If `None`, compute coordinates for all the entries in the fibre table.
+            Otherwise, only update the entries for the positioner IDs listed.
+
+        """
+
         self.site.set_time(jd)
 
         if self.field_centre:
@@ -1042,24 +1232,30 @@ class ManualAssignmentData(BaseAssignmentData):
                     "Creating a manual configuration from ICRS "
                     "coordinates requires defining a field centre."
                 )
-            self._from_icrs()
+            self._from_icrs(positioner_ids=positioner_ids)
         elif "xwok" in sample_target and "ywok" in sample_target:
-            self._from_wok()
+            self._from_wok(positioner_ids=positioner_ids)
         elif "alpha" in sample_target and "beta" in sample_target:
-            self._from_positioner()
+            self._from_positioner(positioner_ids=positioner_ids)
         else:
             raise ValueError("Target data does not contain the necessary columns.")
 
         # Final validation.
         self.validate()
 
-    def _from_wok(self):
+    def _from_wok(self, positioner_ids: list[int] | None = None):
         """Loads fibre data from target data using wok coordinates."""
 
         self._check_all_assigned()
 
         # Calculate positioner coordinates for each wok coordinate.
         for hole_id, data in self.target_data.items():
+
+            if positioner_ids is not None:
+                pid = self.wok_data.loc[self.wok_data.holeID == hole_id].index.values[0]
+                if pid in positioner_ids:
+                    continue
+
             xwok = data["xwok"]
             ywok = data["ywok"]
             zwok = data.get("zwok", POSITIONER_HEIGHT)
@@ -1077,7 +1273,7 @@ class ManualAssignmentData(BaseAssignmentData):
             self.target_data[hole_id].update({"alpha": alpha, "beta": beta})
 
         # Now simply call _from_positioner()
-        self._from_positioner()
+        self._from_positioner(positioner_ids=positioner_ids)
 
         # We want to keep the original wok coordinates that now have been overridden
         # by calling _from_positioner.
@@ -1098,15 +1294,19 @@ class ManualAssignmentData(BaseAssignmentData):
                 )
             else:
                 wok_coords.append([-999.0] * 3)
+
         self.fibre_table[["xwok", "ywok", "zwok"]] = wok_coords
 
-    def _from_positioner(self):
+    def _from_positioner(self, positioner_ids: list[int] | None = None):
         """Loads fibre data from target data using positioner coordinates."""
 
         self._check_all_assigned()
 
         data = {}
         for pid in self.wok_data.index:
+
+            if positioner_ids is not None and pid in positioner_ids:
+                continue
 
             hole_id = self.wok_data.at[pid, "holeID"]
             alpha = self.target_data[hole_id]["alpha"]
