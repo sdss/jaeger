@@ -46,6 +46,7 @@ class FVC:
     """Focal View Camera class."""
 
     fibre_data: Optional[pandas.DataFrame]
+    measurements: Optional[pandas.DataFrame]
     centroids: Optional[pandas.DataFrame]
     offsets: Optional[pandas.DataFrame]
 
@@ -75,6 +76,7 @@ class FVC:
         """Resets the instance."""
 
         self.fibre_data = None
+        self.measurements = None
         self.centroids = None
         self.offsets = None
 
@@ -139,7 +141,10 @@ class FVC:
             if self.command.status.is_done:
                 raise FVCError("Command is done.")
 
-        self.log(f"Taking {exposure_time} seconds FVC exposure.", to_command=False)
+        self.log(
+            f"Taking {stack} x {exposure_time} seconds FVC exposure.",
+            to_command=False,
+        )
 
         tron = None
 
@@ -377,20 +382,24 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
-        self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
+        xwok_measured = xy_wok_robot_meas[:, 0]
+        ywok_measured = xy_wok_robot_meas[:, 1]
 
         # Only use online robots for final RMS.
-        online = self.fibre_data.loc[
-            (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
-        ]
-        dx = online.xwok - online.xwok_measured
-        dy = online.ywok - online.ywok_measured
+        online = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
+        dx = self.fibre_data.loc[online, "xwok"] - xwok_measured[online]
+        dy = self.fibre_data.loc[online, "ywok"] - ywok_measured[online]
 
         self.fitrms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
+
+        keep_cols = ["positioner_id", "hole_id"]
+        self.measurements = self.fibre_data.loc[fibre_type, keep_cols]
+        self.measurements.loc[:, "xwok_measured"] = xwok_measured
+        self.measurements.loc[:, "ywok_measured"] = ywok_measured
+        self.measurements.reset_index().set_index("positioner_id")
 
         self.fibre_data.reset_index(inplace=True)
         self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
@@ -607,6 +616,11 @@ class FVC:
 
         self.offsets = offsets
 
+        if self.measurements is not None:
+            pos_meas_columns = ["alpha_measured", "beta_measured"]
+            alpha_beta_measured = self.offsets.loc[:, pos_meas_columns]
+            self.measurements.loc[:, pos_meas_columns] = alpha_beta_measured
+
         self.log("Finished calculating offsets.", level=logging.DEBUG)
 
         return offsets
@@ -642,6 +656,11 @@ class FVC:
 
         proc_hdus = fits.HDUList([fits.PrimaryHDU(), self.proc_hdu])
 
+        if self.fps and self.fps.configuration:
+            proc_hdus[1].header["CONFIGID"] = self.fps.configuration.configuration_id
+        else:
+            proc_hdus[1].header["CONFIGID"] = -999.0
+
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
         fiducialCoords = calibration.fiducialCoords
@@ -657,11 +676,17 @@ class FVC:
             table = fits.BinTableHDU(rec, name=name)
             proc_hdus.append(table)
 
-        measured_coords = self.fibre_data.copy()
-        measured_coords.reset_index(inplace=True)
-        measured_coords.sort_values("positioner_id", inplace=True)
-        measured_coords_rec = Table.from_pandas(measured_coords).as_array()
-        proc_hdus.append(fits.BinTableHDU(measured_coords_rec, name="FIBERDATA"))
+        fibre_data = self.fibre_data.copy()
+        fibre_data.reset_index(inplace=True)
+        fibre_data.sort_values("positioner_id", inplace=True)
+        fibre_data_rec = Table.from_pandas(fibre_data).as_array()
+        proc_hdus.append(fits.BinTableHDU(fibre_data_rec, name="FIBERDATA"))
+
+        if self.measurements:
+            measurements_rec = Table.from_pandas(self.measurements).as_array()
+        else:
+            measurements_rec = None
+        proc_hdus.append(fits.BinTableHDU(measurements_rec, name="MEASUREMENTS"))
 
         # Add IEB information
         ieb_keys = config["fvc"]["ieb_keys"]
@@ -680,6 +705,7 @@ class FVC:
         for key, val in ieb_data.items():
             proc_hdus[1].header[key] = val
 
+        posangles = None
         if self.fps:
             await self.fps.update_position()
             positions = self.fps.get_positions()
@@ -717,15 +743,16 @@ class FVC:
                     current_positions["startAlpha"] = _start_alpha
                     current_positions["startBeta"] = _start_beta
 
-            rec = Table.from_pandas(current_positions.reset_index()).as_array()
-            proc_hdus.append(fits.BinTableHDU(rec, name="POSANGLES"))
+            posangles = Table.from_pandas(current_positions.reset_index()).as_array()
+        proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
         rec = Table.from_pandas(self.centroids.reset_index()).as_array()
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
+        offsets = None
         if self.offsets is not None:
-            rec = Table.from_pandas(self.offsets.reset_index()).as_array()
-            proc_hdus.append(fits.BinTableHDU(rec, name="OFFSETS"))
+            offsets = Table.from_pandas(self.offsets.reset_index()).as_array()
+        proc_hdus.append(fits.BinTableHDU(offsets, name="OFFSETS"))
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 

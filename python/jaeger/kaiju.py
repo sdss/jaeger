@@ -71,6 +71,8 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     if collision_buffer < 1.5:
         raise JaegerError("Invalid collision buffer < 1.5.")
 
+    log.debug(f"Creating RobotGridCalib with stepSize={ang_step}, epsilon={epsilon}.")
+
     robot_grid = RobotGridCalib(stepSize=ang_step, epsilon=epsilon, seed=seed)
     robot_grid.setCollisionBuffer(collision_buffer)
 
@@ -217,12 +219,13 @@ def get_path_pair(
     data: Optional[dict] = None,
     path_generation_mode: str = "greedy",
     ignore_did_fail: bool = False,
-    escape_deg: float = 5,
+    explode_deg: float = 5,
+    explode_positioner_id: int | None = None,
     speed=None,
     smooth_points=None,
     path_delay=None,
     collision_shrink=None,
-    stop_if_deadlocked: bool = False,
+    stop_if_deadlock: bool = False,
 ) -> tuple:
     """Runs ``pathGenGreedy`` and returns the to and from destination paths.
 
@@ -236,15 +239,17 @@ def get_path_pair(
         run in an executor.
     path_generation_mode
         Defines the path generation algorithm to use.
-        Either ``greedy`` or ``escape``.
+        Either ``greedy`` or ``explode`` or ``explode_one``.
     ignore_did_fail
         Generate paths even if path generation failed (i.e., deadlocks).
-    escape_deg
-        Degrees for ``pathGenEscape``.
+    explode_deg
+        Degrees for ``pathGenExplode``.
+    explode_positioner_id
+        The positioner to explode.
     speed, smooth_points, path_delay, collision_shrink
         Kaiju parameters to pass to ``getPathPair``. Otherwise uses the default
         configuration values.
-    stop_if_deadlocked
+    stop_if_deadlock
         If `True`, detects deadlocks early in the path and returns shorter
         trajectories (at the risk of some false positive deadlocks).
 
@@ -260,16 +265,25 @@ def get_path_pair(
         raise JaegerError("robot_grid and data are mutually exclusive.")
 
     if data is not None:
-        set_destination = False if path_generation_mode == "escape" else True
+        set_destination = False if path_generation_mode == "explode" else True
         robot_grid = load_robot_grid(data, set_destination=set_destination)
 
     assert robot_grid is not None
 
-    if path_generation_mode == "escape":
-        robot_grid.pathGenExplode(escape_deg)
+    if path_generation_mode == "explode":
+        log.debug(f"Running pathGenExplode with explode_deg={explode_deg}.")
+        robot_grid.pathGenExplode(explode_deg)
+        deadlocks = []
+    elif path_generation_mode == "explode_one":
+        log.debug(
+            f"Running pathGenExplodeOne with explode_deg={explode_deg}, "
+            f"explode_positioner_id={explode_positioner_id}."
+        )
+        robot_grid.pathGenExplodeOne(explode_deg, explode_positioner_id)
         deadlocks = []
     else:
-        robot_grid.pathGenGreedy(stopIfDeadlock=stop_if_deadlocked)
+        log.debug(f"Running pathGenGreedy with stopIfDeadlock={stop_if_deadlock}.")
+        robot_grid.pathGenGreedy(stopIfDeadlock=stop_if_deadlock)
 
         # Check for deadlocks.
         deadlocks = robot_grid.deadlockedRobots()
@@ -280,6 +294,11 @@ def get_path_pair(
     smooth_points = smooth_points or config["kaiju"]["smooth_points"]
     collision_shrink = collision_shrink or config["kaiju"]["collision_shrink"]
     path_delay = path_delay or config["kaiju"]["path_delay"]
+
+    log.debug(
+        f"Running getPathPair with speed={speed}, smoothPoints={smooth_points}, "
+        f"collisionShrink={collision_shrink}, pathDelay={path_delay}."
+    )
 
     to_destination, from_destination = robot_grid.getPathPair(
         speed=speed,
@@ -347,7 +366,7 @@ async def unwind(
         get_path_pair,
         data=data,
         ignore_did_fail=force,
-        stop_if_deadlocked=force,
+        stop_if_deadlock=force,
         executor="process",
     )
     if did_fail:
@@ -366,6 +385,7 @@ async def explode(
     current_positions: dict[int, tuple[float | None, float | None]],
     explode_deg=20.0,
     collision_buffer: float | None = None,
+    positioner_id: int | None = None,
 ):
     """Explodes the grid by a number of degrees.
 
@@ -379,11 +399,17 @@ async def explode(
     for pid, (alpha, beta) in current_positions.items():
         data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
 
+    if positioner_id is not None:
+        path_generation_mode = "explode_one"
+    else:
+        path_generation_mode = "explode"
+
     (to_destination, *_) = await run_in_executor(
         get_path_pair,
         data=data,
-        path_generation_mode="escape",
-        escape_deg=explode_deg,
+        path_generation_mode=path_generation_mode,
+        explode_deg=explode_deg,
+        explode_positioner_id=positioner_id,
         ignore_did_fail=False,
         executor="process",
     )

@@ -123,12 +123,6 @@ class TrajectoryError(JaegerError):
         if self.trajectory:
             self.trajectory.failed = True
 
-        try:
-            fps = jaeger.FPS.get_instance()
-            asyncio.create_task(fps.save_snapshot())
-        except Exception as err:
-            warnings.warn(f"Failed saving snapshot on trajectory error: {err}")
-
 
 class FVCError(JaegerError):
     """An error handling the FVC or the FVC loop."""
