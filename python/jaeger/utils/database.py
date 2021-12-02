@@ -36,6 +36,8 @@ def check_database(f):
 def load_holes(observatory: str):
     """Loads a list holes to ``targetdb.hole``."""
 
+    targetdb.database.become_admin()
+
     observatory_pk = targetdb.Observatory.get(label=observatory).pk
 
     row_start = 13
@@ -89,6 +91,8 @@ def load_fields(
         sequentially increments the ``field_id`` field starting with the current
         maximum value.
     """
+
+    targetdb.database.become_admin()
 
     if files is None and pattern:
         files = list(glob(pattern))
