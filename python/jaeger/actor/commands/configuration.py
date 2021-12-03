@@ -52,8 +52,8 @@ def configuration():
     help="Replace an existing entry.",
 )
 @click.option(
-    "--generate-paths",
-    is_flag=True,
+    "--generate-paths/--no-generate-paths",
+    default=True,
     help="Generates and stores the to and from destination paths.",
 )
 @click.option(
@@ -67,6 +67,17 @@ def configuration():
     is_flag=True,
     help="Loads a configuration from the current robot positions.",
 )
+@click.option(
+    "--ingest/--no-ingest",
+    default=False,
+    help="Whether to ingest the configuration into the DB.",
+)
+@click.option(
+    "--write-summary/--no-write-summary",
+    default=False,
+    help="Whether to write the summary file for the configuration. "
+    "Ignore if --no-ingest.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -77,6 +88,8 @@ async def load(
     from_positions: bool = False,
     generate_paths: bool = False,
     epoch_delay: float = 0.0,
+    ingest: bool = False,
+    write_summary: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -111,10 +124,14 @@ async def load(
     if fps.configuration.ingested is False:
         replace = False
 
-    fps.configuration.write_to_database(replace=replace)
+    if ingest:
+        fps.configuration.write_to_database(replace=replace)
 
     configuration = fps.configuration
     assert configuration.design
+
+    if ingest and write_summary:
+        fps.configuration.write_summary(overwrite=True)
 
     boresight = fps.configuration.assignment_data.boresight
 
@@ -132,6 +149,7 @@ async def load(
 
     if generate_paths:
         try:
+            command.info("Calculating trajectories.")
             await configuration.get_trajectory(decollide=True)
         except (TrajectoryError, JaegerError) as err:
             return command.fail(

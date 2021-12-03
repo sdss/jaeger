@@ -138,7 +138,7 @@ class BaseConfiguration:
     """A base configuration class."""
 
     assignment_data: BaseAssignmentData
-    epoch: float | None
+    epoch: float | None = None
 
     def __init__(self):
 
@@ -254,12 +254,12 @@ class BaseConfiguration:
 
         decollided: list[int] = []
         if decollide:
-            decollided = await decollide_in_executor(
+            self.robot_grid = await decollide_in_executor(
                 self.robot_grid,
                 simple=simple_decollision,
             )
 
-            if len(decollided) > 0:
+            if len(self.robot_grid.deadlockedRobots()) > 0:
                 self.log(
                     f"{len(decollided)} positioners were collided and were reassigned.",
                     level=logging.WARNING,
@@ -383,6 +383,8 @@ class BaseConfiguration:
 
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
+
+        targetdb.database.become_admin()
 
         assert self.assignment_data.site.time
         epoch = self.assignment_data.site.time.jd
@@ -648,6 +650,9 @@ class Configuration(BaseConfiguration):
         self.design = design
         self.design_id = design.design_id
         self.assignment_data = AssignmentData(self, epoch=epoch)
+
+        assert self.assignment_data.site.time
+        self.epoch = self.assignment_data.site.time.jd
 
     def __repr__(self):
         return (
