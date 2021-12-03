@@ -116,7 +116,12 @@ async def status(command, fps):
     default=1,
     help="When powering multiple devices, the delay to wait between them.",
 )
-async def switch(command, fps, devices=(), on=None, cycle=False, delay=1):
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Forces a device to turn on/off even if disabled..",
+)
+async def switch(command, fps, devices=(), on=None, cycle=False, delay=1, force=False):
     """Switches the status of an on/off device."""
 
     ieb = fps.ieb
@@ -127,8 +132,11 @@ async def switch(command, fps, devices=(), on=None, cycle=False, delay=1):
     for idev, device in enumerate(devices):
 
         if device.upper() in config["ieb"]["disabled_devices"]:
-            command.warning(text=f"{device} is disabled. Skipping.")
-            continue
+            if force is False:
+                command.warning(text=f"{device} is disabled. Skipping.")
+                continue
+            else:
+                command.warning(text=f"{device} is disabled but overriding.")
 
         if len(devices) > 1 and idev != 0:
             await asyncio.sleep(delay)
