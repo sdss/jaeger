@@ -302,12 +302,12 @@ async def random(
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 
-    if send_trajectory:
-        return command.finish()
-
     # Make this the FPS configuration
     assert command.actor
     command.actor.fps.configuration = configuration
+
+    if send_trajectory:
+        return command.finish()
 
     command.info("Executing random trajectory.")
 
