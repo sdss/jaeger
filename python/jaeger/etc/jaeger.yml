@@ -50,6 +50,7 @@ fps:
     disable_collision_detection_positioners: []
     use_sync_line: false
     snapshot_path: /data/logs/jaeger/snapshots/
+    configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
     use_lock: True
 
 ieb:
@@ -70,7 +71,7 @@ positioner:
 kaiju:
     speed: 2
     ang_step: 0.1
-    collision_buffer: 2.1
+    collision_buffer: 2.0
     smooth_points: 5
     collision_shrink: 0.08
     path_delay: 1

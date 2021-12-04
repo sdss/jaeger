@@ -187,7 +187,8 @@
                 { "title": "dec_boresight", "type": "number" },
                 { "title": "position_angle", "type": "number" },
                 { "title": "alt_boresight", "type": "number" },
-                { "title": "az_boresight", "type": "number" }
+                { "title": "az_boresight", "type": "number" },
+                { "title": "summary_file", "type": "string" }
             ]
         },
         "fvc_filename": {
@@ -200,6 +201,9 @@
             "type": "number"
         },
         "snapshot": {
+            "type": "string"
+        },
+        "configuration_snapshot": {
             "type": "string"
         }
     },

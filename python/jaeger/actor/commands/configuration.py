@@ -69,14 +69,14 @@ def configuration():
 )
 @click.option(
     "--ingest/--no-ingest",
-    default=False,
+    default=True,
     help="Whether to ingest the configuration into the DB.",
 )
 @click.option(
     "--write-summary/--no-write-summary",
-    default=False,
+    default=True,
     help="Whether to write the summary file for the configuration. "
-    "Ignore if --no-ingest.",
+    "Ignored if --no-ingest.",
 )
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
@@ -92,6 +92,8 @@ async def load(
     write_summary: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
+
+    command.info(f"Loading design {designid}.")
 
     if reload is True:
         if fps.configuration is None:
@@ -109,6 +111,7 @@ async def load(
             return command.fail(error="Design ID is required.")
 
         try:
+            # Define the epoch for the configuration.
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(designid, epoch=epoch)
         except (ValueError, RuntimeError, JaegerError) as err:
@@ -124,16 +127,30 @@ async def load(
     if fps.configuration.ingested is False:
         replace = False
 
+    configuration = fps.configuration
+    configuration.set_command(command)
+
+    if generate_paths:
+        try:
+            command.info("Calculating trajectories.")
+            await configuration.get_trajectory(decollide=True)
+        except Exception as err:
+            return command.fail(error=f"Failed generating paths: {err}")
+
     if ingest:
         fps.configuration.write_to_database(replace=replace)
-
-    configuration = fps.configuration
-    assert configuration.design
+    else:
+        command.warning("Not ingesting configuration. Configuration ID is -999.")
+        fps.configuration.configuration_id = -999
 
     if ingest and write_summary:
-        fps.configuration.write_summary(overwrite=True)
+        summary_file = fps.configuration.write_summary(overwrite=True)
+    else:
+        summary_file = ""
 
     boresight = fps.configuration.assignment_data.boresight
+
+    assert configuration.design
 
     command.debug(
         configuration_loaded=[
@@ -144,23 +161,14 @@ async def load(
             configuration.design.field["position_angle"],
             boresight[0, 0],
             boresight[0, 1],
+            summary_file,
         ]
     )
 
-    if generate_paths:
-        try:
-            command.info("Calculating trajectories.")
-            await configuration.get_trajectory(decollide=True)
-        except (TrajectoryError, JaegerError) as err:
-            return command.fail(
-                error=f"Failed generating paths: {err} "
-                "The configuration has been loaded and written to the database."
-            )
+    snapshot = await configuration.save_snapshot()
+    command.info(configuration_snapshot=snapshot)
 
-    return command.finish(
-        text=f"Configuration {fps.configuration.configuration_id} loaded "
-        "and written to database."
-    )
+    return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
 
 @configuration.command()

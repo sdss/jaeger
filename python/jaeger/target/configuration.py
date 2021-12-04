@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import warnings
+from glob import glob
 
 from typing import TYPE_CHECKING, Optional, Union, cast
 
@@ -40,9 +41,11 @@ from jaeger.kaiju import (
     dump_robot_grid,
     get_path_pair_in_executor,
     get_robot_grid,
+    get_snapshot_async,
     load_robot_grid,
     warn,
 )
+from jaeger.utils.helpers import run_in_executor
 
 from .tools import positioner_to_wok, wok_to_positioner
 
@@ -75,6 +78,7 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
         ("assigned", numpy.int16),
         ("on_target", numpy.int16),
         ("valid", numpy.int16),
+        ("decollided", numpy.int16),
         ("xFocal", numpy.float64),
         ("yFocal", numpy.float64),
         ("alpha", numpy.float32),
@@ -128,6 +132,8 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
 
     default["assigned"] = 0
     default["valid"] = 0
+    default["on_target"] = 0
+    default["decollided"] = 0
     default["sdssv_boss_target0"] = 0
     default["sdssv_apogee_target0"] = 0
 
@@ -138,7 +144,7 @@ class BaseConfiguration:
     """A base configuration class."""
 
     assignment_data: BaseAssignmentData
-    epoch: float | None = None
+    epoch: float | None
 
     def __init__(self):
 
@@ -157,6 +163,8 @@ class BaseConfiguration:
         self.robot_grid = self._initialise_grid()
 
         self.command: Command[JaegerActor] | None = None
+
+        self._decollided: list[int] = []
 
         self.to_destination: dict | None = None
         self.from_destination: dict | None = None
@@ -210,7 +218,7 @@ class BaseConfiguration:
         if self.configuration_id is not None:
             raise JaegerError(
                 "Cannot recompute coordinates once the configuration "
-                "has been loaded to the database."
+                "ID has been set."
             )
 
         self.assignment_data.compute_coordinates(jd=jd, positioner_ids=positioner_ids)
@@ -240,41 +248,69 @@ class BaseConfiguration:
         ftable = self.assignment_data.fibre_table
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
-        for robot in self.robot_grid.robotDict.values():
-            if robot.id not in ftable.index.get_level_values(0):
-                raise JaegerError(f"Positioner {robot.id} is not assigned.")
+        # Assign positions to all the assigned, valid targets.
+        valid = ftable.loc[(ftable.assigned == 1) & (ftable.valid == 1)]
 
-            # Get the first of the three fibres since all have the same alpha, beta.
-            rdata = ftable.loc[robot.id].iloc[0]
-            if rdata.valid:
-                robot.setAlphaBeta(rdata.alpha, rdata.beta)
+        self.log(
+            f"Assigned targets {(ftable.assigned == 1).sum()}. "
+            f"Valid targets {len(valid)}."
+        )
+
+        for robot in self.robot_grid.robotDict.values():
+            if robot.id not in valid.index.get_level_values(0):
+                robot.setAlphaBeta(alpha0, beta0)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
-                continue
-            raise JaegerError(f"Positioner {robot.id} has no valid coordinates.")
+            else:
+                vrow = valid.loc[robot.id].iloc[0]
+                robot.setAlphaBeta(vrow.alpha, vrow.beta)
+                robot.setDestinationAlphaBeta(alpha0, beta0)
 
         decollided: list[int] = []
         if decollide:
-            self.robot_grid = await decollide_in_executor(
-                self.robot_grid,
-                simple=simple_decollision,
+            priority_order = (
+                ftable.loc[(ftable.valid == 1)]
+                .loc[(slice(None), "Metrology"), :]
+                .index.get_level_values(0)
+                .to_list()
             )
 
-            if len(self.robot_grid.deadlockedRobots()) > 0:
+            self.robot_grid, decollided = await decollide_in_executor(
+                self.robot_grid,
+                simple=simple_decollision,
+                priority_order=priority_order,
+            )
+
+            if len(decollided) > 0:
                 self.log(
-                    f"{len(decollided)} positioners were collided and were reassigned.",
+                    f"{len(decollided)} positioners were collided and "
+                    "were reassigned.",
                     level=logging.WARNING,
+                    to_command=False,
                 )
 
         self._update_coordinates(decollided)
 
         # Fix deadlocks (this sets the trajectories in the instance).
-        await self._resolve_deadlocks(
-            n_retries=n_deadlock_retries if resolve_deadlocks else -1
-        )
+        self.log("Generating path pair.")
+        n_retries = n_deadlock_retries if resolve_deadlocks else -1
+        unlocked = await self._resolve_deadlocks(n_retries=n_retries)
+
+        self._decollided = decollided + unlocked
+
+        if self.from_destination is None:
+            raise TrajectoryError(
+                "Cannot find valid trajectory for configuration "
+                f"{self.configuration_id}."
+            )
 
         return self.from_destination
 
-    async def _resolve_deadlocks(self, n_retries: int = 5, attempt: int = 1):
+    async def _resolve_deadlocks(
+        self,
+        n_retries: int = 5,
+        attempt: int = 1,
+        decollided: list[int] = [],
+    ) -> list[int]:
         """Iteratively fix deadlocks."""
 
         # Save the grid data in case we need to decollide.
@@ -302,6 +338,9 @@ class BaseConfiguration:
                 # Replace one of the deadlocked robots with a random new position.
                 # TODO: maybe not call setXYUniform and do a small offset.
 
+                if attempt == 1:
+                    self.log("Deadlocks found. Attempting resolution.")
+
                 self.log(f"Attempt {attempt}: {n_deadlocks} deadlocks found.")
 
                 to_move = numpy.random.choice(deadlocks)
@@ -320,17 +359,20 @@ class BaseConfiguration:
                         raise TrajectoryError("Cannot decollide deadlocked positioner.")
 
                 self._update_coordinates(positioner_ids=[to_move])
+                decollided.append(to_move)
 
                 # Try again!
                 return await self._resolve_deadlocks(
                     n_retries=n_retries - 1,
                     attempt=attempt + 1,
+                    decollided=decollided,
                 )
 
         else:
             if attempt > 1:
                 self.log("All deadlocks have been fixed.")
-                return
+
+        return decollided
 
     def _update_coordinates(
         self,
@@ -351,7 +393,7 @@ class BaseConfiguration:
             ftable.loc[(robot.id, "Metrology"), cols] = robot.metWokXYZ
 
             # If the robot is in the list it means now it's at a different position
-            # so we need to update its coordinates in the table. We begin by
+            # now, so we need to update its coordinates in the table. We begin by
             # setting the [xyz]wok coordinates to what kaiju believes.
             if robot.id in positioner_ids:
                 cols = ["xwok", "ywok", "zwok"]
@@ -367,6 +409,41 @@ class BaseConfiguration:
 
         if mark_off_target:
             ftable.loc[positioner_ids, "on_target"] = 0
+
+    async def save_snapshot(self, highlight=None):
+        """Saves a snapshot of the current robot grid."""
+
+        mjd = int(Time.now().mjd)
+        dirpath = os.path.join(config["fps"]["configuration_snapshot_path"], str(mjd))
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+
+        cid = self.configuration_id or -999
+
+        path_pattern = os.path.join(
+            dirpath,
+            f"configuration_snapshot_{mjd}_{cid}_*.pdf",
+        )
+        files = sorted(glob(path_pattern))
+
+        if len(files) == 0:
+            seq = 1
+        else:
+            seq = int(files[-1].split("_")[-1][0:2]) + 1
+
+        path = path_pattern.replace("*", f"{seq:02d}")
+
+        data = dump_robot_grid(self.robot_grid)
+
+        await run_in_executor(
+            get_snapshot_async,
+            path,
+            data=data,
+            highlight=highlight or self._decollided,
+            executor="process",
+        )
+
+        return path
 
     @property
     def ingested(self):
@@ -384,7 +461,8 @@ class BaseConfiguration:
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
 
-        targetdb.database.become_admin()
+        if "admin" in targetdb.database._config:
+            targetdb.database.become_admin()
 
         assert self.assignment_data.site.time
         epoch = self.assignment_data.site.time.jd
@@ -484,7 +562,7 @@ class BaseConfiguration:
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
-    def write_summary(self, overwrite=False):
+    def write_summary(self, overwrite: bool = False):
         """Writes the confSummary file."""
 
         # TODO: some time may be saved by doing a single DB query and retrieving
@@ -495,7 +573,9 @@ class BaseConfiguration:
             raise JaegerError("Configuration needs to be set and loaded to the DB.")
 
         adata = self.assignment_data
-        fdata = self.assignment_data.fibre_table
+
+        fdata = self.assignment_data.fibre_table.copy()
+        fdata.fillna(-999)
 
         time = Time.now()
 
@@ -637,6 +717,8 @@ class BaseConfiguration:
             enums={"fiberType": ("FIBERTYPE", ("BOSS", "APOGEE", "METROLOGY", "NONE"))},
         )
 
+        return path
+
 
 class Configuration(BaseConfiguration):
     """A configuration based on a target design."""
@@ -765,28 +847,26 @@ class BaseAssignmentData:
         ("offline", numpy.int8, 0),
         ("deadlocked", numpy.int8, 0),
         ("collided", numpy.int8, 0),
-        ("wavelength", numpy.float32, -999.0),
-        ("ra_icrs", numpy.float64, -999.0),
-        ("dec_icrs", numpy.float64, -999.0),
-        ("ra_epoch", numpy.float64, -999.0),
-        ("dec_epoch", numpy.float64, -999.0),
-        ("alt", numpy.float64, -999.0),
-        ("az", numpy.float64, -999.0),
-        ("xfocal", numpy.float64, -999.0),
-        ("yfocal", numpy.float64, -999.0),
-        ("xwok", numpy.float64, -999.0),
-        ("ywok", numpy.float64, -999.0),
-        ("zwok", numpy.float64, -999.0),
-        ("xwok_kaiju", numpy.float64, -999.0),
-        ("ywok_kaiju", numpy.float64, -999.0),
-        ("zwok_kaiju", numpy.float64, -999.0),
-        ("xwok_measured", numpy.float64, -999.0),
-        ("ywok_measured", numpy.float64, -999.0),
-        ("xtangent", numpy.float64, -999.0),
-        ("ytangent", numpy.float64, -999.0),
-        ("ztangent", numpy.float64, -999.0),
-        ("alpha", numpy.float64, -999.0),
-        ("beta", numpy.float64, -999.0),
+        ("wavelength", numpy.float32, numpy.nan),
+        ("ra_icrs", numpy.float64, numpy.nan),
+        ("dec_icrs", numpy.float64, numpy.nan),
+        ("ra_epoch", numpy.float64, numpy.nan),
+        ("dec_epoch", numpy.float64, numpy.nan),
+        ("alt", numpy.float64, numpy.nan),
+        ("az", numpy.float64, numpy.nan),
+        ("xfocal", numpy.float64, numpy.nan),
+        ("yfocal", numpy.float64, numpy.nan),
+        ("xwok", numpy.float64, numpy.nan),
+        ("ywok", numpy.float64, numpy.nan),
+        ("zwok", numpy.float64, numpy.nan),
+        ("xwok_kaiju", numpy.float64, numpy.nan),
+        ("ywok_kaiju", numpy.float64, numpy.nan),
+        ("zwok_kaiju", numpy.float64, numpy.nan),
+        ("xtangent", numpy.float64, numpy.nan),
+        ("ytangent", numpy.float64, numpy.nan),
+        ("ztangent", numpy.float64, numpy.nan),
+        ("alpha", numpy.float64, numpy.nan),
+        ("beta", numpy.float64, numpy.nan),
     ]
 
     def __init__(
@@ -893,8 +973,7 @@ class BaseAssignmentData:
     def _from_icrs(self, positioner_ids: list[int] | None = None):
         """Loads fibre data from target data using ICRS coordinates."""
 
-        kaiju_config = config["kaiju"]
-        alpha0, beta0 = kaiju_config["lattice_position"]
+        alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         data = {}
         for pid in self.wok_data.index:
@@ -946,7 +1025,8 @@ class BaseAssignmentData:
                 data[(pid, ftype)] = icrs_data
 
         # Now do a single update of the whole fibre table.
-        self.fibre_table.update(pandas.DataFrame.from_dict(data, orient="index"))
+        self.fibre_table = pandas.DataFrame.from_dict(data, orient="index")
+        self.fibre_table.sort_index(inplace=True)
 
     def validate(self):
         """Validates the fibre table."""
@@ -1295,11 +1375,11 @@ class ManualAssignmentData(BaseAssignmentData):
                     [
                         target["xwok"],
                         target["ywok"],
-                        target.get("zwok", -999.0),
+                        target.get("zwok", numpy.nan),
                     ]
                 )
             else:
-                wok_coords.append([-999.0] * 3)
+                wok_coords.append([numpy.nan] * 3)
 
         self.fibre_table[["xwok", "ywok", "zwok"]] = wok_coords
 
