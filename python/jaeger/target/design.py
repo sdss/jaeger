@@ -25,6 +25,8 @@ __all__ = ["Design"]
 
 @dataclass
 class FieldData:
+    """Field data for design."""
+
     field_id: int
     rs_run: str
     observatory: str
