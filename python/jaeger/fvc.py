@@ -800,6 +800,7 @@ class FVC:
             grid,
             ignore_did_fail=True,
             stop_if_deadlock=True,
+            ignore_initial_collision=True,
         )
         if did_fail:
             log.warning(
