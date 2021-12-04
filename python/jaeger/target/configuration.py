@@ -586,7 +586,7 @@ class BaseConfiguration:
         fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
         fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
 
-        fdata.fillna(-999)
+        fdata.fillna(-999, inplace=True)
 
         time = Time.now()
 
