@@ -986,7 +986,7 @@ class BaseAssignmentData:
                 pmra=numpy.nan_to_num(pmra, nan=0),
                 pmdec=numpy.nan_to_num(pmdec, nan=0),
                 parallax=numpy.nan_to_num(parallax),
-                epoch=epoch,
+                epoch=Time(epoch, format="jyear").jd,
             )
 
             assert self.site.time
