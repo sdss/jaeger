@@ -267,12 +267,7 @@ class BaseConfiguration:
 
         decollided: list[int] = []
         if decollide:
-            priority_order = (
-                ftable.loc[(ftable.valid == 1)]
-                .loc[(slice(None), "Metrology"), :]
-                .index.get_level_values(0)
-                .to_list()
-            )
+            priority_order = valid.index.get_level_values(0).tolist()
 
             self.robot_grid, decollided = await decollide_in_executor(
                 self.robot_grid,
