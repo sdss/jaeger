@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import time
 import warnings
 
 from typing import TYPE_CHECKING, Optional
@@ -43,7 +44,7 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int = 0, collision_buffer=None):
+def get_robot_grid(seed: int | None = None, collision_buffer=None):
     """Returns a new robot grid with the destination set to the lattice position.
 
     If an initialised instance of the FPS is available, disabled robots will be
@@ -51,16 +52,11 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
 
     """
 
-    from jaeger.fps import FPS
-
-    fps = FPS.get_instance()
-    if fps is None:
-        warn(
-            "FPS information not provided when creating the robot grid. "
-            "Will not be able to disable robots."
-        )
-
     from kaiju.robotGrid import RobotGridCalib
+
+    if seed is None:
+        t = 1000 * time.time()
+        seed = int(int(t) % 2 ** 32 / 1000)
 
     kaiju_config = config["kaiju"]
     ang_step = kaiju_config["ang_step"]
