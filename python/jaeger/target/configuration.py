@@ -956,6 +956,7 @@ class BaseAssignmentData:
         over_180 = self.fibre_table.beta > 180
 
         self.fibre_table.loc[na | over_180, "valid"] = 0
+        self.fibre_table.loc[na | over_180, "on_target"] = 0
 
     def icrs_to_positioner(
         self,
