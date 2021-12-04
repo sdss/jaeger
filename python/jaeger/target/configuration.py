@@ -93,6 +93,7 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
         ("lambda_eff", numpy.float32, -999.0),
         ("coord_epoch", numpy.float32, -999.0),
         ("spectrographId", numpy.int16, -999),
+        ("fiberId", numpy.int16, -999),
         ("mag", numpy.dtype(("<f4", (5,))), [-999.0] * 5),
         ("optical_prov", "U10", ""),
         ("bp_mag", numpy.float32, -999.0),
@@ -107,6 +108,8 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
         ("category", "U20", ""),
         ("sdssv_boss_target0", numpy.int64, 0),
         ("sdssv_apogee_target0", numpy.int64, 0),
+        ("delta_ra", numpy.float64, 0.0),
+        ("delta_dec", numpy.float64, 0.0),
     ]
 
     names, formats, defaults = zip(*fiber_map_data)
@@ -571,6 +574,18 @@ class BaseConfiguration:
         adata = self.assignment_data
 
         fdata = self.assignment_data.fibre_table.copy()
+
+        # Add fiberId
+        fass = pandas.merge(
+            calibration.positionerTable,
+            calibration.fiberAssignments,
+            left_index=True,
+            right_index=True,
+        ).set_index("positionerID")
+
+        fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
+        fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
+
         fdata.fillna(-999)
 
         time = Time.now()
@@ -639,6 +654,7 @@ class BaseConfiguration:
                     "ra": row_data.ra_epoch,
                     "dec": row_data.ra_epoch,
                     "spectrographId": spec_id,
+                    "fiberId": row_data.fiberId,
                 }
             )
 
@@ -843,6 +859,7 @@ class BaseAssignmentData:
         ("deadlocked", numpy.int8, 0),
         ("decollided", numpy.int8, 0),
         ("wavelength", numpy.float32, numpy.nan),
+        ("fiberId", numpy.int32, -999),
         ("ra_icrs", numpy.float64, numpy.nan),
         ("dec_icrs", numpy.float64, numpy.nan),
         ("ra_epoch", numpy.float64, numpy.nan),

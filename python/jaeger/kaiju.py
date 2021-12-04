@@ -225,7 +225,7 @@ def get_path_pair(
     path_delay=None,
     collision_shrink=None,
     stop_if_deadlock: bool = False,
-    ignore_initial_collision: bool = False,
+    ignore_initial_collisions: bool = False,
 ) -> tuple:
     """Runs ``pathGenGreedy`` and returns the to and from destination paths.
 
@@ -252,7 +252,7 @@ def get_path_pair(
     stop_if_deadlock
         If `True`, detects deadlocks early in the path and returns shorter
         trajectories (at the risk of some false positive deadlocks).
-    ignore_initial_collision
+    ignore_initial_collisions
         If `True`, does not fail if the initial state is collided. To be used
         only for offsets.
 
@@ -288,7 +288,7 @@ def get_path_pair(
         log.debug(f"Running pathGenGreedy with stopIfDeadlock={stop_if_deadlock}.")
         robot_grid.pathGenGreedy(
             stopIfDeadlock=stop_if_deadlock,
-            ignoreInitialCollision=ignore_initial_collision,
+            ignoreInitialCollisions=ignore_initial_collisions,
         )
 
         # Check for deadlocks.
