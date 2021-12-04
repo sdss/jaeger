@@ -93,7 +93,8 @@ async def load(
 ):
     """Creates and ingests a configuration from a design in the database."""
 
-    command.info(f"Loading design {designid}.")
+    if designid is not None:
+        command.info(f"Loading design {designid}.")
 
     if reload is True:
         if fps.configuration is None:
@@ -119,7 +120,7 @@ async def load(
 
         fps.configuration = design.configuration
 
-    assert isinstance(fps.configuration, Configuration)
+    assert isinstance(fps.configuration, (Configuration, ManualConfiguration))
 
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
@@ -154,11 +155,11 @@ async def load(
         configuration_loaded=[
             configuration.configuration_id,
             configuration.design.design_id if configuration.design else -999,
-            boresight.ra[0],
-            boresight.dec[0],
+            boresight.ra[0] if boresight else -999.0,
+            boresight.dec[0] if boresight else -999.0,
             configuration.design.field.position_angle if configuration.design else 0,
-            boresight[0, 0],
-            boresight[0, 1],
+            boresight[0, 0] if boresight else -999.0,
+            boresight[0, 1] if boresight else -999.0,
             summary_file,
         ]
     )
@@ -187,6 +188,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     try:
         from_destination = await fps.configuration.decollide_and_get_paths()
     except Exception as err:
+        raise
         return command.fail(error=f"Failed getting trajectory: {err}")
 
     if not await check_trajectory(from_destination, fps=fps, atol=1):

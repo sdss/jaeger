@@ -300,8 +300,6 @@ class BaseConfiguration:
         if self.from_destination is None:
             raise TrajectoryError("Cannot find valid trajectory.")
 
-        self.assignment_data.fibre_table.to_hdf("conf_data_after_decollide.hdf", "data")
-
         return self.from_destination
 
     async def _resolve_deadlocks(
@@ -1106,8 +1104,8 @@ class BaseAssignmentData:
                         beta,
                         position_angle=self.position_angle,
                         update=False,
-                        assigned=assigned,
-                        on_target=assigned,
+                        assigned=int(assigned),
+                        on_target=int(assigned),
                     )
                     data[(pid, ftype)] = icrs_data
 
@@ -1133,8 +1131,8 @@ class BaseAssignmentData:
                             "xtangent": tangent[0],
                             "ytangent": tangent[1],
                             "ztangent": tangent[2],
-                            "assigned": assigned,
-                            "on_target": assigned,
+                            "assigned": int(assigned),
+                            "on_target": int(assigned),
                         }
                     )
                     data[(pid, ftype)] = row
