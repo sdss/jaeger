@@ -44,6 +44,7 @@ from jaeger.kaiju import (
     load_robot_grid,
     warn,
 )
+from jaeger.utils import get_sjd
 from jaeger.utils.helpers import run_in_executor
 
 from .tools import positioner_to_wok, wok_to_positioner
@@ -71,44 +72,44 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
     """Returns a stub for the FIBERMAP table and a default entry,"""
 
     fiber_map_data = [
-        ("positionerId", numpy.int16),
-        ("holeId", "U7"),
-        ("fiberType", "U10"),
-        ("assigned", numpy.int16),
-        ("on_target", numpy.int16),
-        ("valid", numpy.int16),
-        ("decollided", numpy.int16),
-        ("xFocal", numpy.float64),
-        ("yFocal", numpy.float64),
-        ("alpha", numpy.float32),
-        ("beta", numpy.float32),
-        ("racat", numpy.float64),
-        ("deccat", numpy.float64),
-        ("pmra", numpy.float32),
-        ("pmdec", numpy.float32),
-        ("parallax", numpy.float32),
-        ("ra", numpy.float64),
-        ("dec", numpy.float64),
-        ("lambda_eff", numpy.float32),
-        ("coord_epoch", numpy.float32),
-        ("spectrographId", numpy.int16),
-        ("mag", numpy.dtype(("<f4", (5,)))),
-        ("optical_prov", "U10"),
-        ("bp_mag", numpy.float32),
-        ("gaia_g_mag", numpy.float32),
-        ("rp_mag", numpy.float32),
-        ("h_mag", numpy.float32),
-        ("catalogid", numpy.int64),
-        ("carton_to_target_pk", numpy.int64),
-        ("cadence", "U20"),
-        ("firstcarton", "U25"),
-        ("program", "U20"),
-        ("category", "U20"),
-        ("sdssv_boss_target0", numpy.int64),
-        ("sdssv_apogee_target0", numpy.int64),
+        ("positionerId", numpy.int16, -999),
+        ("holeId", "U7", ""),
+        ("fiberType", "U10", ""),
+        ("assigned", numpy.int16, 0),
+        ("on_target", numpy.int16, 0),
+        ("valid", numpy.int16, 0),
+        ("decollided", numpy.int16, 0),
+        ("xFocal", numpy.float64, -999.0),
+        ("yFocal", numpy.float64, -999.0),
+        ("alpha", numpy.float32, -999.0),
+        ("beta", numpy.float32, -999.0),
+        ("racat", numpy.float64, -999.0),
+        ("deccat", numpy.float64, -999.0),
+        ("pmra", numpy.float32, -999.0),
+        ("pmdec", numpy.float32, -999.0),
+        ("parallax", numpy.float32, -999.0),
+        ("ra", numpy.float64, -999.0),
+        ("dec", numpy.float64, -999.0),
+        ("lambda_eff", numpy.float32, -999.0),
+        ("coord_epoch", numpy.float32, -999.0),
+        ("spectrographId", numpy.int16, -999),
+        ("mag", numpy.dtype(("<f4", (5,))), [-999.0] * 5),
+        ("optical_prov", "U10", ""),
+        ("bp_mag", numpy.float32, -999.0),
+        ("gaia_g_mag", numpy.float32, -999.0),
+        ("rp_mag", numpy.float32, -999.0),
+        ("h_mag", numpy.float32, -999.0),
+        ("catalogid", numpy.int64, -999),
+        ("carton_to_target_pk", numpy.int64, -999),
+        ("cadence", "U20", ""),
+        ("firstcarton", "U25", ""),
+        ("program", "U20", ""),
+        ("category", "U20", ""),
+        ("sdssv_boss_target0", numpy.int64, 0),
+        ("sdssv_apogee_target0", numpy.int64, 0),
     ]
 
-    names, formats = zip(*fiber_map_data)
+    names, formats, defaults = zip(*fiber_map_data)
 
     fibermap = numpy.empty((length,), dtype={"names": names, "formats": formats})
 
@@ -116,25 +117,7 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
     default = {}
     for i in range(len(names)):
         name = names[i]
-        dd = numpy.dtype(formats[i])
-        if name == "mag":
-            value = [-999.0] * 5
-        elif dd.char in ["h", "i"]:
-            value = -999
-        elif dd.char in ["S"]:
-            value = ""
-        elif dd.char in ["f", "d"]:
-            value = -999.0
-        else:
-            value = -999.0
-        default[name] = value
-
-    default["assigned"] = 0
-    default["valid"] = 0
-    default["on_target"] = 0
-    default["decollided"] = 0
-    default["sdssv_boss_target0"] = 0
-    default["sdssv_apogee_target0"] = 0
+        default[name] = defaults[i]
 
     return (fibermap, default)
 
@@ -197,20 +180,13 @@ class BaseConfiguration:
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
 
-    def recompute_coordinates(
-        self,
-        jd: Optional[float] = None,
-        positioner_ids: list[int] | None = None,
-    ):
+    def recompute_coordinates(self, jd: Optional[float] = None):
         """Recalculates the coordinates.
 
         Parameters
         ----------
         jd
             The Julian Date for which to compute the coordinates.
-        positioner_ids
-            If `None`, compute coordinates for all the entries in the fibre table.
-            Otherwise, only update the entries for the positioner IDs listed.
 
         """
 
@@ -220,22 +196,42 @@ class BaseConfiguration:
                 "ID has been set."
             )
 
-        self.assignment_data.compute_coordinates(jd=jd, positioner_ids=positioner_ids)
+        self.assignment_data.compute_coordinates(jd=jd)
 
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-    async def get_trajectory(
+    async def decollide_and_get_paths(
         self,
-        decollide: bool = False,
+        decollide: bool = True,
         simple_decollision: bool = False,
         resolve_deadlocks: bool = True,
         n_deadlock_retries: int = 5,
-    ):
+        force: bool = False,
+    ) -> dict:
         """Returns a trajectory dictionary from the folded position.
 
         Also stores the to destination trajectory so that it can be
         used later to return to folded position.
+
+        Parameters
+        ----------
+        decollide
+            Runs the decollision routine.
+        simple_decollision
+            If `True`, runs `decollideGrid()` without trying to prioritise and
+            minimise what robots move.
+        resolve_deadlocks
+            Whether to solve for deadlocks after decollision.
+        force
+            If `False`, fails if the robot grid is deadlocked. Always fails if there
+            are collisions.
+
+        Returns
+        -------
+        from_destination
+            Returns the ``from destination`` trajectory (usually from lattice to
+            targets).
 
         """
 
@@ -277,55 +273,75 @@ class BaseConfiguration:
             if len(decollided) > 0:
                 self.log(
                     f"{len(decollided)} positioners were collided and "
-                    "were reassigned.",
+                    f"were reassigned: {decollided}.",
                     level=logging.WARNING,
                     to_command=False,
                 )
 
-        self._update_coordinates(decollided)
+            self._update_coordinates(decollided)
+
+        # Final check for collisions.
+        if len(self.robot_grid.getCollidedRobotList()) > 0:
+            raise TrajectoryError("The robot grid remains collided.")
 
         # Fix deadlocks (this sets the trajectories in the instance).
         self.log("Generating path pair.")
         n_retries = n_deadlock_retries if resolve_deadlocks else -1
-        unlocked = await self._resolve_deadlocks(n_retries=n_retries)
+        unlocked = await self._resolve_deadlocks(n_retries=n_retries, force=force)
+
+        self._update_coordinates(unlocked)
 
         self._decollided = decollided + unlocked
+        self.assignment_data.fibre_table.loc[self._decollided, "decollided"] = 1
 
         if self.from_destination is None:
             raise TrajectoryError("Cannot find valid trajectory.")
+
+        self.assignment_data.fibre_table.to_hdf("conf_data_after_decollide.hdf", "data")
 
         return self.from_destination
 
     async def _resolve_deadlocks(
         self,
         n_retries: int = 5,
-        attempt: int = 1,
-        decollided: list[int] = [],
+        force: bool = False,
     ) -> list[int]:
         """Iteratively fix deadlocks."""
 
         # Save the grid data in case we need to decollide.
         grid_data = dump_robot_grid(self.robot_grid)
 
-        result = await get_path_pair_in_executor(self.robot_grid)
-        self.to_destination, self.from_destination, did_fail, deadlocks = result
+        attempt: int = 0
+        decollided: list[int] = []
 
-        n_deadlocks = len(deadlocks)
+        while True:
+            result = await get_path_pair_in_executor(self.robot_grid)
+            self.to_destination, self.from_destination, did_fail, deadlocks = result
 
-        if did_fail:
-            if n_retries < 0:
-                # n_retries == -1 means we don't want to solve for deadlocks. Fail!
-                raise TrajectoryError(
-                    "Failed generating a valid trajectory. "
-                    f"{n_deadlocks} deadlocks were found."
-                )
-            elif n_retries == 0:
-                # We have exhausted our retries.
-                self.log(
-                    f"Attempt {attempt}: {n_deadlocks} deadlocks remain but "
-                    "the number of retries has been exhausted."
-                )
-            else:
+            n_deadlocks = len(deadlocks)
+
+            if did_fail:
+                attempt += 1
+
+                if n_retries < 0:
+                    # n_retries == -1 means we don't want to solve for deadlocks. Fail!
+                    raise TrajectoryError(
+                        "Failed generating a valid trajectory. "
+                        f"{n_deadlocks} deadlocks were found."
+                    )
+
+                if attempt > n_retries:
+                    msg = (
+                        f"Attempt {attempt}: {n_deadlocks} deadlocks remain but "
+                        "the number of retries has been exhausted."
+                    )
+
+                    if force is False:
+                        raise TrajectoryError(msg)
+
+                    else:
+                        self.log(msg, level=logging.WARNING, to_command=False)
+
                 # Replace one of the deadlocked robots with a random new position.
                 # TODO: maybe not call setXYUniform and do a small offset.
 
@@ -335,7 +351,7 @@ class BaseConfiguration:
                 self.log(f"Attempt {attempt}: {n_deadlocks} deadlocks found.")
 
                 to_move = numpy.random.choice(deadlocks)
-                self.log(f"Trying to unlock positioner {to_move}.")
+                self.log(f"Trying to unlock positioner {to_move}.", level=logging.DEBUG)
 
                 # Restore robot grid (it has been mangled by calling get_path_pair).
                 self.robot_grid = load_robot_grid(grid_data)
@@ -349,19 +365,15 @@ class BaseConfiguration:
                     if self.robot_grid.isCollided(to_move):
                         raise TrajectoryError("Cannot decollide deadlocked positioner.")
 
-                self._update_coordinates(positioner_ids=[to_move])
-                decollided.append(to_move)
+                if to_move not in decollided:
+                    decollided.append(to_move)
 
-                # Try again!
-                return await self._resolve_deadlocks(
-                    n_retries=n_retries - 1,
-                    attempt=attempt + 1,
-                    decollided=decollided,
-                )
+                grid_data = dump_robot_grid(self.robot_grid)
 
-        else:
-            if attempt > 1:
-                self.log("All deadlocks have been fixed.")
+            else:
+                if attempt > 1:
+                    self.log("All deadlocks have been fixed.")
+                break
 
         return decollided
 
@@ -374,6 +386,10 @@ class BaseConfiguration:
 
         ftable = self.assignment_data.fibre_table
 
+        n_positioners = len(positioner_ids)
+        if n_positioners > 0:
+            self.log(f"Recomputing {n_positioners} coordinates.", level=logging.DEBUG)
+
         # Update the [xyz]wok_kaiju columns with the values the kaiju uses.
         # These should (!) be identical to [xyz]wok. We do this for all the
         # positioners in the grid.
@@ -384,19 +400,19 @@ class BaseConfiguration:
             ftable.loc[(robot.id, "Metrology"), cols] = robot.metWokXYZ
 
             # If the robot is in the list it means now it's at a different position
-            # now, so we need to update its coordinates in the table. We begin by
-            # setting the [xyz]wok coordinates to what kaiju believes.
+            # now, so we need to update its coordinates in the table.
             if robot.id in positioner_ids:
-                cols = ["xwok", "ywok", "zwok"]
-                ftable.loc[(robot.id, "APOGEE"), cols] = robot.apWokXYZ
-                ftable.loc[(robot.id, "BOSS"), cols] = robot.bossWokXYZ
-                ftable.loc[(robot.id, "Metrology"), cols] = robot.metWokXYZ
+                for ftype in ["APOGEE", "BOSS", "Metrology"]:
+                    self.assignment_data.positioner_to_icrs(
+                        robot.id,
+                        ftype,
+                        robot.alpha,
+                        robot.beta,
+                        self.design.field.position_angle if self.design else 0.0,
+                        update=True,
+                    )
 
-        # Now we recompute coordinates for the positioners to update.
-        n_positioners = len(positioner_ids)
-        if n_positioners > 0:
-            self.log(f"Recomputing {n_positioners} coordinates.", level=logging.DEBUG)
-            self.recompute_coordinates(jd=self.epoch, positioner_ids=positioner_ids)
+        self.assignment_data.validate()
 
         if mark_off_target:
             ftable.loc[positioner_ids, "on_target"] = 0
@@ -563,7 +579,6 @@ class BaseConfiguration:
 
         header = {
             "configuration_id": self.configuration_id,
-            "targeting_version": -999,
             "robostrategy_run": "NA",
             "fps_calibrations_version": calibration.fps_calibs_version,
             "design_id": self.design_id,
@@ -571,7 +586,7 @@ class BaseConfiguration:
             "instruments": "BOSS APOGEE",
             "epoch": adata.site.time.jd if adata.site.time else -999,
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
-            "MJD": int(time.mjd),  # TODO: this should be SJD
+            "MJD": int(get_sjd(adata.observatory.upper())),
             "observatory": adata.observatory,
             "temperature": -999,  # TODO
             "raCen": -999.0,
@@ -581,10 +596,10 @@ class BaseConfiguration:
         if design:
             header.update(
                 {
-                    "robostrategy_run": design.field["rs_run"],
-                    "field_id": design.field["field_id"],
-                    "raCen": design.field["racen"],
-                    "decCen": design.field["deccen"],
+                    "robostrategy_run": design.field.rs_run,
+                    "field_id": design.field.field_id,
+                    "raCen": design.field.racen,
+                    "decCen": design.field.deccen,
                 }
             )
 
@@ -826,7 +841,7 @@ class BaseAssignmentData:
         ("disabled", numpy.int8, 0),
         ("offline", numpy.int8, 0),
         ("deadlocked", numpy.int8, 0),
-        ("collided", numpy.int8, 0),
+        ("decollided", numpy.int8, 0),
         ("wavelength", numpy.float32, numpy.nan),
         ("ra_icrs", numpy.float64, numpy.nan),
         ("dec_icrs", numpy.float64, numpy.nan),
@@ -864,7 +879,7 @@ class BaseAssignmentData:
         if observatory is None:
             if self.design is None:
                 raise ValueError("Cannot determine observatory.")
-            self.observatory = self.design.field["observatory"].upper()
+            self.observatory = self.design.field.observatory.upper()
         else:
             self.observatory = observatory
 
@@ -885,7 +900,7 @@ class BaseAssignmentData:
 
         if self.design:
             self.target_data = self.design.target_data
-            self.position_angle = self.design.field["position_angle"]
+            self.position_angle = self.design.field.position_angle
         else:
             self.target_data = {}
 
@@ -899,20 +914,13 @@ class BaseAssignmentData:
     def __repr__(self):
         return f"<{self.__class__.__name__} (design_id={self.design_id})>"
 
-    def compute_coordinates(
-        self,
-        jd: Optional[float] = None,
-        positioner_ids: list[int] | None = None,
-    ):
+    def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems.
 
         Parameters
         ----------
         jd
             The Julian Date for which to compute the coordinates.
-        positioner_ids
-            If `None`, compute coordinates for all the entries in the fibre table.
-            Otherwise, only update the entries for the positioner IDs listed.
 
         """
 
@@ -950,16 +958,13 @@ class BaseAssignmentData:
 
         return fibre_table
 
-    def _from_icrs(self, positioner_ids: list[int] | None = None):
+    def _from_icrs(self):
         """Loads fibre data from target data using ICRS coordinates."""
 
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         data = {}
         for pid in self.wok_data.index:
-
-            if positioner_ids is not None and pid in positioner_ids:
-                continue
 
             positioner_data = self.wok_data.loc[pid]
             hole_id = positioner_data.holeID
@@ -1007,6 +1012,125 @@ class BaseAssignmentData:
         # Now do a single update of the whole fibre table.
         self.fibre_table = pandas.DataFrame.from_dict(data, orient="index")
         self.fibre_table.sort_index(inplace=True)
+
+    def _from_wok(self):
+        """Loads fibre data from target data using wok coordinates."""
+
+        self._check_all_assigned()
+
+        # Calculate positioner coordinates for each wok coordinate.
+        for hole_id, data in self.target_data.items():
+
+            xwok = data["xwok"]
+            ywok = data["ywok"]
+            zwok = data.get("zwok", POSITIONER_HEIGHT)
+            fibre_type = data["fibre_type"]
+
+            (alpha, beta), _ = wok_to_positioner(
+                hole_id,
+                self.site.name,
+                fibre_type,
+                xwok,
+                ywok,
+                zwok=zwok,
+            )
+
+            self.target_data[hole_id].update({"alpha": alpha, "beta": beta})
+
+        # Now simply call _from_positioner()
+        self._from_positioner()
+
+        # We want to keep the original wok coordinates that now have been overridden
+        # by calling _from_positioner.
+        wok_coords = []
+        for idx in range(len(self.fibre_table)):
+            row: pandas.Series = self.fibre_table.iloc[idx]
+            hole_id = row.hole_id
+            assigned = row.assigned
+
+            if assigned == 1 and hole_id in self.target_data:
+                target = self.target_data[hole_id]
+                wok_coords.append(
+                    [
+                        target["xwok"],
+                        target["ywok"],
+                        target.get("zwok", numpy.nan),
+                    ]
+                )
+            else:
+                wok_coords.append([numpy.nan] * 3)
+
+        self.fibre_table[["xwok", "ywok", "zwok"]] = wok_coords
+
+    def _from_positioner(self):
+        """Loads fibre data from target data using positioner coordinates."""
+
+        self._check_all_assigned()
+
+        data = {}
+        for pid in self.wok_data.index:
+
+            hole_id = self.wok_data.at[pid, "holeID"]
+            alpha = self.target_data[hole_id]["alpha"]
+            beta = self.target_data[hole_id]["beta"]
+
+            # Now calculate some coordinates for the other two non-assigned fibres.
+            for ftype in ["APOGEE", "BOSS", "Metrology"]:
+
+                assigned = self.target_data[hole_id]["fibre_type"] == ftype
+
+                # If boresight has been set, go all the way from positioner to ICRS.
+                # Otherwise just calculate tangent and wok.
+                if self.boresight:
+                    icrs_data = self.positioner_to_icrs(
+                        pid,
+                        ftype,
+                        alpha,
+                        beta,
+                        position_angle=self.position_angle,
+                        update=False,
+                        assigned=assigned,
+                        on_target=assigned,
+                    )
+                    data[(pid, ftype)] = icrs_data
+
+                else:
+
+                    wok, tangent = positioner_to_wok(
+                        hole_id,
+                        self.site.name,
+                        ftype,
+                        alpha,
+                        beta,
+                    )
+
+                    row = self._defaults.copy()
+                    row.update(
+                        {
+                            "hole_id": hole_id,
+                            "alpha": alpha,
+                            "beta": beta,
+                            "xwok": wok[0],
+                            "ywok": wok[1],
+                            "zwok": wok[2],
+                            "xtangent": tangent[0],
+                            "ytangent": tangent[1],
+                            "ztangent": tangent[2],
+                            "assigned": assigned,
+                            "on_target": assigned,
+                        }
+                    )
+                    data[(pid, ftype)] = row
+
+        # Now do a single update of the whole fibre table.
+        new_data = pandas.DataFrame.from_dict(data, orient="index")
+        self.fibre_table.loc[new_data.index, new_data.columns] = new_data
+
+    def _check_all_assigned(self):
+        """Check that all the positioners are in ``target_data``."""
+
+        if len(set(self.target_data) - set(self.wok_data.holeID)) > 0:
+            raise ValueError("Not all the positioners have been assigned a target.")
 
     def validate(self):
         """Validates the fibre table."""
@@ -1066,7 +1190,11 @@ class BaseAssignmentData:
                 wok[0][1],
             )
 
-        row = self._defaults.copy()
+        if update is False:
+            row = self._defaults.copy()
+        else:
+            row = {}
+
         row.update(
             {
                 "hole_id": hole_id,
@@ -1092,7 +1220,7 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[(positioner_id, fibre_type)] = pandas.Series(row)
+            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = row
 
         return row
 
@@ -1117,7 +1245,7 @@ class BaseAssignmentData:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
 
-            wok, _ = positioner_to_wok(
+            wok, tangent = positioner_to_wok(
                 hole_id,
                 self.site.name,
                 fibre_type,
@@ -1135,7 +1263,11 @@ class BaseAssignmentData:
             obs = Observed(field, site=self.site, wavelength=wavelength)
             icrs = ICRS(obs, epoch=self.site.time.jd)
 
-        row = self._defaults.copy()
+        if update is False:
+            row = self._defaults.copy()
+        else:
+            row = {}
+
         row.update(
             {
                 "hole_id": hole_id,
@@ -1149,12 +1281,15 @@ class BaseAssignmentData:
                 "zwok": wok[2],
                 "alpha": alpha,
                 "beta": beta,
+                "xtangent": tangent[0],
+                "ytangent": tangent[1],
+                "ztangent": tangent[2],
             }
         )
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[(positioner_id, fibre_type)] = pandas.Series(row)
+            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = row
 
         return row
 
@@ -1170,11 +1305,7 @@ class AssignmentData(BaseAssignmentData):
 
         self.compute_coordinates(epoch)
 
-    def compute_coordinates(
-        self,
-        jd: Optional[float] = None,
-        positioner_ids: list[int] | None = None,
-    ):
+    def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems.
 
         Parameters
@@ -1189,7 +1320,7 @@ class AssignmentData(BaseAssignmentData):
 
         self.site.set_time(jd)
 
-        icrs_bore = ICRS([[self.design.field["racen"], self.design.field["deccen"]]])
+        icrs_bore = ICRS([[self.design.field.racen, self.design.field.deccen]])
         self.boresight = Observed(
             icrs_bore,
             site=self.site,
@@ -1197,7 +1328,7 @@ class AssignmentData(BaseAssignmentData):
         )
 
         # Load fibre data using ICRS coordinates.
-        self._from_icrs(positioner_ids=positioner_ids)
+        self._from_icrs()
 
         # Final validation
         self.validate()
@@ -1255,20 +1386,13 @@ class ManualAssignmentData(BaseAssignmentData):
         self.fibre_table = self._create_fibre_table()
         self.compute_coordinates()
 
-    def compute_coordinates(
-        self,
-        jd: Optional[float] = None,
-        positioner_ids: list[int] | None = None,
-    ):
+    def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems.
 
         Parameters
         ----------
         jd
             The Julian Date for which to compute the coordinates.
-        positioner_ids
-            If `None`, compute coordinates for all the entries in the fibre table.
-            Otherwise, only update the entries for the positioner IDs listed.
 
         """
 
@@ -1298,139 +1422,13 @@ class ManualAssignmentData(BaseAssignmentData):
                     "Creating a manual configuration from ICRS "
                     "coordinates requires defining a field centre."
                 )
-            self._from_icrs(positioner_ids=positioner_ids)
+            self._from_icrs()
         elif "xwok" in sample_target and "ywok" in sample_target:
-            self._from_wok(positioner_ids=positioner_ids)
+            self._from_wok()
         elif "alpha" in sample_target and "beta" in sample_target:
-            self._from_positioner(positioner_ids=positioner_ids)
+            self._from_positioner()
         else:
             raise ValueError("Target data does not contain the necessary columns.")
 
         # Final validation.
         self.validate()
-
-    def _from_wok(self, positioner_ids: list[int] | None = None):
-        """Loads fibre data from target data using wok coordinates."""
-
-        self._check_all_assigned()
-
-        # Calculate positioner coordinates for each wok coordinate.
-        for hole_id, data in self.target_data.items():
-
-            if positioner_ids is not None:
-                pid = self.wok_data.loc[self.wok_data.holeID == hole_id].index.values[0]
-                if pid in positioner_ids:
-                    continue
-
-            xwok = data["xwok"]
-            ywok = data["ywok"]
-            zwok = data.get("zwok", POSITIONER_HEIGHT)
-            fibre_type = data["fibre_type"]
-
-            (alpha, beta), _ = wok_to_positioner(
-                hole_id,
-                self.site.name,
-                fibre_type,
-                xwok,
-                ywok,
-                zwok=zwok,
-            )
-
-            self.target_data[hole_id].update({"alpha": alpha, "beta": beta})
-
-        # Now simply call _from_positioner()
-        self._from_positioner(positioner_ids=positioner_ids)
-
-        # We want to keep the original wok coordinates that now have been overridden
-        # by calling _from_positioner.
-        wok_coords = []
-        for idx in range(len(self.fibre_table)):
-            row: pandas.Series = self.fibre_table.iloc[idx]
-            hole_id = row.hole_id
-            assigned = row.assigned
-
-            if assigned == 1 and hole_id in self.target_data:
-                target = self.target_data[hole_id]
-                wok_coords.append(
-                    [
-                        target["xwok"],
-                        target["ywok"],
-                        target.get("zwok", numpy.nan),
-                    ]
-                )
-            else:
-                wok_coords.append([numpy.nan] * 3)
-
-        self.fibre_table[["xwok", "ywok", "zwok"]] = wok_coords
-
-    def _from_positioner(self, positioner_ids: list[int] | None = None):
-        """Loads fibre data from target data using positioner coordinates."""
-
-        self._check_all_assigned()
-
-        data = {}
-        for pid in self.wok_data.index:
-
-            if positioner_ids is not None and pid in positioner_ids:
-                continue
-
-            hole_id = self.wok_data.at[pid, "holeID"]
-            alpha = self.target_data[hole_id]["alpha"]
-            beta = self.target_data[hole_id]["beta"]
-
-            # Now calculate some coordinates for the other two non-assigned fibres.
-            for ftype in ["APOGEE", "BOSS", "Metrology"]:
-
-                assigned = self.target_data[hole_id]["fibre_type"] == ftype
-
-                # If boresight has been set, go all the way from positioner to ICRS.
-                # Otherwise just calculate tangent and wok.
-                if self.boresight:
-                    icrs_data = self.positioner_to_icrs(
-                        pid,
-                        ftype,
-                        alpha,
-                        beta,
-                        position_angle=self.position_angle,
-                        update=False,
-                        assigned=assigned,
-                        on_target=assigned,
-                    )
-                    data[(pid, ftype)] = icrs_data
-
-                else:
-
-                    wok, tangent = positioner_to_wok(
-                        hole_id,
-                        self.site.name,
-                        ftype,
-                        alpha,
-                        beta,
-                    )
-
-                    row = self._defaults.copy()
-                    row.update(
-                        {
-                            "hole_id": hole_id,
-                            "alpha": alpha,
-                            "beta": beta,
-                            "xwok": wok[0],
-                            "ywok": wok[1],
-                            "zwok": wok[2],
-                            "xtangent": tangent[0],
-                            "ytangent": tangent[1],
-                            "ztangent": tangent[2],
-                            "assigned": assigned,
-                            "on_target": assigned,
-                        }
-                    )
-                    data[(pid, ftype)] = row
-
-        # Now do a single update of the whole fibre table.
-        self.fibre_table.update(pandas.DataFrame.from_dict(data, orient="index"))
-
-    def _check_all_assigned(self):
-        """Check that all the positioners are in ``target_data``."""
-
-        if len(set(self.target_data) - set(self.wok_data.holeID)) > 0:
-            raise ValueError("Not all the positioners have been assigned a target.")

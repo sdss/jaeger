@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from typing import Any
 
 import peewee
@@ -21,6 +23,16 @@ from .configuration import Configuration
 
 
 __all__ = ["Design"]
+
+
+@dataclass
+class FieldData:
+    field_id: int
+    rs_run: str
+    observatory: str
+    racen: float
+    deccen: float
+    position_angle: float
 
 
 class Design:
@@ -55,7 +67,7 @@ class Design:
         except peewee.DoesNotExist:
             raise ValueError(f"design_id {design_id} does not exist in the database.")
 
-        self.field: dict[str, Any] = dict(
+        self.field = FieldData(
             field_id=self.design.field.field_id,
             rs_run=self.design.field.version.plan if self.design else "NA",
             observatory=self.design.field.observatory.label,

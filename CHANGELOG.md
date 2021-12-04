@@ -4,12 +4,12 @@
 
 ### 🚀 New
 
-* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.get_trajectory()` is called. The reverse path can be sent from the actor using `configuration reverse`. The paths can be generated in advance when loading the design. An ``--epoch-delay`` parameter can be passed when loading the design to create a configuration for some time in the future.
+* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.decollide_and_get_paths()` is called. The reverse path can be sent from the actor using `configuration reverse`. The paths can be generated in advance when loading the design. An ``--epoch-delay`` parameter can be passed when loading the design to create a configuration for some time in the future.
 * [#167](https://github.com/sdss/jaeger/issues/167) Add the ability of loading a configuration from the current positions of the robots.
 
 ### ✨ Improved
 
-* [#166](https://github.com/sdss/jaeger/issues/166) During `BaseConfiguration.get_trajectory()` the paths are decollided and deadlocks resolved while trying to maintain as many robots on target as possible. The fibre table is updated.
+* [#166](https://github.com/sdss/jaeger/issues/166) During `BaseConfiguration.decollide_and_get_paths()` the paths are decollided and deadlocks resolved while trying to maintain as many robots on target as possible. The fibre table is updated.
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
 * `jaeger.commands.goto.goto()` generates `kaiju`-valid trajectories by default.
 

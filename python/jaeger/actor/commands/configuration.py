@@ -133,7 +133,7 @@ async def load(
     if generate_paths:
         try:
             command.info("Calculating trajectories.")
-            await configuration.get_trajectory(decollide=True)
+            await configuration.decollide_and_get_paths()
         except Exception as err:
             return command.fail(error=f"Failed generating paths: {err}")
 
@@ -150,15 +150,13 @@ async def load(
 
     boresight = fps.configuration.assignment_data.boresight
 
-    assert configuration.design
-
     command.debug(
         configuration_loaded=[
             configuration.configuration_id,
-            configuration.design.design_id,
+            configuration.design.design_id if configuration.design else -999,
             boresight.ra[0],
             boresight.dec[0],
-            configuration.design.field["position_angle"],
+            configuration.design.field.position_angle if configuration.design else 0,
             boresight[0, 0],
             boresight[0, 1],
             summary_file,
@@ -187,7 +185,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     else:
         command.info(text="Calculating trajectory.")
     try:
-        from_destination = await fps.configuration.get_trajectory()
+        from_destination = await fps.configuration.decollide_and_get_paths()
     except Exception as err:
         return command.fail(error=f"Failed getting trajectory: {err}")
 
@@ -293,7 +291,7 @@ async def random(
 
     try:
         command.info("Getting trajectory.")
-        trajectory = await configuration.get_trajectory(decollide=False)
+        trajectory = await configuration.decollide_and_get_paths(decollide=False)
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 
