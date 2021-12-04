@@ -245,6 +245,10 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     type=click.FloatRange(1.6, 3.0),
     help="Custom collision buffer",
 )
+@click.option(
+    "--send-trajectory/--no-send-trajectory",
+    help="Send the trajectory to the FPS.",
+)
 async def random(
     command: Command[JaegerActor],
     fps: FPS,
@@ -252,6 +256,7 @@ async def random(
     danger: bool = False,
     uniform: str | None = None,
     collision_buffer: float | None = None,
+    send_trajectory: bool = True,
 ):
     """Executes a random, valid configuration."""
 
@@ -295,11 +300,14 @@ async def random(
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 
-    command.info("Executing random trajectory.")
+    if send_trajectory:
+        return command.finish()
 
     # Make this the FPS configuration
     assert command.actor
     command.actor.fps.configuration = configuration
+
+    command.info("Executing random trajectory.")
 
     try:
         await fps.send_trajectory(trajectory, command=command)
