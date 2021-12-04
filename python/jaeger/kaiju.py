@@ -81,20 +81,9 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     # for when I dump and reload robot grids.
     robot_grid.collisionBuffer = collision_buffer
 
-    if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
-        raise JaegerError("Mismatch between connected positioners and robot grid.")
-
     for robot in robot_grid.robotDict.values():
-        if fps is not None:
-            positioner = fps[robot.id]
-            if positioner.disabled:
-                log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
-                robot.setAlphaBeta(positioner.alpha, positioner.beta)
-                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
-                robot.isOffline = True
-                continue
-
         robot.setDestinationAlphaBeta(alpha0, beta0)
+        robot.setAlphaBeta(alpha0, beta0)
 
     return robot_grid
 
