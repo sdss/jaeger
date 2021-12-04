@@ -286,7 +286,7 @@ LOG_FILE = os.path.join(
 )
 @pass_fps
 @cli_coro
-async def actor(fps_maker, no_tron):
+async def actor(fps_maker, no_tron: bool = False):
     """Runs the actor."""
 
     try:

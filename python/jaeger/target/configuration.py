@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import os
 import warnings
-from glob import glob
 
 from typing import TYPE_CHECKING, Optional, Union, cast
 
@@ -293,10 +292,7 @@ class BaseConfiguration:
         self._decollided = decollided + unlocked
 
         if self.from_destination is None:
-            raise TrajectoryError(
-                "Cannot find valid trajectory for configuration "
-                f"{self.configuration_id}."
-            )
+            raise TrajectoryError("Cannot find valid trajectory.")
 
         return self.from_destination
 
@@ -326,7 +322,7 @@ class BaseConfiguration:
             elif n_retries == 0:
                 # We have exhausted our retries.
                 self.log(
-                    f"Attempt {attempt}: {n_deadlocks} deadlocks remain but"
+                    f"Attempt {attempt}: {n_deadlocks} deadlocks remain but "
                     "the number of retries has been exhausted."
                 )
             else:
@@ -415,18 +411,7 @@ class BaseConfiguration:
 
         cid = self.configuration_id or -999
 
-        path_pattern = os.path.join(
-            dirpath,
-            f"configuration_snapshot_{mjd}_{cid}_*.pdf",
-        )
-        files = sorted(glob(path_pattern))
-
-        if len(files) == 0:
-            seq = 1
-        else:
-            seq = int(files[-1].split("_")[-1][0:2]) + 1
-
-        path = path_pattern.replace("*", f"{seq:02d}")
+        path = os.path.join(dirpath, f"configuration_snapshot_{mjd}_{cid}.pdf")
 
         data = dump_robot_grid(self.robot_grid)
 
