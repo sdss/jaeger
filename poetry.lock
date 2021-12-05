@@ -1142,7 +1142,7 @@ documents = ["sphinx (>=1.1.3)", "sphinx-rtd-theme", "humanfriendly"]
 quality = ["coverage (>=3.5.3)", "nose (>=1.2.1)", "mock (>=1.0.0)", "pep8 (>=1.3.3)"]
 repl = ["click (>=7.0)", "prompt-toolkit (==2.0.4)", "pygments (>=2.2.0)", "click (>=7.0)", "prompt-toolkit (>=3.0.8)", "pygments (>=2.2.0)", "aiohttp (>=3.7.3)", "pyserial-asyncio (>=0.5)"]
 tornado = ["tornado (==4.5.3)"]
-twisted = ["Twisted[serial,conch] (>=20.3.0)", "Twisted[conch] (>=20.3.0)"]
+twisted = ["Twisted[conch,serial] (>=20.3.0)", "Twisted[conch] (>=20.3.0)"]
 
 [[package]]
 name = "pyparsing"
@@ -1413,7 +1413,7 @@ sdsstools = ">=0.4.13,<0.5.0"
 
 [[package]]
 name = "sdss-coordio"
-version = "1.1.4a0"
+version = "1.1.4a1"
 description = "Coordinate conversion for SDSS-V"
 category = "main"
 optional = false
@@ -1959,7 +1959,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1,<4.0"
-content-hash = "d1a46e8f64e4a43f18b3a78c0a23217538b2e88ba6e0968c86ef5397024b4e7c"
+content-hash = "bdfe9d480c69d16cfe0dd66782e1a5b1f8eba541b3fe700cb64359684beea8b8"
 
 [metadata.files]
 aio-pika = [
@@ -3128,7 +3128,7 @@ sdss-clu = [
     {file = "sdss_clu-1.5.5a0-py3-none-any.whl", hash = "sha256:70a9b2fa79f7678d8398e76c44ff99c629b15c2851710e940bf384ad3f8ffdb3"},
 ]
 sdss-coordio = [
-    {file = "sdss-coordio-1.1.4a0.tar.gz", hash = "sha256:c413e0470be4d6c085c80b41551980e722bb49a6ce6896e82759da61040ae058"},
+    {file = "sdss-coordio-1.1.4a1.tar.gz", hash = "sha256:ee88ea5bd57f9eb2d9fc11051c54ad8d8a649b0868c2d52089b633ff9fbab22d"},
 ]
 sdss-drift = [
     {file = "sdss-drift-0.3.1a0.tar.gz", hash = "sha256:9365f8dbb8a1c1c8d1f64e091f7694639774187c7a50c0f48f1707326ebf1765"},
