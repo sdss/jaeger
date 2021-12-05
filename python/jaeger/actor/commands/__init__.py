@@ -19,6 +19,7 @@ from .fvc import *
 from .ieb import *
 from .pollers import *
 from .positioner import *
+from .power import *
 from .snapshot import *
 from .talk import *
 from .unwind import *

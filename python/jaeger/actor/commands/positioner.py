@@ -215,14 +215,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 @jaeger_parser.command()
 @click.argument("POSITIONER-IDS", type=int, nargs=-1, required=False)
-@click.option(
-    "-f",
-    "--full",
-    is_flag=True,
-    default=False,
-    help="outputs more statuses.",
-)
-async def status(command, fps, positioner_ids, full):
+async def status(command, fps, positioner_ids):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioner_ids or list(fps.positioners.keys())
@@ -230,58 +223,56 @@ async def status(command, fps, positioner_ids, full):
     if not check_positioners(positioner_ids, command, fps):
         return
 
-    try:
-        await fps.update_status(positioner_ids=0)
-        await fps.update_position(positioner_ids=positioner_ids)
-    except JaegerError as err:
-        return command.fail(error=f"Failed reporting status: {err}")
-
-    n_trajs = (
-        await fps.send_command(
-            CommandID.GET_NUMBER_TRAJECTORIES,
-            positioner_ids=positioner_ids,
-        )
-    ).get_replies()
-
     command.info(locked=fps.locked)
-
     command.info(n_positioners=len(fps.positioners))
-
-    for pid in sorted(positioner_ids):
-        p = fps[pid]
-
-        alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
-        beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
-
-        n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
-
-        if pid in fps.positioner_to_bus:
-            interface, bus = fps.positioner_to_bus[pid]
-            interface = fps.can.interfaces.index(interface) + 1
-        else:
-            interface = -1
-            bus = -1
-
-        command.write(
-            "i",
-            positioner_status=[
-                p.positioner_id,
-                alpha_pos,
-                beta_pos,
-                f"0x{int(p.status):x}",
-                p.initialised,
-                p.is_bootloader() or False,
-                p.firmware or "?",
-                interface,
-                bus,
-                n_trajs_pid,
-            ],
-        )
-
     command.info(fps_status=f"0x{fps.status.value:x}")
 
-    if full:
-        await clu.Command("ieb status", parent=command).parse()
+    if len(positioner_ids) > 0:
+        try:
+            await fps.update_status(positioner_ids=0)
+            await fps.update_position(positioner_ids=positioner_ids)
+        except JaegerError as err:
+            return command.fail(error=f"Failed reporting status: {err}")
+
+        n_trajs = (
+            await fps.send_command(
+                CommandID.GET_NUMBER_TRAJECTORIES,
+                positioner_ids=positioner_ids,
+            )
+        ).get_replies()
+
+        for pid in sorted(positioner_ids):
+            p = fps[pid]
+
+            alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
+            beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
+
+            n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
+
+            if pid in fps.positioner_to_bus:
+                interface, bus = fps.positioner_to_bus[pid]
+                interface = fps.can.interfaces.index(interface) + 1
+            else:
+                interface = -1
+                bus = -1
+
+            command.write(
+                "i",
+                positioner_status=[
+                    p.positioner_id,
+                    alpha_pos,
+                    beta_pos,
+                    f"0x{int(p.status):x}",
+                    p.initialised,
+                    p.is_bootloader() or False,
+                    p.firmware or "?",
+                    interface,
+                    bus,
+                    n_trajs_pid,
+                ],
+            )
+
+    await clu.Command("ieb status", parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
 

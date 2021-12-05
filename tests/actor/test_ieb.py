@@ -13,7 +13,7 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_power_on(actor):
-    command = await actor.invoke_mock_command("ieb power on")
+    command = await actor.invoke_mock_command("power on")
     assert command.status.did_succeed
 
 
@@ -24,12 +24,12 @@ async def test_power_on_fails(actor, mocker):
     await ps1.open()
     mocker.patch.object(ps1, "write")
 
-    command = await actor.invoke_mock_command("ieb power on")
+    command = await actor.invoke_mock_command("power on")
     assert command.status.did_fail
 
 
 async def test_power_off(actor):
-    command = await actor.invoke_mock_command("ieb power off")
+    command = await actor.invoke_mock_command("power off")
     assert command.status.did_succeed
 
 
