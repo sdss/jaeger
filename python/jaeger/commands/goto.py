@@ -355,6 +355,7 @@ async def goto(
             data=data,
             stop_if_deadlock=force,
             executor="process",
+            ignore_did_fail=force,
         )
 
         if did_fail is True:
