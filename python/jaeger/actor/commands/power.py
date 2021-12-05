@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -72,7 +72,7 @@ async def switch(
             assert isinstance(device_obj, Relay)
             dev_name = device_obj.name
         except ValueError:
-            return command.fail(error=f"cannot find device {device!r}.")
+            return command.fail(error=f"Cannot find device {device!r}.")
 
         if device_obj.module.mode not in ["holding_register", "coil"]:
             return command.fail(error=f"{dev_name!r} is not an output.")
@@ -85,7 +85,7 @@ async def switch(
                 on = True
             else:
                 return command.fail(
-                    error=f"invalid status for device {dev_name!r}: {current_status!r}."
+                    error=f"Invalid status for device {dev_name!r}: {current_status!r}."
                 )
 
         try:
@@ -94,16 +94,16 @@ async def switch(
             elif on is False:
                 await device_obj.open()
         except Exception:
-            return command.fail(error=f"failed to set status of device {dev_name!r}.")
+            return command.fail(error=f"Failed to set status of device {dev_name!r}.")
 
         if cycle:
-            command.write("d", text="waiting 1 second before powering up.")
+            command.write("d", text="Waiting 1 second before powering up.")
             await asyncio.sleep(1)
             try:
                 await device_obj.close()
             except Exception:
                 return command.fail(
-                    error=f"failed to power device {dev_name!r} back on."
+                    error=f"Failed to power device {dev_name!r} back on."
                 )
 
         # If we read the status immediately sometimes we still get the old one.
@@ -112,18 +112,12 @@ async def switch(
 
         status = "on" if (await device_obj.read())[0] == "closed" else "off"
 
-        category = (
-            await _get_category_data(command, device_obj.category)
-            if device_obj.category
-            else []
-        )
+        message: dict[str, Any] = {"text": f"Device {dev_name!r} is now {status!r}."}
+        category = device_obj.category
+        if category:
+            message[category] = await _get_category_data(command, category)
 
-        command.info(
-            message={
-                "text": f"device {dev_name!r} is now {status!r}.",
-                category: category,
-            }
-        )
+        command.info(message=message)
 
     return command.finish()
 
