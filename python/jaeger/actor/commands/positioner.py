@@ -190,6 +190,7 @@ async def goto(
             relative=relative,
             use_sync_line=use_sync,
             command=command,
+            go_cowboy=go_cowboy,
         )
     except (JaegerError, TrajectoryError) as err:
         return command.fail(error=f"Goto command failed: {err}")
