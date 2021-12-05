@@ -195,7 +195,7 @@ async def create_random_configuration(
     # Confirm that the configuration is valid. This should only matter
     # for full range random configurations.
     try:
-        robot_grid = await decollide_in_executor(robot_grid, simple=True)
+        robot_grid, _ = await decollide_in_executor(robot_grid, simple=True)
         grid_data = {
             robot.id: (robot.alpha, robot.beta)
             for robot in robot_grid.robotDict.values()
@@ -238,7 +238,7 @@ async def create_random_configuration(
                     robot.setAlphaBeta(*grid_data[robot.id])
 
             try:
-                robot_grid = await decollide_in_executor(robot_grid, simple=True)
+                robot_grid, _ = await decollide_in_executor(robot_grid, simple=True)
                 grid_data = {
                     robot.id: (robot.alpha, robot.beta)
                     for robot in robot_grid.robotDict.values()
