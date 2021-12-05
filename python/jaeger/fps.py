@@ -1053,7 +1053,7 @@ class FPS(BaseFPS["FPS"]):
         speed: Optional[float] = None,
         relative=False,
         use_sync_line: bool | None = None,
-        no_kaiju: bool = False,
+        go_cowboy: bool = False,
     ):
         """Sends a list of positioners to a given position.
 
@@ -1069,7 +1069,7 @@ class FPS(BaseFPS["FPS"]):
             If `True`, ``alpha`` and ``beta`` are considered relative angles.
         use_sync_line
             Whether to use the SYNC line to start the trajectories.
-        no_kaiju
+        go_cowboy
             If set, does not create a ``kaiju``-safe trajectory. Use at your own risk.
 
         """
@@ -1081,7 +1081,7 @@ class FPS(BaseFPS["FPS"]):
                 relative=relative,
                 speed=speed,
                 use_sync_line=use_sync_line,
-                no_kaiju=no_kaiju,
+                go_cowboy=go_cowboy,
             )
         except Exception:
             raise
