@@ -155,6 +155,7 @@ async def load(
         configuration_loaded=[
             configuration.configuration_id,
             configuration.design.design_id if configuration.design else -999,
+            configuration.design.field.field_id if configuration.design else -999,
             boresight.ra[0] if boresight else -999.0,
             boresight.dec[0] if boresight else -999.0,
             configuration.design.field.position_angle if configuration.design else 0,
