@@ -392,13 +392,12 @@ class Trajectory(object):
             positioner = self.fps.positioners[pos_id]
             status = positioner.status
 
-            if positioner.offline:
-                warnings.warn(
-                    f"positioner_id={pos_id} is offline but was "
-                    "included in the trajectory. Skipping it.",
-                    JaegerUserWarning,
+            if positioner.disabled:
+                raise TrajectoryError(
+                    f"positioner_id={pos_id} is disabled/offline but was "
+                    "included in the trajectory.",
+                    self,
                 )
-                continue
 
             if (
                 positioner.flags.DATUM_ALPHA_INITIALIZED not in status
