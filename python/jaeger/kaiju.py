@@ -329,12 +329,6 @@ def get_path_pair(
         pathDelay=path_delay,
     )
 
-    # Delete offline robots from trajectories.
-    for robot in robot_grid.robotDict.values():
-        if robot.isOffline:
-            to_destination.pop(robot.id, None)
-            from_destination.pop(robot.id, None)
-
     return (
         to_destination,
         from_destination,
