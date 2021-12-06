@@ -186,14 +186,14 @@ async def execute(command: Command[JaegerActor], fps: FPS):
         command.info(text="Using stored trajectory (from destination).")
     else:
         command.info(text="Calculating trajectory.")
-    try:
-        from_destination = await fps.configuration.decollide_and_get_paths()
-    except Exception as err:
-        raise
-        return command.fail(error=f"Failed getting trajectory: {err}")
 
-    if not await check_trajectory(from_destination, fps=fps, atol=1):
-        return command.fail(error="Trajectory validation failed.")
+        try:
+            from_destination = await fps.configuration.decollide_and_get_paths()
+        except Exception as err:
+            return command.fail(error=f"Failed getting trajectory: {err}")
+
+        if not await check_trajectory(from_destination, fps=fps, atol=1):
+            return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing forward trajectory.")
 
