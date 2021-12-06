@@ -156,6 +156,8 @@
                 { "title": "beta", "type": "number" },
                 { "title": "bits", "type": "string" },
                 { "title": "initialised", "type": "boolean" },
+                { "title": "disabled", "type": "boolean" },
+                { "title": "offline", "type": "boolean" },
                 { "title": "bootloader", "type": "boolean" },
                 { "title": "firmware", "type": "string" },
                 { "title": "interface", "type": "integer" },
