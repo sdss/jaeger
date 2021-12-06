@@ -294,7 +294,7 @@ class BaseConfiguration:
 
         self._update_coordinates(unlocked)
 
-        self._decollided = decollided + unlocked
+        self._decollided = list(set(decollided + unlocked))
         self.assignment_data.fibre_table.loc[self._decollided, "decollided"] = 1
 
         if self.from_destination is None:

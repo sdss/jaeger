@@ -156,11 +156,11 @@ async def load(
             configuration.configuration_id,
             configuration.design.design_id if configuration.design else -999,
             configuration.design.field.field_id if configuration.design else -999,
-            boresight.ra[0] if boresight else -999.0,
-            boresight.dec[0] if boresight else -999.0,
+            boresight.ra[0] if boresight is not None else -999.0,
+            boresight.dec[0] if boresight is not None else -999.0,
             configuration.design.field.position_angle if configuration.design else 0,
-            boresight[0, 0] if boresight else -999.0,
-            boresight[0, 1] if boresight else -999.0,
+            boresight[0, 0] if boresight is not None else -999.0,
+            boresight[0, 1] if boresight is not None else -999.0,
             summary_file,
         ]
     )
