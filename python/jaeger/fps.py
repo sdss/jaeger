@@ -430,13 +430,8 @@ class FPS(BaseFPS["FPS"]):
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it.
-        ignored_positioners = []
         for reply in get_fw_command.replies:
             if reply.positioner_id not in self.positioners:
-
-                if reply.positioner_id in config["fps"]["skip_positioners"]:
-                    ignored_positioners.append(reply.positioner_id)
-                    continue
 
                 if hasattr(reply.message, "interface"):
                     interface = reply.message.interface
@@ -453,12 +448,16 @@ class FPS(BaseFPS["FPS"]):
             if positioner.positioner_id in config["fps"]["disabled_positioners"]:
                 positioner.disabled = True
 
-        if len(ignored_positioners) > 0:
-            warnings.warn(
-                "The following connected positioners are ignored as they are "
-                f"in the skip_positioners list: {ignored_positioners}",
-                JaegerUserWarning,
-            )
+        # Add offline robots. Offline positioners are physically in the array but
+        # they don't reply to commands and we need to specify their position. Once
+        # That's done they behave as normal disabled robots.
+        for pid in config["fps"]["offline_positioners"]:
+            off_alpha, off_beta = config["fps"]["offline_positioners"][pid]
+            positioner = self.add_positioner(pid)
+            positioner.disabled = True
+            positioner.offline = True
+            positioner.alpha = off_alpha
+            positioner.beta = off_beta
 
         # Mark as initialised here although we have some more work to do.
         self.initialised = True

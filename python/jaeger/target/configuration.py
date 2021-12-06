@@ -176,7 +176,7 @@ class BaseConfiguration:
 
     def _initialise_grid(self):
 
-        self.robot_grid = get_robot_grid()
+        self.robot_grid = get_robot_grid(self.fps)
 
         return self.robot_grid
 
@@ -255,6 +255,9 @@ class BaseConfiguration:
         )
 
         for robot in self.robot_grid.robotDict.values():
+            if robot.isOffline:
+                continue
+
             if robot.id not in valid.index.get_level_values(0):
                 robot.setAlphaBeta(alpha0, beta0)
                 robot.setDestinationAlphaBeta(alpha0, beta0)

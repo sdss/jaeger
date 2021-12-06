@@ -44,7 +44,7 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int | None = None, collision_buffer=None):
+def get_robot_grid(fps: FPS | None, seed: int | None = None, collision_buffer=None):
     """Returns a new robot grid with the destination set to the lattice position.
 
     If an initialised instance of the FPS is available, disabled robots will be
@@ -78,8 +78,14 @@ def get_robot_grid(seed: int | None = None, collision_buffer=None):
     robot_grid.collisionBuffer = collision_buffer
 
     for robot in robot_grid.robotDict.values():
-        robot.setDestinationAlphaBeta(alpha0, beta0)
-        robot.setAlphaBeta(alpha0, beta0)
+        if fps is not None and robot.id in fps and fps[robot.id].disabled is True:
+            positioner = fps[robot.id]
+            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            robot.setAlphaBeta(positioner.alpha, positioner.beta)
+            robot.isOffline = True
+        else:
+            robot.setDestinationAlphaBeta(alpha0, beta0)
+            robot.setAlphaBeta(alpha0, beta0)
 
     return robot_grid
 
@@ -98,7 +104,13 @@ def dump_robot_grid(robot_grid: RobotGridCalib) -> dict:
         destinationAlpha = robot.destinationAlpha
         destinationBeta = robot.destinationBeta
 
-        data["grid"][robot.id] = (alpha, beta, destinationAlpha, destinationBeta)
+        data["grid"][robot.id] = (
+            alpha,
+            beta,
+            destinationAlpha,
+            destinationBeta,
+            robot.isOffline,
+        )
 
     return data
 
@@ -107,13 +119,15 @@ def load_robot_grid(data: dict, set_destination: bool = True) -> RobotGridCalib:
     """Restores a robot grid from a dump."""
 
     collision_buffer = data["collision_buffer"]
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
+    robot_grid = get_robot_grid(None, collision_buffer=collision_buffer)
 
     for robot in robot_grid.robotDict.values():
         data_robot = data["grid"][robot.id]
         robot.setAlphaBeta(data_robot[0], data_robot[1])
         if set_destination:
             robot.setDestinationAlphaBeta(data_robot[2], data_robot[3])
+        if data_robot[4] is True:
+            robot.isOffline = True
 
     return robot_grid
 
@@ -189,6 +203,8 @@ def decollide(
     if len(collided) > 0:
         for robot_id in collided:
             if robot_grid.isCollided(robot_id):
+                if robot_grid.robotDict[robot_id].isOffline:
+                    continue
                 robot_grid.decollideRobot(robot_id)
                 decollided.append(robot_id)  # Even if we failed it may have moved.
                 if robot_grid.isCollided(robot_id):
@@ -312,6 +328,12 @@ def get_path_pair(
         collisionShrink=collision_shrink,
         pathDelay=path_delay,
     )
+
+    # Delete offline robots from trajectories.
+    for robot in robot_grid.robotDict.values():
+        if robot.isOffline:
+            to_destination.pop(robot.id, None)
+            from_destination.pop(robot.id, None)
 
     return (
         to_destination,

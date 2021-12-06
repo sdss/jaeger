@@ -63,6 +63,7 @@ class Positioner(StatusMixIn):
         self.firmware: str | None = None
 
         self.disabled = False
+        self.offline = False
         self.precise_moves = True
 
         super().__init__(
