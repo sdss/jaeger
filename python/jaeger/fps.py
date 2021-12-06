@@ -451,13 +451,17 @@ class FPS(BaseFPS["FPS"]):
         # Add offline robots. Offline positioners are physically in the array but
         # they don't reply to commands and we need to specify their position. Once
         # That's done they behave as normal disabled robots.
-        for pid in config["fps"]["offline_positioners"]:
-            off_alpha, off_beta = config["fps"]["offline_positioners"][pid]
-            positioner = self.add_positioner(pid)
-            positioner.disabled = True
-            positioner.offline = True
-            positioner.alpha = off_alpha
-            positioner.beta = off_beta
+        if config["fps"]["offline_positioners"] is not None:
+            for pid in config["fps"]["offline_positioners"]:
+                off_alpha, off_beta = config["fps"]["offline_positioners"][pid]
+                if pid not in self.positioners:
+                    positioner = self.add_positioner(pid)
+                else:
+                    positioner = self.positioners[pid]
+                positioner.disabled = True
+                positioner.offline = True
+                positioner.alpha = off_alpha
+                positioner.beta = off_beta
 
         # Mark as initialised here although we have some more work to do.
         self.initialised = True
