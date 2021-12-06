@@ -376,6 +376,7 @@ async def decollide_in_executor(
 async def unwind(
     current_positions: dict[int, tuple[float | None, float | None]],
     collision_buffer: float | None = None,
+    disabled: list[int] = [],
     force: bool = False,
 ):
     """Folds all the robots to the lattice position.
@@ -390,7 +391,7 @@ async def unwind(
     # than creating a grid and dumping it.
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid, (alpha, beta) in current_positions.items():
-        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
+        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0, pid in disabled)
 
     (to_destination, _, did_fail, deadlocks) = await run_in_executor(
         get_path_pair,
@@ -415,6 +416,7 @@ async def explode(
     current_positions: dict[int, tuple[float | None, float | None]],
     explode_deg=20.0,
     collision_buffer: float | None = None,
+    disabled: list[int] = [],
     positioner_id: int | None = None,
 ):
     """Explodes the grid by a number of degrees.
@@ -427,7 +429,7 @@ async def explode(
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid, (alpha, beta) in current_positions.items():
-        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
+        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0, pid in disabled)
 
     if positioner_id is not None:
         path_generation_mode = "explode_one"
@@ -504,7 +506,13 @@ async def get_snapshot(
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid in fps.positioners.keys():
-        data["grid"][int(pid)] = (fps[pid].alpha, fps[pid].beta, 0, 0)
+        data["grid"][int(pid)] = (
+            fps[pid].alpha,
+            fps[pid].beta,
+            0,
+            0,
+            fps[pid].disabled,
+        )
 
     await run_in_executor(
         get_snapshot_async,

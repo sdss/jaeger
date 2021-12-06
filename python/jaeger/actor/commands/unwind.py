@@ -59,6 +59,7 @@ async def unwind_command(
         trajectory = await unwind(
             positions,
             collision_buffer=collision_buffer,
+            disabled=[pid for pid in fps.positioners if fps.positioners[pid].disabled],
             force=force,
         )
     except (ValueError, TrajectoryError) as err:
@@ -96,6 +97,7 @@ async def explode_command(
         trajectory = await explode(
             positions,
             explode_deg=explode_deg,
+            disabled=[pid for pid in fps.positioners if fps.positioners[pid].disabled],
             positioner_id=one,
         )
     except (JaegerError, ValueError, TrajectoryError) as err:
