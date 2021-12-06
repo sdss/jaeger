@@ -183,6 +183,7 @@
             "items": [
                 { "title": "configuration_id", "type": "integer" },
                 { "title": "design_id", "type": "integer" },
+                { "title": "field_id", "type": "integer" },
                 { "title": "ra_boresight", "type": "number" },
                 { "title": "dec_boresight", "type": "number" },
                 { "title": "position_angle", "type": "number" },
@@ -204,6 +205,15 @@
             "type": "string"
         },
         "configuration_snapshot": {
+            "type": "string"
+        },
+        "kaiju_version": {
+            "type": "string"
+        },
+        "coordio_version": {
+            "type": "string"
+        },
+        "fps_calibrations_version": {
             "type": "string"
         }
     },
