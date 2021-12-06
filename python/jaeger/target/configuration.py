@@ -365,9 +365,10 @@ class BaseConfiguration:
 
                 # Now check if it's collided and decollide it.
                 if self.robot_grid.isCollided(to_move):
-                    self.robot_grid.decollideRobot(to_move)
-                    if self.robot_grid.isCollided(to_move):
-                        raise TrajectoryError("Cannot decollide deadlocked positioner.")
+                    if self.robot_grid.robotDict[to_move].isOffline is False:
+                        self.robot_grid.decollideRobot(to_move)
+                        if self.robot_grid.isCollided(to_move):
+                            raise TrajectoryError("Cannot decollide deadlocked robot.")
 
                 if to_move not in decollided:
                     decollided.append(to_move)
