@@ -777,8 +777,11 @@ class FVC:
         await self.fps.update_position()
 
         # Setup robot grid.
-        grid = get_robot_grid()
+        grid = get_robot_grid(self.fps)
         for robot in grid.robotDict.values():
+            if robot.isOffline:
+                continue
+
             positioner = self.fps[robot.id]
             robot.setAlphaBeta(positioner.alpha, positioner.beta)
 

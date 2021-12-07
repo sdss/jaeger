@@ -45,8 +45,8 @@ fps:
     start_pollers: false
     status_poller_delay: 5
     position_poller_delay: 5
-    skip_positioners: []
-    disabled_positioners: [235, 1395, 278]
+    disabled_positioners: [54, 463]
+    offline_positioners: null
     disable_collision_detection_positioners: []
     use_sync_line: false
     snapshot_path: /data/logs/jaeger/snapshots/

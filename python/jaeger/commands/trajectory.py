@@ -393,9 +393,8 @@ class Trajectory(object):
             status = positioner.status
 
             if positioner.disabled:
-                self.failed = True
                 raise TrajectoryError(
-                    f"positioner_id={pos_id} is disabled but was "
+                    f"positioner_id={pos_id} is disabled/offline but was "
                     "included in the trajectory.",
                     self,
                 )

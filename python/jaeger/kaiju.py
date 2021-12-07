@@ -44,7 +44,7 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int | None = None, collision_buffer=None):
+def get_robot_grid(fps: FPS | None, seed: int | None = None, collision_buffer=None):
     """Returns a new robot grid with the destination set to the lattice position.
 
     If an initialised instance of the FPS is available, disabled robots will be
@@ -78,8 +78,14 @@ def get_robot_grid(seed: int | None = None, collision_buffer=None):
     robot_grid.collisionBuffer = collision_buffer
 
     for robot in robot_grid.robotDict.values():
-        robot.setDestinationAlphaBeta(alpha0, beta0)
-        robot.setAlphaBeta(alpha0, beta0)
+        if fps is not None and robot.id in fps and fps[robot.id].disabled is True:
+            positioner = fps[robot.id]
+            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            robot.setAlphaBeta(positioner.alpha, positioner.beta)
+            robot.isOffline = True
+        else:
+            robot.setDestinationAlphaBeta(alpha0, beta0)
+            robot.setAlphaBeta(alpha0, beta0)
 
     return robot_grid
 
@@ -98,7 +104,13 @@ def dump_robot_grid(robot_grid: RobotGridCalib) -> dict:
         destinationAlpha = robot.destinationAlpha
         destinationBeta = robot.destinationBeta
 
-        data["grid"][robot.id] = (alpha, beta, destinationAlpha, destinationBeta)
+        data["grid"][robot.id] = (
+            alpha,
+            beta,
+            destinationAlpha,
+            destinationBeta,
+            robot.isOffline,
+        )
 
     return data
 
@@ -107,13 +119,15 @@ def load_robot_grid(data: dict, set_destination: bool = True) -> RobotGridCalib:
     """Restores a robot grid from a dump."""
 
     collision_buffer = data["collision_buffer"]
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
+    robot_grid = get_robot_grid(None, collision_buffer=collision_buffer)
 
     for robot in robot_grid.robotDict.values():
         data_robot = data["grid"][robot.id]
         robot.setAlphaBeta(data_robot[0], data_robot[1])
         if set_destination:
             robot.setDestinationAlphaBeta(data_robot[2], data_robot[3])
+        if data_robot[4] is True:
+            robot.isOffline = True
 
     return robot_grid
 
@@ -189,6 +203,8 @@ def decollide(
     if len(collided) > 0:
         for robot_id in collided:
             if robot_grid.isCollided(robot_id):
+                if robot_grid.robotDict[robot_id].isOffline:
+                    continue
                 robot_grid.decollideRobot(robot_id)
                 decollided.append(robot_id)  # Even if we failed it may have moved.
                 if robot_grid.isCollided(robot_id):
@@ -354,6 +370,7 @@ async def decollide_in_executor(
 async def unwind(
     current_positions: dict[int, tuple[float | None, float | None]],
     collision_buffer: float | None = None,
+    disabled: list[int] = [],
     force: bool = False,
 ):
     """Folds all the robots to the lattice position.
@@ -368,7 +385,7 @@ async def unwind(
     # than creating a grid and dumping it.
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid, (alpha, beta) in current_positions.items():
-        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
+        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0, pid in disabled)
 
     (to_destination, _, did_fail, deadlocks) = await run_in_executor(
         get_path_pair,
@@ -393,6 +410,7 @@ async def explode(
     current_positions: dict[int, tuple[float | None, float | None]],
     explode_deg=20.0,
     collision_buffer: float | None = None,
+    disabled: list[int] = [],
     positioner_id: int | None = None,
 ):
     """Explodes the grid by a number of degrees.
@@ -405,7 +423,7 @@ async def explode(
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid, (alpha, beta) in current_positions.items():
-        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
+        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0, pid in disabled)
 
     if positioner_id is not None:
         path_generation_mode = "explode_one"
@@ -482,7 +500,13 @@ async def get_snapshot(
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid in fps.positioners.keys():
-        data["grid"][int(pid)] = (fps[pid].alpha, fps[pid].beta, 0, 0)
+        data["grid"][int(pid)] = (
+            fps[pid].alpha,
+            fps[pid].beta,
+            0,
+            0,
+            fps[pid].disabled,
+        )
 
     await run_in_executor(
         get_snapshot_async,

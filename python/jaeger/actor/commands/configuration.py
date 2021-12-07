@@ -291,6 +291,7 @@ async def random(
         uniform_unpack = None
 
     configuration = await create_random_configuration(
+        fps,
         seed=seed,
         uniform=uniform_unpack,
         safe=not danger,

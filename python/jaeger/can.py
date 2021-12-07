@@ -308,9 +308,6 @@ class JaegerCAN(Generic[Bus_co]):
 
         positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
 
-        if positioner_id in config["fps"]["skip_positioners"]:
-            return
-
         if command_id == CommandID.COLLISION_DETECTED:
 
             # Sending stop trajectories causes many more robots to report a collision

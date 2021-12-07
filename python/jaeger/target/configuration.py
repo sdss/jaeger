@@ -176,7 +176,7 @@ class BaseConfiguration:
 
     def _initialise_grid(self):
 
-        self.robot_grid = get_robot_grid()
+        self.robot_grid = get_robot_grid(self.fps)
 
         return self.robot_grid
 
@@ -255,6 +255,9 @@ class BaseConfiguration:
         )
 
         for robot in self.robot_grid.robotDict.values():
+            if robot.isOffline:
+                continue
+
             if robot.id not in valid.index.get_level_values(0):
                 robot.setAlphaBeta(alpha0, beta0)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
@@ -362,9 +365,10 @@ class BaseConfiguration:
 
                 # Now check if it's collided and decollide it.
                 if self.robot_grid.isCollided(to_move):
-                    self.robot_grid.decollideRobot(to_move)
-                    if self.robot_grid.isCollided(to_move):
-                        raise TrajectoryError("Cannot decollide deadlocked positioner.")
+                    if self.robot_grid.robotDict[to_move].isOffline is False:
+                        self.robot_grid.decollideRobot(to_move)
+                        if self.robot_grid.isCollided(to_move):
+                            raise TrajectoryError("Cannot decollide deadlocked robot.")
 
                 if to_move not in decollided:
                     decollided.append(to_move)
