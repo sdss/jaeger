@@ -11,28 +11,33 @@ modules:
                 adaptor: proportional
                 adaptor_extra_params: [0.1]
                 units: celsius
+                category: chiller
                 description: Status display value SV
             FLOW_USER_SETPOINT:
                 address: 9017
                 adaptor: proportional
                 adaptor_extra_params: [0.1]
                 units: gpm
+                category: chiller
                 description: Process fluid setpoint flow GPM
             TEMPERATURE_USER_SETPOINT:
                 address: 9018
                 adaptor: proportional
                 adaptor_extra_params: [0.1]
                 units: celsius
+                category: chiller
                 description: Process fluid setpoint temperature C
             STATUS_AMBIENT_AIR:
                 address: 8985
                 adaptor: proportional
                 adaptor_extra_params: [0.1]
                 units: celsius
+                category: chiller
                 description:
             STATUS_FLUID_FLOW:
                 address: 9011
                 adaptor: proportional
                 adaptor_extra_params: [0.1]
                 units: gpm
+                category: chiller
                 description:
