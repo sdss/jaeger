@@ -654,7 +654,7 @@ class BaseConfiguration:
                     "alpha": row_data.alpha,
                     "beta": row_data.beta,
                     "ra": row_data.ra_epoch,
-                    "dec": row_data.ra_epoch,
+                    "dec": row_data.dec_epoch,
                     "spectrographId": spec_id,
                     "fiberId": row_data.fiberId,
                 }
