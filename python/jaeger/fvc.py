@@ -634,6 +634,7 @@ class FVC:
     async def write_proc_image(
         self,
         new_filename: Optional[str | pathlib.Path] = None,
+        correction_applied: bool = False,
     ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data.
 
@@ -666,6 +667,8 @@ class FVC:
             proc_hdus[1].header["CONFIGID"] = self.fps.configuration.configuration_id
         else:
             proc_hdus[1].header["CONFIGID"] = -999.0
+
+        proc_hdus[1].header["CAPPLIED"] = correction_applied
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
