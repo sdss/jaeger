@@ -80,7 +80,8 @@ kaiju:
 
 fvc:
     zb_polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 28, 29]
-    exposure_time: 1.5
+    exposure_time: 5.
+    fbi_level: 6.
     background_sigma: 3.5
     centroid_min_npix: 100
     target_rms: 10
