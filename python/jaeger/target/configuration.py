@@ -247,6 +247,7 @@ class BaseConfiguration:
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         # Assign positions to all the assigned, valid targets.
+        # TODO: remove disabled from here.
         valid = ftable.loc[(ftable.assigned == 1) & (ftable.valid == 1)]
 
         self.log(
@@ -258,6 +259,7 @@ class BaseConfiguration:
         for robot in self.robot_grid.robotDict.values():
             if robot.isOffline:
                 ftable.loc[robot.id, "offline"] = 1
+                invalid.append(robot.id)
                 continue
 
             if robot.id not in valid.index.get_level_values(0):
