@@ -67,7 +67,7 @@ async def expose(
 
 @fvc_parser.command(cancellable=True)
 @click.option("--exposure-time", type=float, help="Exposure time.")
-@click.option("--fbi-level", default=1.0, type=float, help="FBI LED levels.")
+@click.option("--fbi-level", type=float, help="FBI LED levels.")
 @click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
 @click.option("--max-iterations", type=int, help="Maximum number of iterations.")
 @click.option("--stack", type=int, default=1, help="Number of FVC image to stack.")
@@ -77,7 +77,7 @@ async def loop(
     command: Command[JaegerActor],
     fps: FPS,
     exposure_time: float | None = None,
-    fbi_level: float = 1.0,
+    fbi_level: float | None = None,
     one: bool = False,
     max_iterations: int | None = None,
     stack: int = 3,
@@ -93,7 +93,8 @@ async def loop(
     """
 
     exposure_time = exposure_time or config["fvc"]["exposure_time"]
-    assert isinstance(exposure_time, float)
+    fbi_level = fbi_level or config["fvc"]["fbi_level"]
+    assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
 
     if fps.configuration is None:
         return command.fail("Configuration not loaded.")
@@ -108,11 +109,21 @@ async def loop(
     current_rms = None
     delta_rms = None
 
+    filename = None
+
+    correction_applied = False
+    proc_image_saved = False
+
     try:
 
         n = 1
         while True:
             command.info(f"FVC iteration {n}")
+
+            correction_applied = False
+            proc_image_saved = False
+
+            success = None
 
             # 1. Expose the FVC
             command.debug("Taking exposure with fliswarm.")
@@ -136,28 +147,36 @@ async def loop(
 
             # 4. Check if the RMS or delta RMS criteria are met.
             if current_rms < config["fvc"]["target_rms"]:
-                return command.finish("FVC target RMS reached.")
+                success = True
             elif delta_rms is not None:
                 if delta_rms < config["fvc"]["target_delta_rms"]:
-                    command.warning("Target RMS not reached.")
-                    return command.finish("Delta RMS reached. Cancelling the FVC loop.")
+                    command.warning("Delta RMS reached. Cancelling the FVC loop.")
+                    success = True
                 elif delta_rms < 0:
-                    command.warning("RMS has increased.")
-                    return command.finish("Cancelling the FVC loop.")
+                    command.warning("RMS has increased. Cancelling the FVC loop.")
+                    success = False
 
             # 4. Update current positions and calculate offsets.
             command.debug("Calculating offsets.")
             await fps.update_position()
             await run_in_executor(fvc.calculate_offsets, fps.get_positions())
 
-            # 5. Save processed image with additional tables.
+            # 5. Apply corrections.
+            if success is False and success is False and apply is True:
+                await fvc.apply_correction()
+                correction_applied = True
+
+            # 6. Save processed file.
             proc_path = filename.with_name("proc-" + filename.name)
             command.debug(f"Saving processed image {proc_path}")
-            await fvc.write_proc_image(proc_path)
+            await fvc.write_proc_image(proc_path, correction_applied=correction_applied)
+            proc_image_saved = True
 
-            # 6. Apply corrections.
-            if apply:
-                await fvc.apply_correction()
+            if success is not None:
+                if success is True:
+                    return command.finish("FVC target RMS reached.")
+                else:
+                    return command.fail("FVC RMS not reached.")
 
             if one is True or apply is False:
                 command.warning("Cancelling FVC loop after one iteration.")
@@ -177,6 +196,11 @@ async def loop(
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
         await command.send_command("jaeger", "ieb fbi led2 0")
+
+        if filename is not None and proc_image_saved and fvc.proc_hdu is not None:
+            proc_path = filename.with_name("proc-" + filename.name)
+            command.debug(f"Saving processed image {proc_path}")
+            await fvc.write_proc_image(proc_path, correction_applied=correction_applied)
 
 
 @fvc_parser.command()
