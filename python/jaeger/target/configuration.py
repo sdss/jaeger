@@ -1036,6 +1036,7 @@ class BaseAssignmentData:
         # Now do a single update of the whole fibre table.
         self.fibre_table = pandas.DataFrame.from_dict(data, orient="index")
         self.fibre_table.sort_index(inplace=True)
+        self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
     def _from_wok(self):
         """Loads fibre data from target data using wok coordinates."""
@@ -1149,6 +1150,7 @@ class BaseAssignmentData:
         # Now do a single update of the whole fibre table.
         new_data = pandas.DataFrame.from_dict(data, orient="index")
         self.fibre_table.loc[new_data.index, new_data.columns] = new_data
+        self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
     def _check_all_assigned(self):
         """Check that all the positioners are in ``target_data``."""
