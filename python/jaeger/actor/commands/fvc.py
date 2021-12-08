@@ -120,10 +120,11 @@ async def loop(
         while True:
             command.info(f"FVC iteration {n}")
 
-            correction_applied = False
-            proc_image_saved = False
+            correction_applied: bool = False
+            proc_image_saved: bool = False
 
-            success = None
+            success: bool | None = None
+            message: str | None = None
 
             # 1. Expose the FVC
             command.debug("Taking exposure with fliswarm.")
@@ -150,10 +151,10 @@ async def loop(
                 success = True
             elif delta_rms is not None:
                 if delta_rms < config["fvc"]["target_delta_rms"]:
-                    command.warning("Delta RMS reached. Cancelling the FVC loop.")
+                    message = "Delta RMS reached. Cancelling the FVC loop."
                     success = True
                 elif delta_rms < 0:
-                    command.warning("RMS has increased. Cancelling the FVC loop.")
+                    message = "RMS has increased. Cancelling the FVC loop."
                     success = False
 
             # 4. Update current positions and calculate offsets.
@@ -162,7 +163,7 @@ async def loop(
             await run_in_executor(fvc.calculate_offsets, fps.get_positions())
 
             # 5. Apply corrections.
-            if success is False and success is False and apply is True:
+            if success is None and apply is True:
                 await fvc.apply_correction()
                 correction_applied = True
 
@@ -173,6 +174,9 @@ async def loop(
             proc_image_saved = True
 
             if success is not None:
+                if message is not None:
+                    command.warning(text=message)
+
                 if success is True:
                     return command.finish("FVC target RMS reached.")
                 else:
@@ -197,10 +201,16 @@ async def loop(
         await command.send_command("jaeger", "ieb fbi led1 0")
         await command.send_command("jaeger", "ieb fbi led2 0")
 
-        if filename is not None and proc_image_saved and fvc.proc_hdu is not None:
-            proc_path = filename.with_name("proc-" + filename.name)
-            command.debug(f"Saving processed image {proc_path}")
-            await fvc.write_proc_image(proc_path, correction_applied=correction_applied)
+        if proc_image_saved is False:
+            if filename is not None and fvc.proc_hdu is not None:
+                proc_path = filename.with_name("proc-" + filename.name)
+                command.debug(f"Saving processed image {proc_path}")
+                await fvc.write_proc_image(
+                    proc_path,
+                    correction_applied=correction_applied,
+                )
+            else:
+                command.warning("Cannot write processed image.")
 
 
 @fvc_parser.command()
