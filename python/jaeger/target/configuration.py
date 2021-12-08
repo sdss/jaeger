@@ -254,17 +254,22 @@ class BaseConfiguration:
             f"Valid targets {len(valid)}."
         )
 
+        invalid = []
         for robot in self.robot_grid.robotDict.values():
             if robot.isOffline:
+                ftable.loc[robot.id, "offline"] = 1
                 continue
 
             if robot.id not in valid.index.get_level_values(0):
                 robot.setAlphaBeta(alpha0, beta0)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
+                invalid.append(robot.id)
             else:
                 vrow = valid.loc[robot.id].iloc[0]
                 robot.setAlphaBeta(vrow.alpha, vrow.beta)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
+
+        self._update_coordinates(invalid)
 
         decollided: list[int] = []
         if decollide:
