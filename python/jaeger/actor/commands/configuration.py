@@ -203,7 +203,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
         except Exception as err:
             return command.fail(error=f"Failed getting trajectory: {err}")
 
-        if not await check_trajectory(from_destination, fps=fps, atol=1):
+        if not (await check_trajectory(from_destination, fps=fps, atol=1)):
             return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing forward trajectory.")
@@ -232,7 +232,7 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
             error="The configuration does not have a to_destination path. Use unwind."
         )
 
-    if not await check_trajectory(to_destination, fps=fps, atol=1):
+    if not (await check_trajectory(to_destination, fps=fps, atol=1)):
         return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing reverse trajectory.")
