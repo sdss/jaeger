@@ -78,6 +78,11 @@ def configuration():
     help="Whether to write the summary file for the configuration. "
     "Ignored if --no-ingest.",
 )
+@click.option(
+    "--execute/--no-execute",
+    default=False,
+    help="Send and start the from_destination trajectory.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -90,6 +95,7 @@ async def load(
     epoch_delay: float = 0.0,
     ingest: bool = False,
     write_summary: bool = False,
+    execute: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -134,7 +140,7 @@ async def load(
     if generate_paths:
         try:
             command.info("Calculating trajectories.")
-            await configuration.decollide_and_get_paths()
+            await configuration.decollide_and_get_paths(decollide=not from_positions)
         except Exception as err:
             return command.fail(error=f"Failed generating paths: {err}")
 
@@ -167,6 +173,11 @@ async def load(
 
     snapshot = await configuration.save_snapshot()
     command.info(configuration_snapshot=snapshot)
+
+    if execute:
+        cmd = await command.send_command("jaeger", "configuration execute")
+        if cmd.status.did_fail:
+            return cmd.fail("Failed executing configuration.")
 
     return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
