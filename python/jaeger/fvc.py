@@ -188,6 +188,7 @@ class FVC:
         fibre_type: str = "Metrology",
         plot: bool | str = False,
         polids: numpy.ndarray | list | None = None,
+        outdir: str | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
         """Processes a raw FVC image.
 
@@ -237,6 +238,8 @@ class FVC:
         self.log(f"Processing raw image {path}")
 
         dirname, base = os.path.split(path)
+        dirname = outdir or dirname
+
         proc_path_root = os.path.join(dirname, "proc-" + base[0 : base.find(".fit")])
 
         if plot is True:
@@ -267,7 +270,7 @@ class FVC:
 
         xyCCD = self.centroids[["x", "y"]].to_numpy()
 
-        fibre_data_met = self.fibre_data.loc[fibre_type]
+        fibre_data_met = self.fibre_data.loc[fibre_type].set_index("positioner_id")
 
         # Get close enough to associate the correct centroid with the correct fiducial.
         x_wok_expect = numpy.concatenate([xCMM, fibre_data_met.xwok.to_numpy()])
@@ -382,27 +385,32 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
+        self.fibre_data.loc[:, "mismatched"] = 0
+
         bad_match = met_dist > 1.0
+        bad_match_pid = fibre_data_met.loc[bad_match].index
         if bad_match.sum() > 0:
-            self.log(f"Found {bad_match.sum()} metrology fibres with distance > 1 mm.")
-            self.fibre_data.loc[fibre_type].loc[bad_match, "offline"] = 1
+            self.log(
+                f"Found {bad_match.sum()} metrology fibres with "
+                f"distance > 1 mm: {bad_match_pid.tolist()}"
+            )
+            bad_match_idx = self.fibre_data.positioner_id.isin(bad_match_pid)
+            self.fibre_data.loc[bad_match_idx, "mismatched"] = 1
 
         self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
         self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
 
-        off = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 1)
-        self.fibre_data.loc[off, "xwok_measured"] = self.fibre_data.loc[off, "xwok"]
-        self.fibre_data.loc[off, "ywok_measured"] = self.fibre_data.loc[off, "ywok"]
+        # Only use online, assigned robots for final RMS. First get groups of fibres
+        # with an assigned robot.
+        assigned = self.fibre_data.groupby("positioner_id").filter(
+            lambda g: g.assigned.any()
+            & (g.offline == 0).all()
+            & (g.mismatched == 0).all()
+        )
+        assigned = assigned.loc["Metrology"]
 
-        # Only use online, assigned robots for final RMS.
-        online = self.fibre_data.loc[
-            (self.fibre_data.index == fibre_type)
-            & (self.fibre_data.offline == 0)
-            & (self.fibre_data.assigned == 1)
-        ]
-
-        dx = online.xwok - online.xwok_measured
-        dy = online.ywok - online.ywok_measured
+        dx = assigned.xwok - assigned.xwok_measured
+        dy = assigned.ywok - assigned.ywok_measured
 
         self.fitrms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
