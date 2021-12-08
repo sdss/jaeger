@@ -394,9 +394,11 @@ class FVC:
         self.fibre_data.loc[off, "xwok_measured"] = self.fibre_data.loc[off, "xwok"]
         self.fibre_data.loc[off, "ywok_measured"] = self.fibre_data.loc[off, "ywok"]
 
-        # Only use online robots for final RMS.
+        # Only use online, assigned robots for final RMS.
         online = self.fibre_data.loc[
-            (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
+            (self.fibre_data.index == fibre_type)
+            & (self.fibre_data.offline == 0)
+            & (self.fibre_data.assigned == 1)
         ]
 
         dx = online.xwok - online.xwok_measured
