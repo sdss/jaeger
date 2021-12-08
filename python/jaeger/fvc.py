@@ -550,7 +550,7 @@ class FVC:
         pos_na = offsets["alpha_measured"].isna()
         if pos_na.sum() > 0:
             self.log(
-                "Failed to calculated corrected positioner coordinates for "
+                "Failed to calculate corrected positioner coordinates for "
                 f"{pos_na.sum()} positioners.",
                 level=logging.WARNING,
             )
