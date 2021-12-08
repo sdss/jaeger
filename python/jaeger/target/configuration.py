@@ -291,9 +291,9 @@ class BaseConfiguration:
 
             self._update_coordinates(decollided)
 
-        # Final check for collisions.
-        if len(self.robot_grid.getCollidedRobotList()) > 0:
-            raise TrajectoryError("The robot grid remains collided.")
+            # Final check for collisions.
+            if len(self.robot_grid.getCollidedRobotList()) > 0:
+                raise TrajectoryError("The robot grid remains collided.")
 
         # Fix deadlocks (this sets the trajectories in the instance).
         self.log("Generating path pair.")
