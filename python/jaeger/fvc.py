@@ -382,13 +382,23 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
+        bad_match = met_dist > 1.0
+        if bad_match.sum() > 0:
+            self.log(f"Found {bad_match.sum()} metrology fibres with distance > 1 mm.")
+            self.fibre_data.loc[fibre_type].loc[bad_match, "offline"] = 1
+
         self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
         self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
+
+        off = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 1)
+        self.fibre_data.loc[off, "xwok_measured"] = self.fibre_data.loc[off, "xwok"]
+        self.fibre_data.loc[off, "ywok_measured"] = self.fibre_data.loc[off, "ywok"]
 
         # Only use online robots for final RMS.
         online = self.fibre_data.loc[
             (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
         ]
+
         dx = online.xwok - online.xwok_measured
         dy = online.ywok - online.ywok_measured
 
