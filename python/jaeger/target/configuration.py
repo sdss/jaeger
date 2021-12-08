@@ -634,7 +634,7 @@ class BaseConfiguration:
             row = default.copy()
 
             if fibre_type.upper() == "APOGEE":
-                spec_id = 0
+                spec_id = 2
             elif fibre_type.upper() == "BOSS":
                 spec_id = 1
             else:
