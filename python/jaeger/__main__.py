@@ -286,7 +286,7 @@ LOG_FILE = os.path.join(
 )
 @pass_fps
 @cli_coro
-async def actor(fps_maker, no_tron):
+async def actor(fps_maker, no_tron: bool = False):
     """Runs the actor."""
 
     try:
@@ -757,6 +757,7 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
         trajectory = await unwind(
             positions,
             collision_buffer=collision_buffer,
+            disabled=[pid for pid in fps.positioners if fps.positioners[pid].disabled],
             force=force,
         )
 
@@ -792,6 +793,7 @@ async def explode(
         trajectory = await explode(
             positions,
             explode_deg=explode_deg,
+            disabled=[pid for pid in fps.positioners if fps.positioners[pid].disabled],
             positioner_id=one,
         )
 

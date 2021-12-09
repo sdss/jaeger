@@ -341,6 +341,7 @@ async def goto(
                     current_beta,
                     new_positions[pid][0],
                     new_positions[pid][1],
+                    fps[pid].disabled,
                 )
             else:
                 data["grid"][int(pid)] = (
@@ -348,6 +349,7 @@ async def goto(
                     current_beta,
                     current_alpha,
                     current_beta,
+                    fps[pid].disabled,
                 )
 
         (to_destination, _, did_fail, deadlocks) = await run_in_executor(
@@ -355,6 +357,7 @@ async def goto(
             data=data,
             stop_if_deadlock=force,
             executor="process",
+            ignore_did_fail=force,
         )
 
         if did_fail is True:

@@ -6,6 +6,7 @@
 # @Filename: ieb.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import math
 import os
 
 from typing import Any, Dict
@@ -15,7 +16,37 @@ from drift import Drift, DriftError
 from jaeger import config
 
 
-__all__ = ["IEB", "FVC"]
+__all__ = ["IEB", "FVC", "_get_category_data"]
+
+
+async def _get_category_data(command, category) -> list:
+    """Returns data about a device category."""
+
+    ieb = command.actor.fps.ieb
+    schema = command.actor.model.schema
+
+    items = schema["properties"][category]["items"]
+    measured = []
+
+    async with ieb:
+        for item in items:
+            name = item["title"]
+            type_ = item["type"]
+            device = ieb.get_device(name)
+            value = (await device.read(connect=False))[0]
+            if type_ == "boolean" and device.__type__ == "relay":
+                value = True if value == "closed" else False
+            elif type_ == "integer":
+                value = int(value)
+            elif type_ == "number":
+                if "multipleOf" in item:
+                    precision = int(-math.log10(item["multipleOf"]))
+                else:
+                    precision = 3
+                value = round(value, precision)
+            measured.append(value)
+
+    return measured
 
 
 class IEB(Drift):

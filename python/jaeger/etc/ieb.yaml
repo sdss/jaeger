@@ -8,26 +8,26 @@ modules:
         description: Temperature and humidity sensors
         devices:
             RH1:
-                address: 40009
+                address: 8
                 category: humidity
                 adaptor: rh_dwyer
                 units: percent
                 description: Ambient outside air humidity
             T1:
-                address: 40010
+                address: 9
                 category: temperature
                 adaptor: t_dwyer
                 units: degC
                 description: Ambient outside air temperature
                 offset: 0.0
             RH3:
-                address: 40013
+                address: 12
                 category: humidity
                 adaptor: rh_dwyer
                 units: percent
                 description: FPS inside air humidity above wok
             T3:
-                address: 40014
+                address: 13
                 category: temperature
                 adaptor: t_dwyer
                 units: degC
@@ -40,56 +40,56 @@ modules:
         description: Positioner voltage and flow measurements
         devices:
             PV24_1:
-                address: 40017
+                address: 16
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 1 Positioner Power 24V out
             PV24_2:
-                address: 40018
+                address: 17
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 2 Positioner Power 24V out
             PV24_3:
-                address: 40019
+                address: 18
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 3 Positioner Power 24V out
             PV24_4:
-                address: 40020
+                address: 19
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 4 Positioner Power 24V out
             PV24_5:
-                address: 40021
+                address: 20
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 5 Positioner Power 24V out
             PV24_6:
-                address: 40022
+                address: 21
                 category: voltage
                 adaptor: voltage
                 adaptor_extra_params: [0, 10, 32764, 3.2]
                 units: V
                 description: Sextant 6 Positioner Power 24V out
             FLOW1:
-                address: 40023
+                address: 22
                 category: flow
                 adaptor: flow
                 adaptor_extra_params: [4]
                 units: l/min
                 description: FPS cold plate cooling loop flow rate
             FLOW2:
-                address: 40024
+                address: 23
                 category: flow
                 adaptor: flow
                 adaptor_extra_params: [1]
@@ -102,28 +102,28 @@ modules:
         description: Pt RTD sensors
         devices:
             RTD1:
-                address: 40025
+                address: 24
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: IEB inside air temperature (above modules)
                 offset: -1.55
             RTD2:
-                address: 40026
+                address: 25
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: Wok center (metal) temperature
                 offset: -2.58
             RTD3:
-                address: 40027
+                address: 26
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS air above wok, center
                 offset: -2.28
             RTD4:
-                address: 40028
+                address: 27
                 category: temperature
                 adaptor: rtd
                 units: degC
@@ -136,28 +136,28 @@ modules:
         description: Pt RTD sensors
         devices:
             RTD5:
-                address: 40029
+                address: 28
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon top side panel conduction rail
                 offset: -2.68
             RTD6:
-                address: 40030
+                address: 29
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon bottom conduction rail
                 offset: -2.58
             RTD7:
-                address: 40031
+                address: 30
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS Octagon bottom center ITEM rail
                 offset: -2.18
             RTD8:
-                address: 40032
+                address: 31
                 category: temperature
                 adaptor: rtd
                 units: degC
@@ -170,28 +170,28 @@ modules:
         description: Pt RTD sensors
         devices:
             RTD9:
-                address: 40033
+                address: 32
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: IEB Glycol Supply Temperature
                 offset: -0.298
             RTD10:
-                address: 40034
+                address: 33
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS supply manifold coolant
                 offset: -3.18
             RTD11:
-                address: 40035
+                address: 34
                 category: temperature
                 adaptor: rtd
                 units: degC
                 description: FPS return manifold coolant
                 offset: -2.89
             RTD12:
-                address: 40036
+                address: 35
                 category: temperature
                 adaptor: rtd
                 units: degC
@@ -204,14 +204,14 @@ modules:
         description: Pressure sensors
         devices:
             PRESSURE1:
-                address: 40037
+                address: 36
                 category: pressure
                 adaptor: linear
                 adaptor_extra_params: [0, 50, 0, 32764]
                 units: psi
                 description: Glycol Supply Pressure
             PRESSURE2:
-                address: 40038
+                address: 37
                 category: pressure
                 adaptor: linear
                 adaptor_extra_params: [0, 50, 0, 32764]
@@ -224,13 +224,13 @@ modules:
         description: Pulse Width Modulator (PWM) output module for LED control
         devices:
             LED1:
-                address: 40514
+                address: 513
                 category: fbi_led
                 adaptor: pwd
                 units: percent
                 description: LED1 power
             LED2:
-                address: 40516
+                address: 515
                 category: fbi_led
                 adaptor: pwd
                 units: percent
@@ -242,13 +242,13 @@ modules:
         description: Pulse Width Modulator (PWM) output module for LED control
         devices:
             LED3:
-                address: 40518
+                address: 517
                 category: fbi_led
                 adaptor: pwd
                 units: percent
                 description: LED3 power
             LED4:
-                address: 40520
+                address: 519
                 category: fbi_led
                 adaptor: pwd
                 units: percent
@@ -260,97 +260,97 @@ modules:
         description: Relays for AC power switching (Cards 1-2)
         devices:
             PS1:
-                address: 40513
+                address: 512
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 1
             PS2:
-                address: 40514
+                address: 513
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 2
             PS3:
-                address: 40515
+                address: 514
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 3
             PS4:
-                address: 40516
+                address: 515
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 4
             PS5:
-                address: 40517
+                address: 516
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 5
             PS6:
-                address: 40518
+                address: 517
                 type: relay
                 category: power_sextant
                 relay_type: NO
                 description: 24V power supply for sextant 6
             CM1:
-                address: 40519
+                address: 518
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 1
             CM2:
-                address: 40520
+                address: 519
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 2
             CM3:
-                address: 40521
+                address: 520
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 3
             CM4:
-                address: 40522
+                address: 521
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 4
             CM5:
-                address: 40523
+                address: 522
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 5
             CM6:
-                address: 40524
+                address: 523
                 type: relay
                 category: power_can
                 relay_type: NC
                 description: 24V power supply for CAN module 6
             SYNC:
-                address: 40525
+                address: 524
                 type: relay
                 category: power_sync
                 relay_type: NO
                 description: Sync line
             GFA1:
-                address: 40526
+                address: 525
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 1
             GFA2:
-                address: 40527
+                address: 526
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 2
             GFA3:
-                address: 40528
+                address: 527
                 type: relay
                 category: power_gfa
                 relay_type: NO
@@ -362,55 +362,55 @@ modules:
         description: Relays for AC power switching (Cards 3-4)
         devices:
             GFA4:
-                address: 40529
+                address: 528
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 4
             GFA5:
-                address: 40530
+                address: 529
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 5
             GFA6:
-                address: 40531
+                address: 530
                 type: relay
                 category: power_gfa
                 relay_type: NO
                 description: Guide camera 6
             NUC1:
-                address: 40532
+                address: 531
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 1
             NUC2:
-                address: 40533
+                address: 532
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 2
             NUC3:
-                address: 40534
+                address: 533
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 3
             NUC4:
-                address: 40535
+                address: 534
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 4
             NUC5:
-                address: 40536
+                address: 535
                 type: relay
                 category: power_nuc
                 relay_type: NC
                 description: Guide camera NUC 5
             NUC6:
-                address: 40537
+                address: 536
                 type: relay
                 category: power_nuc
                 relay_type: NC

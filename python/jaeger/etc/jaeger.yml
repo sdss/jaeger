@@ -45,11 +45,12 @@ fps:
     start_pollers: false
     status_poller_delay: 5
     position_poller_delay: 5
-    skip_positioners: []
-    disabled_positioners: [235, 1395, 278]
+    disabled_positioners: [54, 463]
+    offline_positioners: null
     disable_collision_detection_positioners: []
     use_sync_line: false
     snapshot_path: /data/logs/jaeger/snapshots/
+    configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
     use_lock: True
 
 ieb:
@@ -70,7 +71,7 @@ positioner:
 kaiju:
     speed: 2
     ang_step: 0.1
-    collision_buffer: 2.1
+    collision_buffer: 2.0
     smooth_points: 5
     collision_shrink: 0.08
     path_delay: 1
@@ -79,14 +80,15 @@ kaiju:
 
 fvc:
     zb_polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 28, 29]
-    exposure_time: 1.5
+    exposure_time: 5.
+    fbi_level: 6.
     background_sigma: 3.5
     centroid_min_npix: 100
-    target_rms: 10
+    target_rms: 5
     target_delta_rms: 1
-    max_fvc_iterations: 3
+    max_fvc_iterations: 5
     k: 0.7
-    max_offset: 1
+    max_offset: 5
     ieb_keys:
         TEMPRTD2: rtd2
         TEMPRTD3: rtd3

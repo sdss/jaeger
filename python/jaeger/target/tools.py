@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy
 
 from coordio.conv import (
@@ -25,6 +27,10 @@ from jaeger.kaiju import (
     get_path_pair_in_executor,
     get_robot_grid,
 )
+
+
+if TYPE_CHECKING:
+    from jaeger import FPS
 
 
 __all__ = ["wok_to_positioner", "positioner_to_wok"]
@@ -144,6 +150,7 @@ def positioner_to_wok(
 
 
 async def create_random_configuration(
+    fps: FPS,
     seed: int | None = None,
     safe=True,
     uniform: tuple[float, ...] | None = None,
@@ -159,12 +166,15 @@ async def create_random_configuration(
     seed = seed or numpy.random.randint(0, 1000000)
     numpy.random.seed(seed)
 
-    robot_grid = get_robot_grid(seed=seed, collision_buffer=collision_buffer)
+    robot_grid = get_robot_grid(fps, seed=seed, collision_buffer=collision_buffer)
 
     alphaL, betaL = config["kaiju"]["lattice_position"]
 
     # We use Kaiju for convenience in the non-safe mode.
     for robot in robot_grid.robotDict.values():
+
+        if robot.isOffline:
+            continue
 
         if uniform is not None:
             alpha0, alpha1, beta0, beta1 = uniform
@@ -195,7 +205,7 @@ async def create_random_configuration(
     # Confirm that the configuration is valid. This should only matter
     # for full range random configurations.
     try:
-        robot_grid = await decollide_in_executor(robot_grid, simple=True)
+        robot_grid, _ = await decollide_in_executor(robot_grid, simple=True)
         grid_data = {
             robot.id: (robot.alpha, robot.beta)
             for robot in robot_grid.robotDict.values()
@@ -210,6 +220,7 @@ async def create_random_configuration(
     if did_fail and n_deadlock > max_deadlocks:
         log.warning("Too many deadlocked robots. Trying new seed.")
         return await create_random_configuration(
+            fps,
             safe=safe,
             uniform=uniform,
             collision_buffer=collision_buffer,
@@ -226,11 +237,15 @@ async def create_random_configuration(
             to_replace_robot = numpy.random.choice(deadlocks)
 
             robot_grid = get_robot_grid(
+                fps,
                 seed=seed + 1,
                 collision_buffer=collision_buffer,
             )
 
             for robot in robot_grid.robotDict.values():
+
+                if robot.isOffline:
+                    continue
 
                 if robot.id == to_replace_robot:
                     robot.setXYUniform()
@@ -238,7 +253,7 @@ async def create_random_configuration(
                     robot.setAlphaBeta(*grid_data[robot.id])
 
             try:
-                robot_grid = await decollide_in_executor(robot_grid, simple=True)
+                robot_grid, _ = await decollide_in_executor(robot_grid, simple=True)
                 grid_data = {
                     robot.id: (robot.alpha, robot.beta)
                     for robot in robot_grid.robotDict.values()
@@ -258,6 +273,7 @@ async def create_random_configuration(
             if nn == deadlock_retries:
                 log.warning("Failed unlocking. Trying new seed.")
                 return await create_random_configuration(
+                    fps,
                     seed=seed + 1,
                     safe=safe,
                     uniform=uniform,

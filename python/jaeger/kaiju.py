@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import time
 import warnings
 
 from typing import TYPE_CHECKING, Optional
@@ -43,7 +44,7 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(seed: int = 0, collision_buffer=None):
+def get_robot_grid(fps: FPS | None, seed: int | None = None, collision_buffer=None):
     """Returns a new robot grid with the destination set to the lattice position.
 
     If an initialised instance of the FPS is available, disabled robots will be
@@ -51,16 +52,11 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
 
     """
 
-    from jaeger.fps import FPS
-
-    fps = FPS.get_instance()
-    if fps is None:
-        warn(
-            "FPS information not provided when creating the robot grid. "
-            "Will not be able to disable robots."
-        )
-
     from kaiju.robotGrid import RobotGridCalib
+
+    if seed is None:
+        t = 1000 * time.time()
+        seed = int(int(t) % 2 ** 32 / 1000)
 
     kaiju_config = config["kaiju"]
     ang_step = kaiju_config["ang_step"]
@@ -81,20 +77,15 @@ def get_robot_grid(seed: int = 0, collision_buffer=None):
     # for when I dump and reload robot grids.
     robot_grid.collisionBuffer = collision_buffer
 
-    if fps is not None and set(robot_grid.robotDict.keys()) != set(fps.keys()):
-        raise JaegerError("Mismatch between connected positioners and robot grid.")
-
     for robot in robot_grid.robotDict.values():
-        if fps is not None:
+        if fps is not None and robot.id in fps and fps[robot.id].disabled is True:
             positioner = fps[robot.id]
-            if positioner.disabled:
-                log.debug(f"Setting positioner {robot.id} offline in Kaiju.")
-                robot.setAlphaBeta(positioner.alpha, positioner.beta)
-                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
-                robot.isOffline = True
-                continue
-
-        robot.setDestinationAlphaBeta(alpha0, beta0)
+            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            robot.setAlphaBeta(positioner.alpha, positioner.beta)
+            robot.isOffline = True
+        else:
+            robot.setDestinationAlphaBeta(alpha0, beta0)
+            robot.setAlphaBeta(alpha0, beta0)
 
     return robot_grid
 
@@ -113,7 +104,13 @@ def dump_robot_grid(robot_grid: RobotGridCalib) -> dict:
         destinationAlpha = robot.destinationAlpha
         destinationBeta = robot.destinationBeta
 
-        data["grid"][robot.id] = (alpha, beta, destinationAlpha, destinationBeta)
+        data["grid"][robot.id] = (
+            alpha,
+            beta,
+            destinationAlpha,
+            destinationBeta,
+            robot.isOffline,
+        )
 
     return data
 
@@ -122,13 +119,15 @@ def load_robot_grid(data: dict, set_destination: bool = True) -> RobotGridCalib:
     """Restores a robot grid from a dump."""
 
     collision_buffer = data["collision_buffer"]
-    robot_grid = get_robot_grid(collision_buffer=collision_buffer)
+    robot_grid = get_robot_grid(None, collision_buffer=collision_buffer)
 
     for robot in robot_grid.robotDict.values():
         data_robot = data["grid"][robot.id]
         robot.setAlphaBeta(data_robot[0], data_robot[1])
         if set_destination:
             robot.setDestinationAlphaBeta(data_robot[2], data_robot[3])
+        if data_robot[4] is True:
+            robot.isOffline = True
 
     return robot_grid
 
@@ -137,7 +136,9 @@ def decollide(
     robot_grid: Optional[RobotGridCalib] = None,
     data: Optional[dict] = None,
     simple: bool = False,
-) -> RobotGridCalib | dict:
+    decollide_grid_fallback: bool = False,
+    priority_order: list[int] = [],
+) -> tuple[RobotGridCalib | dict, list[int]]:
     """Decollides a potentially collided grid. Raises on fail.
 
     Parameters
@@ -150,22 +151,23 @@ def decollide(
         run in an executor.
     simple
         Runs ``decollideGrid()`` and returns.
+    decollide_grid_fallback
+        If `True`, runs ``decollideGrid()`` if the positioner-by-positioner
+        decollision fails.
+    priority_list
+        A sorted list of positioner IDs with the order of which positioners to
+        try to keep at their current positions. Positioners earlier in the list
+        will be decollided last. Ignore in case of ``simple=True``.
 
     Returns
     -------
-    grid
+    grid,decollided
         If ``robot_grid`` is passed, returns the same grid instance after decollision.
         If ``data`` is passed, returns a dictionary describing the decollided grid
-        that can be used to recreate a grid using `.load_robot_grid`.
+        that can be used to recreate a grid using `.load_robot_grid`. Also returns
+        the list of robots that have been decollided.
 
     """
-
-    def get_collided(robot_grid):
-        collided = [rid for rid in robot_grid.robotDict if robot_grid.isCollided(rid)]
-        if len(collided) == 0:
-            return False
-        else:
-            return collided
 
     if robot_grid is not None and data is not None:
         raise JaegerError("robot_grid and data are mutually exclusive.")
@@ -176,42 +178,55 @@ def decollide(
     assert robot_grid is not None
 
     if simple:
+        collided = robot_grid.getCollidedRobotList()
         robot_grid.decollideGrid()
-        if get_collided(robot_grid) is not False:
+        if len(robot_grid.getCollidedRobotList()) > 0:
             raise JaegerError("Failed decolliding grid.")
 
         if data is not None:
-            return dump_robot_grid(robot_grid)
+            return dump_robot_grid(robot_grid), collided
         else:
-            return robot_grid
+            return robot_grid, collided
 
     # First pass. If collided, decollide each robot one by one.
-    # TODO: Probably this should be done in order of less to more important targets
-    # to throw out the less critical ones first.
-    collided = get_collided(robot_grid)
-    if collided is not False:
-        warn("The grid is collided. Attempting one-by-one decollision.")
+    collided = robot_grid.getCollidedRobotList()
+
+    # Sort collided robots by priority order.
+    collided = sorted(
+        collided,
+        key=lambda x: len(priority_order) - priority_order.index(x)
+        if x in priority_order
+        else -1,
+    )
+
+    decollided = []
+    if len(collided) > 0:
         for robot_id in collided:
             if robot_grid.isCollided(robot_id):
+                if robot_grid.robotDict[robot_id].isOffline:
+                    continue
                 robot_grid.decollideRobot(robot_id)
+                decollided.append(robot_id)  # Even if we failed it may have moved.
                 if robot_grid.isCollided(robot_id):
-                    warn(f"Failed decolliding positioner {robot_id}.")
-                else:
-                    warn(f"Positioner {robot_id} was decollided.")
+                    raise JaegerError(f"Failed decolliding positioner {robot_id}.")
 
     # Second pass. If still collided, try a grid decollision.
-    if get_collided(robot_grid) is not False:
-        warn("Grid is still colliding. Attempting full grid decollision.")
-        robot_grid.decollideGrid()
-        if get_collided(robot_grid) is not False:
-            raise JaegerError("Failed decolliding grid.")
+    if len(robot_grid.getCollidedRobotList()) > 0:
+        if decollide_grid_fallback:
+            warn("Grid is still colliding. Attempting full grid decollision.")
+            robot_grid.decollideGrid()
+            if robot_grid.getCollidedRobotList() is not False:
+                raise JaegerError("Failed decolliding grid.")
+            # We don't know which robots were decollided so assume all collided
+            # robots have moved.
+            decollided = collided
         else:
-            warn("The grid was decollided.")
+            raise JaegerError("Failed decolliding grid.")
 
     if data is not None:
-        return dump_robot_grid(robot_grid)
+        return dump_robot_grid(robot_grid), decollided
     else:
-        return robot_grid
+        return robot_grid, decollided
 
 
 def get_path_pair(
@@ -226,6 +241,7 @@ def get_path_pair(
     path_delay=None,
     collision_shrink=None,
     stop_if_deadlock: bool = False,
+    ignore_initial_collisions: bool = False,
 ) -> tuple:
     """Runs ``pathGenGreedy`` and returns the to and from destination paths.
 
@@ -252,6 +268,9 @@ def get_path_pair(
     stop_if_deadlock
         If `True`, detects deadlocks early in the path and returns shorter
         trajectories (at the risk of some false positive deadlocks).
+    ignore_initial_collisions
+        If `True`, does not fail if the initial state is collided. To be used
+        only for offsets.
 
     Returns
     -------
@@ -283,7 +302,10 @@ def get_path_pair(
         deadlocks = []
     else:
         log.debug(f"Running pathGenGreedy with stopIfDeadlock={stop_if_deadlock}.")
-        robot_grid.pathGenGreedy(stopIfDeadlock=stop_if_deadlock)
+        robot_grid.pathGenGreedy(
+            stopIfDeadlock=stop_if_deadlock,
+            ignoreInitialCollisions=ignore_initial_collisions,
+        )
 
         # Check for deadlocks.
         deadlocks = robot_grid.deadlockedRobots()
@@ -329,23 +351,26 @@ async def get_path_pair_in_executor(robot_grid: RobotGridCalib, **kwargs):
     return traj_data
 
 
-async def decollide_in_executor(robot_grid: RobotGridCalib, **kwargs) -> RobotGridCalib:
+async def decollide_in_executor(
+    robot_grid: RobotGridCalib, **kwargs
+) -> tuple[RobotGridCalib, list[int]]:
     """Calls `.decollide` with a process executor."""
 
     data = dump_robot_grid(robot_grid)
-    decollided_data = await run_in_executor(
+    decollided_data, collided = await run_in_executor(
         decollide,
         data=data,
         executor="process",
         **kwargs,
     )
 
-    return load_robot_grid(decollided_data)
+    return load_robot_grid(decollided_data), collided
 
 
 async def unwind(
     current_positions: dict[int, tuple[float | None, float | None]],
     collision_buffer: float | None = None,
+    disabled: list[int] = [],
     force: bool = False,
 ):
     """Folds all the robots to the lattice position.
@@ -360,7 +385,7 @@ async def unwind(
     # than creating a grid and dumping it.
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid, (alpha, beta) in current_positions.items():
-        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
+        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0, pid in disabled)
 
     (to_destination, _, did_fail, deadlocks) = await run_in_executor(
         get_path_pair,
@@ -385,6 +410,7 @@ async def explode(
     current_positions: dict[int, tuple[float | None, float | None]],
     explode_deg=20.0,
     collision_buffer: float | None = None,
+    disabled: list[int] = [],
     positioner_id: int | None = None,
 ):
     """Explodes the grid by a number of degrees.
@@ -397,7 +423,7 @@ async def explode(
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid, (alpha, beta) in current_positions.items():
-        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0)
+        data["grid"][int(pid)] = (alpha, beta, alpha0, beta0, pid in disabled)
 
     if positioner_id is not None:
         path_generation_mode = "explode_one"
@@ -474,7 +500,13 @@ async def get_snapshot(
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid in fps.positioners.keys():
-        data["grid"][int(pid)] = (fps[pid].alpha, fps[pid].beta, 0, 0)
+        data["grid"][int(pid)] = (
+            fps[pid].alpha,
+            fps[pid].beta,
+            0,
+            0,
+            fps[pid].disabled,
+        )
 
     await run_in_executor(
         get_snapshot_async,

@@ -4,14 +4,20 @@
 
 ### 🚀 New
 
-* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.get_trajectory()` is called. The reverse path can be sent from the actor using `configuration reverse`. The paths can be generated in advance when loading the design. An ``--epoch-delay`` parameter can be passed when loading the design to create a configuration for some time in the future.
+* [#163](https://github.com/sdss/jaeger/issues/163) The to and from destination trajectories are saved when `BaseConfiguration.decollide_and_get_paths()` is called. The reverse path can be sent from the actor using `configuration reverse`. The paths can be generated in advance when loading the design. An ``--epoch-delay`` parameter can be passed when loading the design to create a configuration for some time in the future.
 * [#167](https://github.com/sdss/jaeger/issues/167) Add the ability of loading a configuration from the current positions of the robots.
+* [#169](https://github.com/sdss/jaeger/issues/169) Move `ieb power` and `ieb switch` to simply `power`.
 
 ### ✨ Improved
 
-* [#166](https://github.com/sdss/jaeger/issues/166) During `BaseConfiguration.get_trajectory()` the paths are decollided and deadlocks resolved while trying to maintain as many robots on target as possible. The fibre table is updated.
+* [#166](https://github.com/sdss/jaeger/issues/166) During `BaseConfiguration.decollide_and_get_paths()` the paths are decollided and deadlocks resolved while trying to maintain as many robots on target as possible. The fibre table is updated.
+* [#168](https://github.com/sdss/jaeger/issues/168) Functional version of design loading. Collisions are solved by first attempting to remove unassigned targets. Deadlock resolution uses the same logic as the random configuration creation. ``fiberId`` is not added to the summary file. Snapshots for each configuration are created.
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
 * `jaeger.commands.goto.goto()` generates `kaiju`-valid trajectories by default.
+
+### 🔧 Fixed
+
+* [#168](https://github.com/sdss/jaeger/issues/168) Fixed use of proper motions that were being applied as if the JD epoch was the Julian year.
 
 ### 🔥 Removed
 

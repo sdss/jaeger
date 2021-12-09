@@ -52,8 +52,8 @@ def configuration():
     help="Replace an existing entry.",
 )
 @click.option(
-    "--generate-paths",
-    is_flag=True,
+    "--generate-paths/--no-generate-paths",
+    default=True,
     help="Generates and stores the to and from destination paths.",
 )
 @click.option(
@@ -67,6 +67,22 @@ def configuration():
     is_flag=True,
     help="Loads a configuration from the current robot positions.",
 )
+@click.option(
+    "--ingest/--no-ingest",
+    default=True,
+    help="Whether to ingest the configuration into the DB.",
+)
+@click.option(
+    "--write-summary/--no-write-summary",
+    default=True,
+    help="Whether to write the summary file for the configuration. "
+    "Ignored if --no-ingest.",
+)
+@click.option(
+    "--execute/--no-execute",
+    default=False,
+    help="Send and start the from_destination trajectory.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -77,8 +93,14 @@ async def load(
     from_positions: bool = False,
     generate_paths: bool = False,
     epoch_delay: float = 0.0,
+    ingest: bool = False,
+    write_summary: bool = False,
+    execute: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
+
+    if designid is not None:
+        command.info(f"Loading design {designid}.")
 
     if reload is True:
         if fps.configuration is None:
@@ -96,6 +118,7 @@ async def load(
             return command.fail(error="Design ID is required.")
 
         try:
+            # Define the epoch for the configuration.
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(designid, epoch=epoch)
         except (ValueError, RuntimeError, JaegerError) as err:
@@ -103,7 +126,7 @@ async def load(
 
         fps.configuration = design.configuration
 
-    assert isinstance(fps.configuration, Configuration)
+    assert isinstance(fps.configuration, (Configuration, ManualConfiguration))
 
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
@@ -111,38 +134,52 @@ async def load(
     if fps.configuration.ingested is False:
         replace = False
 
-    fps.configuration.write_to_database(replace=replace)
-
     configuration = fps.configuration
-    assert configuration.design
+    configuration.set_command(command)
+
+    if generate_paths:
+        try:
+            command.info("Calculating trajectories.")
+            await configuration.decollide_and_get_paths(decollide=not from_positions)
+        except Exception as err:
+            return command.fail(error=f"Failed generating paths: {err}")
+
+    if ingest:
+        fps.configuration.write_to_database(replace=replace)
+    else:
+        command.warning("Not ingesting configuration. Configuration ID is -999.")
+        fps.configuration.configuration_id = -999
+
+    if ingest and write_summary:
+        summary_file = fps.configuration.write_summary(overwrite=True)
+    else:
+        summary_file = ""
 
     boresight = fps.configuration.assignment_data.boresight
 
     command.debug(
         configuration_loaded=[
             configuration.configuration_id,
-            configuration.design.design_id,
-            boresight.ra[0],
-            boresight.dec[0],
-            configuration.design.field["position_angle"],
-            boresight[0, 0],
-            boresight[0, 1],
+            configuration.design.design_id if configuration.design else -999,
+            configuration.design.field.field_id if configuration.design else -999,
+            boresight.ra[0] if boresight is not None else -999.0,
+            boresight.dec[0] if boresight is not None else -999.0,
+            configuration.design.field.position_angle if configuration.design else 0,
+            boresight[0, 0] if boresight is not None else -999.0,
+            boresight[0, 1] if boresight is not None else -999.0,
+            summary_file,
         ]
     )
 
-    if generate_paths:
-        try:
-            await configuration.get_trajectory(decollide=True)
-        except (TrajectoryError, JaegerError) as err:
-            return command.fail(
-                error=f"Failed generating paths: {err} "
-                "The configuration has been loaded and written to the database."
-            )
+    snapshot = await configuration.save_snapshot()
+    command.info(configuration_snapshot=snapshot)
 
-    return command.finish(
-        text=f"Configuration {fps.configuration.configuration_id} loaded "
-        "and written to database."
-    )
+    if execute:
+        cmd = await command.send_command("jaeger", "configuration execute")
+        if cmd.status.did_fail:
+            return cmd.fail("Failed executing configuration.")
+
+    return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
 
 @configuration.command()
@@ -160,13 +197,14 @@ async def execute(command: Command[JaegerActor], fps: FPS):
         command.info(text="Using stored trajectory (from destination).")
     else:
         command.info(text="Calculating trajectory.")
-    try:
-        from_destination = await fps.configuration.get_trajectory()
-    except Exception as err:
-        return command.fail(error=f"Failed getting trajectory: {err}")
 
-    if not await check_trajectory(from_destination, fps=fps, atol=1):
-        return command.fail(error="Trajectory validation failed.")
+        try:
+            from_destination = await fps.configuration.decollide_and_get_paths()
+        except Exception as err:
+            return command.fail(error=f"Failed getting trajectory: {err}")
+
+        if not (await check_trajectory(from_destination, fps=fps, atol=1)):
+            return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing forward trajectory.")
 
@@ -194,7 +232,9 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
             error="The configuration does not have a to_destination path. Use unwind."
         )
 
-    if not await check_trajectory(to_destination, fps=fps, atol=1):
+    # Very large atol here because we may have moved the robots a fair amount
+    # during the FVC feedback loop.
+    if not (await check_trajectory(to_destination, fps=fps, atol=5)):
         return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing reverse trajectory.")
@@ -221,6 +261,10 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     type=click.FloatRange(1.6, 3.0),
     help="Custom collision buffer",
 )
+@click.option(
+    "--send-trajectory/--no-send-trajectory",
+    help="Send the trajectory to the FPS.",
+)
 async def random(
     command: Command[JaegerActor],
     fps: FPS,
@@ -228,6 +272,7 @@ async def random(
     danger: bool = False,
     uniform: str | None = None,
     collision_buffer: float | None = None,
+    send_trajectory: bool = True,
 ):
     """Executes a random, valid configuration."""
 
@@ -259,6 +304,7 @@ async def random(
         uniform_unpack = None
 
     configuration = await create_random_configuration(
+        fps,
         seed=seed,
         uniform=uniform_unpack,
         safe=not danger,
@@ -267,15 +313,18 @@ async def random(
 
     try:
         command.info("Getting trajectory.")
-        trajectory = await configuration.get_trajectory(decollide=False)
+        trajectory = await configuration.decollide_and_get_paths(decollide=False)
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
-
-    command.info("Executing random trajectory.")
 
     # Make this the FPS configuration
     assert command.actor
     command.actor.fps.configuration = configuration
+
+    if send_trajectory:
+        return command.finish()
+
+    command.info("Executing random trajectory.")
 
     try:
         await fps.send_trajectory(trajectory, command=command)

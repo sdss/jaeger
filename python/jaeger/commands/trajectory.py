@@ -271,7 +271,11 @@ class Trajectory(object):
             )
 
         if isinstance(trajectories, (str, pathlib.Path)):
-            self.trajectories = cast(TrajectoryDataType, read_yaml_file(trajectories))
+            path = pathlib.Path(trajectories)
+            if path.suffix == ".json":
+                self.trajectories = json.loads(open(path, "r").read())["trajectory"]
+            else:
+                self.trajectories = cast(dict, read_yaml_file(trajectories))
         elif isinstance(trajectories, dict):
             self.trajectories = trajectories
         else:
@@ -389,9 +393,8 @@ class Trajectory(object):
             status = positioner.status
 
             if positioner.disabled:
-                self.failed = True
                 raise TrajectoryError(
-                    f"positioner_id={pos_id} is disabled but was "
+                    f"positioner_id={pos_id} is disabled/offline but was "
                     "included in the trajectory.",
                     self,
                 )

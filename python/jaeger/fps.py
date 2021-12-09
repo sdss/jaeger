@@ -430,13 +430,8 @@ class FPS(BaseFPS["FPS"]):
 
         # Loops over each reply and set the positioner status to OK. If the
         # positioner was not in the list, adds it.
-        ignored_positioners = []
         for reply in get_fw_command.replies:
             if reply.positioner_id not in self.positioners:
-
-                if reply.positioner_id in config["fps"]["skip_positioners"]:
-                    ignored_positioners.append(reply.positioner_id)
-                    continue
 
                 if hasattr(reply.message, "interface"):
                     interface = reply.message.interface
@@ -453,12 +448,20 @@ class FPS(BaseFPS["FPS"]):
             if positioner.positioner_id in config["fps"]["disabled_positioners"]:
                 positioner.disabled = True
 
-        if len(ignored_positioners) > 0:
-            warnings.warn(
-                "The following connected positioners are ignored as they are "
-                f"in the skip_positioners list: {ignored_positioners}",
-                JaegerUserWarning,
-            )
+        # Add offline robots. Offline positioners are physically in the array but
+        # they don't reply to commands and we need to specify their position. Once
+        # That's done they behave as normal disabled robots.
+        if config["fps"]["offline_positioners"] is not None:
+            for pid in config["fps"]["offline_positioners"]:
+                off_alpha, off_beta = config["fps"]["offline_positioners"][pid]
+                if pid not in self.positioners:
+                    positioner = self.add_positioner(pid)
+                else:
+                    positioner = self.positioners[pid]
+                positioner.disabled = True
+                positioner.offline = True
+                positioner.alpha = off_alpha
+                positioner.beta = off_beta
 
         # Mark as initialised here although we have some more work to do.
         self.initialised = True
@@ -1053,7 +1056,7 @@ class FPS(BaseFPS["FPS"]):
         speed: Optional[float] = None,
         relative=False,
         use_sync_line: bool | None = None,
-        no_kaiju: bool = False,
+        go_cowboy: bool = False,
     ):
         """Sends a list of positioners to a given position.
 
@@ -1069,7 +1072,7 @@ class FPS(BaseFPS["FPS"]):
             If `True`, ``alpha`` and ``beta`` are considered relative angles.
         use_sync_line
             Whether to use the SYNC line to start the trajectories.
-        no_kaiju
+        go_cowboy
             If set, does not create a ``kaiju``-safe trajectory. Use at your own risk.
 
         """
@@ -1081,7 +1084,7 @@ class FPS(BaseFPS["FPS"]):
                 relative=relative,
                 speed=speed,
                 use_sync_line=use_sync_line,
-                no_kaiju=no_kaiju,
+                go_cowboy=go_cowboy,
             )
         except Exception:
             raise

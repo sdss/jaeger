@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import pathlib
 
 from typing import TYPE_CHECKING
@@ -20,6 +21,7 @@ import clu
 
 from jaeger.commands import CommandID, SetCurrent, Trajectory
 from jaeger.commands.goto import goto as goto_
+from jaeger.commands.trajectory import send_trajectory
 from jaeger.exceptions import JaegerError, TrajectoryError
 
 from . import jaeger_parser
@@ -62,8 +64,15 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 
 @jaeger_parser.command()
 @click.argument("POSITIONER-IDS", type=int, nargs=-1)
-@click.argument("ALPHA", type=click.FloatRange(-10.0, 370.0))
-@click.argument("BETA", type=click.FloatRange(-10.0, 370.0))
+@click.argument("ALPHA", type=click.FloatRange(-10.0, 370.0), required=False)
+@click.argument("BETA", type=click.FloatRange(-10.0, 370.0), required=False)
+@click.option(
+    "-l",
+    "--from-file",
+    type=click.Path(exists=True, dir_okay=False),
+    help="Loads the trajectory from a JSON trajectory file. Unless --go-cowboy is used "
+    "only the end points of the trajectories for each positioner are used.",
+)
 @click.option(
     "-r",
     "--relative",
@@ -93,24 +102,34 @@ def check_positioners(positioner_ids, command, fps, initialised=False):
 @click.option(
     "--use-sync/-no-use-sync",
     " /-S",
-    default=True,
+    default=None,
     help="Whether to use the SYNC line to start the trajectory.",
+)
+@click.option(
+    "--go-cowboy",
+    is_flag=True,
+    help="If set, does not use kaiju-validated trajectories.",
 )
 async def goto(
     command: Command[JaegerActor],
     fps: FPS,
     positioner_ids: tuple[int, ...] | list[int],
-    alpha: float,
-    beta: float,
+    alpha: float | None,
+    beta: float | None,
+    from_file: str | None,
     speed: float | None,
     all: bool = False,
     force: bool = False,
     relative: bool = False,
     use_sync: bool = True,
+    go_cowboy: bool = False,
 ):
     """Sends positioners to a given (alpha, beta) position."""
 
     assert command.actor
+
+    if from_file is None and (alpha is None or beta is None):
+        return command.fail(error="alpha and beta or --from-file are required.")
 
     if fps.locked:
         return command.fail(error="FPS is locked. Cannot send goto.")
@@ -118,23 +137,50 @@ async def goto(
     if fps.moving:
         return command.fail(error="FPS is moving. Cannot send goto.")
 
-    if all:
-        if not force:
-            return command.fail(error="Use --force to move all positioners at once.")
-        positioner_ids = list(fps.positioners.keys())
+    if from_file is not None:
+        trajectory = json.loads(open(from_file, "r").read())["trajectory"]
+
+        if go_cowboy is True:
+            try:
+                await send_trajectory(
+                    fps,
+                    trajectory,
+                    use_sync_line=use_sync,
+                    command=command,
+                    extra_dump_data={"kaiju_trajectory": False},
+                )
+                return command.finish()
+            except (JaegerError, TrajectoryError) as err:
+                return command.fail(error=f"Goto command failed: {err}")
+
+        else:
+            new_positions = {}
+            for positioner_id in trajectory:
+                alpha = trajectory[positioner_id]["alpha"][-1][0]
+                beta = trajectory[positioner_id]["beta"][-1][0]
+                new_positions[int(positioner_id)] = (alpha, beta)
+
     else:
-        positioner_ids = list(positioner_ids)
 
-    if not relative:
-        if alpha < 0 or beta < 0:
-            return command.fail(error="Negative angles only allowed in relative mode.")
+        assert alpha is not None and beta is not None
 
-    if not check_positioners(positioner_ids, command, fps, initialised=True):
-        return
+        if all:
+            if not force:
+                return command.fail("Use --force to move all positioners at once.")
+            positioner_ids = list(fps.positioners.keys())
+        else:
+            positioner_ids = list(positioner_ids)
 
-    new_positions = {}
-    for pid in positioner_ids:
-        new_positions[pid] = (alpha, beta)
+        if not relative:
+            if alpha < 0 or beta < 0:
+                return command.fail("Negative angles only allowed in relative mode.")
+
+        if not check_positioners(positioner_ids, command, fps, initialised=True):
+            return
+
+        new_positions = {}
+        for pid in positioner_ids:
+            new_positions[pid] = (alpha, beta)
 
     try:
         await goto_(
@@ -144,6 +190,7 @@ async def goto(
             relative=relative,
             use_sync_line=use_sync,
             command=command,
+            go_cowboy=go_cowboy,
         )
     except (JaegerError, TrajectoryError) as err:
         return command.fail(error=f"Goto command failed: {err}")
@@ -215,14 +262,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 @jaeger_parser.command()
 @click.argument("POSITIONER-IDS", type=int, nargs=-1, required=False)
-@click.option(
-    "-f",
-    "--full",
-    is_flag=True,
-    default=False,
-    help="outputs more statuses.",
-)
-async def status(command, fps, positioner_ids, full):
+async def status(command, fps, positioner_ids):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioner_ids or list(fps.positioners.keys())
@@ -230,58 +270,58 @@ async def status(command, fps, positioner_ids, full):
     if not check_positioners(positioner_ids, command, fps):
         return
 
-    try:
-        await fps.update_status(positioner_ids=0)
-        await fps.update_position(positioner_ids=positioner_ids)
-    except JaegerError as err:
-        return command.fail(error=f"Failed reporting status: {err}")
-
-    n_trajs = (
-        await fps.send_command(
-            CommandID.GET_NUMBER_TRAJECTORIES,
-            positioner_ids=positioner_ids,
-        )
-    ).get_replies()
-
     command.info(locked=fps.locked)
-
     command.info(n_positioners=len(fps.positioners))
-
-    for pid in sorted(positioner_ids):
-        p = fps[pid]
-
-        alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
-        beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
-
-        n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
-
-        if pid in fps.positioner_to_bus:
-            interface, bus = fps.positioner_to_bus[pid]
-            interface = fps.can.interfaces.index(interface) + 1
-        else:
-            interface = -1
-            bus = -1
-
-        command.write(
-            "i",
-            positioner_status=[
-                p.positioner_id,
-                alpha_pos,
-                beta_pos,
-                f"0x{int(p.status):x}",
-                p.initialised,
-                p.is_bootloader() or False,
-                p.firmware or "?",
-                interface,
-                bus,
-                n_trajs_pid,
-            ],
-        )
-
     command.info(fps_status=f"0x{fps.status.value:x}")
 
-    if full:
-        await clu.Command("ieb status", parent=command).parse()
+    if len(positioner_ids) > 0:
+        try:
+            await fps.update_status(positioner_ids=0)
+            await fps.update_position(positioner_ids=positioner_ids)
+        except JaegerError as err:
+            return command.fail(error=f"Failed reporting status: {err}")
+
+        n_trajs = (
+            await fps.send_command(
+                CommandID.GET_NUMBER_TRAJECTORIES,
+                positioner_ids=positioner_ids,
+            )
+        ).get_replies()
+
+        for pid in sorted(positioner_ids):
+            p = fps[pid]
+
+            alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
+            beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
+
+            n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
+
+            if pid in fps.positioner_to_bus:
+                interface, bus = fps.positioner_to_bus[pid]
+                interface = fps.can.interfaces.index(interface) + 1
+            else:
+                interface = -1
+                bus = -1
+
+            command.write(
+                "i",
+                positioner_status=[
+                    p.positioner_id,
+                    alpha_pos,
+                    beta_pos,
+                    f"0x{int(p.status):x}",
+                    p.initialised,
+                    p.disabled,
+                    p.offline,
+                    p.is_bootloader() or False,
+                    p.firmware or "?",
+                    interface,
+                    bus,
+                    n_trajs_pid,
+                ],
+            )
+
+    await clu.Command("ieb status", parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
 

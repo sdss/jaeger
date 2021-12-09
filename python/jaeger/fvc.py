@@ -382,24 +382,32 @@ class FVC:
         )
         xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        xwok_measured = xy_wok_robot_meas[:, 0]
-        ywok_measured = xy_wok_robot_meas[:, 1]
+        bad_match = met_dist > 1.0
+        if bad_match.sum() > 0:
+            self.log(f"Found {bad_match.sum()} metrology fibres with distance > 1 mm.")
+            self.fibre_data.loc[fibre_type].loc[bad_match, "offline"] = 1
 
-        # Only use online robots for final RMS.
-        online = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 0)
-        dx = self.fibre_data.loc[online, "xwok"] - xwok_measured[online]
-        dy = self.fibre_data.loc[online, "ywok"] - ywok_measured[online]
+        self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
+        self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
+
+        off = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 1)
+        self.fibre_data.loc[off, "xwok_measured"] = self.fibre_data.loc[off, "xwok"]
+        self.fibre_data.loc[off, "ywok_measured"] = self.fibre_data.loc[off, "ywok"]
+
+        # Only use online, assigned robots for final RMS.
+        online = self.fibre_data.loc[
+            (self.fibre_data.index == fibre_type)
+            & (self.fibre_data.offline == 0)
+            & (self.fibre_data.assigned == 1)
+        ]
+
+        dx = online.xwok - online.xwok_measured
+        dy = online.ywok - online.ywok_measured
 
         self.fitrms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
-
-        keep_cols = ["positioner_id", "hole_id"]
-        self.measurements = self.fibre_data.loc[fibre_type, keep_cols]
-        self.measurements.loc[:, "xwok_measured"] = xwok_measured
-        self.measurements.loc[:, "ywok_measured"] = ywok_measured
-        self.measurements.reset_index().set_index("positioner_id")
 
         self.fibre_data.reset_index(inplace=True)
         self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
@@ -544,7 +552,7 @@ class FVC:
         pos_na = offsets["alpha_measured"].isna()
         if pos_na.sum() > 0:
             self.log(
-                "Failed to calculated corrected positioner coordinates for "
+                "Failed to calculate corrected positioner coordinates for "
                 f"{pos_na.sum()} positioners.",
                 level=logging.WARNING,
             )
@@ -628,6 +636,7 @@ class FVC:
     async def write_proc_image(
         self,
         new_filename: Optional[str | pathlib.Path] = None,
+        correction_applied: bool = False,
     ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data.
 
@@ -660,6 +669,8 @@ class FVC:
             proc_hdus[1].header["CONFIGID"] = self.fps.configuration.configuration_id
         else:
             proc_hdus[1].header["CONFIGID"] = -999.0
+
+        proc_hdus[1].header["CAPPLIED"] = correction_applied
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
@@ -781,8 +792,11 @@ class FVC:
         await self.fps.update_position()
 
         # Setup robot grid.
-        grid = get_robot_grid()
+        grid = get_robot_grid(self.fps)
         for robot in grid.robotDict.values():
+            if robot.isOffline:
+                continue
+
             positioner = self.fps[robot.id]
             robot.setAlphaBeta(positioner.alpha, positioner.beta)
 
@@ -804,6 +818,7 @@ class FVC:
             grid,
             ignore_did_fail=True,
             stop_if_deadlock=True,
+            ignore_initial_collisions=True,
         )
         if did_fail:
             log.warning(
