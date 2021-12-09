@@ -8,9 +8,8 @@
 
 from __future__ import annotations
 
-from fps_calibrations import get_version
-
 from coordio import __version__ as coordio_version
+from fps_calibrations import get_version
 from kaiju import __version__ as kaiju_version
 
 from jaeger import __version__ as jaeger_version
