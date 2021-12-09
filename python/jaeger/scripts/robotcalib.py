@@ -15,8 +15,8 @@ from sdsstools.daemonizer import cli_coro
 
 
 # hardcoded defaults
-MET_LED = 10  # leds 1 and 2
-AP_LED = 3  # led 3
+MET_LED = 6  # leds 1 and 2
+AP_LED = 16  # led 3
 BOSS_LED = 8  # led 4
 ANG_STEP = 0.1  # step size in degrees for path generation
 EPS = ANG_STEP * 2  # absolute distance used for path smoothing
@@ -27,8 +27,8 @@ SMOOTH_PTS = 5  # number of points for smoothing paths
 COLLISION_SHRINK = 0.08  # mm to shrink buffers by for path smoothing/simplification
 PATH_DELAY = 1  # seconds of time in the future to send the first point
 SAFE_BETA = [165, 195]
-MAX_ALPHA = 358  # set here for robot 444 without full range alpha travel
-BAD_ROBOTS = []  # put offline robots in this list?
+# MAX_ALPHA = 358  # set here for robot 444 without full range alpha travel
+BAD_ROBOTS = [54, 463]  # put offline robots in this list?
 DOWNSAMPLE = 100
 
 
@@ -108,9 +108,13 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
     # or RobotGridCalib will load from positionerTable
     # example:
 
-    # rg.robotDict[235].setAlphaBeta(0.0076,180.0012)
-    # rg.robotDict[235].setDestinationAlphaBeta(0.0076,180.0012)
-    # rg.robotDict[235].isOffline = True
+    rg.robotDict[54].setAlphaBeta(10.013,169.9634)
+    rg.robotDict[54].setDestinationAlphaBeta(10.013,169.9634)
+    rg.robotDict[54].isOffline = True
+
+    rg.robotDict[463].setAlphaBeta(10.0103,170.0181)
+    rg.robotDict[463].setDestinationAlphaBeta(10.0103,170.0181)
+    rg.robotDict[463].isOffline = True
 
     # < no offline robots yet > #
 
@@ -125,15 +129,10 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
             # for now special handling for robot 444
             # note, i'm not checking after
             # decolliding grid, which maybe I should?
-            if robot.id == 444:
-                while True:
-                    robot.setXYUniform()
-                    if robot.alpha < MAX_ALPHA:
-                        break
             else:
                 robot.setXYUniform()
         else:
-            alpha = numpy.random.uniform(0, MAX_ALPHA)
+            alpha = numpy.random.uniform(0, 359.999) #MAX_ALPHA)
             beta = numpy.random.uniform(SAFE_BETA[0], SAFE_BETA[1])
             if robot.id == 999:
                 print("robot 999 alpha", alpha)
@@ -175,22 +174,6 @@ async def ledOff(fps, devName):
 async def exposeFVC(fvc, exptime, fibre_data, nexp):
     from jaeger.exceptions import FVCError
 
-<<<<<<< HEAD
-    for ii in range(nexp):
-        try:
-            print("exposing FVC %i of %i" % (ii + 1, nexp))
-            rawfname = await fvc.expose(exposure_time=exptime, stack=nexp)
-            print("exposure complete: %s" % rawfname)
-            fvc.process_fvc_image(rawfname, fibre_data, plot=True)
-            print("image processing complete")
-            positions = await fvc.fps.update_position()
-            fvc.calculate_offsets(positions)
-            print("calculcate offsets complete")
-            await fvc.write_proc_image()
-            print("image write complete")
-        except FVCError as e:
-            print("exposure failed with FVCError, continuing")
-=======
     try:
         print("exposing FVC stack of %i" % (nexp))
         rawfname = await fvc.expose(exposure_time=exptime, stack=nexp)
@@ -204,7 +187,6 @@ async def exposeFVC(fvc, exptime, fibre_data, nexp):
         print("image write complete")
     except FVCError as e:
         print("exposure failed with FVCError, continuing")
->>>>>>> 9333864a42617d9902808a1d5c5f8a9f73843472
 
 
 async def unwind(fps, speed, collisionBuffer):
@@ -496,22 +478,24 @@ async def robotcalib(
                 badRobotForward.append(e.trajectory.failed_positioners)
                 print("TRAJECTORY ERROR moving fold-->target")
                 print("failed positioners: ", str(e.trajectory.failed_positioners))
-                print("attempting to recover from trajectory error with unwind")
-                # shrink collision buffer
-                _cbShrink = cb - 0.1
-                await fps.unlock()
-                # success = await unwind(fps, speed, _cbShrink)
-                success = False
-                if success:
-                    print("unwind worked skipping to next iteration")
-                    continue
-                else:
-                    print("moves executed", movesExecuted)
-                    print("number of traj errors fold-->target", nErrorsForward)
-                    print("err robots fold-->target", badRobotForward)
-                    print("number of traj errors target-->fold", nErrorsReverse)
-                    print("err robots target-->fold", badRobotReverse)
-                    return  # exit routine
+                return
+
+                # print("attempting to recover from trajectory error with unwind")
+                # # shrink collision buffer
+                # _cbShrink = cb - 0.1
+                # await fps.unlock()
+                # # success = await unwind(fps, speed, _cbShrink)
+                # success = False
+                # if success:
+                #     print("unwind worked skipping to next iteration")
+                #     continue
+                # else:
+                #     print("moves executed", movesExecuted)
+                #     print("number of traj errors fold-->target", nErrorsForward)
+                #     print("err robots fold-->target", badRobotForward)
+                #     print("number of traj errors target-->fold", nErrorsReverse)
+                #     print("err robots target-->fold", badRobotReverse)
+                #     return  # exit routine
 
         else:
             print("not moving array --nomove flag passed")
@@ -579,23 +563,25 @@ async def robotcalib(
                 badRobotReverse.append(e.trajectory.failed_positioners)
                 print("TRAJECTORY ERROR moving target-->fold")
                 print("failed positioners: ", str(e.trajectory.failed_positioners))
-                print("attempting to recover from trajectory error with unwind")
-                # shrink collision buffer
-                _cbShrink = cb - 0.1
-                await fps.unlock()
-                # success = await unwind(fps, speed, _cbShrink)
-                success = False
-                if success:
-                    # unwind worked move to next iteration
-                    print("unwind worked skipping to next iteration")
-                    continue
-                else:
-                    print("moves executed", movesExecuted)
-                    print("number of traj errors fold-->target", nErrorsForward)
-                    print("err robots fold-->target", badRobotForward)
-                    print("number of traj errors target-->fold", nErrorsReverse)
-                    print("err robots target-->fold", badRobotReverse)
-                    return  # exit routine
+                return
+
+                # print("attempting to recover from trajectory error with unwind")
+                # # shrink collision buffer
+                # _cbShrink = cb - 0.1
+                # await fps.unlock()
+                # # success = await unwind(fps, speed, _cbShrink)
+                # success = False
+                # if success:
+                #     # unwind worked move to next iteration
+                #     print("unwind worked skipping to next iteration")
+                #     continue
+                # else:
+                #     print("moves executed", movesExecuted)
+                #     print("number of traj errors fold-->target", nErrorsForward)
+                #     print("err robots fold-->target", badRobotForward)
+                #     print("number of traj errors target-->fold", nErrorsReverse)
+                #     print("err robots target-->fold", badRobotReverse)
+                #     return  # exit routine
 
     print("\n-------\nend script\n-------\n")
     print("moves executed", movesExecuted)
