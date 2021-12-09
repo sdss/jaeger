@@ -498,7 +498,6 @@ class BaseConfiguration:
                     design_id = self.design.design_id
 
                 configuration = opsdb.Configuration(
-                    configuration_id=self.configuration_id,
                     design_id=design_id,
                     epoch=epoch,
                     calibration_version=calibration.fps_calibs_version,
