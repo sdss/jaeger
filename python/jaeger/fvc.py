@@ -440,7 +440,7 @@ class FVC:
 
         # Assign measured xywok to fibres with valid matches.
         xy_wok_robot_meas = xy_wok_meas[xy_wok_meas_idx]
-        breakpoint()
+
         fdata.loc[
             (fdata.index == fibre_type) & matched_idx,
             ["xwok_measured", "ywok_measured"],
@@ -469,7 +469,7 @@ class FVC:
         self.proc_hdu = hdus[1]
 
         self.log(f"Finished processing {path}", level=logging.DEBUG)
-        breakpoint()
+
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
     def calculate_offsets(
