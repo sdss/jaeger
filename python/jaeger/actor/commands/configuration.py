@@ -99,6 +99,8 @@ async def load(
 ):
     """Creates and ingests a configuration from a design in the database."""
 
+    assert command.actor is not None
+
     if designid is not None:
         command.info(f"Loading design {designid}.")
 
@@ -118,10 +120,17 @@ async def load(
             return command.fail(error="Design ID is required.")
 
         try:
+            valid = Design.check_design(designid, command.actor.observatory)
+            if valid is False:
+                return command.fail(
+                    "The design does not exists or is not a valid "
+                    f"{command.actor.observatory} design."
+                )
+
             # Define the epoch for the configuration.
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(designid, epoch=epoch)
-        except (ValueError, RuntimeError, JaegerError) as err:
+        except Exception as err:
             return command.fail(error=f"Failed retrieving design: {err}")
 
         fps.configuration = design.configuration

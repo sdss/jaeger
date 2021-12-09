@@ -16,6 +16,7 @@
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
 * `jaeger.commands.goto.goto()` generates `kaiju`-valid trajectories by default.
 * FVC RMS fit only takes assigned robots into account.
+* Added a check when loading a design to confirm that the design exists and is for the current observatory.
 
 ### 🔧 Fixed
 

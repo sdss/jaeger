@@ -126,6 +126,31 @@ class Design:
         return {data["holeid"]: data for data in target_data}
 
     @classmethod
+    def check_design(cls, design_id: int, site: str):
+        """Checks if a design exists and is for the current observatory."""
+
+        if targetdb.database.connected is False:
+            raise RuntimeError("Database is not connected.")
+
+        exists = (
+            targetdb.Design.select()
+            .where(targetdb.Design.design_id == design_id)
+            .exists()
+        )
+        if exists is False:
+            return False
+
+        observatory = (
+            targetdb.Design.select(targetdb.Observatory.label)
+            .join(targetdb.Field)
+            .join(targetdb.Observatory)
+            .where(targetdb.Design.design_id == design_id)
+            .scalar()
+        )
+
+        return site == observatory
+
+    @classmethod
     async def create_async(cls, design_id: int, epoch: float | None = None):
         """Returns a design while creating the configuration in an executor."""
 
