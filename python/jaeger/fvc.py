@@ -809,10 +809,10 @@ class FVC:
                     current_positions["startAlpha"] = _start_alpha
                     current_positions["startBeta"] = _start_beta
 
-            posangles = Table.from_pandas(current_positions.reset_index()).as_array()
+            posangles = Table.from_pandas(current_positions).as_array()
         proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
-        rec = Table.from_pandas(self.centroids.reset_index()).as_array()
+        rec = Table.from_pandas(self.centroids).as_array()
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
         offsets = None
