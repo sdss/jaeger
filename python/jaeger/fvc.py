@@ -162,6 +162,7 @@ class FVC:
             expose_command = self.command.send_command("fliswarm", cmd_str)
         else:
             tron = TronConnection(
+                "jaeger.jaeger",
                 config["actor"]["tron_host"],
                 config["actor"]["tron_port"],
             )
