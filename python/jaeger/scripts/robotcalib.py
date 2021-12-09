@@ -86,6 +86,7 @@ def getTargetCoords(rg):
             "alpha": alpha,
             "beta": beta,
             "offline": offline,
+            "assigned": [1]*len(positioner_id)
         }
     )
 
