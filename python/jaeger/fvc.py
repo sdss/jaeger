@@ -44,9 +44,7 @@ if TYPE_CHECKING:
 __all__ = ["FVC"]
 
 
-MAX_ROUGH_FIT_DISTANCE = 10
-MAX_FIDUCIAL_FIT_DISTANCE = 5
-MAX_FINAL_FIT_DISTANCE = 1
+FVC_CONFIG = config["fvc"]
 
 
 class FVC:
@@ -296,7 +294,7 @@ class FVC:
         xyCMMouter_matched_idx, xy_wok_rough_idx, distances = arg_nearest_neighbor(
             xyCMMouter,
             xy_wok_rough,
-            MAX_ROUGH_FIT_DISTANCE,
+            FVC_CONFIG["max_rough_fit_distance"],
         )
 
         n_rejected = len(xyCMMouter) - len(xyCMMouter_matched_idx)
@@ -354,7 +352,7 @@ class FVC:
         xyCMM_matched_idx, xy_wok_meas_idx, distances = arg_nearest_neighbor(
             xyCMM,
             xy_wok_meas,
-            MAX_FIDUCIAL_FIT_DISTANCE,
+            FVC_CONFIG["max_fiducial_fit_distance"],
         )
 
         n_rejected = len(xyCMM) - len(xyCMM_matched_idx)
@@ -415,7 +413,7 @@ class FVC:
         xy_expect_matched_idx, xy_wok_meas_idx, distances = arg_nearest_neighbor(
             xy_expect_pos,
             xy_wok_meas,
-            MAX_FINAL_FIT_DISTANCE,
+            FVC_CONFIG["max_final_fit_distance"],
         )
 
         n_rejected = len(xy_expect_pos) - len(xy_expect_matched_idx)
