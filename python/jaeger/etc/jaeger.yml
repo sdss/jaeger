@@ -84,6 +84,11 @@ fvc:
     fbi_level: 6.
     background_sigma: 3.5
     centroid_min_npix: 100
+    max_rough_fit_distance: 10.
+    max_fiducial_fit_distance: 5.
+    max_final_fit_distance: 1.
+    reference_rotator_position: 135.4
+    centre_rotation: [4115., 3092.]
     target_rms: 5
     target_delta_rms: 1
     max_fvc_iterations: 5

@@ -12,8 +12,10 @@
 
 * [#166](https://github.com/sdss/jaeger/issues/166) During `BaseConfiguration.decollide_and_get_paths()` the paths are decollided and deadlocks resolved while trying to maintain as many robots on target as possible. The fibre table is updated.
 * [#168](https://github.com/sdss/jaeger/issues/168) Functional version of design loading. Collisions are solved by first attempting to remove unassigned targets. Deadlock resolution uses the same logic as the random configuration creation. ``fiberId`` is not added to the summary file. Snapshots for each configuration are created.
+* [#172](https://github.com/sdss/jaeger/issues/172) The FVC centroids are now derotated according to the rotator angle, allowing to run the FVC loop at any rotator position.
 * Snapshots are run in a process pool executor and are saved automatically at the end of a trajectory or when `TrajectoryError` is raised.
 * `jaeger.commands.goto.goto()` generates `kaiju`-valid trajectories by default.
+* FVC RMS fit only takes assigned robots into account.
 
 ### 🔧 Fixed
 

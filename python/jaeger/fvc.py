@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Optional
 
 import numpy
 import pandas
+import scipy.spatial.distance
 import sep
 from astropy.io import fits
 from astropy.table import Table
@@ -39,7 +40,11 @@ from jaeger.utils import run_in_executor
 if TYPE_CHECKING:
     from jaeger.actor import JaegerActor
 
+
 __all__ = ["FVC"]
+
+
+FVC_CONFIG = config["fvc"]
 
 
 class FVC:
@@ -188,6 +193,7 @@ class FVC:
         fibre_type: str = "Metrology",
         plot: bool | str = False,
         polids: numpy.ndarray | list | None = None,
+        outdir: str | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
         """Processes a raw FVC image.
 
@@ -233,10 +239,13 @@ class FVC:
             fibre_data = self.fps.configuration.assignment_data.fibre_table
 
         self.fibre_data = fibre_data.copy().reset_index().set_index("fibre_type")
+        fdata = self.fibre_data  # For shots
 
         self.log(f"Processing raw image {path}")
 
         dirname, base = os.path.split(path)
+        dirname = outdir or dirname
+
         proc_path_root = os.path.join(dirname, "proc-" + base[0 : base.find(".fit")])
 
         if plot is True:
@@ -267,7 +276,45 @@ class FVC:
 
         xyCCD = self.centroids[["x", "y"]].to_numpy()
 
-        fibre_data_met = self.fibre_data.loc[fibre_type]
+        # Get the rotator angle so that we can derotate the centroids to the
+        # x/ywok-aligned configuration.
+        rotpos = hdus[1].header.get("IPA", None)
+        if rotpos is None:
+            self.log(
+                "IPA keyword not found in the header. Assuming that "
+                "the FVC image is already derotated.",
+                level=logging.WARNING,
+                to_command=False,
+            )
+
+        # The angle to derotate is rotpos minus the reference rotator position, CCW.
+        rotpos = float(rotpos) % 360.0
+        theta = rotpos - FVC_CONFIG["reference_rotator_position"]
+
+        theta_rad = numpy.deg2rad(theta)
+        sin_theta = numpy.sin(theta_rad)
+        cos_theta = numpy.cos(theta_rad)
+
+        # Rotation of theta degrees CCW around x0, y0. First we translate to a
+        # rotation around the origin, then rotate and translate back.
+        x0, y0 = FVC_CONFIG["centre_rotation"]
+        trans_matrix = numpy.array([[1, 0, x0], [0, 1, y0], [0, 0, 1]])
+        trans_neg_matrix = numpy.array([[1, 0, -x0], [0, 1, -y0], [0, 0, 1]])
+        rot_matrix = numpy.array(
+            [[cos_theta, -sin_theta, 0], [sin_theta, cos_theta, 0], [0, 0, 1]]
+        )
+
+        xyzCCD = numpy.hstack((xyCCD, numpy.ones((xyCCD.shape[0], 1))))
+        xyzCCD = numpy.dot(
+            trans_matrix,
+            numpy.dot(
+                rot_matrix,
+                numpy.dot(trans_neg_matrix, xyzCCD.T),
+            ),
+        ).T
+        xyCCD = xyzCCD[:, 0:2]
+
+        fibre_data_met = fdata.loc[fibre_type].set_index("positioner_id")
 
         # Get close enough to associate the correct centroid with the correct fiducial.
         x_wok_expect = numpy.concatenate([xCMM, fibre_data_met.xwok.to_numpy()])
@@ -277,19 +324,32 @@ class FVC:
         rt = RoughTransform(xyCCD, xy_wok_expect)
         xy_wok_rough = rt.apply(xyCCD)
 
-        # First associate fiducials and build first round just use outer fiducials
+        # 1. First associate fiducials and build first round just use outer fiducials
         rCMM = numpy.sqrt(xyCMM[:, 0] ** 2 + xyCMM[:, 1] ** 2)
         keep = rCMM > 310
         xyCMMouter = xyCMM[keep, :]
 
-        arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMMouter, xy_wok_rough)
+        xyCMMouter_matched_idx, xy_wok_rough_idx, distances = arg_nearest_neighbor(
+            xyCMMouter,
+            xy_wok_rough,
+            FVC_CONFIG["max_rough_fit_distance"],
+        )
+
+        n_rejected = len(xyCMMouter) - len(xyCMMouter_matched_idx)
+        if n_rejected:
+            self.log(
+                f"Rejected {n_rejected} rough fiducial matches.",
+                level=logging.WARNING,
+                to_command=False,
+            )
+        max_fid_rough_dist = numpy.max(distances[xyCMMouter_matched_idx])
         self.log(
-            f"Max fiducial rough distance: {numpy.max(fid_rough_dist):.3f}",
+            f"Max. valid fiducial rough distance: {numpy.max(max_fid_rough_dist):.3f}",
             level=logging.INFO,
         )
 
-        xy_fiducial_CCD = xyCCD[arg_found]
-        xy_fiducial_wok_rough = xy_wok_rough[arg_found]
+        xy_fiducial_CCD = xyCCD[xy_wok_rough_idx]
+        xy_fiducial_wok_rough = xy_wok_rough[xy_wok_rough_idx]
 
         if plot:
             self.plot_fvc_assignments(
@@ -325,16 +385,29 @@ class FVC:
                 title="Full transform 1",
             )
 
-        # Re-associate fiducials, some could have been wrongly associated in
+        # 2. Re-associate fiducials, some could have been wrongly associated in
         # first fit but second fit should be better?
-        arg_found, fid_rough_dist = arg_nearest_neighbor(xyCMM, xy_wok_meas)
+        xyCMM_matched_idx, xy_wok_meas_idx, distances = arg_nearest_neighbor(
+            xyCMM,
+            xy_wok_meas,
+            FVC_CONFIG["max_fiducial_fit_distance"],
+        )
+
+        n_rejected = len(xyCMM) - len(xyCMM_matched_idx)
+        if n_rejected:
+            self.log(
+                f"Rejected {n_rejected} fiducial matches.",
+                level=logging.WARNING,
+                to_command=False,
+            )
+        max_fid_dist = numpy.max(distances[xyCMM_matched_idx])
         self.log(
-            f"Max fiducial fit 2 distance: {numpy.max(fid_rough_dist):.3f}",
+            f"Max. valid fiducial distance: {numpy.max(max_fid_dist):.3f}",
             level=logging.INFO,
         )
 
-        xy_fiducial_CCD = xyCCD[arg_found]  # Overwriting
-        xy_fiducial_wok_refine = xy_wok_meas[arg_found]
+        xy_fiducial_CCD = xyCCD[xy_wok_meas_idx]  # Overwriting
+        xy_fiducial_wok_refine = xy_wok_meas[xy_wok_meas_idx]
 
         if plot:
             self.plot_fvc_assignments(
@@ -375,42 +448,60 @@ class FVC:
         # Transform all CCD detections to wok space
         xy_expect_pos = fibre_data_met[["xwok", "ywok"]].to_numpy()
 
-        arg_found, met_dist = arg_nearest_neighbor(xy_expect_pos, xy_wok_meas)
+        xy_expect_matched_idx, xy_wok_meas_idx, distances = arg_nearest_neighbor(
+            xy_expect_pos,
+            xy_wok_meas,
+            FVC_CONFIG["max_final_fit_distance"],
+        )
+
+        n_rejected = len(xy_expect_pos) - len(xy_expect_matched_idx)
+        if n_rejected:
+            self.log(
+                f"Rejected {n_rejected} metrology matches.",
+                level=logging.WARNING,
+                to_command=False,
+            )
+
+        # Set all in mismatched column to 1, then set to zero all the one we matched.
+        fdata.loc[:, "mismatched"] = 1
+        matched_pids = fibre_data_met.iloc[xy_expect_matched_idx].index.tolist()
+        matched_idx = fdata.positioner_id.isin(matched_pids)
+        fdata.loc[matched_idx, "mismatched"] = 0
+
+        max_met_dist = numpy.max(distances[xy_expect_matched_idx])
         self.log(
-            f"Max metrology distance: {numpy.max(met_dist):.3f}",
+            f"Max. valid metrology distance: {numpy.max(max_met_dist):.3f}",
             level=logging.INFO,
         )
-        xy_wok_robot_meas = xy_wok_meas[arg_found]
 
-        bad_match = met_dist > 1.0
-        if bad_match.sum() > 0:
-            self.log(f"Found {bad_match.sum()} metrology fibres with distance > 1 mm.")
-            self.fibre_data.loc[fibre_type].loc[bad_match, "offline"] = 1
+        # Assign measured xywok to fibres with valid matches.
+        xy_wok_robot_meas = xy_wok_meas[xy_wok_meas_idx]
 
-        self.fibre_data.loc[fibre_type, "xwok_measured"] = xy_wok_robot_meas[:, 0]
-        self.fibre_data.loc[fibre_type, "ywok_measured"] = xy_wok_robot_meas[:, 1]
+        fdata.loc[
+            (fdata.index == fibre_type) & matched_idx,
+            ["xwok_measured", "ywok_measured"],
+        ] = xy_wok_robot_meas
 
-        off = (self.fibre_data.index == fibre_type) & (self.fibre_data.offline == 1)
-        self.fibre_data.loc[off, "xwok_measured"] = self.fibre_data.loc[off, "xwok"]
-        self.fibre_data.loc[off, "ywok_measured"] = self.fibre_data.loc[off, "ywok"]
+        # Only use online, assigned robots for final RMS. First get groups of fibres
+        # with an assigned robot, that are not offline or mismatched.
+        assigned = fdata.groupby("positioner_id").filter(
+            lambda g: g.assigned.any()
+            & (g.offline == 0).all()
+            & (g.mismatched == 0).all()
+        )
+        # Now get the metrology fibre from those groups.
+        assigned = assigned.loc[fibre_type]
 
-        # Only use online, assigned robots for final RMS.
-        online = self.fibre_data.loc[
-            (self.fibre_data.index == fibre_type)
-            & (self.fibre_data.offline == 0)
-            & (self.fibre_data.assigned == 1)
-        ]
-
-        dx = online.xwok - online.xwok_measured
-        dy = online.ywok - online.ywok_measured
-
+        # Calculate RMS from assigned fibres.
+        dx = assigned.xwok - assigned.xwok_measured
+        dy = assigned.ywok - assigned.ywok_measured
         self.fitrms = numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2))
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
 
-        self.fibre_data.reset_index(inplace=True)
-        self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
+        fdata.reset_index(inplace=True)
+        fdata.set_index(["hole_id", "fibre_type"], inplace=True)
         self.proc_hdu = hdus[1]
 
         self.log(f"Finished processing {path}", level=logging.DEBUG)
@@ -754,10 +845,10 @@ class FVC:
                     current_positions["startAlpha"] = _start_alpha
                     current_positions["startBeta"] = _start_beta
 
-            posangles = Table.from_pandas(current_positions.reset_index()).as_array()
+            posangles = Table.from_pandas(current_positions).as_array()
         proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
-        rec = Table.from_pandas(self.centroids.reset_index()).as_array()
+        rec = Table.from_pandas(self.centroids).as_array()
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
         offsets = None
@@ -930,27 +1021,46 @@ class FVC:
         plt.close()
 
 
-def arg_nearest_neighbor(xyA: numpy.ndarray, xyB: numpy.ndarray):
-    """Loop over xy list A, find nearest neighbour in list B
+def arg_nearest_neighbor(
+    xyA: numpy.ndarray,
+    xyB: numpy.ndarray,
+    atol: float | None = None,
+):
+    """Finds the nearest neighbour in list B for each target in list A.
+
+    If the distance between the item in A and the closest element in B is greater
+    than ``atol``, a match is not returned.
+
+    Parameters
+    ----------
+    xyA
+        The list we want to match.
+    xyB
+        The reference table.
+    atol
+        The maximum allowed distance. `None` to not do any distance checking.
 
     Returns
     -------
     result
-        The indices in list b that match A.
+        A tuple with the indices in ``A`` that have been matched, the matching index
+        in ``B`` for each matched element in ``A``, and the distance from each
+        element in ``A`` to the nearest neighbour in ``B`` (regardless of whether
+        that distance is greater than ``atol``).
 
     """
 
-    # TODO: this is probably efficient given the number of points, but maybe
-    # replace with a scipy cdist.
-
     xyA = numpy.array(xyA)
     xyB = numpy.array(xyB)
-    out = []
-    distance = []
-    for x, y in xyA:
-        dist = numpy.sqrt((x - xyB[:, 0]) ** 2 + (y - xyB[:, 1]) ** 2)
-        amin = numpy.argmin(dist)
-        distance.append(dist[amin])
-        out.append(amin)
 
-    return numpy.array(out), numpy.array(distance)
+    distances = scipy.spatial.distance.cdist(xyA, xyB)
+
+    min_distances = numpy.array([numpy.min(d) for d in distances])
+    indexB = numpy.array([numpy.argmin(d) for d in distances])
+
+    if atol is not None:
+        good_matches = numpy.where(min_distances < atol)[0]
+    else:
+        good_matches = numpy.arange(len(indexB))
+
+    return good_matches, indexB[good_matches], min_distances
