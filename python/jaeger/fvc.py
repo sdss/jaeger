@@ -276,6 +276,44 @@ class FVC:
 
         xyCCD = self.centroids[["x", "y"]].to_numpy()
 
+        # Get the rotator angle so that we can derotate the centroids to the
+        # x/ywok-aligned configuration.
+        rotpos = hdus[1].header.get("IPA", None)
+        if rotpos is None:
+            self.log(
+                "IPA keyword not found in the header. Assuming that "
+                "the FVC image is already derotated.",
+                level=logging.WARNING,
+                to_command=False,
+            )
+
+        # The angle to derotate is rotpos minus the reference rotator position, CCW.
+        rotpos = float(rotpos) % 360.0
+        theta = rotpos - FVC_CONFIG["reference_rotator_position"]
+
+        theta_rad = numpy.deg2rad(theta)
+        sin_theta = numpy.sin(theta_rad)
+        cos_theta = numpy.cos(theta_rad)
+
+        # Rotation of theta degrees CCW around x0, y0. First we translate to a
+        # rotation around the origin, then rotate and translate back.
+        x0, y0 = FVC_CONFIG["centre_rotation"]
+        trans_matrix = numpy.array([[1, 0, x0], [0, 1, y0], [0, 0, 1]])
+        trans_neg_matrix = numpy.array([[1, 0, -x0], [0, 1, -y0], [0, 0, 1]])
+        rot_matrix = numpy.array(
+            [[cos_theta, -sin_theta, 0], [sin_theta, cos_theta, 0], [0, 0, 1]]
+        )
+
+        xyzCCD = numpy.hstack((xyCCD, numpy.ones((xyCCD.shape[0], 1))))
+        xyzCCD = numpy.dot(
+            trans_matrix,
+            numpy.dot(
+                rot_matrix,
+                numpy.dot(trans_neg_matrix, xyzCCD.T),
+            ),
+        ).T
+        xyCCD = xyzCCD[:, 0:2]
+
         fibre_data_met = fdata.loc[fibre_type].set_index("positioner_id")
 
         # Get close enough to associate the correct centroid with the correct fiducial.
