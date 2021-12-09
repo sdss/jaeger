@@ -448,6 +448,7 @@ def get_snapshot_async(
     robot_grid: Optional[RobotGridCalib] = None,
     data: Optional[dict] = None,
     highlight: int | None = None,
+    title: str | None = None,
 ):
     """Creates an FPS snapshot and saves it to disk. To be used with an executor.
 
@@ -463,6 +464,8 @@ def get_snapshot_async(
         run in an executor.
     highlight
         Robot to highlight.
+    title
+        A title for the plot.
 
     """
 
@@ -479,6 +482,10 @@ def get_snapshot_async(
         ax = robot_grid.plot_state(highlightRobot=highlight)
 
     assert ax is not None
+
+    if title is not None:
+        ax.set_title(title)
+
     ax.figure.savefig(path)
 
 
@@ -487,6 +494,7 @@ async def get_snapshot(
     fps: FPS | None = None,
     collision_buffer: float | None = None,
     highlight: int | None = None,
+    title: str | None = None,
 ):
     """Plots a snapshot of the FPS and saves it to disk."""
 
@@ -513,6 +521,7 @@ async def get_snapshot(
         path,
         data=data,
         highlight=highlight,
+        title=title,
         executor="process",
     )
 

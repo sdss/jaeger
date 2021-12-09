@@ -443,11 +443,16 @@ class BaseConfiguration:
 
         data = dump_robot_grid(self.robot_grid)
 
+        title = None
+        if self.configuration_id:
+            title = f"Configuration {self.configuration_id}"
+
         await run_in_executor(
             get_snapshot_async,
             path,
             data=data,
             highlight=highlight or self._decollided,
+            title=title,
             executor="process",
         )
 
