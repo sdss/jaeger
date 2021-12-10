@@ -514,7 +514,7 @@ class FVC:
         reported_positions: numpy.ndarray,
         fibre_data: Optional[pandas.DataFrame] = None,
         k: Optional[float] = None,
-        max_offset: Optional[float] = None,
+        max_correction: Optional[float] = None,
     ) -> pandas.DataFrame:
         """Determines the offset to apply to the currently reported positions.
 
@@ -536,7 +536,7 @@ class FVC:
             last run.
         k
             The fraction of the correction to apply.
-        max_offset
+        max_correction
             The maximum offset allowed per robot and arm, in degrees. Corrections
             larger than ``max_offset`` are clipped.
 

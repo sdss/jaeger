@@ -206,7 +206,7 @@ async def loop(
                 fvc.calculate_offsets,
                 fps.get_positions(),
                 k=k,
-                max_offset=max_correction,
+                max_correction=max_correction,
             )
 
             # 5. Apply corrections.
