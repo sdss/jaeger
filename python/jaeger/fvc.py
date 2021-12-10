@@ -904,11 +904,16 @@ class FVC:
             else:
                 robot.setDestinationAlphaBeta(row.alpha_new, row.beta_new)
 
-        # Check for collisions.
+        # Check for collisions. If robots are collided just leave them there.
         collided = [rid for rid in grid.robotDict if grid.isCollided(rid)]
         n_coll = len(collided)
         if n_coll > 0:
-            raise FVCError(f"Cannot apply corrections. {n_coll} robots are collided.")
+            for pid in collided:
+                positioner = self.fps[pid]
+                alpha = positioner.alpha
+                beta = positioner.beta
+                grid.robotDict[pid].setAlphaBeta(alpha, beta)
+                grid.robotDict[pid].setDestinationAlphaBeta(alpha, beta)
 
         # Generate trajectories.
         (to_destination, _, did_fail, deadlocks) = await get_path_pair_in_executor(
