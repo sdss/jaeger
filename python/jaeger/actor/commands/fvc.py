@@ -66,13 +66,53 @@ async def expose(
 
 
 @fvc_parser.command(cancellable=True)
-@click.option("--exposure-time", type=float, help="Exposure time.")
-@click.option("--fbi-level", type=float, help="FBI LED levels.")
-@click.option("--one", is_flag=True, help="Only runs one FVC correction iteration.")
-@click.option("--max-iterations", type=int, help="Maximum number of iterations.")
-@click.option("--stack", type=int, default=1, help="Number of FVC image to stack.")
-@click.option("--plot/--no-plot", default=True, help="Generate and save plots.")
-@click.option("--apply/--no-apply", default=True, help="Apply corrections.")
+@click.option(
+    "--exposure-time",
+    type=float,
+    help="Exposure time.",
+)
+@click.option(
+    "--fbi-level",
+    type=float,
+    help="FBI LED levels.",
+)
+@click.option(
+    "--one",
+    is_flag=True,
+    help="Only runs one FVC correction iteration.",
+)
+@click.option(
+    "--max-iterations",
+    type=int,
+    help="Maximum number of iterations.",
+)
+@click.option(
+    "--stack",
+    type=int,
+    default=1,
+    help="Number of FVC image to stack.",
+)
+@click.option(
+    "--plot/--no-plot",
+    default=True,
+    help="Generate and save plots.",
+)
+@click.option(
+    "--apply/--no-apply",
+    default=True,
+    help="Apply corrections.",
+)
+@click.option(
+    "-m",
+    "--max-correction",
+    type=float,
+    help="Maximum correction allowed, in degrees.",
+)
+@click.option(
+    "-k",
+    type=float,
+    help="Proportional term of the correction.",
+)
 async def loop(
     command: Command[JaegerActor],
     fps: FPS,
@@ -83,6 +123,8 @@ async def loop(
     stack: int = 3,
     plot: bool = True,
     apply: bool = True,
+    max_correction: float | None = None,
+    k: float | None = None,
 ):
     """Executes the FVC correction loop.
 
@@ -160,7 +202,12 @@ async def loop(
             # 4. Update current positions and calculate offsets.
             command.debug("Calculating offsets.")
             await fps.update_position()
-            await run_in_executor(fvc.calculate_offsets, fps.get_positions())
+            await run_in_executor(
+                fvc.calculate_offsets,
+                fps.get_positions(),
+                k=k,
+                max_offset=max_correction,
+            )
 
             # 5. Apply corrections.
             if success is None and apply is True:

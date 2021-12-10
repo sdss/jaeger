@@ -514,6 +514,7 @@ class FVC:
         reported_positions: numpy.ndarray,
         fibre_data: Optional[pandas.DataFrame] = None,
         k: Optional[float] = None,
+        max_offset: Optional[float] = None,
     ) -> pandas.DataFrame:
         """Determines the offset to apply to the currently reported positions.
 
@@ -535,6 +536,9 @@ class FVC:
             last run.
         k
             The fraction of the correction to apply.
+        max_offset
+            The maximum offset allowed per robot and arm, in degrees. Corrections
+            larger than ``max_offset`` are clipped.
 
         Returns
         -------
@@ -547,7 +551,9 @@ class FVC:
         self.log("Calculating offset from FVC image and fit.")
 
         site = config["observatory"]
+
         self.k = k or config["fvc"]["k"]
+        max_offset: float = max_offset or config["fvc"]["max_offset"]
 
         if fibre_data is None and self.fibre_data is None:
             raise FVCError("No fibre data passed or stored in the instance.")
@@ -663,7 +669,6 @@ class FVC:
         offsets["beta_offset"] = beta_offset
 
         # Clip very large offsets and apply a proportional term.
-        max_offset = config["fvc"]["max_offset"]
         alpha_offset_c = numpy.clip(self.k * alpha_offset, -max_offset, max_offset)
         beta_offset_c = numpy.clip(self.k * beta_offset, -max_offset, max_offset)
 
