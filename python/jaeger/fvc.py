@@ -905,7 +905,7 @@ class FVC:
                 robot.setDestinationAlphaBeta(row.alpha_new, row.beta_new)
 
         # Check for collisions. If robots are collided just leave them there.
-        collided = [rid for rid in grid.robotDict if grid.isCollided(rid)]
+        collided = grid.getCollidedRobotList()
         n_coll = len(collided)
         if n_coll > 0:
             for pid in collided:
