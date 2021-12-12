@@ -553,7 +553,7 @@ class FVC:
         site = config["observatory"]
 
         self.k = k or config["fvc"]["k"]
-        max_offset: float = max_offset or config["fvc"]["max_offset"]
+        max_offset: float = max_correction or config["fvc"]["max_correction"]
 
         if fibre_data is None and self.fibre_data is None:
             raise FVCError("No fibre data passed or stored in the instance.")
