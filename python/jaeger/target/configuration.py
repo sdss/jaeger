@@ -874,6 +874,7 @@ class BaseAssignmentData:
         ("offline", numpy.int8, 0),
         ("deadlocked", numpy.int8, 0),
         ("decollided", numpy.int8, 0),
+        ("mismatched", numpy.int8, 0),
         ("wavelength", numpy.float32, numpy.nan),
         ("fiberId", numpy.int32, -999),
         ("ra_icrs", numpy.float64, numpy.nan),
@@ -890,6 +891,9 @@ class BaseAssignmentData:
         ("xwok_kaiju", numpy.float64, numpy.nan),
         ("ywok_kaiju", numpy.float64, numpy.nan),
         ("zwok_kaiju", numpy.float64, numpy.nan),
+        ("xwok_measured", numpy.float64, numpy.nan),
+        ("ywok_measured", numpy.float64, numpy.nan),
+        ("zwok_measured", numpy.float64, numpy.nan),
         ("xtangent", numpy.float64, numpy.nan),
         ("ytangent", numpy.float64, numpy.nan),
         ("ztangent", numpy.float64, numpy.nan),
@@ -1160,6 +1164,13 @@ class BaseAssignmentData:
         new_data = pandas.DataFrame.from_dict(data, orient="index")
         self.fibre_table.loc[new_data.index, new_data.columns] = new_data
         self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
+
+    def update_from_wok_measured(
+        self,
+        fibre_type: str,
+        positioner_ids: list[int] | None = None,
+    ):
+        """Updates the coordinates from the ``x/ywok_measured``."""
 
     def _check_all_assigned(self):
         """Check that all the positioners are in ``target_data``."""
