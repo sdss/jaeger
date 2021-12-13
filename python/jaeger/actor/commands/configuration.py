@@ -83,6 +83,11 @@ def configuration():
     default=False,
     help="Send and start the from_destination trajectory.",
 )
+@click.option(
+    "--reissue",
+    is_flag=True,
+    help="Only reissue the configuration_loaded keyword.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -96,10 +101,19 @@ async def load(
     ingest: bool = False,
     write_summary: bool = False,
     execute: bool = False,
+    reissue: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
     assert command.actor is not None
+
+    if reissue is True:
+        if fps.configuration is None or fps.configuration.design is None:
+            return command.fail("No configuration loaded.")
+        if designid is not None and designid != fps.configuration.design.design_id:
+            return command.fail("Mismatch between loaded and provided design IDs.")
+        _output_configuration_loaded(command, fps)
+        return command.finish()
 
     if designid is not None:
         command.info(f"Loading design {designid}.")
@@ -160,11 +174,28 @@ async def load(
         fps.configuration.configuration_id = -999
 
     if ingest and write_summary:
-        summary_file = fps.configuration.write_summary(overwrite=True)
-    else:
-        summary_file = ""
+        fps.configuration.write_summary(overwrite=True)
+
+    _output_configuration_loaded(command, fps)
+
+    snapshot = await configuration.save_snapshot()
+    command.info(configuration_snapshot=snapshot)
+
+    if execute:
+        cmd = await command.send_command("jaeger", "configuration execute")
+        if cmd.status.did_fail:
+            return cmd.fail("Failed executing configuration.")
+
+    return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
+
+
+def _output_configuration_loaded(command: Command[JaegerActor], fps: FPS):
+    """Outputs the loaded configuration."""
+
+    assert fps.configuration
 
     boresight = fps.configuration.assignment_data.boresight
+    configuration = fps.configuration
 
     command.debug(
         configuration_loaded=[
@@ -176,19 +207,9 @@ async def load(
             configuration.design.field.position_angle if configuration.design else 0,
             boresight[0, 0] if boresight is not None else -999.0,
             boresight[0, 1] if boresight is not None else -999.0,
-            summary_file,
+            configuration._summary_file or "",
         ]
     )
-
-    snapshot = await configuration.save_snapshot()
-    command.info(configuration_snapshot=snapshot)
-
-    if execute:
-        cmd = await command.send_command("jaeger", "configuration execute")
-        if cmd.status.did_fail:
-            return cmd.fail("Failed executing configuration.")
-
-    return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
 
 @configuration.command()

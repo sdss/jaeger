@@ -139,6 +139,7 @@ class BaseConfiguration:
         # Configuration ID is None until we insert in the database.
         # Once set, it cannot be changed.
         self.configuration_id: int | None = None
+        self._summary_file: str | None = None
 
         self.design: Design | None = None
         self.design_id: int | None = None
@@ -740,6 +741,8 @@ class BaseConfiguration:
             hdr=header,
             enums={"fiberType": ("FIBERTYPE", ("BOSS", "APOGEE", "METROLOGY", "NONE"))},
         )
+
+        self._summary_file = str(path)
 
         return path
 
