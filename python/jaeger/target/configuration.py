@@ -991,7 +991,7 @@ class BaseAssignmentData:
 
         return fibre_table
 
-    def _from_icrs(self):
+    def _init_from_icrs(self):
         """Loads fibre data from target data using ICRS coordinates."""
 
         alpha0, beta0 = config["kaiju"]["lattice_position"]
@@ -1047,7 +1047,7 @@ class BaseAssignmentData:
         self.fibre_table.sort_index(inplace=True)
         self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
-    def _from_wok(self):
+    def _init_from_wok(self):
         """Loads fibre data from target data using wok coordinates."""
 
         self._check_all_assigned()
@@ -1072,7 +1072,7 @@ class BaseAssignmentData:
             self.target_data[hole_id].update({"alpha": alpha, "beta": beta})
 
         # Now simply call _from_positioner()
-        self._from_positioner()
+        self._init_from_positioner()
 
         # We want to keep the original wok coordinates that now have been overridden
         # by calling _from_positioner.
@@ -1096,7 +1096,7 @@ class BaseAssignmentData:
 
         self.fibre_table[["xwok", "ywok", "zwok"]] = wok_coords
 
-    def _from_positioner(self):
+    def _init_from_positioner(self):
         """Loads fibre data from target data using positioner coordinates."""
 
         self._check_all_assigned()
@@ -1363,7 +1363,7 @@ class AssignmentData(BaseAssignmentData):
         )
 
         # Load fibre data using ICRS coordinates.
-        self._from_icrs()
+        self._init_from_icrs()
 
         # Final validation
         self.validate()
@@ -1457,11 +1457,11 @@ class ManualAssignmentData(BaseAssignmentData):
                     "Creating a manual configuration from ICRS "
                     "coordinates requires defining a field centre."
                 )
-            self._from_icrs()
+            self._init_from_icrs()
         elif "xwok" in sample_target and "ywok" in sample_target:
-            self._from_wok()
+            self._init_from_wok()
         elif "alpha" in sample_target and "beta" in sample_target:
-            self._from_positioner()
+            self._init_from_positioner()
         else:
             raise ValueError("Target data does not contain the necessary columns.")
 
