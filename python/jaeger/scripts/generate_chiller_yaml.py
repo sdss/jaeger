@@ -27,6 +27,15 @@ modules:
 """
 
 
+NAME_CONV = {
+    "STATUS_FLUID_FLOW_SV": "STATUS_FLUID_FLOW",
+    "USER_FLOW_SP_GPM_SV": "FLOW_USER_SETPOINT",
+    "STATUS_DISPLAY_VALUE_SV": "DISPLAY_VALUE",
+    "USER_SETPOINT_SV": "TEMPERATURE_USER_SETPOINT",
+    "STATUS_AMBIENT_AIR_SV": "STATUS_AMBIENT_AIR",
+}
+
+
 def generate_chiller_yaml(variables_files: str):
     """Generates a YAML file for Drift with all the chiller variables from the CSV."""
 
@@ -37,7 +46,12 @@ def generate_chiller_yaml(variables_files: str):
 
     for _, row in variables.iterrows():
         address = row.Address - 1
-        devices[row.Name.upper()] = {
+
+        name = row.Name.upper()
+        if name in NAME_CONV:
+            name = NAME_CONV[name]
+
+        devices[name] = {
             "address": address,
             "units": row.Unit if isinstance(row.Unit, str) else "",
             "category": "chiller",
@@ -45,7 +59,7 @@ def generate_chiller_yaml(variables_files: str):
         }
 
         if row.Scale != 1:
-            devices[row.Name.upper()].update(
+            devices[name].update(
                 {
                     "adaptor": "proportional",
                     "adaptor_extra_params": [0.1],

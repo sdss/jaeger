@@ -49,6 +49,14 @@ modules:
         category: chiller
         description: General fault current state; True=Fault
         units: ''
+      DISPLAY_VALUE:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 8991
+        category: chiller
+        description: Current Display Value
+        units: ''
       FEL_AMBIENT_AIR_SV:
         address: 8988
         category: chiller
@@ -139,18 +147,18 @@ modules:
         category: chiller
         description: Total freeze protect warning count over machines life
         units: ''
-      STATUS_AMBIENT_AIR_SV:
-        address: 8985
-        category: chiller
-        description: .nan
-        units: ''
-      STATUS_DISPLAY_VALUE_SV:
+      FLOW_USER_SETPOINT:
         adaptor: proportional
         adaptor_extra_params:
         - 0.1
-        address: 8991
+        address: 9017
         category: chiller
-        description: Current Display Value
+        description: Process fluid setpoint flow Gallons Per Minute
+        units: gpm
+      STATUS_AMBIENT_AIR:
+        address: 8985
+        category: chiller
+        description: .nan
         units: ''
       STATUS_DUTY_CYCLE_100_SV:
         address: 8979
@@ -175,7 +183,7 @@ modules:
         category: chiller
         description: ECM fanspeed current value
         units: ''
-      STATUS_FLUID_FLOW_SV:
+      STATUS_FLUID_FLOW:
         adaptor: proportional
         adaptor_extra_params:
         - 0.1
@@ -271,20 +279,7 @@ modules:
         category: chiller
         description: Sp Hi Limit, C or F
         units: C/F
-      USER_FLOW_SP_GPM_SV:
-        adaptor: proportional
-        adaptor_extra_params:
-        - 0.1
-        address: 9017
-        category: chiller
-        description: Process fluid setpoint flow Gallons Per Minute
-        units: gpm
-      USER_REMOTE_START_STOP_SV:
-        address: 9019
-        category: chiller
-        description: .nan
-        units: ''
-      USER_SETPOINT_SV:
+      TEMPERATURE_USER_SETPOINT:
         adaptor: proportional
         adaptor_extra_params:
         - 0.1
@@ -292,6 +287,11 @@ modules:
         category: chiller
         description: Process fluid setpoint temperature C or F
         units: C
+      USER_REMOTE_START_STOP_SV:
+        address: 9019
+        category: chiller
+        description: .nan
+        units: ''
       WARN_AMB_AIR_SV:
         address: 9001
         category: chiller
