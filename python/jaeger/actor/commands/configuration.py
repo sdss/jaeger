@@ -17,7 +17,11 @@ from astropy.time import Time
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import check_trajectory
-from jaeger.target.configuration import Configuration, ManualConfiguration
+from jaeger.target.configuration import (
+    Configuration,
+    DitheredConfiguration,
+    ManualConfiguration,
+)
 from jaeger.target.design import Design
 from jaeger.target.tools import create_random_configuration
 
@@ -222,24 +226,29 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
 
-    if fps.configuration.from_destination is not None:
-        from_destination = fps.configuration.from_destination
-        command.info(text="Using stored trajectory (from destination).")
-    else:
+    if fps.configuration.is_dither:
+        assert isinstance(fps.configuration, DitheredConfiguration)
         command.info(text="Calculating trajectory.")
+        trajectory = await fps.configuration.get_paths()
+    else:
+        if fps.configuration.from_destination is not None:
+            trajectory = fps.configuration.from_destination
+            command.info(text="Using stored trajectory (from destination).")
+        else:
+            command.info(text="Calculating trajectory.")
 
-        try:
-            from_destination = await fps.configuration.decollide_and_get_paths()
-        except Exception as err:
-            return command.fail(error=f"Failed getting trajectory: {err}")
+            try:
+                trajectory = await fps.configuration.decollide_and_get_paths()
+            except Exception as err:
+                return command.fail(error=f"Failed getting trajectory: {err}")
 
-        if not (await check_trajectory(from_destination, fps=fps, atol=1)):
-            return command.fail(error="Trajectory validation failed.")
+            if not (await check_trajectory(trajectory, fps=fps, atol=1)):
+                return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing forward trajectory.")
 
     try:
-        await fps.send_trajectory(from_destination, command=command)
+        await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
@@ -256,25 +265,52 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
 
-    to_destination = fps.configuration.to_destination
-    if to_destination is None:
-        return command.fail(
-            error="The configuration does not have a to_destination path. Use unwind."
-        )
+    if fps.configuration.is_dither:
+        trajectory = fps.configuration.from_destination
+    else:
+        trajectory = fps.configuration.to_destination
+        if trajectory is None:
+            return command.fail(
+                error="The configuration does not have a to_destination "
+                "path. Use unwind."
+            )
 
-    # Very large atol here because we may have moved the robots a fair amount
-    # during the FVC feedback loop.
-    if not (await check_trajectory(to_destination, fps=fps, atol=5)):
-        return command.fail(error="Trajectory validation failed.")
+        # Very large atol here because we may have moved the robots a fair amount
+        # during the FVC feedback loop.
+        if not (await check_trajectory(trajectory, fps=fps, atol=5)):
+            return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing reverse trajectory.")
 
     try:
-        await fps.send_trajectory(to_destination, command=command)
+        await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
     command.finish()
+
+
+@configuration.command()
+@click.argument("RADIUS", type=float)
+async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
+    """Dither a loaded configuration."""
+
+    if fps.configuration is None:
+        return command.fail("A configuration must first be loaded.")
+
+    if isinstance(fps.configuration, DitheredConfiguration):
+        parent_configuration = fps.configuration.parent_configuration
+    else:
+        parent_configuration = fps.configuration
+
+    fps.configuration = DitheredConfiguration(parent_configuration, radius)
+
+    fps.configuration.write_to_database()
+    fps.configuration.write_summary(overwrite=True)
+
+    _output_configuration_loaded(command, fps)
+
+    command.finish(f"Dither configuration {fps.configuration.configuration_id} loaded.")
 
 
 @configuration.command()

@@ -150,6 +150,8 @@ class BaseConfiguration:
         self.design: Design | None = None
         self.design_id: int | None = None
 
+        self.extra_summary_data = {}
+
         self.fps = FPS.get_instance()
 
         self.robot_grid = self._initialise_grid()
@@ -638,6 +640,8 @@ class BaseConfiguration:
                 }
             )
 
+        header.update(self.extra_summary_data)
+
         fibermap, default = get_fibermap_table(len(fdata))
 
         i = 0
@@ -779,7 +783,7 @@ class Configuration(BaseConfiguration):
 class DitheredConfiguration(BaseConfiguration):
     def __init__(
         self,
-        configuration: Configuration,
+        configuration: BaseConfiguration,
         radius: float,
         epoch: float | None = None,
     ):
@@ -788,7 +792,7 @@ class DitheredConfiguration(BaseConfiguration):
 
         super().__init__()
 
-        self.parent_configuration: Configuration = configuration
+        self.parent_configuration: BaseConfiguration = configuration
         self.is_dither = True
 
         self.design = configuration.design
@@ -825,35 +829,72 @@ class DitheredConfiguration(BaseConfiguration):
         assert self.design
 
         parent_data = self.parent_configuration.assignment_data.fibre_table.copy()
+        self.assignment_data.fibre_table = parent_data
 
         data = {}
 
-        wok_data = self.assignment_data.wok_data
+        for (pid, ftype), row_parent in parent_data.iterrows():  # type: ignore
 
-        for (pid, ftype), data in parent_data.iterrows():  # type: ignore
-
-            if data.valid == 0:
-                data[(pid, ftype)] = {"hole_id": wok_data.at[pid, "holeID"]}
+            if row_parent.valid == 0:
                 continue
 
             robot = self.robot_grid.robotDict[pid]
-            robot.setAlphaBeta(data.alpha, data.beta)
-            robot.uniformDither(self.radius)
+            robot.setAlphaBeta(row_parent.alpha, row_parent.beta)
+            new_alpha, new_beta = robot.uniformDither(self.radius)
 
             icrs_data = self.assignment_data.positioner_to_icrs(
                 pid,
                 ftype,
-                data.alpha,
-                data.beta,
+                new_alpha,
+                new_beta,
                 position_angle=self.design.field.position_angle,
                 update=False,
             )
             data[(pid, ftype)] = icrs_data
 
         # Now do a single update of the whole fibre table.
-        self.fibre_table = pandas.DataFrame.from_dict(data, orient="index")
-        self.fibre_table.sort_index(inplace=True)
-        self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
+        new_fibre_table = pandas.DataFrame.from_dict(data, orient="index")
+        new_fibre_table.sort_index(inplace=True)
+        new_fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
+
+        self.assignment_data.fibre_table.loc[new_fibre_table.index, :] = new_fibre_table
+        self.assignment_data.validate()
+
+    async def get_paths(self):
+
+        self.robot_grid = self._initialise_grid()
+
+        ftable = self.assignment_data.fibre_table
+        parent_ftable = self.parent_configuration.assignment_data.fibre_table
+
+        for robot in self.robot_grid.robotDict.values():
+            if robot.isOffline:
+                ftable.loc[robot.id, "offline"] = 1
+                continue
+
+            row = ftable.loc[robot.id].iloc[0]
+            prow = parent_ftable.loc[robot.id].iloc[0]
+
+            robot.setAlphaBeta(prow.alpha, prow.beta)
+            robot.setDestinationAlphaBeta(row.alpha, row.beta)
+
+        (
+            self.to_destination,
+            self.from_destination,
+            did_fail,
+            deadlocks,
+        ) = await get_path_pair_in_executor(
+            self.robot_grid,
+            ignore_did_fail=True,
+            stop_if_deadlock=True,
+            ignore_initial_collisions=True,
+        )
+        if did_fail:
+            log.warning(
+                f"Found {len(deadlocks)} deadlocks but applying correction anyway."
+            )
+
+        return self.to_destination
 
 
 class ManualConfiguration(BaseConfiguration):
