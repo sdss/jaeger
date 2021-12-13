@@ -304,6 +304,7 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
         parent_configuration = fps.configuration
 
     fps.configuration = DitheredConfiguration(parent_configuration, radius)
+    await fps.configuration.compute_dithers()
 
     fps.configuration.write_to_database()
     fps.configuration.write_summary(overwrite=True)

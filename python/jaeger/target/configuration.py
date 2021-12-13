@@ -822,21 +822,22 @@ class DitheredConfiguration(BaseConfiguration):
             "dither_radius": radius,
         }
 
-        self.compute_dithers()
-
-    def compute_dithers(self):
+    async def compute_dithers(self):
 
         assert self.design
 
+        await self.fps.update_position()
+        positions = self.fps.get_positions_dict()
+
         parent_data = self.parent_configuration.assignment_data.fibre_table.copy()
+        for idx, _ in parent_data.iterrows():
+            parent_data.loc[idx, ["alpha", "beta"]] = positions[idx[0]]  # type: ignore
+
         self.assignment_data.fibre_table = parent_data
 
         data = {}
 
         for (pid, ftype), row_parent in parent_data.iterrows():  # type: ignore
-
-            if row_parent.valid == 0:
-                continue
 
             robot = self.robot_grid.robotDict[pid]
             robot.setAlphaBeta(row_parent.alpha, row_parent.beta)
@@ -865,7 +866,9 @@ class DitheredConfiguration(BaseConfiguration):
         self.robot_grid = self._initialise_grid()
 
         ftable = self.assignment_data.fibre_table
-        parent_ftable = self.parent_configuration.assignment_data.fibre_table
+
+        await self.fps.update_position()
+        positions = self.fps.get_positions_dict()
 
         for robot in self.robot_grid.robotDict.values():
             if robot.isOffline:
@@ -873,9 +876,8 @@ class DitheredConfiguration(BaseConfiguration):
                 continue
 
             row = ftable.loc[robot.id].iloc[0]
-            prow = parent_ftable.loc[robot.id].iloc[0]
 
-            robot.setAlphaBeta(prow.alpha, prow.beta)
+            robot.setAlphaBeta(*positions[robot.id])
             robot.setDestinationAlphaBeta(row.alpha, row.beta)
 
         (
