@@ -63,6 +63,7 @@ __all__ = [
     "Configuration",
     "ManualConfiguration",
     "AssignmentData",
+    "DitheredConfiguration",
 ]
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
@@ -213,7 +214,7 @@ class BaseConfiguration:
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-    async def decollide_and_get_paths(
+    async def get_paths(
         self,
         decollide: bool = True,
         simple_decollision: bool = False,
@@ -781,6 +782,8 @@ class Configuration(BaseConfiguration):
 
 
 class DitheredConfiguration(BaseConfiguration):
+    """A positioner configuration dithered from a parent configuration."""
+
     def __init__(
         self,
         configuration: BaseConfiguration,
@@ -822,28 +825,19 @@ class DitheredConfiguration(BaseConfiguration):
             "dither_radius": radius,
         }
 
-    async def compute_dithers(self):
+    def compute_coordinates(self, new_positions: dict):
 
         assert self.design
 
-        await self.fps.update_position()
-        positions = self.fps.get_positions_dict()
-
-        parent_data = self.parent_configuration.assignment_data.fibre_table.copy()
-        for idx, _ in parent_data.iterrows():
-            parent_data.loc[idx, ["alpha", "beta"]] = positions[idx[0]]  # type: ignore
-
-        self.assignment_data.fibre_table = parent_data
-
         data = {}
 
-        for (pid, ftype), row_parent in parent_data.iterrows():  # type: ignore
+        for index, _ in self.assignment_data.fibre_table.iterrows():
+            pid, ftype = cast(tuple, index)
 
-            robot = self.robot_grid.robotDict[pid]
-            robot.setAlphaBeta(row_parent.alpha, row_parent.beta)
-            new_alpha, new_beta = robot.uniformDither(self.radius)
+            new_alpha = new_positions[pid]["alpha"]
+            new_beta = new_positions[pid]["beta"]
 
-            icrs_data = self.assignment_data.positioner_to_icrs(
+            row_data = self.assignment_data.positioner_to_icrs(
                 pid,
                 ftype,
                 new_alpha,
@@ -851,50 +845,64 @@ class DitheredConfiguration(BaseConfiguration):
                 position_angle=self.design.field.position_angle,
                 update=False,
             )
-            data[(pid, ftype)] = icrs_data
+
+            robot = self.fps.positioners[pid]
+            if robot.offline:
+                row_data["offline"] = 1
+            if robot.disabled:
+                row_data["disabled"] = 1
+
+            data[(pid, ftype)] = row_data
 
         # Now do a single update of the whole fibre table.
         new_fibre_table = pandas.DataFrame.from_dict(data, orient="index")
         new_fibre_table.sort_index(inplace=True)
         new_fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
-        self.assignment_data.fibre_table.loc[new_fibre_table.index, :] = new_fibre_table
+        self.assignment_data.fibre_table = new_fibre_table
         self.assignment_data.validate()
+
+        self.assignment_data.fibre_table.loc[:, ["on_target", "assigned"]] = 0
 
     async def get_paths(self):
 
         self.robot_grid = self._initialise_grid()
-
-        ftable = self.assignment_data.fibre_table
 
         await self.fps.update_position()
         positions = self.fps.get_positions_dict()
 
         for robot in self.robot_grid.robotDict.values():
             if robot.isOffline:
-                ftable.loc[robot.id, "offline"] = 1
                 continue
 
-            row = ftable.loc[robot.id].iloc[0]
-
             robot.setAlphaBeta(*positions[robot.id])
-            robot.setDestinationAlphaBeta(row.alpha, row.beta)
+            new_alpha, new_beta = robot.uniformDither(self.radius)
+            robot.setDestinationAlphaBeta(new_alpha, new_beta)
 
         (
             self.to_destination,
             self.from_destination,
-            did_fail,
-            deadlocks,
+            *_,
         ) = await get_path_pair_in_executor(
             self.robot_grid,
             ignore_did_fail=True,
             stop_if_deadlock=True,
             ignore_initial_collisions=True,
         )
-        if did_fail:
-            log.warning(
-                f"Found {len(deadlocks)} deadlocks but applying correction anyway."
-            )
+
+        # Get the actual last points where we went. Due to deadlocks and
+        # collisions these may not actually be the ones we set.
+        new_positions = {}
+        for positioner_id in self.robot_grid.robotDict:
+            if positioner_id in self.to_destination:
+                alpha = self.to_destination[positioner_id]["alpha"][-1][0]
+                beta = self.to_destination[positioner_id]["beta"][-1][0]
+            else:
+                alpha, beta = positions[positioner_id]
+
+            new_positions[positioner_id] = {"alpha": alpha, "beta": beta}
+
+        self.compute_coordinates(new_positions)
 
         return self.to_destination
 
