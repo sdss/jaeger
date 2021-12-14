@@ -485,11 +485,18 @@ class FVC:
 
         # Only use online, assigned robots for final RMS. First get groups of fibres
         # with an assigned robot, that are not offline or mismatched.
-        assigned = fdata.groupby("positioner_id").filter(
-            lambda g: g.assigned.any()
-            & (g.offline == 0).all()
-            & (g.mismatched == 0).all()
-        )
+        if fdata.assigned.sum() > 0:
+            assigned = fdata.groupby("positioner_id").filter(
+                lambda g: g.assigned.any()
+                & (g.offline == 0).all()
+                & (g.mismatched == 0).all()
+            )
+        else:
+            self.log("No assigned fibres found. Using all matched fibres.")
+            assigned = fdata.groupby("positioner_id").filter(
+                lambda g: (g.offline == 0).all() & (g.mismatched == 0).all()
+            )
+
         # Now get the metrology fibre from those groups.
         assigned = assigned.loc[fibre_type]
 

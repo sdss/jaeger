@@ -1,43 +1,331 @@
 address: 10.25.1.162
-port: 1111
 modules:
-    CHILLER:
-        mode: holding_register
-        channels: -1
-        description: APO chiller status variables
-        devices:
-            DISPLAY_VALUE:
-                address: 8991
-                adaptor: proportional
-                adaptor_extra_params: [0.1]
-                units: celsius
-                category: chiller
-                description: Status display value SV
-            FLOW_USER_SETPOINT:
-                address: 9017
-                adaptor: proportional
-                adaptor_extra_params: [0.1]
-                units: gpm
-                category: chiller
-                description: Process fluid setpoint flow GPM
-            TEMPERATURE_USER_SETPOINT:
-                address: 9018
-                adaptor: proportional
-                adaptor_extra_params: [0.1]
-                units: celsius
-                category: chiller
-                description: Process fluid setpoint temperature C
-            STATUS_AMBIENT_AIR:
-                address: 8985
-                adaptor: proportional
-                adaptor_extra_params: [0.1]
-                units: celsius
-                category: chiller
-                description:
-            STATUS_FLUID_FLOW:
-                address: 9011
-                adaptor: proportional
-                adaptor_extra_params: [0.1]
-                units: gpm
-                category: chiller
-                description:
+  CHILLER:
+    channels: -1
+    description: APO chiller status variables
+    devices:
+      ALARM_COMP_FAULT_SV:
+        address: 8959
+        category: chiller
+        description: Comp fault current state; True=Fault
+        units: ''
+      ALARM_CRITICAL_FLUID_LVL_SV:
+        address: 8960
+        category: chiller
+        description: Critical fluid level current state; True=Fault
+        units: ''
+      ALARM_HTCO_SV:
+        address: 8961
+        category: chiller
+        description: Hi fluid temp; True=Fault
+        units: ''
+      ALARM_LOW_FLOW_SV:
+        address: 8962
+        category: chiller
+        description: Low flow alarm current state; True=Fault
+        units: ''
+      ALARM_LOW_PRESS_SV:
+        address: 9014
+        category: chiller
+        description: Low suction pressure; True=Fault
+        units: ''
+      ALARM_OPEN_SENSOR_SV:
+        address: 8963
+        category: chiller
+        description: Open sensor alarm current state; True=Fault
+        units: ''
+      ALARM_PUMP_FAULT_SV:
+        address: 8964
+        category: chiller
+        description: Pump fault current state; True=Fault
+        units: ''
+      ALARM_SSF_SV:
+        address: 8965
+        category: chiller
+        description: Saftey systems fault current state; True=Fault
+        units: ''
+      ALARM_SYS_FAULT_SV:
+        address: 8966
+        category: chiller
+        description: General fault current state; True=Fault
+        units: ''
+      DISPLAY_VALUE:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 8991
+        category: chiller
+        description: Current Display Value
+        units: ''
+      FEL_AMBIENT_AIR_SV:
+        address: 8988
+        category: chiller
+        description: Ambient air warning count since machie turned on
+        units: ''
+      FEL_AMBIENT_COUNT_SV:
+        address: 8967
+        category: chiller
+        description: Total hi ambient warning count over machines life
+        units: ''
+      FEL_COMP_OL_COUNT_SV:
+        address: 8968
+        category: chiller
+        description: Total comp overload count over machines life
+        units: ''
+      FEL_CRIT_FLUID_COUNT_SV:
+        address: 8969
+        category: chiller
+        description: Total Critical fluid fault count over machines life
+        units: ''
+      FEL_DIRTY_COND_SV:
+        address: 8990
+        category: chiller
+        description: Dirty condenser warning count since machine turned on
+        units: ''
+      FEL_GEN_WARNING_SV:
+        address: 8972
+        category: chiller
+        description: Total general warning count over machines life
+        units: ''
+      FEL_HI_AMB_SV:
+        address: 8973
+        category: chiller
+        description: Total hi ambient warning count over machines life
+        units: ''
+      FEL_HTCO_COUNT_SV:
+        address: 8974
+        category: chiller
+        description: Hi temp cut off fault count since machine turned on
+        units: ''
+      FEL_LOW_FLOW_COUNT_SV:
+        address: 8975
+        category: chiller
+        description: Total low flow fault count over machines life
+        units: ''
+      FEL_LOW_WATER_COUNT_SV:
+        address: 8976
+        category: chiller
+        description: Total low water warning count over machines life
+        units: ''
+      FEL_OL_PUMP_COUNT_SV:
+        address: 8977
+        category: chiller
+        description: Pump overload fault count since machine turned on
+        units: ''
+      FEL_OUT_OF_RANGE_SV:
+        address: 8980
+        category: chiller
+        description: Total temp out of range warning over machines life
+        units: ''
+      FEL_SENSOR_FAULT_COUNT_SV:
+        address: 8981
+        category: chiller
+        description: Total sensor fault count over machine's life
+        units: ''
+      FEL_SSF_COUNT_SV:
+        address: 8982
+        category: chiller
+        description: Total saftey systems fault count over machines life
+        units: ''
+      FEL_START_WARN_COUNT_SV:
+        address: 8983
+        category: chiller
+        description: Total start/stop warning count pver machines life
+        units: ''
+      FEL_SYS_FAULT_COUNT_SV:
+        address: 8984
+        category: chiller
+        description: Total system fault count over machines life
+        units: ''
+      FEL_WARN_COUNT_SV:
+        address: 8986
+        category: chiller
+        description: Total warning count over machines life
+        units: ''
+      FEL_WARN_FREEZE_PROTECT_SV:
+        address: 8987
+        category: chiller
+        description: Total freeze protect warning count over machines life
+        units: ''
+      FLOW_USER_SETPOINT:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 9017
+        category: chiller
+        description: Process fluid setpoint flow Gallons Per Minute
+        units: gpm
+      STATUS_AMBIENT_AIR:
+        address: 8985
+        category: chiller
+        description: .nan
+        units: ''
+      STATUS_DUTY_CYCLE_100_SV:
+        address: 8979
+        category: chiller
+        description: Duty cycle current percentage
+        units: ''
+      STATUS_DUTY_CYCLE_SV:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 8970
+        category: chiller
+        description: PID controls to this value in [C]
+        units: '%'
+      STATUS_FAN_PV_SV:
+        address: 9012
+        category: chiller
+        description: Refrigeration discharge current pressure/temperature
+        units: ''
+      STATUS_FAN_SPEED_SV:
+        address: 8971
+        category: chiller
+        description: ECM fanspeed current value
+        units: ''
+      STATUS_FLUID_FLOW:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 9011
+        category: chiller
+        description: .nan
+        units: ''
+      STATUS_HEAT_ON_SV:
+        address: 8993
+        category: chiller
+        description: Heat on current state; True=On
+        units: ''
+      STATUS_LOW_PRES_TRANS_SV:
+        address: 9015
+        category: chiller
+        description: Refrigeration suction current pressure
+        units: ''
+      STATUS_OPERATING_HOURS_SV:
+        address: 8978
+        category: chiller
+        description: Operating hours since machine turned on
+        units: ''
+      STATUS_REFRIG_DISCH_TEMP_SV:
+        address: 8995
+        category: chiller
+        description: ECM discharge refrig temp sensor current value
+        units: ''
+      SYSTEM_CONTROL_VALUE_SV:
+        address: 8989
+        category: chiller
+        description: Current Control Value/SP
+        units: ''
+      SYSTEM_C_OR_F_GRAPH_PV_SV:
+        address: 9009
+        category: chiller
+        description: Process fluid present value for HMI graph
+        units: ''
+      SYSTEM_DRY_WIPER_HEAT_SV:
+        address: 9016
+        category: chiller
+        description: .nan
+        units: ''
+      SYSTEM_FAN_SP_SV:
+        address: 9013
+        category: chiller
+        description: Refrigeration discharge ECM fan setpoint
+        units: ''
+      SYSTEM_FLOAT_RESET_SV:
+        address: 8992
+        category: chiller
+        description: Reset float on startup variable; True=Reset Fault
+        units: ''
+      SYSTEM_GRAPH_LIMIT_HI_SV:
+        address: 9008
+        category: chiller
+        description: High limit of HMI display graph
+        units: ''
+      SYSTEM_GRAPH_LIMIT_LOW_SV:
+        address: 9007
+        category: chiller
+        description: Low limit of HMI display graph
+        units: ''
+      SYSTEM_PROCESS_FLUID_PV_SV:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 8994
+        category: chiller
+        description: Process Fluid PV
+        units: ''
+      SYSTEM_SENSORS_OK_SV:
+        address: 8996
+        category: chiller
+        description: Sensors working flag state; True=Fault
+        units: ''
+      SYSTEM_SP_HI_LIM_C_SV:
+        address: 8997
+        category: chiller
+        description: SP hi limit [C]
+        units: C
+      SYSTEM_SP_HI_SV:
+        address: 8998
+        category: chiller
+        description: Sp Lo Limit, C or F
+        units: C/F
+      SYSTEM_SP_LOW_LIM_C_SV:
+        address: 8999
+        category: chiller
+        description: SP low limit [C]
+        units: C
+      SYSTEM_SP_LOW_SV:
+        address: 9000
+        category: chiller
+        description: Sp Hi Limit, C or F
+        units: C/F
+      TEMPERATURE_USER_SETPOINT:
+        adaptor: proportional
+        adaptor_extra_params:
+        - 0.1
+        address: 9018
+        category: chiller
+        description: Process fluid setpoint temperature C or F
+        units: C
+      USER_REMOTE_START_STOP_SV:
+        address: 9019
+        category: chiller
+        description: .nan
+        units: ''
+      WARN_AMB_AIR_SV:
+        address: 9001
+        category: chiller
+        description: Ambient air warning current state; True=Fault
+        units: ''
+      WARN_DIRTY_COND_SV:
+        address: 9010
+        category: chiller
+        description: Dirty condenser warning status; True=Fault
+        units: ''
+      WARN_FREEZE_PROTECT_SV:
+        address: 9002
+        category: chiller
+        description: Freeze protect warning current state; True=Fault
+        units: ''
+      WARN_GENERAL_SV:
+        address: 9003
+        category: chiller
+        description: General warning current state; True=Fault
+        units: ''
+      WARN_LOW_WATER_SV:
+        address: 9004
+        category: chiller
+        description: Low water warning current state; True=Fault
+        units: ''
+      WARN_RANGE_SV:
+        address: 9005
+        category: chiller
+        description: Temp out of range warning current state
+        units: ''
+      WARN_START_SV:
+        address: 9006
+        category: chiller
+        description: start signal warning current state; True=WARN
+        units: ''
+    mode: holding_register
+port: 1111
