@@ -63,6 +63,7 @@ __all__ = [
     "Configuration",
     "ManualConfiguration",
     "AssignmentData",
+    "DitheredConfiguration",
 ]
 
 PositionerType = Union[PositionerApogee, PositionerBoss]
@@ -141,8 +142,16 @@ class BaseConfiguration:
         self.configuration_id: int | None = None
         self._summary_file: str | None = None
 
+        # Whether the configuration is a dither. If True, there will be a base
+        # configuration from which we dithered and the trajectory will be applied
+        # ignoring collisions and with early exit for deadlocks.
+        self.parent_configuration: BaseConfiguration | None = None
+        self.is_dither: bool = False
+
         self.design: Design | None = None
         self.design_id: int | None = None
+
+        self.extra_summary_data = {}
 
         self.fps = FPS.get_instance()
 
@@ -205,7 +214,7 @@ class BaseConfiguration:
         assert self.assignment_data.site.time
         self.epoch = self.assignment_data.site.time.jd
 
-    async def decollide_and_get_paths(
+    async def get_paths(
         self,
         decollide: bool = True,
         simple_decollision: bool = False,
@@ -632,6 +641,8 @@ class BaseConfiguration:
                 }
             )
 
+        header.update(self.extra_summary_data)
+
         fibermap, default = get_fibermap_table(len(fdata))
 
         i = 0
@@ -770,6 +781,132 @@ class Configuration(BaseConfiguration):
         )
 
 
+class DitheredConfiguration(BaseConfiguration):
+    """A positioner configuration dithered from a parent configuration."""
+
+    def __init__(
+        self,
+        configuration: BaseConfiguration,
+        radius: float,
+        epoch: float | None = None,
+    ):
+
+        assert configuration.design
+
+        super().__init__()
+
+        self.parent_configuration: BaseConfiguration = configuration
+        self.is_dither = True
+
+        self.design = configuration.design
+        self.design_id = self.design.design_id
+        self.assignment_data = AssignmentData(
+            self,
+            epoch=epoch,
+            computer_coordinates=False,
+        )
+
+        self.assignment_data.site.set_time(epoch)
+
+        icrs_bore = ICRS([[self.design.field.racen, self.design.field.deccen]])
+        self.assignment_data.boresight = Observed(
+            icrs_bore,
+            site=self.assignment_data.site,
+            wavelength=INST_TO_WAVE["GFA"],
+        )
+
+        assert self.assignment_data.site.time
+        self.epoch = self.assignment_data.site.time.jd
+
+        self.radius = radius
+
+        self.extra_summary_data = {
+            "parent_configuration": self.parent_configuration.configuration_id or -999,
+            "dither_radius": radius,
+        }
+
+    def compute_coordinates(self, new_positions: dict):
+
+        assert self.design
+
+        data = {}
+
+        for index, _ in self.assignment_data.fibre_table.iterrows():
+            pid, ftype = cast(tuple, index)
+
+            new_alpha = new_positions[pid]["alpha"]
+            new_beta = new_positions[pid]["beta"]
+
+            row_data = self.assignment_data.positioner_to_icrs(
+                pid,
+                ftype,
+                new_alpha,
+                new_beta,
+                position_angle=self.design.field.position_angle,
+                update=False,
+            )
+
+            robot = self.fps.positioners[pid]
+            if robot.offline:
+                row_data["offline"] = 1
+            if robot.disabled:
+                row_data["disabled"] = 1
+
+            data[(pid, ftype)] = row_data
+
+        # Now do a single update of the whole fibre table.
+        new_fibre_table = pandas.DataFrame.from_dict(data, orient="index")
+        new_fibre_table.sort_index(inplace=True)
+        new_fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
+
+        self.assignment_data.fibre_table = new_fibre_table
+        self.assignment_data.validate()
+
+        self.assignment_data.fibre_table.loc[:, ["on_target", "assigned"]] = 0
+
+    async def get_paths(self):
+
+        self.robot_grid = self._initialise_grid()
+
+        await self.fps.update_position()
+        positions = self.fps.get_positions_dict()
+
+        for robot in self.robot_grid.robotDict.values():
+            if robot.isOffline:
+                continue
+
+            robot.setAlphaBeta(*positions[robot.id])
+            new_alpha, new_beta = robot.uniformDither(self.radius)
+            robot.setDestinationAlphaBeta(new_alpha, new_beta)
+
+        (
+            self.to_destination,
+            self.from_destination,
+            *_,
+        ) = await get_path_pair_in_executor(
+            self.robot_grid,
+            ignore_did_fail=True,
+            stop_if_deadlock=True,
+            ignore_initial_collisions=True,
+        )
+
+        # Get the actual last points where we went. Due to deadlocks and
+        # collisions these may not actually be the ones we set.
+        new_positions = {}
+        for positioner_id in self.robot_grid.robotDict:
+            if positioner_id in self.to_destination:
+                alpha = self.to_destination[positioner_id]["alpha"][-1][0]
+                beta = self.to_destination[positioner_id]["beta"][-1][0]
+            else:
+                alpha, beta = positions[positioner_id]
+
+            new_positions[positioner_id] = {"alpha": alpha, "beta": beta}
+
+        self.compute_coordinates(new_positions)
+
+        return self.to_destination
+
+
 class ManualConfiguration(BaseConfiguration):
     """A configuration create manually.
 
@@ -899,7 +1036,7 @@ class BaseAssignmentData:
 
     def __init__(
         self,
-        configuration: Configuration | ManualConfiguration,
+        configuration: Configuration | ManualConfiguration | DitheredConfiguration,
         observatory: Optional[str] = None,
     ):
 
@@ -1100,6 +1237,8 @@ class BaseAssignmentData:
         """Loads fibre data from target data using positioner coordinates."""
 
         self._check_all_assigned()
+
+        assert self.configuration.design
 
         data = {}
         for pid in self.wok_data.index:
@@ -1334,11 +1473,17 @@ class AssignmentData(BaseAssignmentData):
 
     design: Design
 
-    def __init__(self, configuration: Configuration, epoch: float | None = None):
+    def __init__(
+        self,
+        configuration: Configuration | DitheredConfiguration,
+        epoch: float | None = None,
+        computer_coordinates: bool = True,
+    ):
 
         super().__init__(configuration)
 
-        self.compute_coordinates(epoch)
+        if computer_coordinates:
+            self.compute_coordinates(epoch)
 
     def compute_coordinates(self, jd: Optional[float] = None):
         """Computes coordinates in different systems.
