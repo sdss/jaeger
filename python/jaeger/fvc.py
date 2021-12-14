@@ -934,6 +934,41 @@ class FVC:
                 f"Found {len(deadlocks)} deadlocks but applying correction anyway."
             )
 
+        # TODO: this may be faster without update=True.
+
+        # Update coordinates in the configuration assignment data using the
+        # end positions of the trajectory.
+        if (
+            self.fps is not None
+            and self.fps.configuration is not None
+            and self.fibre_data is not None
+        ):
+            self.log("Updating coordinates.", level=logging.DEBUG)
+
+            ass_data = self.fps.configuration.assignment_data
+            ass_data.fibre_table = (
+                self.fibre_data.reset_index()
+                .set_index(["positioner_id", "fibre_type"])
+                .copy()
+            )
+
+            for pid in to_destination:
+                for ftype in ["APOGEE", "BOSS", "Metrology"]:
+                    ass_data.positioner_to_icrs(
+                        pid,
+                        ftype,
+                        to_destination[pid]["alpha"][-1][0],
+                        to_destination[pid]["beta"][-1][0],
+                        update=True,
+                    )
+
+            # And copy back the results.
+            self.fibre_data = ass_data.fibre_table.copy()
+            self.fibre_data.reset_index().set_index(
+                ["hole_id", "fibre_type"],
+                inplace=True,
+            )
+
         self.log("Sending correction trajectory.")
         try:
             await self.fps.send_trajectory(to_destination, command=self.command)
