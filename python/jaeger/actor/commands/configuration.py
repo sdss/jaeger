@@ -167,7 +167,7 @@ async def load(
     if generate_paths:
         try:
             command.info("Calculating trajectories.")
-            await configuration.decollide_and_get_paths(decollide=not from_positions)
+            await configuration.get_paths(decollide=not from_positions)
         except Exception as err:
             return command.fail(error=f"Failed generating paths: {err}")
 
@@ -238,7 +238,7 @@ async def execute(command: Command[JaegerActor], fps: FPS):
             command.info(text="Calculating trajectory.")
 
             try:
-                trajectory = await fps.configuration.decollide_and_get_paths()
+                trajectory = await fps.configuration.get_paths()
             except Exception as err:
                 return command.fail(error=f"Failed getting trajectory: {err}")
 
@@ -380,7 +380,7 @@ async def random(
 
     try:
         command.info("Getting trajectory.")
-        trajectory = await configuration.decollide_and_get_paths(decollide=False)
+        trajectory = await configuration.get_paths(decollide=False)
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 
