@@ -1421,7 +1421,7 @@ class BaseAssignmentData:
         fibre_type: str,
         alpha: float,
         beta: float,
-        position_angle: float = 0.0,
+        position_angle: float | None = None,
         update: bool = True,
         **kwargs,
     ):
@@ -1430,6 +1430,9 @@ class BaseAssignmentData:
         wavelength = INST_TO_WAVE.get(fibre_type.capitalize(), INST_TO_WAVE["GFA"])
 
         assert self.site.time
+
+        if position_angle is None:
+            position_angle = self.design.field.position_angle if self.design else 0.0
 
         hole_id = self.wok_data.at[positioner_id, "holeID"]
 
