@@ -228,8 +228,12 @@ async def execute(command: Command[JaegerActor], fps: FPS):
 
     if fps.configuration.is_dither:
         assert isinstance(fps.configuration, DitheredConfiguration)
-        command.info(text="Calculating trajectory.")
-        trajectory = await fps.configuration.get_paths()
+        if fps.configuration.to_destination is not None:
+            trajectory = fps.configuration.to_destination
+            command.info(text="Using stored trajectory (to destination).")
+        else:
+            command.info(text="Calculating trajectory.")
+            trajectory = await fps.configuration.get_paths()
     else:
         if fps.configuration.from_destination is not None:
             trajectory = fps.configuration.from_destination
@@ -304,12 +308,17 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
         parent_configuration = fps.configuration
 
     fps.configuration = DitheredConfiguration(parent_configuration, radius)
-    await fps.configuration.compute_dithers()
+    await fps.configuration.get_paths()
 
     fps.configuration.write_to_database()
     fps.configuration.write_summary(overwrite=True)
 
     _output_configuration_loaded(command, fps)
+
+    command.info("Executon dithered configuration.")
+    execute_cmd = await command.send_command("jaeger", "configuration execute")
+    if execute_cmd.status.did_fail:
+        command.fail("Failed executing configuration.")
 
     command.finish(f"Dither configuration {fps.configuration.configuration_id} loaded.")
 
