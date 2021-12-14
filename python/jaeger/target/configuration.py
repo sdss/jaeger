@@ -604,7 +604,7 @@ class BaseConfiguration:
             calibration.fiberAssignments,
             left_index=True,
             right_index=True,
-        ).set_index("positionerID")
+        ).set_index("positionerID_x")
 
         fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
         fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
