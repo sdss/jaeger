@@ -584,7 +584,12 @@ class BaseConfiguration:
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
-    def write_summary(self, overwrite: bool = False):
+    def write_summary(
+        self,
+        flavour: str = "",
+        overwrite: bool = False,
+        headers: dict = {},
+    ):
         """Writes the confSummary file."""
 
         # TODO: some time may be saved by doing a single DB query and retrieving
@@ -641,6 +646,7 @@ class BaseConfiguration:
                 }
             )
 
+        header.update(headers)
         header.update(self.extra_summary_data)
 
         fibermap, default = get_fibermap_table(len(fdata))
@@ -733,7 +739,7 @@ class BaseConfiguration:
             self.assignment_data.observatory.lower(),
             "summary_files",
             f"{int(self.configuration_id / 100):04d}XX",
-            f"confSummary-{self.configuration_id}.par",
+            f"confSummary{flavour}-{self.configuration_id}.par",
         )
 
         if os.path.exists(path):
