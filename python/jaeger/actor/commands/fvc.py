@@ -244,6 +244,13 @@ async def loop(
 
     finally:
 
+        command.info("Saving confSummaryF file.")
+        fps.configuration.write_summary(
+            flavour="F",
+            overwrite=True,
+            headers={"fvc_rms": current_rms},
+        )
+
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
         await command.send_command("jaeger", "ieb fbi led2 0")
