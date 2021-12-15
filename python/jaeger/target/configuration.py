@@ -635,6 +635,9 @@ class BaseConfiguration:
             "raCen": -999.0,
             "decCen": -999.0,
             "pa": -999.0,
+            "is_dithered": 0,
+            "parent_configuration": -999,
+            "dither_radius": -999.0,
         }
 
         if design:
