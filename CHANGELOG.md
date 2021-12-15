@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🚀 New
+
+* Added `jaeger configuration slew` command.
+
 ### ✨ Improved
 
 * Check that the rotator is halted before exposing the FVC.

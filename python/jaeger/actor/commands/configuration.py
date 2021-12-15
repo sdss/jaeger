@@ -324,6 +324,41 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
 
 
 @configuration.command()
+async def slew(command: Command[JaegerActor], fps: FPS):
+    """Slews to the field centre of a configuration."""
+
+    command.warning(
+        "jaeger configuration slew is a temporary command that does not "
+        "perform any safety checks. It will be replaced with hal goto."
+    )
+
+    if fps.configuration is None:
+        return command.fail("Configuration not loaded.")
+
+    if isinstance(fps.configuration, DitheredConfiguration):
+        return command.fail("Cannot slew to a dithered configuration.")
+
+    if fps.configuration.design is None:
+        return command.fail("The configuration does not have a design.")
+
+    ra = fps.configuration.design.field.racen
+    dec = fps.configuration.design.field.deccen
+    pa = fps.configuration.design.field.position_angle
+
+    command.info(f"Slewing to ({ra}, {dec}, {pa})")
+
+    slew_cmd = await command.send_command(
+        "tcc",
+        f"track {ra}, {dec} icrs /rottype=object /rotang={pa:g} /rotwrap=mid",
+    )
+
+    if slew_cmd.status.did_fail:
+        return command.fail("Failed slewing to field.")
+
+    return command.finish("Slew complete.")
+
+
+@configuration.command()
 @click.argument("SEED", type=int, required=False)
 @click.option("--danger", is_flag=True, help="Use full range of alpha and beta.")
 @click.option(
