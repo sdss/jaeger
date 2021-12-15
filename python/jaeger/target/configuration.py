@@ -634,6 +634,7 @@ class BaseConfiguration:
             "temperature": -999,  # TODO
             "raCen": -999.0,
             "decCen": -999.0,
+            "pa": -999.0,
         }
 
         if design:
@@ -643,6 +644,7 @@ class BaseConfiguration:
                     "field_id": design.field.field_id,
                     "raCen": design.field.racen,
                     "decCen": design.field.deccen,
+                    "pa": design.field.position_angle,
                 }
             )
 
