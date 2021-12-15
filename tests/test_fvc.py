@@ -84,6 +84,7 @@ def test_fvc():
     assert fvc.command is None
 
 
+@pytest.mark.xfail()
 def test_configuration(configuration: ManualConfiguration):
 
     ftable = configuration.assignment_data.fibre_table
