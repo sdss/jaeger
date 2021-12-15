@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Check that the rotator is halted before exposing the FVC.
+
+
 ## 0.13.0 - December 14, 2021
 
 ### 🚀 New
