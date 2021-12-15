@@ -71,6 +71,7 @@ class FVC:
             )
 
         self.site = site
+        self.correction_applied: bool = False
 
         self.command = command
         self.fps = FPS.get_instance()
@@ -740,7 +741,6 @@ class FVC:
     async def write_proc_image(
         self,
         new_filename: Optional[str | pathlib.Path] = None,
-        correction_applied: bool = False,
     ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data.
 
@@ -774,7 +774,7 @@ class FVC:
         else:
             proc_hdus[1].header["CONFIGID"] = -999.0
 
-        proc_hdus[1].header["CAPPLIED"] = correction_applied
+        proc_hdus[1].header["CAPPLIED"] = self.correction_applied
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
@@ -934,48 +934,64 @@ class FVC:
                 f"Found {len(deadlocks)} deadlocks but applying correction anyway."
             )
 
-        # TODO: this may be faster without update=True.
-
-        # Update coordinates in the configuration assignment data using the
-        # end positions of the trajectory.
-        if (
-            self.fps is not None
-            and self.fps.configuration is not None
-            and self.fibre_data is not None
-        ):
-            self.log("Updating coordinates.", level=logging.DEBUG)
-
-            ass_data = self.fps.configuration.assignment_data
-            ass_data.fibre_table = (
-                self.fibre_data.reset_index()
-                .set_index(["positioner_id", "fibre_type"])
-                .copy()
-            )
-
-            for pid in to_destination:
-                for ftype in ["APOGEE", "BOSS", "Metrology"]:
-                    ass_data.positioner_to_icrs(
-                        pid,
-                        ftype,
-                        to_destination[pid]["alpha"][-1][0],
-                        to_destination[pid]["beta"][-1][0],
-                        update=True,
-                    )
-
-            # And copy back the results.
-            self.fibre_data = ass_data.fibre_table.copy()
-            self.fibre_data.reset_index().set_index(
-                ["hole_id", "fibre_type"],
-                inplace=True,
-            )
-
         self.log("Sending correction trajectory.")
         try:
             await self.fps.send_trajectory(to_destination, command=self.command)
         except TrajectoryError as err:
             raise FVCError(f"Failed executing the correction trajectory: {err}")
 
+        self.correction_applied = True
         self.log("Correction applied.")
+
+    def write_summary_F(self):
+        """Updates data with the last measured positions and write confSummaryF."""
+
+        if self.fps is None or self.fps.configuration is None:
+            raise FVCError("write_summary_F can only be called with a configuration.")
+
+        if self.fibre_data is None:
+            raise FVCError("No fibre data.")
+
+        self.log("Updating coordinates.", level=logging.DEBUG)
+
+        fdata = (
+            self.fibre_data.reset_index()
+            .set_index(["positioner_id", "fibre_type"])
+            .copy()
+        )
+
+        idx = pandas.IndexSlice
+        cols = ["hole_id", "xwok_measured", "ywok_measured"]
+        measured = fdata.loc[idx[:, "Metrology"], cols].dropna()
+
+        for (pid, ftype), row in measured.iterrows():
+            (alpha, beta), _ = wok_to_positioner(
+                row.hole_id,
+                "APO",  # TODO: do not hardcode this.
+                "Metrology",
+                row.xwok_measured,
+                row.ywok_measured,
+            )
+            if not numpy.isnan(alpha):
+                fdata.loc[idx[pid, :], ["alpha", "beta"]] = (alpha, beta)
+
+        self.fps.configuration.assignment_data.fibre_table = fdata.copy()
+
+        for pid in measured.index.get_level_values(0).tolist():
+            alpha, beta = fdata.loc[(pid, "Metrology"), ["alpha", "beta"]]
+            for ftype in ["APOGEE", "BOSS", "Metrology"]:
+                self.fps.configuration.assignment_data.positioner_to_icrs(
+                    pid,
+                    ftype,
+                    alpha,
+                    beta,
+                    update=True,
+                )
+
+        self.fps.configuration.write_summary(
+            flavour="F",
+            headers={"fvc_rms": self.fitrms},
+        )
 
     def extract(self, image_data: numpy.ndarray) -> pandas.DataFrame:
         """Extract image data using SExtractor. Returns the extracted centroids."""

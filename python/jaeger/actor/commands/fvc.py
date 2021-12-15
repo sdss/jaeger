@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from typing import TYPE_CHECKING, Optional, cast
 
 import click
@@ -147,13 +149,18 @@ async def loop(
     await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
     await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
 
+    if one is True and apply is True:
+        command.warning(
+            "One correction will be applied. The confSummaryF "
+            "file will not reflect the final state."
+        )
+
     max_iterations = max_iterations or config["fvc"]["max_fvc_iterations"]
     current_rms = None
     delta_rms = None
 
     filename = None
 
-    correction_applied = False
     proc_image_saved = False
 
     try:
@@ -162,7 +169,6 @@ async def loop(
         while True:
             command.info(f"FVC iteration {n}")
 
-            correction_applied: bool = False
             proc_image_saved: bool = False
 
             success: bool | None = None
@@ -211,13 +217,15 @@ async def loop(
 
             # 5. Apply corrections.
             if success is None and apply is True:
-                await fvc.apply_correction()
-                correction_applied = True
+                if n == max_iterations and one is False:
+                    command.info("Not applying correction during the last iteration.")
+                else:
+                    await fvc.apply_correction()
 
             # 6. Save processed file.
             proc_path = filename.with_name("proc-" + filename.name)
             command.debug(f"Saving processed image {proc_path}")
-            await fvc.write_proc_image(proc_path, correction_applied=correction_applied)
+            await fvc.write_proc_image(proc_path)
             proc_image_saved = True
 
             if success is not None:
@@ -245,11 +253,7 @@ async def loop(
     finally:
 
         command.info("Saving confSummaryF file.")
-        fps.configuration.write_summary(
-            flavour="F",
-            overwrite=True,
-            headers={"fvc_rms": current_rms},
-        )
+        await asyncio.get_running_loop().run_in_executor(None, fvc.write_summary_F)
 
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
@@ -259,10 +263,7 @@ async def loop(
             if filename is not None and fvc.proc_hdu is not None:
                 proc_path = filename.with_name("proc-" + filename.name)
                 command.debug(f"Saving processed image {proc_path}")
-                await fvc.write_proc_image(
-                    proc_path,
-                    correction_applied=correction_applied,
-                )
+                await fvc.write_proc_image(proc_path)
             else:
                 command.warning("Cannot write processed image.")
 
