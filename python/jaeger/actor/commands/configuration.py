@@ -324,8 +324,17 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
 
 
 @configuration.command()
-async def slew(command: Command[JaegerActor], fps: FPS):
-    """Slews to the field centre of a configuration."""
+@click.argument("POSITION_ANGLE", type=float, required=False)
+async def slew(
+    command: Command[JaegerActor],
+    fps: FPS,
+    position_angle: float | None = None,
+):
+    """Slews to the field centre of a configuration.
+
+    Optionally pass the position angle of the rotator in DEGREES.
+
+    """
 
     command.warning(
         "jaeger configuration slew is a temporary command that does not "
@@ -343,7 +352,11 @@ async def slew(command: Command[JaegerActor], fps: FPS):
 
     ra = fps.configuration.design.field.racen
     dec = fps.configuration.design.field.deccen
-    pa = fps.configuration.design.field.position_angle
+
+    if position_angle is not None:
+        pa = position_angle
+    else:
+        pa = fps.configuration.design.field.position_angle
 
     command.info(f"Slewing to ({ra}, {dec}, {pa})")
 
