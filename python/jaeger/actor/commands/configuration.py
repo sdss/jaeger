@@ -16,7 +16,7 @@ from astropy.time import Time
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.kaiju import check_trajectory
+from jaeger.kaiju import check_trajectory, explode
 from jaeger.target.configuration import (
     Configuration,
     DitheredConfiguration,
@@ -269,6 +269,8 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     if fps.configuration is None:
         return command.fail(error="A configuration must first be loaded.")
 
+    await fps.update_position()
+
     if fps.configuration.is_dither:
         trajectory = fps.configuration.from_destination
     else:
@@ -279,10 +281,23 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
                 "path. Use unwind."
             )
 
-        # Very large atol here because we may have moved the robots a fair amount
-        # during the FVC feedback loop.
-        # if not (await check_trajectory(trajectory, fps=fps, atol=5)):
-        #     return command.fail(error="Trajectory validation failed.")
+        try:
+            # First we explode the robots a bit.
+            command.info("Exploding before reversing.")
+            current_positions = fps.get_positions_dict()
+            explode_path = await explode(current_positions, 5.0)
+            await fps.send_trajectory(explode_path, command=command)
+
+            # Then we send a goto to the initial point of the reverse trajectory.
+            new_positions = {
+                pid: (trajectory[pid]["alpha"][0][0], trajectory[pid]["beta"][0][0])
+                for pid in trajectory
+            }
+            command.info("Reverting to final configuration positions.")
+            await fps.goto(new_positions)
+
+        except Exception as err:
+            return command.fail(f"Failed preparing to send reverse trajectory: {err}")
 
     command.info(text="Sending and executing reverse trajectory.")
 
