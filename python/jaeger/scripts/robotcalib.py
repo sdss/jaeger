@@ -86,7 +86,7 @@ def getTargetCoords(rg):
             "alpha": alpha,
             "beta": beta,
             "offline": offline,
-            "assigned": [1]*len(positioner_id)
+            "assigned": [1] * len(positioner_id),
         }
     )
 
@@ -109,12 +109,12 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
     # or RobotGridCalib will load from positionerTable
     # example:
 
-    rg.robotDict[54].setAlphaBeta(10.013,169.9634)
-    rg.robotDict[54].setDestinationAlphaBeta(10.013,169.9634)
+    rg.robotDict[54].setAlphaBeta(10.013, 169.9634)
+    rg.robotDict[54].setDestinationAlphaBeta(10.013, 169.9634)
     rg.robotDict[54].isOffline = True
 
-    rg.robotDict[463].setAlphaBeta(10.0103,170.0181)
-    rg.robotDict[463].setDestinationAlphaBeta(10.0103,170.0181)
+    rg.robotDict[463].setAlphaBeta(10.0103, 170.0181)
+    rg.robotDict[463].setDestinationAlphaBeta(10.0103, 170.0181)
     rg.robotDict[463].isOffline = True
 
     # < no offline robots yet > #
@@ -133,7 +133,7 @@ def getRandomGrid(seed, danger=False, collisionBuffer=None, lefthand=False):
             else:
                 robot.setXYUniform()
         else:
-            alpha = numpy.random.uniform(0, 359.999) #MAX_ALPHA)
+            alpha = numpy.random.uniform(0, 359.999)  # MAX_ALPHA)
             beta = numpy.random.uniform(SAFE_BETA[0], SAFE_BETA[1])
             if robot.id == 999:
                 print("robot 999 alpha", alpha)
