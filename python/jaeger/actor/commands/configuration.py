@@ -281,8 +281,8 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
 
         # Very large atol here because we may have moved the robots a fair amount
         # during the FVC feedback loop.
-        if not (await check_trajectory(trajectory, fps=fps, atol=5)):
-            return command.fail(error="Trajectory validation failed.")
+        # if not (await check_trajectory(trajectory, fps=fps, atol=5)):
+        #     return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing reverse trajectory.")
 
