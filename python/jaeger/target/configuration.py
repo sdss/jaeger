@@ -275,6 +275,7 @@ class BaseConfiguration:
             if robot.id not in valid.index.get_level_values(0):
                 robot.setAlphaBeta(alpha0, beta0)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
+                robot.setXYUniform()  # Scramble unassigned robots.
                 invalid.append(robot.id)
             else:
                 vrow = valid.loc[robot.id].iloc[0]
@@ -600,7 +601,6 @@ class BaseConfiguration:
             raise JaegerError("Configuration needs to be set and loaded to the DB.")
 
         adata = self.assignment_data
-
         fdata = self.assignment_data.fibre_table.copy()
 
         # Add fiberId
@@ -806,10 +806,14 @@ class DitheredConfiguration(BaseConfiguration):
 
         self.design = configuration.design
         self.design_id = self.design.design_id
+
         self.assignment_data = AssignmentData(
             self,
             epoch=epoch,
             computer_coordinates=False,
+        )
+        self.assignment_data.fibre_table = (
+            self.parent_configuration.assignment_data.fibre_table.copy()
         )
 
         self.assignment_data.site.set_time(epoch)
@@ -835,6 +839,8 @@ class DitheredConfiguration(BaseConfiguration):
 
         assert self.design
 
+        ftable = self.assignment_data.fibre_table
+
         data = {}
 
         for index, _ in self.assignment_data.fibre_table.iterrows():
@@ -852,12 +858,6 @@ class DitheredConfiguration(BaseConfiguration):
                 update=False,
             )
 
-            robot = self.fps.positioners[pid]
-            if robot.offline:
-                row_data["offline"] = 1
-            if robot.disabled:
-                row_data["disabled"] = 1
-
             data[(pid, ftype)] = row_data
 
         # Now do a single update of the whole fibre table.
@@ -865,10 +865,34 @@ class DitheredConfiguration(BaseConfiguration):
         new_fibre_table.sort_index(inplace=True)
         new_fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
-        self.assignment_data.fibre_table = new_fibre_table
-        self.assignment_data.validate()
+        # Copy some of the coordinate columns back to the original table.
+        cols = [
+            "ra_epoch",
+            "dec_epoch",
+            "az",
+            "alt",
+            "xfocal",
+            "yfocal",
+            "xwok",
+            "ywok",
+            "zwok",
+            "xtangent",
+            "ytangent",
+            "ztangent",
+            "alpha",
+            "beta",
+        ]
+        ftable.loc[new_fibre_table.index, cols] = new_fibre_table.loc[:, cols]
 
-        self.assignment_data.fibre_table.loc[:, ["on_target", "assigned"]] = 0
+        for ax in ["x", "y", "z"]:
+            ftable.loc[:, f"{ax}wok_measured"] = numpy.nan
+            ftable.loc[:, f"{ax}wok_kaiju"] = numpy.nan
+
+        ftable.loc[:, "on_target"] = 0
+
+        # Reset all to valid, then validate.
+        ftable.loc[:, "valid"] = 1
+        self.assignment_data.validate()
 
     async def get_paths(self):
 
