@@ -120,7 +120,6 @@ omit = [
 exclude_lines = [
     "pragma: no cover",
     "class AsyncioExecutor",
-    "def convert_kaiju_trajectory",
     "class CANnetInterface",
     "if TYPE_CHECKING:",
     "def __repr__"
