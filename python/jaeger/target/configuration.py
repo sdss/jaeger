@@ -275,6 +275,7 @@ class BaseConfiguration:
             if robot.id not in valid.index.get_level_values(0):
                 robot.setAlphaBeta(alpha0, beta0)
                 robot.setDestinationAlphaBeta(alpha0, beta0)
+                robot.setXYUniform()  # Scramble unassigned robots.
                 invalid.append(robot.id)
             else:
                 vrow = valid.loc[robot.id].iloc[0]
@@ -584,7 +585,12 @@ class BaseConfiguration:
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
-    def write_summary(self, overwrite: bool = False):
+    def write_summary(
+        self,
+        flavour: str = "",
+        overwrite: bool = False,
+        headers: dict = {},
+    ):
         """Writes the confSummary file."""
 
         # TODO: some time may be saved by doing a single DB query and retrieving
@@ -595,7 +601,6 @@ class BaseConfiguration:
             raise JaegerError("Configuration needs to be set and loaded to the DB.")
 
         adata = self.assignment_data
-
         fdata = self.assignment_data.fibre_table.copy()
 
         # Add fiberId
@@ -604,7 +609,7 @@ class BaseConfiguration:
             calibration.fiberAssignments,
             left_index=True,
             right_index=True,
-        ).set_index("positionerID")
+        ).set_index("positionerID_x")
 
         fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
         fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
@@ -641,6 +646,7 @@ class BaseConfiguration:
                 }
             )
 
+        header.update(headers)
         header.update(self.extra_summary_data)
 
         fibermap, default = get_fibermap_table(len(fdata))
@@ -733,7 +739,7 @@ class BaseConfiguration:
             self.assignment_data.observatory.lower(),
             "summary_files",
             f"{int(self.configuration_id / 100):04d}XX",
-            f"confSummary-{self.configuration_id}.par",
+            f"confSummary{flavour}-{self.configuration_id}.par",
         )
 
         if os.path.exists(path):
@@ -800,10 +806,14 @@ class DitheredConfiguration(BaseConfiguration):
 
         self.design = configuration.design
         self.design_id = self.design.design_id
+
         self.assignment_data = AssignmentData(
             self,
             epoch=epoch,
             computer_coordinates=False,
+        )
+        self.assignment_data.fibre_table = (
+            self.parent_configuration.assignment_data.fibre_table.copy()
         )
 
         self.assignment_data.site.set_time(epoch)
@@ -829,6 +839,8 @@ class DitheredConfiguration(BaseConfiguration):
 
         assert self.design
 
+        ftable = self.assignment_data.fibre_table
+
         data = {}
 
         for index, _ in self.assignment_data.fibre_table.iterrows():
@@ -846,12 +858,6 @@ class DitheredConfiguration(BaseConfiguration):
                 update=False,
             )
 
-            robot = self.fps.positioners[pid]
-            if robot.offline:
-                row_data["offline"] = 1
-            if robot.disabled:
-                row_data["disabled"] = 1
-
             data[(pid, ftype)] = row_data
 
         # Now do a single update of the whole fibre table.
@@ -859,10 +865,34 @@ class DitheredConfiguration(BaseConfiguration):
         new_fibre_table.sort_index(inplace=True)
         new_fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
-        self.assignment_data.fibre_table = new_fibre_table
-        self.assignment_data.validate()
+        # Copy some of the coordinate columns back to the original table.
+        cols = [
+            "ra_epoch",
+            "dec_epoch",
+            "az",
+            "alt",
+            "xfocal",
+            "yfocal",
+            "xwok",
+            "ywok",
+            "zwok",
+            "xtangent",
+            "ytangent",
+            "ztangent",
+            "alpha",
+            "beta",
+        ]
+        ftable.loc[new_fibre_table.index, cols] = new_fibre_table.loc[:, cols]
 
-        self.assignment_data.fibre_table.loc[:, ["on_target", "assigned"]] = 0
+        for ax in ["x", "y", "z"]:
+            ftable.loc[:, f"{ax}wok_measured"] = numpy.nan
+            ftable.loc[:, f"{ax}wok_kaiju"] = numpy.nan
+
+        ftable.loc[:, "on_target"] = 0
+
+        # Reset all to valid, then validate.
+        ftable.loc[:, "valid"] = 1
+        self.assignment_data.validate()
 
     async def get_paths(self):
 
@@ -1011,6 +1041,7 @@ class BaseAssignmentData:
         ("offline", numpy.int8, 0),
         ("deadlocked", numpy.int8, 0),
         ("decollided", numpy.int8, 0),
+        ("mismatched", numpy.int8, 0),
         ("wavelength", numpy.float32, numpy.nan),
         ("fiberId", numpy.int32, -999),
         ("ra_icrs", numpy.float64, numpy.nan),
@@ -1027,6 +1058,9 @@ class BaseAssignmentData:
         ("xwok_kaiju", numpy.float64, numpy.nan),
         ("ywok_kaiju", numpy.float64, numpy.nan),
         ("zwok_kaiju", numpy.float64, numpy.nan),
+        ("xwok_measured", numpy.float64, numpy.nan),
+        ("ywok_measured", numpy.float64, numpy.nan),
+        ("zwok_measured", numpy.float64, numpy.nan),
         ("xtangent", numpy.float64, numpy.nan),
         ("ytangent", numpy.float64, numpy.nan),
         ("ztangent", numpy.float64, numpy.nan),
@@ -1128,7 +1162,7 @@ class BaseAssignmentData:
 
         return fibre_table
 
-    def _from_icrs(self):
+    def _init_from_icrs(self):
         """Loads fibre data from target data using ICRS coordinates."""
 
         alpha0, beta0 = config["kaiju"]["lattice_position"]
@@ -1184,7 +1218,7 @@ class BaseAssignmentData:
         self.fibre_table.sort_index(inplace=True)
         self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
-    def _from_wok(self):
+    def _init_from_wok(self):
         """Loads fibre data from target data using wok coordinates."""
 
         self._check_all_assigned()
@@ -1209,7 +1243,7 @@ class BaseAssignmentData:
             self.target_data[hole_id].update({"alpha": alpha, "beta": beta})
 
         # Now simply call _from_positioner()
-        self._from_positioner()
+        self._init_from_positioner()
 
         # We want to keep the original wok coordinates that now have been overridden
         # by calling _from_positioner.
@@ -1233,7 +1267,7 @@ class BaseAssignmentData:
 
         self.fibre_table[["xwok", "ywok", "zwok"]] = wok_coords
 
-    def _from_positioner(self):
+    def _init_from_positioner(self):
         """Loads fibre data from target data using positioner coordinates."""
 
         self._check_all_assigned()
@@ -1299,6 +1333,13 @@ class BaseAssignmentData:
         new_data = pandas.DataFrame.from_dict(data, orient="index")
         self.fibre_table.loc[new_data.index, new_data.columns] = new_data
         self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
+
+    def update_from_wok_measured(
+        self,
+        fibre_type: str,
+        positioner_ids: list[int] | None = None,
+    ):
+        """Updates the coordinates from the ``x/ywok_measured``."""
 
     def _check_all_assigned(self):
         """Check that all the positioners are in ``target_data``."""
@@ -1404,7 +1445,7 @@ class BaseAssignmentData:
         fibre_type: str,
         alpha: float,
         beta: float,
-        position_angle: float = 0.0,
+        position_angle: float | None = None,
         update: bool = True,
         **kwargs,
     ):
@@ -1413,6 +1454,9 @@ class BaseAssignmentData:
         wavelength = INST_TO_WAVE.get(fibre_type.capitalize(), INST_TO_WAVE["GFA"])
 
         assert self.site.time
+
+        if position_angle is None:
+            position_angle = self.design.field.position_angle if self.design else 0.0
 
         hole_id = self.wok_data.at[positioner_id, "holeID"]
 
@@ -1508,7 +1552,7 @@ class AssignmentData(BaseAssignmentData):
         )
 
         # Load fibre data using ICRS coordinates.
-        self._from_icrs()
+        self._init_from_icrs()
 
         # Final validation
         self.validate()
@@ -1602,11 +1646,11 @@ class ManualAssignmentData(BaseAssignmentData):
                     "Creating a manual configuration from ICRS "
                     "coordinates requires defining a field centre."
                 )
-            self._from_icrs()
+            self._init_from_icrs()
         elif "xwok" in sample_target and "ywok" in sample_target:
-            self._from_wok()
+            self._init_from_wok()
         elif "alpha" in sample_target and "beta" in sample_target:
-            self._from_positioner()
+            self._init_from_positioner()
         else:
             raise ValueError("Target data does not contain the necessary columns.")
 

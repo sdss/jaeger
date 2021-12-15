@@ -71,6 +71,7 @@ class FVC:
             )
 
         self.site = site
+        self.correction_applied: bool = False
 
         self.command = command
         self.fps = FPS.get_instance()
@@ -740,7 +741,6 @@ class FVC:
     async def write_proc_image(
         self,
         new_filename: Optional[str | pathlib.Path] = None,
-        correction_applied: bool = False,
     ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data.
 
@@ -774,7 +774,7 @@ class FVC:
         else:
             proc_hdus[1].header["CONFIGID"] = -999.0
 
-        proc_hdus[1].header["CAPPLIED"] = correction_applied
+        proc_hdus[1].header["CAPPLIED"] = self.correction_applied
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
@@ -940,7 +940,58 @@ class FVC:
         except TrajectoryError as err:
             raise FVCError(f"Failed executing the correction trajectory: {err}")
 
+        self.correction_applied = True
         self.log("Correction applied.")
+
+    def write_summary_F(self):
+        """Updates data with the last measured positions and write confSummaryF."""
+
+        if self.fps is None or self.fps.configuration is None:
+            raise FVCError("write_summary_F can only be called with a configuration.")
+
+        if self.fibre_data is None:
+            raise FVCError("No fibre data.")
+
+        self.log("Updating coordinates.", level=logging.DEBUG)
+
+        fdata = (
+            self.fibre_data.reset_index()
+            .set_index(["positioner_id", "fibre_type"])
+            .copy()
+        )
+
+        idx = pandas.IndexSlice
+        cols = ["hole_id", "xwok_measured", "ywok_measured"]
+        measured = fdata.loc[idx[:, "Metrology"], cols].dropna()
+
+        for (pid, ftype), row in measured.iterrows():
+            (alpha, beta), _ = wok_to_positioner(
+                row.hole_id,
+                "APO",  # TODO: do not hardcode this.
+                "Metrology",
+                row.xwok_measured,
+                row.ywok_measured,
+            )
+            if not numpy.isnan(alpha):
+                fdata.loc[idx[pid, :], ["alpha", "beta"]] = (alpha, beta)
+
+        self.fps.configuration.assignment_data.fibre_table = fdata.copy()
+
+        for pid in measured.index.get_level_values(0).tolist():
+            alpha, beta = fdata.loc[(pid, "Metrology"), ["alpha", "beta"]]
+            for ftype in ["APOGEE", "BOSS", "Metrology"]:
+                self.fps.configuration.assignment_data.positioner_to_icrs(
+                    pid,
+                    ftype,
+                    alpha,
+                    beta,
+                    update=True,
+                )
+
+        self.fps.configuration.write_summary(
+            flavour="F",
+            headers={"fvc_rms": self.fitrms},
+        )
 
     def extract(self, image_data: numpy.ndarray) -> pandas.DataFrame:
         """Extract image data using SExtractor. Returns the extracted centroids."""
