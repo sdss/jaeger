@@ -1152,7 +1152,7 @@ documents = ["sphinx (>=1.1.3)", "sphinx-rtd-theme", "humanfriendly"]
 quality = ["coverage (>=3.5.3)", "nose (>=1.2.1)", "mock (>=1.0.0)", "pep8 (>=1.3.3)"]
 repl = ["click (>=7.0)", "prompt-toolkit (==2.0.4)", "pygments (>=2.2.0)", "click (>=7.0)", "prompt-toolkit (>=3.0.8)", "pygments (>=2.2.0)", "aiohttp (>=3.7.3)", "pyserial-asyncio (>=0.5)"]
 tornado = ["tornado (==4.5.3)"]
-twisted = ["Twisted[conch,serial] (>=20.3.0)", "Twisted[conch] (>=20.3.0)"]
+twisted = ["Twisted[serial,conch] (>=20.3.0)", "Twisted[conch] (>=20.3.0)"]
 
 [[package]]
 name = "pyparsing"
@@ -1399,7 +1399,7 @@ numpy = ">=1.16.5,<1.23.0"
 
 [[package]]
 name = "sdss-clu"
-version = "1.5.5a0"
+version = "1.5.5"
 description = "A new protocol for SDSS actors."
 category = "main"
 optional = false
@@ -1415,7 +1415,7 @@ sdsstools = ">=0.4.13,<0.5.0"
 
 [[package]]
 name = "sdss-coordio"
-version = "1.1.4a1"
+version = "1.1.4a2"
 description = "Coordinate conversion for SDSS-V"
 category = "main"
 optional = false
@@ -1435,7 +1435,7 @@ dev = ["flake8 (>=3.7.9)", "doc8 (>=0.8.0)", "pytest (>=5.2.2)", "pytest-asyncio
 
 [[package]]
 name = "sdss-drift"
-version = "0.3.1a0"
+version = "0.4.0"
 description = "Modbus PLC control library"
 category = "main"
 optional = false
@@ -1447,7 +1447,7 @@ sdsstools = ">=0.4.1"
 
 [[package]]
 name = "sdss-kaiju"
-version = "1.2.0a1"
+version = "1.2.0a2"
 description = "Collision Avoidance for SDSS-V Positioners"
 category = "main"
 optional = false
@@ -1840,7 +1840,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "tomli"
-version = "1.2.2"
+version = "1.2.3"
 description = "A lil' TOML parser"
 category = "main"
 optional = false
@@ -1961,7 +1961,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1,<3.11"
-content-hash = "0e107b8213813139d97258a03a46fe1dc3ba0bc0d1d8046cfd98a601bd7bc1ef"
+content-hash = "0fb331194ff5bb2ab5510412b7e737fb1c77cbe5da74c502db0d9fb68fa317ed"
 
 [metadata.files]
 aio-pika = [
@@ -3064,18 +3064,18 @@ scipy = [
     {file = "scipy-1.7.3.tar.gz", hash = "sha256:ab5875facfdef77e0a47d5fd39ea178b58e60e454a4c85aa1e52fcb80db7babf"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-1.5.5a0.tar.gz", hash = "sha256:94f5723e2ec2f143ceba0c7ad68108ccad38530217d0f71a0be7b2312662da57"},
-    {file = "sdss_clu-1.5.5a0-py3-none-any.whl", hash = "sha256:70a9b2fa79f7678d8398e76c44ff99c629b15c2851710e940bf384ad3f8ffdb3"},
+    {file = "sdss-clu-1.5.5.tar.gz", hash = "sha256:21a5e164ed45fd210b5d33bd645ead1887596646c9b208f828ba1f962f70123d"},
+    {file = "sdss_clu-1.5.5-py3-none-any.whl", hash = "sha256:a078c9771259b025c59375806026db20f56a86af0b5f62fb681ce31f21aa45ff"},
 ]
 sdss-coordio = [
-    {file = "sdss-coordio-1.1.4a1.tar.gz", hash = "sha256:ee88ea5bd57f9eb2d9fc11051c54ad8d8a649b0868c2d52089b633ff9fbab22d"},
+    {file = "sdss-coordio-1.1.4a2.tar.gz", hash = "sha256:198743a1d2c6795767388b8d82fa239707e079fadcccd5c97c27b486137b1a70"},
 ]
 sdss-drift = [
-    {file = "sdss-drift-0.3.1a0.tar.gz", hash = "sha256:9365f8dbb8a1c1c8d1f64e091f7694639774187c7a50c0f48f1707326ebf1765"},
-    {file = "sdss_drift-0.3.1a0-py3-none-any.whl", hash = "sha256:12c76bac9b01d788d077ab1cdc8cd9739b6537fd21ab8e9ad38a8cc81defeaa3"},
+    {file = "sdss-drift-0.4.0.tar.gz", hash = "sha256:3f7a8c232f8a83a322ba0cb4648b778d5fd3c39fbd853ad465f3ee996c655f94"},
+    {file = "sdss_drift-0.4.0-py3-none-any.whl", hash = "sha256:41390835f4ccc59d701f1b37be614d29e7f2e65b30afd74c83daa4a4a69918bc"},
 ]
 sdss-kaiju = [
-    {file = "sdss-kaiju-1.2.0a1.tar.gz", hash = "sha256:ba268cfab7715ae0c00db1d01f5699f76f06ff7a991f79497715c6d815afe92d"},
+    {file = "sdss-kaiju-1.2.0a2.tar.gz", hash = "sha256:0eb7411c4da2f17e376923d7a6f53488809d966198ada0867a993b018cbdf12a"},
 ]
 sdssdb = [
     {file = "sdssdb-0.4.13.tar.gz", hash = "sha256:b4af1785f408e1e4dbe36915b5150e5a94aa98f0bf2878831e7e2ef501bce0de"},
@@ -3286,8 +3286,8 @@ toml = [
     {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},
 ]
 tomli = [
-    {file = "tomli-1.2.2-py3-none-any.whl", hash = "sha256:f04066f68f5554911363063a30b108d2b5a5b1a010aa8b6132af78489fe3aade"},
-    {file = "tomli-1.2.2.tar.gz", hash = "sha256:c6ce0015eb38820eaf32b5db832dbc26deb3dd427bd5f6556cf0acac2c214fee"},
+    {file = "tomli-1.2.3-py3-none-any.whl", hash = "sha256:e3069e4be3ead9668e21cb9b074cd948f7b3113fd9c8bba083f48247aab8b11c"},
+    {file = "tomli-1.2.3.tar.gz", hash = "sha256:05b6166bff487dc068d322585c7ea4ef78deed501cc124060e0f238e89a9231f"},
 ]
 tornado = [
     {file = "tornado-6.1-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:d371e811d6b156d82aa5f9a4e08b58debf97c302a35714f6f45e35139c332e32"},
