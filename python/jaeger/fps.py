@@ -268,6 +268,8 @@ class FPS(BaseFPS["FPS"]):
         self.__status_event = asyncio.Event()
         self.__temperature_task: asyncio.Task | None = None
 
+        self.observatory = config["observatory"]
+
         # Position and status pollers
         self.pollers = PollerList(
             [

@@ -143,7 +143,7 @@ async def loop(
     if fps.configuration is None:
         return command.fail("Configuration not loaded.")
 
-    fvc = FVC(config["observatory"], command=command)
+    fvc = FVC(fps.observatory, command=command)
 
     # Check that the rotator is halted.
     axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")

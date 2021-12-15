@@ -967,7 +967,7 @@ class FVC:
         for (pid, ftype), row in measured.iterrows():
             (alpha, beta), _ = wok_to_positioner(
                 row.hole_id,
-                "APO",  # TODO: do not hardcode this.
+                self.fps.observatory,
                 "Metrology",
                 row.xwok_measured,
                 row.ywok_measured,
