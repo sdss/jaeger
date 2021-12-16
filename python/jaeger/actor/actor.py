@@ -13,6 +13,7 @@ import json
 import logging
 import os
 from tempfile import NamedTemporaryFile
+from time import time
 
 import clu
 import clu.protocol
@@ -21,6 +22,7 @@ from clu.tools import ActorHandler
 import jaeger
 from jaeger import FPS, __version__, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
+from jaeger.ieb import IEB, Chiller
 
 
 __all__ = ["JaegerActor"]
@@ -103,6 +105,7 @@ class JaegerActor(clu.LegacyActor):
             log.warnings_logger.addHandler(self.actor_handler)
 
         self.__status_watcher_task = asyncio.create_task(self._status_watcher())
+        self.__chiller_watcher_task = asyncio.create_task(self._chiller_watcher())
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
@@ -133,3 +136,52 @@ class JaegerActor(clu.LegacyActor):
 
         async for status in self.fps.async_status():
             self.write("i", fps_status=f"0x{status.value:x}")
+
+    async def _chiller_watcher(self):
+        """Sets the chiller set point temperature."""
+
+        last_changed: float | None = None
+
+        chiller = Chiller.create()
+
+        while True:
+            if isinstance(self.fps.ieb, IEB):
+                ieb = self.fps.ieb
+
+                dev_name = "TEMPERATURE_USER_SETPOINT"
+                dev = chiller.get_device(dev_name)
+
+                failed: bool = True
+                for _ in range(10):
+                    try:
+                        ambient_temp = (await ieb.read_device("T1"))[0]
+
+                        current_time = time()
+                        msg = {
+                            "text": f"Setting chiller to {round(ambient_temp-1, 1)} C"
+                        }
+
+                        changed = False
+                        if last_changed is None:
+                            await dev.write(int((ambient_temp - 1) * 10))
+                            changed = True
+                        else:
+                            delta_time_hours = (current_time - last_changed) / 3600.0
+                            if delta_time_hours >= 1.0:
+                                await dev.write(int((ambient_temp - 1) * 10))
+                                changed = True
+
+                        if changed is True:
+                            self.write("i", msg)
+                            last_changed = time()
+
+                        failed = False
+
+                    except Exception:
+                        await asyncio.sleep(2)
+                        continue
+
+                if failed is True:
+                    self.write("e", {"text": "Failed setting chiller temperature."})
+
+                await asyncio.sleep(300)
