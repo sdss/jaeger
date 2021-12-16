@@ -44,7 +44,7 @@ def configuration():
     pass
 
 
-@configuration.command()
+@configuration.command(cancellable=True)
 @click.option(
     "--reload",
     is_flag=True,
