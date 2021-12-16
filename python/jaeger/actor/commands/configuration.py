@@ -339,7 +339,7 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
 
     _output_configuration_loaded(command, fps)
 
-    command.info("Executon dithered configuration.")
+    command.info("Executing dithered configuration.")
     execute_cmd = await command.send_command("jaeger", "configuration execute")
     if execute_cmd.status.did_fail:
         command.fail("Failed executing configuration.")
