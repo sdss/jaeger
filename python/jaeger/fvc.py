@@ -991,6 +991,7 @@ class FVC:
         self.fps.configuration.write_summary(
             flavour="F",
             headers={"fvc_rms": self.fitrms},
+            overwrite=True,
         )
 
     def extract(self, image_data: numpy.ndarray) -> pandas.DataFrame:
