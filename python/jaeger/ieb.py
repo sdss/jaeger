@@ -131,3 +131,15 @@ class FVC(IEB):
         default_ieb_path = config["files"]["fvc_config"]
 
         return super().create(default_ieb_path)
+
+
+class Chiller(IEB):
+    """Connects to the chiller Modbus PLC."""
+
+    @classmethod
+    def create(cls, path=None):
+        """Creates a `.Chiller` instance with the default configuration."""
+
+        default_chiller_path = config["files"]["chiller_config"]
+
+        return super().create(default_chiller_path)

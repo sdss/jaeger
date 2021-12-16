@@ -6,13 +6,21 @@
 # @Filename: __init__.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from typing import TYPE_CHECKING
+
+from clu import Command
 from clu.parsers.click import command_parser
+
+from jaeger.actor import JaegerActor
 
 
 jaeger_parser = command_parser
 
+JaegerCommandType = Command[JaegerActor]
+
 
 from .can import *
+from .chiller import *
 from .configuration import *
 from .debug import *
 from .fvc import *

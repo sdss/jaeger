@@ -5,6 +5,7 @@
 ### 🚀 New
 
 * Added `jaeger configuration slew` command.
+* Added chiller control.
 
 ### ✨ Improved
 

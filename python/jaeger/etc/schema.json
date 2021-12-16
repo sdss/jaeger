@@ -217,6 +217,18 @@
         },
         "fps_calibrations_version": {
             "type": "string"
+        },
+        "chiller_temperature_value": {
+            "type": "number"
+        },
+        "chiller_temperature_setpoint": {
+            "type": "number"
+        },
+        "chiller_flow_value": {
+            "type": "number"
+        },
+        "chiller_flow_setpoint": {
+            "type": "number"
         }
     },
     "additionalProperties": false
