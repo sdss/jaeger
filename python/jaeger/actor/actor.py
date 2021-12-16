@@ -141,6 +141,7 @@ class JaegerActor(clu.LegacyActor):
         """Sets the chiller set point temperature."""
 
         last_changed: float | None = None
+        last_setpoint: float | None = None
 
         chiller = Chiller.create()
 
@@ -154,15 +155,20 @@ class JaegerActor(clu.LegacyActor):
                 failed: bool = True
                 for _ in range(10):
                     try:
-                        ambient_temp = (await ieb.read_device("T1"))[0]
+                        ambient_temp = (await ieb.read_device("T3"))[0]
 
+                        if last_setpoint is None:
+                            last_setpoint = (await dev.read())[0]
+
+                        delta_temp = abs(last_setpoint - ambient_temp)
                         current_time = time()
+
                         msg = {
                             "text": f"Setting chiller to {round(ambient_temp-1, 1)} C"
                         }
 
                         changed = False
-                        if last_changed is None:
+                        if last_changed is None or delta_temp > 5:
                             await dev.write(int((ambient_temp - 1) * 10))
                             changed = True
                         else:
