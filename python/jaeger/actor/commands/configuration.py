@@ -322,6 +322,11 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
     else:
         parent_configuration = fps.configuration
 
+    command.info(
+        "Creating dithered configuration from "
+        f"{parent_configuration.configuration_id}."
+    )
+
     fps.configuration = DitheredConfiguration(parent_configuration, radius)
     await fps.configuration.get_paths()
 
