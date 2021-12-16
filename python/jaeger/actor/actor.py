@@ -155,7 +155,7 @@ class JaegerActor(clu.LegacyActor):
                 failed: bool = True
                 for _ in range(10):
                     try:
-                        ambient_temp = (await ieb.read_device("T3"))[0]
+                        ambient_temp = (await ieb.read_device("T1"))[0]
 
                         if last_setpoint is None:
                             last_setpoint = (await dev.read())[0]
