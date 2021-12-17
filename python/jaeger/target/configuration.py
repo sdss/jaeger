@@ -837,6 +837,7 @@ class DitheredConfiguration(BaseConfiguration):
 
         self.extra_summary_data = {
             "parent_configuration": self.parent_configuration.configuration_id or -999,
+            "is_dithered": 1,
             "dither_radius": radius,
         }
 
