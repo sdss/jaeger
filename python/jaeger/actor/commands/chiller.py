@@ -70,10 +70,10 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
 
     async def _stop_watcher():
         with suppress(asyncio.CancelledError):
-            if actor is not None and actor.__chiller_watcher is not None:
-                actor.__chiller_watcher.cancel()
-                await actor.__chiller_watcher
-                actor.__chiller_watcher = None
+            if actor is not None and actor._chiller_watcher_task is not None:
+                actor._chiller_watcher_task.cancel()
+                await actor._chiller_watcher_task
+                actor._chiller_watcher_task = None
 
     chiller = Chiller.create()
 
@@ -82,8 +82,9 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
 
         if value == "auto":
             await _stop_watcher()
-            actor.__chiller_watcher = asyncio.create_task(actor._chiller_watcher())
+            actor._chiller_watcher_task = asyncio.create_task(actor._chiller_watcher())
             command.info("Chiller temperature set to auto.")
+            return command.finish()
         else:
             value = float(value)
             command.warning("Stopping chiller auto mode.")
