@@ -152,8 +152,9 @@ class JaegerActor(clu.LegacyActor):
                 dev_name = "TEMPERATURE_USER_SETPOINT"
                 dev = chiller.get_device(dev_name)
 
-                failed: bool = True
+                failed: bool = False
                 for _ in range(10):
+                    failed = False
                     try:
                         ambient_temp = (await ieb.read_device("T3"))[0]
 
@@ -180,11 +181,10 @@ class JaegerActor(clu.LegacyActor):
                         if changed is True:
                             self.write("i", msg)
                             last_changed = time()
-                            break
-
-                        failed = False
+                        break
 
                     except Exception:
+                        failed = True
                         await asyncio.sleep(2)
                         continue
 
