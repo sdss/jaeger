@@ -6,7 +6,6 @@ from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import click
-from numpy import broadcast
 
 from jaeger.ieb import Chiller
 
