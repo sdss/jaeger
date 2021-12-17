@@ -104,8 +104,10 @@ class JaegerActor(clu.LegacyActor):
         if log.warnings_logger:
             log.warnings_logger.addHandler(self.actor_handler)
 
-        self.__status_watcher_task = asyncio.create_task(self._status_watcher())
-        self.__chiller_watcher_task = asyncio.create_task(self._chiller_watcher())
+        self.__status_watcher = asyncio.create_task(self._status_watcher())
+        self.__chiller_watcher: asyncio.Task | None = asyncio.create_task(
+            self._chiller_watcher()
+        )
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""

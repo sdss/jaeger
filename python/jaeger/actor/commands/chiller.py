@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 
 from typing import TYPE_CHECKING
 
@@ -60,14 +61,34 @@ async def status(command: JaegerCommandType, fps: FPS):
 
 @chiller.command()
 @click.argument("MODE", type=click.Choice(["temperature", "flow"]))
-@click.argument("VALUE", type=float)
-async def set(command: JaegerCommandType, fps: FPS, mode: str, value: float | int):
+@click.argument("VALUE", type=str)
+async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | float):
     """Shows the temperature or flow of the chiller."""
+
+    actor = command.actor
+    assert actor
+
+    async def _stop_watcher():
+        with suppress(asyncio.CancelledError):
+            if actor is not None and actor.__chiller_watcher is not None:
+                actor.__chiller_watcher.cancel()
+                await actor.__chiller_watcher
+                actor.__chiller_watcher = None
 
     chiller = Chiller.create()
 
     if mode == "temperature":
         dev_name = "TEMPERATURE_USER_SETPOINT"
+
+        if value == "auto":
+            await _stop_watcher()
+            actor.__chiller_watcher = asyncio.create_task(actor._chiller_watcher())
+            command.info("Chiller temperature set to auto.")
+        else:
+            value = float(value)
+            command.warning("Stopping chiller auto mode.")
+            await _stop_watcher()
+
     else:
         dev_name = "FLOW_USER_SETPOINT"
 
