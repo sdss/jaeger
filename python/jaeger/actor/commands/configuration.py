@@ -310,6 +310,11 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
+    if fps.configuration.is_dither:
+        command.info("Restoring parent configuration.")
+        fps.configuration = fps.configuration.parent_configuration
+        _output_configuration_loaded(command, fps)
+
     command.finish()
 
 

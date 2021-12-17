@@ -104,8 +104,8 @@ class JaegerActor(clu.LegacyActor):
         if log.warnings_logger:
             log.warnings_logger.addHandler(self.actor_handler)
 
-        self.__status_watcher = asyncio.create_task(self._status_watcher())
-        self.__chiller_watcher: asyncio.Task | None = asyncio.create_task(
+        self._status_watcher_task = asyncio.create_task(self._status_watcher())
+        self._chiller_watcher_task: asyncio.Task | None = asyncio.create_task(
             self._chiller_watcher()
         )
 
