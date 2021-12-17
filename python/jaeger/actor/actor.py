@@ -180,6 +180,7 @@ class JaegerActor(clu.LegacyActor):
                         if changed is True:
                             self.write("i", msg)
                             last_changed = time()
+                            break
 
                         failed = False
 
