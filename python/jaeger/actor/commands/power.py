@@ -349,4 +349,9 @@ async def off(
     if not (await _power_sequence(command, ieb, off_seq, mode="off", delay=delay)):
         return
 
+    command.info("Waiting 15 seconds and reloading positioners.")
+    await asyncio.sleep(15)
+
+    await fps.initialise()
+
     return command.finish(text="Power off sequence complete.")
