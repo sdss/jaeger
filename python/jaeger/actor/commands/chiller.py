@@ -95,7 +95,7 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
 
     device = chiller.get_device(dev_name)
 
-    value = int(value * 10)
+    value = int(float(value) * 10)
 
     for _ in range(10):
         try:
