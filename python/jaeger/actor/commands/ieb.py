@@ -31,12 +31,13 @@ __all__ = ["ieb"]
 
 @jaeger_parser.group()
 @pass_args()
-def ieb(command, fps):
+@click.pass_context
+def ieb(ctx, command, fps):
     """Manages the IEB."""
 
     ieb = fps.ieb
 
-    if not ieb or ieb.disabled:
+    if not ieb or (ieb.disabled and ctx.invoked_subcommand != "enable"):
         command.fail(error="ieb not connected.")
         raise click.Abort()
 
@@ -51,6 +52,18 @@ async def enable(command, fps):
         return command.fail("IEB object does not exist.")
 
     fps.ieb.disabled = False
+
+    return command.finish()
+
+
+@ieb.command()
+async def disable(command, fps):
+    """Disables the IEB."""
+
+    if fps.ieb is None or not isinstance(fps.ieb, IEB):
+        return command.fail("IEB object does not exist.")
+
+    fps.ieb.disabled = True
 
     return command.finish()
 
