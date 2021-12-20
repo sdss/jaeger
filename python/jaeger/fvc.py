@@ -361,13 +361,13 @@ class FVC:
                 yCMM,
                 plot_path_root + "_roughassoc.pdf",
                 xy_fiducial=xy_fiducial_wok_rough,
-                xy_fiducial_cmm=xyCMMouter,
+                xy_fiducial_cmm=xyCMMouter[xyCMMouter_matched_idx],
                 title="Rough fiducial association",
             )
 
         ft = ZhaoBurgeTransform(
             xy_fiducial_CCD,
-            xyCMMouter,
+            xyCMMouter[xyCMMouter_matched_idx],
             polids=(polids or config["fvc"]["zb_polids"]),
         )
         self.log(
@@ -420,13 +420,13 @@ class FVC:
                 plot_path_root + "_refineassoc.pdf",
                 title="Refined fiducial association",
                 xy_fiducial=xy_fiducial_wok_refine,
-                xy_fiducial_cmm=xyCMM,
+                xy_fiducial_cmm=xyCMM[xyCMM_matched_idx],
             )
 
         # Try a new transform
         ft = ZhaoBurgeTransform(
             xy_fiducial_CCD,
-            xyCMM,
+            xyCMM[xyCMM_matched_idx],
             polids=(polids or config["fvc"]["zb_polids"]),
         )
         self.log(
