@@ -258,7 +258,7 @@ async def loop(
 
             n += 1
 
-    except FVCError as err:
+    except Exception as err:
         return command.fail(error=f"Failed processing image: {err}")
 
     finally:
