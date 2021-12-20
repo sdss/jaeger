@@ -170,16 +170,17 @@ class JaegerActor(clu.LegacyActor):
                             "text": f"Setting chiller to {round(ambient_temp-1, 1)} C"
                         }
 
+                        new_temp = ambient_temp - 1
+                        if new_temp <= 0.1:
+                            new_temp = 0.1
+
                         changed = False
                         if last_changed is None or delta_temp > 5:
-                            await dev.write(int((ambient_temp - 1) * 10))
+                            await dev.write(int(new_temp * 10))
                             changed = True
                         else:
                             delta_time_hours = (current_time - last_changed) / 3600.0
                             if delta_time_hours >= 1.0:
-                                new_temp = ambient_temp - 1
-                                if new_temp <= 0:
-                                    new_temp = 0.1
                                 await dev.write(int(new_temp * 10))
                                 changed = True
 
