@@ -171,8 +171,8 @@ class JaegerActor(clu.LegacyActor):
                         }
 
                         new_temp = ambient_temp - 1
-                        if new_temp <= 0.1:
-                            new_temp = 0.1
+                        if new_temp <= 1:
+                            new_temp = 1
 
                         changed = False
                         if last_changed is None or delta_temp > 5:
