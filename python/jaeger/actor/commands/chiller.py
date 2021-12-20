@@ -86,6 +86,8 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
             return command.finish()
         else:
             value = float(value)
+            if value < 0.1:
+                return command.fail("Minimum temperature is 0.1 C.")
             command.warning("Stopping chiller auto mode.")
             await _stop_watcher()
 

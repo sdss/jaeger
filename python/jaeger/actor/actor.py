@@ -177,7 +177,10 @@ class JaegerActor(clu.LegacyActor):
                         else:
                             delta_time_hours = (current_time - last_changed) / 3600.0
                             if delta_time_hours >= 1.0:
-                                await dev.write(int((ambient_temp - 1) * 10))
+                                new_temp = ambient_temp - 1
+                                if new_temp <= 0:
+                                    new_temp = 0.1
+                                await dev.write(int(new_temp * 10))
                                 changed = True
 
                         if changed is True:
