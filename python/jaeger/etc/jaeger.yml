@@ -93,7 +93,7 @@ fvc:
     target_delta_rms: 1
     max_fvc_iterations: 5
     k: 1.0
-    max_correction: 10
+    max_correction: 15
     ieb_keys:
         TEMPRTD2: rtd2
         TEMPRTD3: rtd3
