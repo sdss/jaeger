@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import click
+import numpy
 
+from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import explode, unwind
 
@@ -39,21 +41,38 @@ __all__ = ["unwind_command", "explode_command"]
     is_flag=True,
     help="Execute unwind even in presence of deadlocks.",
 )
+@click.option(
+    "--status",
+    is_flag=True,
+    help="Checks if the array is folded.",
+)
 async def unwind_command(
     command: Command[JaegerActor],
     fps: FPS,
     collision_buffer: float | None = None,
     force: bool = False,
+    status: bool = False,
 ):
     """Sends the FPS to folded."""
 
     if fps.locked:
         command.fail(error="The FPS is locked.")
 
-    command.debug(text="Calculating unwind trajectory.")
-
     await fps.update_position()
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
+
+    # Check if the array is already folded. If so, do nothing.
+    alphaL, betaL = config["kaiju"]["lattice_position"]
+    positions_array = fps.get_positions()
+    if numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1):
+        command.info(folded=True)
+        return command.finish("All positioners are folded.")
+    else:
+        command.info(folded=False)
+        if status:
+            return command.finish("The array is not folded.")
+
+    command.debug(text="Calculating unwind trajectory.")
 
     try:
         trajectory = await unwind(
