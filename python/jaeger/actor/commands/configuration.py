@@ -188,7 +188,10 @@ async def load(
     if execute:
         cmd = await command.send_command("jaeger", "configuration execute")
         if cmd.status.did_fail:
-            return cmd.fail("Failed executing configuration.")
+            if cmd.status.is_done:
+                return
+            else:
+                return cmd.fail("Failed executing configuration.")
 
     return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
