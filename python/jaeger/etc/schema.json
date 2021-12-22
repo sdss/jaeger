@@ -147,6 +147,7 @@
         },
         "move_time": { "type": "number" },
         "locked": { "type": "boolean" },
+        "folded": { "type": "boolean" },
         "n_positioners": { "type": "integer" },
         "positioner_status": {
             "type": "array",

@@ -192,6 +192,14 @@ async def send_trajectory(
             err.trajectory,
         )
 
+    if command:
+        alphaL, betaL = config["kaiju"]["lattice_position"]
+        positions_array = fps.get_positions()
+        if numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1):
+            command.info(folded=True)
+        else:
+            command.info(folded=False)
+
     msg = "All positioners have reached their destinations."
     log.info(msg)
     if command:
