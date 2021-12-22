@@ -146,6 +146,7 @@
             "items": [{ "title": "LED1", "type": "number" }]
         },
         "move_time": { "type": "number" },
+        "alive_at": { "type": "number" },
         "locked": { "type": "boolean" },
         "folded": { "type": "boolean" },
         "n_positioners": { "type": "integer" },

@@ -104,6 +104,7 @@ class JaegerActor(clu.LegacyActor):
         if log.warnings_logger:
             log.warnings_logger.addHandler(self.actor_handler)
 
+        self._alive_task = asyncio.create_task(self._report_alive())
         self._status_watcher_task = asyncio.create_task(self._status_watcher())
         self._chiller_watcher_task: asyncio.Task | None = asyncio.create_task(
             self._chiller_watcher()
@@ -122,6 +123,13 @@ class JaegerActor(clu.LegacyActor):
         await self.status_server.start()
 
         self.log.info(f"starting status server on {self.host}:{port}")
+
+    async def _report_alive(self):
+        """Outputs the ``alive_at`` keyword."""
+
+        while True:
+            self.write("d", {"alive_at": time()}, broadcast=True)
+            await asyncio.sleep(60)
 
     async def _report_status_cb(self, transport):
         """Reports the status to the status server."""
