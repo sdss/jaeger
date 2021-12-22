@@ -246,8 +246,8 @@ async def execute(command: Command[JaegerActor], fps: FPS):
             except Exception as err:
                 return command.fail(error=f"Failed getting trajectory: {err}")
 
-            if not (await check_trajectory(trajectory, fps=fps, atol=1)):
-                return command.fail(error="Trajectory validation failed.")
+        if not (await check_trajectory(trajectory, fps=fps, atol=1)):
+            return command.fail(error="Trajectory validation failed.")
 
     command.info(text="Sending and executing forward trajectory.")
 
