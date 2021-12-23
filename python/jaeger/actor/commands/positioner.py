@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import pathlib
+from time import time
 
 from typing import TYPE_CHECKING
 
@@ -266,6 +267,8 @@ async def status(command, fps, positioner_ids):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioner_ids or list(fps.positioners.keys())
+
+    command.actor.write("d", {"alive_at": time()}, broadcast=True)
 
     if not check_positioners(positioner_ids, command, fps):
         return
