@@ -167,12 +167,15 @@ async def loop(
         )
 
     max_iterations = max_iterations or config["fvc"]["max_fvc_iterations"]
+
     current_rms = None
     delta_rms = None
 
     filename = None
-
     proc_image_saved = False
+
+    # Flag to determine when to exit the loop.
+    finish: bool = False
 
     try:
 
@@ -181,9 +184,6 @@ async def loop(
             command.info(f"FVC iteration {n}")
 
             proc_image_saved: bool = False
-
-            success: bool | None = None
-            message: str | None = None
 
             # 1. Expose the FVC
             command.debug("Taking exposure with fliswarm.")
@@ -207,14 +207,15 @@ async def loop(
 
             # 4. Check if the RMS or delta RMS criteria are met.
             if current_rms < config["fvc"]["target_rms"]:
-                success = True
+                command.info("RMS target reached.")
+                finish = True
             elif delta_rms is not None:
                 if delta_rms < config["fvc"]["target_delta_rms"]:
-                    message = "Delta RMS reached. Cancelling the FVC loop."
-                    success = True
+                    command.info("Delta RMS reached. RMS target has not been reached.")
+                    finish = True
                 elif delta_rms < 0:
-                    message = "RMS has increased. Cancelling the FVC loop."
-                    success = False
+                    command.warning("RMS has increased. Cancelling FVC loop.")
+                    finish = True
 
             # 4. Update current positions and calculate offsets.
             command.debug("Calculating offsets.")
@@ -227,9 +228,9 @@ async def loop(
             )
 
             # 5. Apply corrections.
-            if success is None and apply is True:
+            if finish is False and apply is True:
                 if n == max_iterations and one is False:
-                    command.info("Not applying correction during the last iteration.")
+                    command.debug("Not applying correction during the last iteration.")
                 else:
                     await fvc.apply_correction()
 
@@ -239,22 +240,16 @@ async def loop(
             await fvc.write_proc_image(proc_path)
             proc_image_saved = True
 
-            if success is not None:
-                if message is not None:
-                    command.warning(text=message)
-
-                if success is True:
-                    return command.finish("FVC target RMS reached.")
-                else:
-                    return command.fail("FVC RMS not reached.")
+            if finish is True:
+                break
 
             if one is True or apply is False:
                 command.warning("Cancelling FVC loop after one iteration.")
-                return command.finish()
+                break
 
             if n == max_iterations:
                 command.warning("Maximum number of iterations reached.")
-                return command.finish("Finishing FVC loop.")
+                break
 
             n += 1
 
@@ -277,6 +272,9 @@ async def loop(
                 await fvc.write_proc_image(proc_path)
             else:
                 command.warning("Cannot write processed image.")
+
+        # FVC loop always succeeds.
+        return command.finish()
 
 
 @fvc_parser.command()

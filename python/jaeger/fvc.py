@@ -556,7 +556,7 @@ class FVC:
 
         """
 
-        self.log("Calculating offset from FVC image and fit.")
+        self.log("Calculating offset from FVC image and model fit.")
 
         site = config["observatory"]
 
