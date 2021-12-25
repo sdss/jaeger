@@ -93,7 +93,7 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
     """
 
     positioner_class: ClassVar[Type[Positioner]] = Positioner
-    _instance: ClassVar[dict[Type[BaseFPS], FPS_T]] = {}
+    _instance: dict[Type[BaseFPS], FPS_T] = {}
 
     initialised: bool
 
