@@ -51,7 +51,7 @@ async def enable(command, fps):
     if fps.ieb is None or not isinstance(fps.ieb, IEB):
         return command.fail("IEB object does not exist.")
 
-    fps.ieb.disabled = False
+    fps.ieb.enable()
 
     return command.finish()
 

@@ -63,6 +63,7 @@ class IEB(Drift):
         super().__init__(*args, **kwargs)
 
         self._categories = None
+        self._n_failures: int = 0
 
     @classmethod
     def create(cls, path=None):
@@ -98,12 +99,22 @@ class IEB(Drift):
         try:
             await Drift.__aenter__(self)
         except DriftError:
-            self.disabled = True
-            raise DriftError("Failed connecting to the IEB. Disabling it.")
+            self._n_failures += 1
+            if self._n_failures >= 5:
+                self.disabled = True
+                raise DriftError("Failed connecting to the IEB. Disabling it.")
+            else:
+                raise DriftError("Failed connecting to the IEB.")
 
     async def __aexit__(self, *args):
 
         await Drift.__aexit__(self, *args)
+
+    def enable(self):
+        """Re-enables the IEB instance."""
+
+        self._n_failures = 0
+        self.disabled = False
 
     async def get_status(self) -> Dict[str, Any]:
         """Returns the status of the IEB components."""

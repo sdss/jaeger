@@ -1220,6 +1220,9 @@ class FPS(BaseFPS["FPS"]):
     async def _handle_temperature(self):
         """Handle positioners in low temperature."""
 
+        if not isinstance(self.ieb, IEB):
+            log.error("Cannot handle low-temperature mode. IEB not present.")
+
         async def set_rpm(activate):
             if activate:
                 rpm = config["low_temperature"]["rpm_cold"]
@@ -1290,15 +1293,15 @@ class FPS(BaseFPS["FPS"]):
                     self.set_status(base_status | FPSStatus.TEMPERATURE_NORMAL)
 
             except BaseException as err:
-                log.info(
+                log.warning(
                     f"Cannot read device {sensor!r}. "
-                    f"Low-temperature mode will not be engaged: {err}",
+                    f"Low-temperature tracking temporarily disabled: {err}",
                 )
                 base_status = self.status & ~FPSStatus.TEMPERATURE_BITS
                 self.set_status(base_status | FPSStatus.TEMPERATURE_UNKNOWN)
-                return
 
-            await asyncio.sleep(interval)
+            finally:
+                await asyncio.sleep(interval)
 
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
