@@ -352,7 +352,10 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
     if execute_cmd.status.did_fail:
         command.fail("Failed executing configuration.")
 
-    command.finish(f"Dither configuration {fps.configuration.configuration_id} loaded.")
+    command.finish(
+        f"Dithered configuration {fps.configuration.configuration_id} "
+        "loaded and executed."
+    )
 
 
 @configuration.command()
