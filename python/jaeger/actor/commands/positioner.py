@@ -262,20 +262,20 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 
 @jaeger_parser.command()
-@click.argument("POSITIONER-IDS", type=int, nargs=-1, required=False)
-async def status(command, fps, positioner_ids):
+@click.argument("POSITIONERS", type=int, nargs=-1, required=False)
+async def status(command, fps, positioners):
     """Reports the position and status bit of a list of positioners."""
 
-    positioner_ids = positioner_ids or list(fps.positioners.keys())
-
-    command.actor.write("d", {"alive_at": time()}, broadcast=True)
+    positioner_ids = positioners or list(fps.positioners.keys())
 
     if not check_positioners(positioner_ids, command, fps):
         return
 
-    command.info(locked=fps.locked)
-    command.info(n_positioners=len(fps.positioners))
-    command.info(fps_status=f"0x{fps.status.value:x}")
+    if len(positioners) > 0:
+        command.actor.write("d", {"alive_at": time()}, broadcast=True)
+        command.info(locked=fps.locked)
+        command.info(n_positioners=len(fps.positioners))
+        command.info(fps_status=f"0x{fps.status.value:x}")
 
     if len(positioner_ids) > 0:
         try:
@@ -324,7 +324,8 @@ async def status(command, fps, positioner_ids):
                 ],
             )
 
-    await clu.Command("ieb status", parent=command).parse()
+    if len(positioners) > 0:
+        await clu.Command("ieb status", parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
 
