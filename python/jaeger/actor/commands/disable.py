@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 import click
 
-from . import JaegerCommandType, command_parser
+from . import JaegerCommandType, jaeger_parser
 
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 __all__ = ["disable", "enable"]
 
 
-@command_parser
+@jaeger_parser.command()
 @click.argument("POSITIONER-ID", type=int)
 async def disable(command: JaegerCommandType, fps: FPS, positioner_id: int):
     """Disables a positioner"""
@@ -40,7 +40,7 @@ async def disable(command: JaegerCommandType, fps: FPS, positioner_id: int):
     return command.finish()
 
 
-@command_parser
+@jaeger_parser.command()
 @click.argument("POSITIONER-ID", type=int)
 async def enable(command: JaegerCommandType, fps: FPS, positioner_id: int):
     """Enables a positioner"""
