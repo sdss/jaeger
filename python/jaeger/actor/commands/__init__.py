@@ -23,6 +23,7 @@ from .can import *
 from .chiller import *
 from .configuration import *
 from .debug import *
+from .disable import *
 from .fvc import *
 from .ieb import *
 from .pollers import *

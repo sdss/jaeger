@@ -8,6 +8,7 @@
 * Added chiller control.
 * A keyword `folded` is updated after a trajectory indicating if the array is folded. In `jaeger unwind`, if the array is already folded (with a tolerance of 1 degree), it does nothing. `jaeger unwind --status` only reports the folded status.
 * Report `alive_at` every 60 second.
+* Add commands to enable and disable a positioner during runtime.
 
 ### ✨ Improved
 
