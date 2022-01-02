@@ -174,13 +174,13 @@ class JaegerActor(clu.LegacyActor):
                         delta_temp = abs(last_setpoint - ambient_temp)
                         current_time = time()
 
-                        msg = {
-                            "text": f"Setting chiller to {round(ambient_temp-1, 1)} C"
-                        }
-
                         new_temp = ambient_temp - 1
                         if new_temp <= 1:
                             new_temp = 1
+
+                        msg = {
+                            "text": f"Setting chiller to {round(new_temp, 1)} C"
+                        }
 
                         changed = False
                         if last_changed is None or delta_temp > 5:
