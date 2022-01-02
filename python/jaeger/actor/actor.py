@@ -201,13 +201,13 @@ class JaegerActor(clu.LegacyActor):
                             # point). Otherwise only set the temperature once
                             # an hour.
 
-                            delta_temp = abs(last_setpoint - ambient_temp)
-                            now = time()
-
                             # New set point is one below ambient clipped to 1 degC.
                             new_temp = ambient_temp - 1
                             if new_temp <= 1:
                                 new_temp = 1
+
+                            delta_temp = abs(last_setpoint - new_temp)
+                            now = time()
 
                             msg = {"text": f"Setting chiller to {round(new_temp, 1)} C"}
 
