@@ -31,5 +31,6 @@ from .positioner import *
 from .power import *
 from .snapshot import *
 from .talk import *
+from .testing import *
 from .unwind import *
 from .version import *
