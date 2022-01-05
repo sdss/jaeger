@@ -42,6 +42,8 @@ async def disable(
 ):
     """Outputs the ``configuration_loaded`` keyword for a given field."""
 
-    command.finish(
-        configuration_loaded=[-999, -999, -999, ra, dec, pa, -999.0, -999.0, ""]
+    command.info(
+        configuration_loaded=[-999, -999, -999, ra, dec, pa, -999.0, -999.0, "/data"]
     )
+
+    return command.finish()
