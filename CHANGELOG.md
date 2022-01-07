@@ -1,6 +1,6 @@
 # Changelog
 
-## Next version
+## 0.13.1 - December 14, 2021
 
 ### 🚀 New
 
@@ -13,6 +13,11 @@
 ### ✨ Improved
 
 * Check that the rotator is halted before exposing the FVC.
+* Added wok coordinates to summary files.
+
+### 🔧 Fixed
+
+* Increased length of `optical_prov` in `confSummary` files.
 
 
 ## 0.13.0 - December 14, 2021
