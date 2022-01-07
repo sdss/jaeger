@@ -32,9 +32,7 @@ async def test_status(actor):
     command = await actor.invoke_mock_command("status")
 
     assert command.status.did_succeed
-
-    # cmd running + locked + n_positioners + 5 positioners + ieb status + done
-    assert len(actor.mock_replies) == 13
+    assert len(actor.mock_replies) == 10
 
 
 async def test_info(actor):
@@ -43,8 +41,9 @@ async def test_info(actor):
     assert command.status.did_succeed
 
     data = actor.mock_replies
-    assert "version" in data[3]
-    assert "config_file" in data[4]
+
+    assert "version" in data[4]
+    assert "config_file" in data[5]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
