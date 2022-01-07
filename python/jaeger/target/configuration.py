@@ -99,7 +99,7 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
         ("spectrographId", numpy.int16, -999),
         ("fiberId", numpy.int16, -999),
         ("mag", numpy.dtype(("<f4", (5,))), [-999.0] * 5),
-        ("optical_prov", "U10", ""),
+        ("optical_prov", "U30", ""),
         ("bp_mag", numpy.float32, -999.0),
         ("gaia_g_mag", numpy.float32, -999.0),
         ("rp_mag", numpy.float32, -999.0),
