@@ -30,10 +30,14 @@ from coordio import (
     Site,
     Wok,
 )
+from coordio import __version__ as coordio_version
 from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
+from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
-from jaeger import FPS, config, log
+from jaeger import FPS
+from jaeger import __version__ as jaeger_version
+from jaeger import config, log
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import (
     decollide_in_executor,
@@ -627,6 +631,9 @@ class BaseConfiguration:
             "configuration_id": self.configuration_id,
             "robostrategy_run": "NA",
             "fps_calibrations_version": calibration.fps_calibs_version,
+            "jaeger_version": jaeger_version,
+            "coordio_version": coordio_version,
+            "kaiju_version": kaiju_version,
             "design_id": self.design_id,
             "field_id": -999,
             "instruments": "BOSS APOGEE",
