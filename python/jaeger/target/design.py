@@ -47,6 +47,8 @@ class Design:
     epoch
         The JD epoch for which to calculate the configuration coordinates. If
         `None`, uses the current time.
+    scale
+        Focal plane scale factor to apply. Defaults to coordio's internal value.
 
     """
 
@@ -55,6 +57,7 @@ class Design:
         design_id: int,
         load_configuration: bool = True,
         epoch: float | None = None,
+        scale: float | None = None,
     ):
 
         if calibration.wokCoords is None:
@@ -151,12 +154,22 @@ class Design:
         return site == observatory
 
     @classmethod
-    async def create_async(cls, design_id: int, epoch: float | None = None):
+    async def create_async(
+        cls,
+        design_id: int,
+        epoch: float | None = None,
+        scale: float | None = None,
+    ):
         """Returns a design while creating the configuration in an executor."""
 
         self = cls(design_id, load_configuration=False)
 
-        configuration = await run_in_executor(Configuration, self, epoch=epoch)
+        configuration = await run_in_executor(
+            Configuration,
+            self,
+            epoch=epoch,
+            scale=scale,
+        )
         self.configuration = configuration
 
         return self

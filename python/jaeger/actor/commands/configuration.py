@@ -92,6 +92,11 @@ def configuration():
     is_flag=True,
     help="Only reissue the configuration_loaded keyword.",
 )
+@click.option(
+    "--scale",
+    type=float,
+    help="Focal plane scale factor. If not passes, uses coordio default.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -106,6 +111,7 @@ async def load(
     write_summary: bool = False,
     execute: bool = False,
     reissue: bool = False,
+    scale: float | None = None,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -147,7 +153,7 @@ async def load(
 
             # Define the epoch for the configuration.
             epoch = Time.now().jd + epoch_delay / 86400.0
-            design = await Design.create_async(designid, epoch=epoch)
+            design = await Design.create_async(designid, epoch=epoch, scale=scale)
         except Exception as err:
             return command.fail(error=f"Failed retrieving design: {err}")
 

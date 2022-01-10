@@ -139,7 +139,7 @@ class BaseConfiguration:
     assignment_data: BaseAssignmentData
     epoch: float | None
 
-    def __init__(self):
+    def __init__(self, scale: float | None = None):
 
         if len(calibration.positionerTable) == 0:
             raise ValueError("FPS calibrations not loaded or the array is empty.")
@@ -148,6 +148,8 @@ class BaseConfiguration:
         # Once set, it cannot be changed.
         self.configuration_id: int | None = None
         self._summary_file: str | None = None
+
+        self.scale = scale
 
         # Whether the configuration is a dither. If True, there will be a base
         # configuration from which we dithered and the trajectory will be applied
@@ -636,6 +638,7 @@ class BaseConfiguration:
             "kaiju_version": kaiju_version,
             "design_id": self.design_id,
             "field_id": -999,
+            "focal_scale": self.assignment_data.scale or 0.999882,
             "instruments": "BOSS APOGEE",
             "epoch": adata.site.time.jd if adata.site.time else -999,
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
@@ -787,16 +790,23 @@ class Configuration(BaseConfiguration):
 
     assignment_data: AssignmentData
 
-    def __init__(self, design: Design, epoch: float | None = None, **kwargs):
+    def __init__(
+        self,
+        design: Design,
+        epoch: float | None = None,
+        scale: float | None = None,
+    ):
 
-        super().__init__(**kwargs)
+        super().__init__(scale=scale)
+
+        assert self.assignment_data.site.time
+
+        self.epoch = self.assignment_data.site.time.jd
+        self.scale = scale
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment_data = AssignmentData(self, epoch=epoch)
-
-        assert self.assignment_data.site.time
-        self.epoch = self.assignment_data.site.time.jd
+        self.assignment_data = AssignmentData(self, epoch=epoch, scale=scale)
 
     def __repr__(self):
         return (
@@ -817,7 +827,7 @@ class DitheredConfiguration(BaseConfiguration):
 
         assert configuration.design
 
-        super().__init__()
+        super().__init__(scale=self.parent_configuration.scale)
 
         self.parent_configuration: BaseConfiguration = configuration
         self.is_dither = True
@@ -844,6 +854,7 @@ class DitheredConfiguration(BaseConfiguration):
         )
 
         assert self.assignment_data.site.time
+
         self.epoch = self.assignment_data.site.time.jd
 
         self.radius = radius
@@ -992,9 +1003,10 @@ class ManualConfiguration(BaseConfiguration):
         design_id: int = -999,
         observatory: str | None = None,
         position_angle: float = 0.0,
+        scale: float | None = None,
     ):
 
-        super().__init__()
+        super().__init__(scale=scale)
 
         self.design = None
         self.design_id = design_id
@@ -1014,6 +1026,7 @@ class ManualConfiguration(BaseConfiguration):
             observatory,
             field_centre=field_centre,
             position_angle=position_angle,
+            scale=scale,
         )
 
     @classmethod
@@ -1091,6 +1104,7 @@ class BaseAssignmentData:
         self,
         configuration: Configuration | ManualConfiguration | DitheredConfiguration,
         observatory: Optional[str] = None,
+        scale: float | None = None,
     ):
 
         self.configuration = configuration
@@ -1108,6 +1122,8 @@ class BaseAssignmentData:
 
         self.site = Site(self.observatory)
         self.site.set_time()
+
+        self.scale = scale
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
@@ -1413,7 +1429,12 @@ class BaseAssignmentData:
 
             observed = Observed(icrs, wavelength=wavelength, site=self.site)
             field = Field(observed, field_center=self.boresight)
-            focal = FocalPlane(field, wavelength=wavelength, site=self.site)
+            focal = FocalPlane(
+                field,
+                wavelength=wavelength,
+                site=self.site,
+                fpScale=self.scale,
+            )
             wok = Wok(focal, site=self.site, obsAngle=position_angle)
 
             positioner, tangent = wok_to_positioner(
@@ -1494,6 +1515,7 @@ class BaseAssignmentData:
                 Wok([wok], site=self.site, obsAngle=position_angle),
                 wavelength=wavelength,
                 site=self.site,
+                fpScale=self.scale,
             )
 
             field = Field(focal, field_center=self.boresight)
@@ -1541,9 +1563,10 @@ class AssignmentData(BaseAssignmentData):
         configuration: Configuration | DitheredConfiguration,
         epoch: float | None = None,
         computer_coordinates: bool = True,
+        scale: float | None = None,
     ):
 
-        super().__init__(configuration)
+        super().__init__(configuration, scale=scale)
 
         if computer_coordinates:
             self.compute_coordinates(epoch)
@@ -1601,6 +1624,8 @@ class ManualAssignmentData(BaseAssignmentData):
         RA/Dec. If `None`, target data must be positioner or wok coordinates.
     position_angle
         The position angle of the field.
+    scale
+        The focal plane scale factor.
 
     """
 
@@ -1613,9 +1638,10 @@ class ManualAssignmentData(BaseAssignmentData):
         observatory: str,
         field_centre: tuple[float, float] | numpy.ndarray | None = None,
         position_angle: float = 0.0,
+        scale: float | None = None,
     ):
 
-        super().__init__(configuration, observatory=observatory)
+        super().__init__(configuration, observatory=observatory, scale=scale)
 
         self.target_data = target_data
 
