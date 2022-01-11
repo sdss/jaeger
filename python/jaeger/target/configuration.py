@@ -799,14 +799,14 @@ class Configuration(BaseConfiguration):
 
         super().__init__(scale=scale)
 
+        self.design = design
+        self.design_id = design.design_id
+        self.assignment_data = AssignmentData(self, epoch=epoch, scale=scale)
+
         assert self.assignment_data.site.time
 
         self.epoch = self.assignment_data.site.time.jd
         self.scale = scale
-
-        self.design = design
-        self.design_id = design.design_id
-        self.assignment_data = AssignmentData(self, epoch=epoch, scale=scale)
 
     def __repr__(self):
         return (
@@ -827,7 +827,7 @@ class DitheredConfiguration(BaseConfiguration):
 
         assert configuration.design
 
-        super().__init__(scale=self.parent_configuration.scale)
+        super().__init__(scale=configuration.scale)
 
         self.parent_configuration: BaseConfiguration = configuration
         self.is_dither = True
