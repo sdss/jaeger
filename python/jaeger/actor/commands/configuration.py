@@ -290,27 +290,27 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
                 "path. Use unwind."
             )
 
-        try:
-            # First we explode the robots a bit.
-            command.info("Exploding before reversing.")
-            current_positions = fps.get_positions_dict()
-            explode_path = await explode(
-                current_positions,
-                5.0,
-                disabled=[pid for pid in fps.positioners if fps[pid].disabled],
-            )
-            await fps.send_trajectory(explode_path, command=command)
+        # try:
+        #     # First we explode the robots a bit.
+        #     command.info("Exploding before reversing.")
+        #     current_positions = fps.get_positions_dict()
+        #     explode_path = await explode(
+        #         current_positions,
+        #         5.0,
+        #         disabled=[pid for pid in fps.positioners if fps[pid].disabled],
+        #     )
+        #     await fps.send_trajectory(explode_path, command=command)
 
-            # Then we send a goto to the initial point of the reverse trajectory.
-            new_positions = {
-                pid: (trajectory[pid]["alpha"][0][0], trajectory[pid]["beta"][0][0])
-                for pid in trajectory
-            }
-            command.info("Reverting to final configuration positions.")
-            await fps.goto(new_positions)
+        #     # Then we send a goto to the initial point of the reverse trajectory.
+        #     new_positions = {
+        #         pid: (trajectory[pid]["alpha"][0][0], trajectory[pid]["beta"][0][0])
+        #         for pid in trajectory
+        #     }
+        #     command.info("Reverting to final configuration positions.")
+        #     await fps.goto(new_positions)
 
-        except Exception as err:
-            return command.fail(f"Failed preparing to send reverse trajectory: {err}")
+        # except Exception as err:
+        #     return command.fail(f"Failed preparing to send reverse trajectory: {err}")
 
     command.info(text="Sending and executing reverse trajectory.")
 
