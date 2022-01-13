@@ -848,6 +848,7 @@ class DitheredConfiguration(BaseConfiguration):
             self,
             epoch=epoch,
             computer_coordinates=False,
+            scale=self.scale,
         )
         self.assignment_data.fibre_table = (
             self.parent_configuration.assignment_data.fibre_table.copy()
