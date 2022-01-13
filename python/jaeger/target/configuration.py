@@ -349,13 +349,14 @@ class BaseConfiguration:
             result = await get_path_pair_in_executor(self.robot_grid)
             self.to_destination, self.from_destination, did_fail, deadlocks = result
 
-            self.from_destination = {
-                pid: {
-                    "alpha": self.from_destination[pid]["alpha"][1:],
-                    "beta": self.from_destination[pid]["beta"][1:],
+            if did_fail is False:
+                self.from_destination = {
+                    pid: {
+                        "alpha": self.from_destination[pid]["alpha"][1:],
+                        "beta": self.from_destination[pid]["beta"][1:],
+                    }
+                    for pid in self.from_destination
                 }
-                for pid in self.from_destination
-            }
 
             n_deadlocks = len(deadlocks)
 
