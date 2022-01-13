@@ -154,7 +154,14 @@ def positioner_to_wok(
         dy=positioner_data.dy,
     )
 
-    return numpy.array(wok), numpy.array([tangent[0], tangent[1], 0])
+    wok_coords = numpy.array(wok)
+    rwok = numpy.sqrt(wok_coords[0] ** 2 + wok_coords[1] ** 2)
+    if site == "APO":
+        wok_coords[2] = POSITIONER_HEIGHT + wokCurveAPO(rwok)
+    else:
+        wok_coords[2] = POSITIONER_HEIGHT + wokCurveLCO(rwok)
+
+    return wok_coords, numpy.array([tangent[0], tangent[1], 0])
 
 
 async def create_random_configuration(

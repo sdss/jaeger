@@ -1461,6 +1461,7 @@ class BaseAssignmentData:
                 fibre_type,
                 wok[0][0],
                 wok[0][1],
+                wok[0][2]
             )
 
         if update is False:
