@@ -207,6 +207,8 @@ def _output_configuration_loaded(command: Command[JaegerActor], fps: FPS):
 
     assert fps.configuration
 
+    command.debug(text=f"Focal plane scale: {fps.configuration.assignment_data.scale}.")
+
     boresight = fps.configuration.assignment_data.boresight
     configuration = fps.configuration
 
