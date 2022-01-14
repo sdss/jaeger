@@ -1290,7 +1290,7 @@ class BaseAssignmentData:
                 fibre_type,
                 xwok,
                 ywok,
-                zwok=zwok,
+                zwok,
             )
 
             self.target_data[hole_id].update({"alpha": alpha, "beta": beta})
@@ -1456,12 +1456,7 @@ class BaseAssignmentData:
             wok = Wok(focal, site=self.site, obsAngle=position_angle)
 
             positioner, tangent = wok_to_positioner(
-                hole_id,
-                self.site.name,
-                fibre_type,
-                wok[0][0],
-                wok[0][1],
-                wok[0][2]
+                hole_id, self.site.name, fibre_type, wok[0][0], wok[0][1], wok[0][2]
             )
 
         if update is False:

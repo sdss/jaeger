@@ -19,7 +19,6 @@ from coordio.conv import (
     wokToTangent,
 )
 from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
-from coordio.utils import wokCurveAPO, wokCurveLCO
 
 from jaeger import config, log
 from jaeger.exceptions import JaegerError
@@ -43,7 +42,7 @@ def wok_to_positioner(
     fibre_type: str,
     xwok: float,
     ywok: float,
-    zwok: float | None = None,
+    zwok: float = POSITIONER_HEIGHT,
 ) -> tuple[numpy.ndarray, numpy.ndarray]:
     """Converts from wok to positioner coordinates.
 
@@ -66,13 +65,6 @@ def wok_to_positioner(
         yBeta = positioner_data.metY
     else:
         raise ValueError(f"Invalid fibre type {fibre_type}.")
-
-    if zwok is None:
-        rwok = numpy.sqrt(xwok ** 2 + ywok ** 2)
-        if site == "APO":
-            zwok = POSITIONER_HEIGHT + wokCurveAPO(rwok)
-        else:
-            zwok = POSITIONER_HEIGHT + wokCurveLCO(rwok)
 
     tangent = wokToTangent(
         xwok,
@@ -155,11 +147,6 @@ def positioner_to_wok(
     )
 
     wok_coords = numpy.array(wok)
-    rwok = numpy.sqrt(wok_coords[0] ** 2 + wok_coords[1] ** 2)
-    if site == "APO":
-        wok_coords[2] = POSITIONER_HEIGHT + wokCurveAPO(rwok)
-    else:
-        wok_coords[2] = POSITIONER_HEIGHT + wokCurveLCO(rwok)
 
     return wok_coords, numpy.array([tangent[0], tangent[1], 0])
 
