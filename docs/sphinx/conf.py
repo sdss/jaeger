@@ -120,7 +120,7 @@ intersphinx_mapping = {
 
 # autodoc_typehints = "description"
 
-autodoc_mock_imports = ["_tkinter"]
+autodoc_mock_imports = ["_tkinter", "fps_calibrations"]
 autodoc_member_order = "groupwise"
 autodoc_default_options = {"members": None, "show-inheritance": None}
 autodoc_typehints = "description"
