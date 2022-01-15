@@ -59,6 +59,21 @@ async def status(command: JaegerCommandType, fps: FPS):
 
 
 @chiller.command()
+async def disable(command: JaegerCommandType, fps: FPS):
+    """Disables the chiller watcher."""
+
+    actor = command.actor
+
+    with suppress(asyncio.CancelledError):
+        if actor is not None and actor._chiller_watcher_task is not None:
+            actor._chiller_watcher_task.cancel()
+            await actor._chiller_watcher_task
+            actor._chiller_watcher_task = None
+
+    return command.finish("Chiller watcher has been disabled.")
+
+
+@chiller.command()
 @click.argument("MODE", type=click.Choice(["temperature", "flow"]))
 @click.argument("VALUE", type=str)
 async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | float):
