@@ -469,6 +469,8 @@ def get_snapshot_async(
 
     """
 
+    import matplotlib.pyplot as plt
+
     if robot_grid is not None and data is not None:
         raise JaegerError("robot_grid and data are mutually exclusive.")
 
@@ -486,7 +488,11 @@ def get_snapshot_async(
     if title is not None:
         ax.set_title(title)
 
+    plt.tight_layout()
+
     ax.figure.savefig(path)
+
+    plt.close("all")
 
 
 async def get_snapshot(
