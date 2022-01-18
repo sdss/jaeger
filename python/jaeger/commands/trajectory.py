@@ -683,8 +683,6 @@ class Trajectory(object):
             raise
 
         finally:
-            await self.fps.stop_trajectory()
-
             # Not explicitely updating the positions here because save_snapshot()
             # will do that and no need to waste extra time.
             await self.fps.save_snapshot()
