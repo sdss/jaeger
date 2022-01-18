@@ -1335,3 +1335,9 @@ class FPS(BaseFPS["FPS"]):
 
     async def __aexit__(self, *excinfo):
         await self.shutdown()
+
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        return self

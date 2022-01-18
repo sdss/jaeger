@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import warnings
+from copy import deepcopy
 
 from typing import TYPE_CHECKING, Optional, Union, cast
 
@@ -172,6 +173,21 @@ class BaseConfiguration:
 
         self.to_destination: dict | None = None
         self.from_destination: dict | None = None
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == "robot_grid":
+                v = None
+            setattr(result, k, deepcopy(v, memo))
+        return result
+
+    def copy(self):
+        """Returns a deep copy of the configuration instance. Drops the robot grid."""
+
+        return deepcopy(self)
 
     def set_command(self, command: Optional[Command[JaegerActor]]):
         """Sets the command to which to output messages."""
@@ -599,6 +615,7 @@ class BaseConfiguration:
         flavour: str = "",
         overwrite: bool = False,
         headers: dict = {},
+        fibre_table: pandas.DataFrame | None = None,
     ):
         """Writes the confSummary file."""
 
@@ -610,7 +627,7 @@ class BaseConfiguration:
             raise JaegerError("Configuration needs to be set and loaded to the DB.")
 
         adata = self.assignment_data
-        fdata = self.assignment_data.fibre_table.copy()
+        fdata = fibre_table or self.assignment_data.fibre_table.copy()
 
         # Add fiberId
         fass = pandas.merge(
@@ -638,7 +655,7 @@ class BaseConfiguration:
             "kaiju_version": kaiju_version,
             "design_id": self.design_id,
             "field_id": -999,
-            "focal_scale": self.assignment_data.scale or 0.999882,
+            "focal_scale": adata.scale or 0.999882,
             "instruments": "BOSS APOGEE",
             "epoch": adata.site.time.jd if adata.site.time else -999,
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
@@ -757,7 +774,7 @@ class BaseConfiguration:
         sdsscore_dir = os.environ["SDSSCORE_DIR"]
         path = os.path.join(
             sdsscore_dir,
-            self.assignment_data.observatory.lower(),
+            adata.observatory.lower(),
             "summary_files",
             f"{int(self.configuration_id / 100):04d}XX",
             f"confSummary{flavour}-{self.configuration_id}.par",
