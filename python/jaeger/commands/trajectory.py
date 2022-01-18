@@ -386,6 +386,7 @@ class Trajectory(object):
         self.move_time = 0.0
 
         await self.fps.stop_trajectory()
+        await self.fps.stop_trajectory(clear_flags=True)
 
         if not await self.fps.update_status(
             positioner_ids=list(self.trajectories),
