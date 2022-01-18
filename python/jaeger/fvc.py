@@ -975,12 +975,13 @@ class FVC:
             if not numpy.isnan(alpha):
                 fdata.loc[idx[pid, :], ["alpha", "beta"]] = (alpha, beta)
 
-        self.fps.configuration.assignment_data.fibre_table = fdata.copy()
+        configuration_copy = self.fps.configuration.copy()
+        configuration_copy.assignment_data.fibre_table = fdata.copy()
 
         for pid in measured.index.get_level_values(0).tolist():
             alpha, beta = fdata.loc[(pid, "Metrology"), ["alpha", "beta"]]
             for ftype in ["APOGEE", "BOSS", "Metrology"]:
-                self.fps.configuration.assignment_data.positioner_to_icrs(
+                configuration_copy.assignment_data.positioner_to_icrs(
                     pid,
                     ftype,
                     alpha,
@@ -988,7 +989,7 @@ class FVC:
                     update=True,
                 )
 
-        self.fps.configuration.write_summary(
+        configuration_copy.write_summary(
             flavour="F",
             headers={"fvc_rms": self.fitrms},
             overwrite=True,
