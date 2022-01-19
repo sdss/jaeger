@@ -356,9 +356,9 @@ class SetIncreaseCollisionMargin(Command):
     move_command = False
     safe = False
 
-    def __init__(self, positioner_ids, buffer: int, **kwargs):
+    def __init__(self, positioner_ids, margin: int, **kwargs):
 
-        data = int_to_bytes(int(buffer))
+        data = int_to_bytes(int(margin), dtype="i4")
         kwargs["data"] = data
 
         super().__init__(positioner_ids, **kwargs)

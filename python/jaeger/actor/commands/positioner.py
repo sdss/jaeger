@@ -25,7 +25,7 @@ from jaeger.commands.goto import goto as goto_
 from jaeger.commands.trajectory import send_trajectory
 from jaeger.exceptions import JaegerError, TrajectoryError
 
-from . import jaeger_parser
+from . import JaegerCommandType, jaeger_parser
 
 
 if TYPE_CHECKING:
@@ -45,6 +45,7 @@ __all__ = [
     "unlock",
     "current",
     "status",
+    "set_collision_margin",
 ]
 
 
@@ -525,3 +526,34 @@ async def reload(command, fps):
         return command.fail(error=f"Initialisation failed: {err}")
 
     return command.finish(text="FPS was reinitialised.")
+
+
+@jaeger_parser.command(name="set-collision-margin")
+@click.argument("MARGIN", type=click.IntRange(-30, 30))
+@click.argument(
+    "-p",
+    "--positioners",
+    type=str,
+    help="Comma-separated positioners to which to apply the margin. "
+    "If not set, applies to all the positioners.",
+)
+async def set_collision_margin(
+    command: JaegerCommandType, fps: FPS, margin: int, positioners: str | None = None
+):
+    """Change the collision margin. The collision margin must be -30 to 30 degrees."""
+
+    if positioners is not None:
+        positioner_ids = list(map(int, positioners.split(",")))
+    else:
+        positioner_ids = None
+
+    margin_command = await fps.send_command(
+        "SET_INCREASE_COLLISION_MARGIN",
+        positioner_ids=positioner_ids,
+        margin=margin,
+    )
+
+    if margin_command.status.failed:
+        return command.fail("Failed updating collision margin.")
+
+    return command.finish()
