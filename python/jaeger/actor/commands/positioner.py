@@ -530,7 +530,7 @@ async def reload(command, fps):
 
 @jaeger_parser.command(name="set-collision-margin")
 @click.argument("MARGIN", type=click.IntRange(-30, 30))
-@click.argument(
+@click.option(
     "-p",
     "--positioners",
     type=str,
@@ -538,7 +538,10 @@ async def reload(command, fps):
     "If not set, applies to all the positioners.",
 )
 async def set_collision_margin(
-    command: JaegerCommandType, fps: FPS, margin: int, positioners: str | None = None
+    command: JaegerCommandType,
+    fps: FPS,
+    margin: int,
+    positioners: str | None = None,
 ):
     """Change the collision margin. The collision margin must be -30 to 30 degrees."""
 
