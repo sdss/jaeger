@@ -325,6 +325,8 @@ class Trajectory(object):
             "use_sync_line": True,
             "extra": extra_dump_data,
             "trajectory": self.trajectories,
+            "initial_positions": self.fps.get_positions_dict(),
+            "final_positions": {},
         }
 
         if dump is False:
@@ -711,6 +713,7 @@ class Trajectory(object):
         self.dump_data["trajectory_send_time"] = self.data_send_time
         self.dump_data["use_sync_line"] = self.use_sync_line
         self.dump_data["end_time"] = time.time()
+        self.dump_data["final_positions"] = self.fps.get_positions_dict()
 
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
