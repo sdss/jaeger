@@ -231,6 +231,9 @@
         },
         "chiller_flow_setpoint": {
             "type": "number"
+        },
+        "trajectory_dump_file": {
+            "type": "string"
         }
     },
     "additionalProperties": false

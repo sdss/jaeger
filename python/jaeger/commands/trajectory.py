@@ -191,6 +191,9 @@ async def send_trajectory(
             f"Something went wrong during the trajectory: {err}.{elapsed_msg}",
             err.trajectory,
         )
+    finally:
+        if traj.dump_file and command:
+            command.debug(trajectory_dump_file=traj.dump_file)
 
     if command:
         alphaL, betaL = config["kaiju"]["lattice_position"]
