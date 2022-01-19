@@ -179,7 +179,7 @@ class BaseConfiguration:
         result = cls.__new__(cls)
         memo[id(self)] = result
         for k, v in self.__dict__.items():
-            if k == "robot_grid":
+            if k in ["robot_grid", "command"]:
                 v = None
             setattr(result, k, deepcopy(v, memo))
         return result
