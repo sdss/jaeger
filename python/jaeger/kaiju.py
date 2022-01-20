@@ -398,7 +398,7 @@ async def unwind(
         if force is False:
             raise TrajectoryError(
                 "Failed generating a valid unwind trajectory. "
-                f"{len(deadlocks)} deadlocks were found."
+                f"{len(deadlocks)} deadlocks were found ({deadlocks})."
             )
         else:
             log.warning("Deadlocks found in unwind but proceeding anyway.")

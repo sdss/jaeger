@@ -363,7 +363,8 @@ async def goto(
         if did_fail is True:
             if force is False:
                 raise TrajectoryError(
-                    f"Cannot execute trajectory. Found {len(deadlocks)} deadlocks."
+                    "Cannot execute trajectory. Found "
+                    f"{len(deadlocks)} deadlocks ({deadlocks})."
                 )
             else:
                 warnings.warn(
