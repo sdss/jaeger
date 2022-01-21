@@ -16,7 +16,7 @@ from astropy.time import Time
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.kaiju import check_trajectory, explode
+from jaeger.kaiju import check_trajectory
 from jaeger.target.configuration import (
     Configuration,
     DitheredConfiguration,
@@ -431,6 +431,7 @@ async def slew(
 @click.option(
     "--send-trajectory/--no-send-trajectory",
     help="Send the trajectory to the FPS.",
+    default=True,
 )
 async def random(
     command: Command[JaegerActor],
@@ -488,7 +489,7 @@ async def random(
     assert command.actor
     command.actor.fps.configuration = configuration
 
-    if send_trajectory:
+    if send_trajectory is False:
         return command.finish()
 
     command.info("Executing random trajectory.")
