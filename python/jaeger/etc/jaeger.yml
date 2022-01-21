@@ -72,7 +72,7 @@ kaiju:
     speed: 2
     ang_step: 0.1
     collision_buffer: 2.0
-    smooth_points: 5
+    smooth_points: 13
     collision_shrink: 0.08
     path_delay: 1
     epsilon_factor: 2
