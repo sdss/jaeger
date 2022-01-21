@@ -1325,8 +1325,6 @@ class BaseAssignmentData:
 
         self._check_all_assigned()
 
-        assert self.configuration.design
-
         data = {}
         for pid in self.wok_data.index:
 
@@ -1532,9 +1530,12 @@ class BaseAssignmentData:
                 fpScale=self.scale,
             )
 
-            field = Field(focal, field_center=self.boresight)
-            obs = Observed(field, site=self.site, wavelength=wavelength)
-            icrs = ICRS(obs, epoch=self.site.time.jd)
+            if self.boresight is None:
+                field = Field(focal, field_center=self.boresight)
+                obs = Observed(field, site=self.site, wavelength=wavelength)
+                icrs = ICRS(obs, epoch=self.site.time.jd)
+            else:
+                field = obs = icrs = None
 
         if update is False:
             row = self._defaults.copy()
@@ -1545,8 +1546,8 @@ class BaseAssignmentData:
             {
                 "hole_id": hole_id,
                 "wavelength": wavelength,
-                "ra_epoch": icrs[0, 0],
-                "dec_epoch": icrs[0, 1],
+                "ra_epoch": icrs[0, 0] if icrs else numpy.nan,
+                "dec_epoch": icrs[0, 1] if icrs else numpy.nan,
                 "xfocal": focal[0, 0],
                 "yfocal": focal[0, 1],
                 "xwok": wok[0],
