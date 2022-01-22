@@ -1523,7 +1523,7 @@ class BaseAssignmentData:
                 fpScale=self.scale,
             )
 
-            if self.boresight is None:
+            if self.boresight is not None:
                 field = Field(focal, field_center=self.boresight)
                 obs = Observed(field, site=self.site, wavelength=wavelength)
                 icrs = ICRS(obs, epoch=self.site.time.jd)
