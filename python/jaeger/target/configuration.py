@@ -1385,13 +1385,6 @@ class BaseAssignmentData:
         self.fibre_table.loc[new_data.index, new_data.columns] = new_data
         self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
-    def update_from_wok_measured(
-        self,
-        fibre_type: str,
-        positioner_ids: list[int] | None = None,
-    ):
-        """Updates the coordinates from the ``x/ywok_measured``."""
-
     def _check_all_assigned(self):
         """Check that all the positioners are in ``target_data``."""
 
