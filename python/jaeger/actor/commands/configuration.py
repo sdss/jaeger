@@ -24,6 +24,7 @@ from jaeger.target.configuration import (
 )
 from jaeger.target.design import Design
 from jaeger.target.tools import create_random_configuration
+from jaeger.utils.database import get_designid_from_queue
 
 from . import jaeger_parser
 
@@ -125,9 +126,6 @@ async def load(
         _output_configuration_loaded(command, fps)
         return command.finish()
 
-    if designid is not None:
-        command.info(f"Loading design {designid}.")
-
     if reload is True:
         if fps.configuration is None:
             return command.fail(error="No configuration found. Cannot reload.")
@@ -140,8 +138,14 @@ async def load(
         fps.configuration = ManualConfiguration.create_from_positions(positions)
 
     else:
+
         if designid is None:
-            return command.fail(error="Design ID is required.")
+            designid = get_designid_from_queue()
+
+        if designid is None:
+            return command.fail("Failed getting a new design from the queue.")
+
+        command.info(f"Loading design {designid}.")
 
         try:
             valid = Design.check_design(designid, command.actor.observatory)

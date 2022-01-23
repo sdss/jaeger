@@ -1539,8 +1539,8 @@ class BaseAssignmentData:
             {
                 "hole_id": hole_id,
                 "wavelength": wavelength,
-                "ra_epoch": icrs[0, 0] if icrs else numpy.nan,
-                "dec_epoch": icrs[0, 1] if icrs else numpy.nan,
+                "ra_epoch": icrs[0, 0] if icrs is not None else numpy.nan,
+                "dec_epoch": icrs[0, 1] if icrs is not None else numpy.nan,
                 "xfocal": focal[0, 0],
                 "yfocal": focal[0, 1],
                 "xwok": wok[0],

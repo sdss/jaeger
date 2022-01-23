@@ -16,10 +16,10 @@ import peewee
 from astropy import table
 from astropy.io import fits
 
-from sdssdb.peewee.sdss5db import targetdb
+from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 
-__all__ = ["load_holes", "load_fields"]
+__all__ = ["load_holes", "load_fields", "get_designid_from_queue"]
 
 
 def check_database(f):
@@ -30,6 +30,17 @@ def check_database(f):
         return f(*args, **kwargs)
 
     return wrapper
+
+
+@check_database
+def get_designid_from_queue() -> int | None:
+    """Pops a design from the queue."""
+
+    design = opsdb.Queue.pop()
+    if design is None:
+        return None
+
+    return design.design_id
 
 
 @check_database
