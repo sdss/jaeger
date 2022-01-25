@@ -784,13 +784,18 @@ class FPS(BaseFPS["FPS"]):
         await self.update_status()
 
         if jaeger.actor_instance:
-            jaeger.actor_instance.write("e", {"locked": True})
+            jaeger.actor_instance.write(
+                "e",
+                {"locked": True, "locked_by": self.locked_by},
+            )
 
         if snapshot:
-            if by is not None and len(by) > 0:
-                highlight = by[0]
+            if self.locked_by is not None:
+                highlight = self.locked_by[0]
             else:
                 highlight = None
+
+            log.debug(f"Saving snapshot with highlight {highlight} ({self.locked_by})")
             filename = await self.save_snapshot(highlight=highlight)
             warnings.warn(f"Snapshot for locked FPS: {filename}", JaegerUserWarning)
 

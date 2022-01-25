@@ -148,6 +148,12 @@
         "move_time": { "type": "number" },
         "alive_at": { "type": "number" },
         "locked": { "type": "boolean" },
+        "locked_by": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            }
+        },
         "folded": { "type": "boolean" },
         "n_positioners": { "type": "integer" },
         "positioner_status": {
