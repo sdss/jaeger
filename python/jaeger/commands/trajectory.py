@@ -28,7 +28,7 @@ from jaeger import config, log
 from jaeger.commands import Command, CommandID
 from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
 from jaeger.ieb import IEB
-from jaeger.maskbits import FPSStatus, PositionerStatus, ResponseCode
+from jaeger.maskbits import FPSStatus, ResponseCode
 from jaeger.utils import int_to_bytes
 
 
