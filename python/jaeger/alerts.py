@@ -17,12 +17,14 @@ from typing import TYPE_CHECKING, Any
 from clu.legacy.tron import TronKey
 from drift import Device, Relay
 
-from jaeger import actor_instance, config, log
+import jaeger
+from jaeger import config, log
 from jaeger.ieb import IEB
 
 
 if TYPE_CHECKING:
     from jaeger import FPS
+    from jaeger.actor import JaegerActor
 
 
 __all__ = ["AlertsBot"]
@@ -36,7 +38,7 @@ class AlertsBot:
         self.fps = fps
         self.ieb = fps.ieb
 
-        self.actor = actor_instance
+        self.actor: JaegerActor | None = None
 
         self.config: dict[str, Any] = config["alerts"]
         self.interval: float = self.config["interval"]
@@ -63,10 +65,15 @@ class AlertsBot:
         }
         self._gfa_alerts = {}
 
-    async def start(self):
+    async def start(self, delay: float | bool = False):
         """Stars the monitoring loop."""
 
         await self.stop()
+
+        if delay is not False and delay > 0:
+            await asyncio.sleep(delay)
+
+        self.actor = jaeger.actor_instance
 
         self._task = asyncio.create_task(self._loop())
 
@@ -93,6 +100,11 @@ class AlertsBot:
         if isinstance(message, str):
             log.log(level, message)
 
+            # No need to output to actor as well if this is a warning or above
+            # because the ActorHandler already does it and we get duplicate messages.
+            if level >= logging.WARNING:
+                return
+
         if self.actor:
             message_code: str = "w"
             if level == logging.DEBUG:
@@ -110,26 +122,29 @@ class AlertsBot:
             self.actor.write(message_code, message=message)
 
     def set_keyword(self, keyword: str, new_value: bool) -> bool:
-        """Sets the value of an alert keyword and outputs it if it has changed.
+        """Sets the value of an alert keyword and outputs it to the actor.
 
         Returns a boolean indicating whether the value has changed.
         """
 
         if keyword not in self.keywords:
-            raise KeyError(f"Invalid keyword {keyword}.")
+            raise KeyError(f"Invalid alert keyword {keyword}.")
 
-        if self.keywords[keyword] != new_value:
-            self.keywords[keyword] = new_value
+        changed = self.keywords[keyword] != new_value
 
-            if new_value is True:
-                level = logging.WARNING
-            else:
-                level = logging.INFO
+        self.keywords[keyword] = new_value
 
+        if new_value is True:
+            level = logging.WARNING
+        else:
+            level = logging.INFO
+
+        # Repeatedly output the keyword if the alert is on.
+        # Otherwise only if it changed.
+        if new_value is True or changed is True:
             self.notify({keyword: int(self.keywords[keyword])}, level=level)
-            return True
 
-        return False
+        return changed
 
     async def _loop(self):
         """The main monitoring loop."""
@@ -202,6 +217,7 @@ class AlertsBot:
             )
             return
 
+        self.notify("Shutting down power supplies.")
         for ps in range(1, 7):
             await self._shutdown_device(f"PS{ps}")
 
@@ -209,10 +225,12 @@ class AlertsBot:
             await self.shutdown_gfas()
 
         if cans is True:
+            self.notify("Shutting down CAN devices.")
             for can in range(1, 7):
                 await self._shutdown_device(f"CM{can}")
 
         if nucs is True:
+            self.notify("Shutting down NUCs.")
             for nuc in range(1, 7):
                 await self._shutdown_device(f"NUC{nuc}")
 
@@ -323,7 +341,7 @@ class AlertsBot:
 
         if flow < flow_config["critical"]:
             self.set_keyword("alert_fps_flow", True)
-            self.notify("FPS coolant flow below limits.")
+            self.notify("FPS coolant flow is below limits.")
 
         else:
             self.set_keyword("alert_fps_flow", False)
