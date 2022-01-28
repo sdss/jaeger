@@ -35,6 +35,7 @@ from zc.lockfile import LockFile
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
+from jaeger.alerts import AlertsBot
 from jaeger.can import JaegerCAN
 from jaeger.commands import (
     Command,
@@ -269,6 +270,8 @@ class FPS(BaseFPS["FPS"]):
         self.__temperature_task: asyncio.Task | None = None
 
         self.observatory = config["observatory"]
+
+        self.alerts = AlertsBot(self)
 
         # Position and status pollers
         self.pollers = PollerList(
@@ -583,6 +586,9 @@ class FPS(BaseFPS["FPS"]):
         # Start the pollers
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
+
+        # Start alerts monitoring
+        await self.alerts.start()
 
         return self
 

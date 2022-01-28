@@ -264,7 +264,7 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 @jaeger_parser.command()
 @click.argument("POSITIONERS", type=int, nargs=-1, required=False)
-async def status(command, fps, positioners):
+async def status(command: JaegerCommandType, fps: FPS, positioners):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioners or list(fps.positioners.keys())
@@ -277,6 +277,7 @@ async def status(command, fps, positioners):
         command.info(locked=fps.locked)
         command.info(n_positioners=len(fps.positioners))
         command.info(fps_status=f"0x{fps.status.value:x}")
+        command.info(message={k: int(v) for k, v in fps.alerts.keywords.items()})
 
     try:
         await fps.update_status(positioner_ids=0)

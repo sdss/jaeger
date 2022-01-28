@@ -1,0 +1,351 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# @Author: José Sánchez-Gallego (gallegoj@uw.edu)
+# @Date: 2022-01-26
+# @Filename: alerts.py
+# @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from contextlib import suppress
+
+from typing import TYPE_CHECKING, Any
+
+from clu.legacy.tron import TronKey
+from drift import Device, Relay
+
+from jaeger import actor_instance, config, log
+from jaeger.ieb import IEB
+
+
+if TYPE_CHECKING:
+    from jaeger import FPS
+
+
+__all__ = ["AlertsBot"]
+
+
+class AlertsBot:
+    """Monitors values and raises alerts."""
+
+    def __init__(self, fps: FPS):
+
+        self.fps = fps
+        self.ieb = fps.ieb
+
+        self.actor = actor_instance
+
+        self.config: dict[str, Any] = config["alerts"]
+        self.interval: float = self.config["interval"]
+
+        self._task: asyncio.Task | None = None
+
+        self.keywords: dict[str, bool] = {}
+        self._gfa_alerts: dict[str, bool] = {}
+
+        self.reset()
+
+    def reset(self):
+        """Resets alerts and parameters."""
+
+        self.keywords = {
+            "alert_gfa_temp_critical": False,
+            "alert_gfa_temp_warning": False,
+            "alert_ieb_temp_critical": False,
+            "alert_ieb_temp_warning": False,
+            "alert_robot_temp_critical": False,
+            "alert_robot_temp_warning": False,
+            "alert_fps_flow": False,
+            "alert_dew_point": False,
+        }
+        self._gfa_alerts = {}
+
+    async def start(self):
+        """Stars the monitoring loop."""
+
+        await self.stop()
+
+        self._task = asyncio.create_task(self._loop())
+
+        if self.actor and "fliswarm" in self.actor.models:
+            self.actor.models["fliswarm"].register_callback(self._check_camera_status)
+
+    async def stop(self):
+        """Stops the monitoring loop."""
+
+        if self._task:
+            with suppress(asyncio.CancelledError):
+                self._task.cancel()
+                await self._task
+        if (
+            self.actor
+            and "fliswarm" in self.actor.models
+            and self._check_camera_status in self.actor.models["fliswarm"]._callbacks
+        ):
+            self.actor.models["fliswarm"].remove_callback(self._check_camera_status)
+
+    def notify(self, message: str | dict, level=logging.WARNING):
+        """Logs a message and outputs it to the actor."""
+
+        if isinstance(message, str):
+            log.log(level, message)
+
+        if self.actor:
+            message_code: str = "w"
+            if level == logging.DEBUG:
+                message_code = "d"
+            elif level == logging.INFO:
+                message_code = "i"
+            elif level == logging.WARNING:
+                message_code = "w"
+            elif level == logging.ERROR:
+                message_code = "e"
+
+            if isinstance(message, str):
+                message = {"text": message}
+
+            self.actor.write(message_code, message=message)
+
+    def set_keyword(self, keyword: str, new_value: bool) -> bool:
+        """Sets the value of an alert keyword and outputs it if it has changed.
+
+        Returns a boolean indicating whether the value has changed.
+        """
+
+        if keyword not in self.keywords:
+            raise KeyError(f"Invalid keyword {keyword}.")
+
+        if self.keywords[keyword] != new_value:
+            self.keywords[keyword] = new_value
+
+            if new_value is True:
+                level = logging.WARNING
+            else:
+                level = logging.INFO
+
+            self.notify({keyword: int(self.keywords[keyword])}, level=level)
+            return True
+
+        return False
+
+    async def _loop(self):
+        """The main monitoring loop."""
+
+        while True:
+
+            for coro in [
+                self._check_robots,
+                self._check_ieb,
+                self._check_flow,
+                self._check_outside_temperature,
+            ]:
+                try:
+                    await coro()
+                except Exception as err:
+                    self.notify(
+                        f"Failed running alerts coroutine {coro.__name__}: {err}."
+                    )
+
+            await asyncio.sleep(self.interval)
+
+    async def shutdown_gfas(self):
+        """Shutdowns the GFAs without touching the rest of the FPS."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify(
+                "IEB not connected, cannot power off GFAs.",
+                level=logging.ERROR,
+            )
+            return
+
+        self.notify("Shutting down cameras.")
+
+        for gfa in range(1, 7):
+            device = self.ieb.get_device(f"GFA{gfa}")
+
+            assert isinstance(device, Relay)
+            await device.open()
+
+            await asyncio.sleep(0.5)
+
+    async def _shutdown_device(self, device: Device | str):
+        """Shuts down a device."""
+
+        if isinstance(device, str):
+            if isinstance(self.ieb, IEB):
+                device = self.ieb.get_device(device)
+            else:
+                self.notify(
+                    f"IEB not connected, cannot find device {device}.",
+                    level=logging.ERROR,
+                )
+                return
+
+        assert isinstance(device, Relay)
+        await device.open()
+
+    async def shutdown_fps(
+        self,
+        nucs: bool = False,
+        gfas: bool = False,
+        cans: bool = False,
+    ):
+        """Shutdowns the robots and optionally other electronics."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify(
+                "IEB not connected, cannot power off FPS.",
+                level=logging.ERROR,
+            )
+            return
+
+        for ps in range(1, 7):
+            await self._shutdown_device(f"PS{ps}")
+
+        if gfas is True:
+            await self.shutdown_gfas()
+
+        if cans is True:
+            for can in range(1, 7):
+                await self._shutdown_device(f"CM{can}")
+
+        if nucs is True:
+            for nuc in range(1, 7):
+                await self._shutdown_device(f"NUC{nuc}")
+
+    async def _check_robots(self):
+        """Checks robot temperature."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify("IEB not connected. Cannot check robot temperatures.")
+            return
+
+        robot_config = config["alerts"]["robot"]
+
+        sensor = robot_config["sensor"]
+        temperature = (await self.ieb.read_device(sensor, adapt=True))[0]
+
+        if temperature > robot_config["critical"]:
+            changed = self.set_keyword("alert_robot_temp_critical", True)
+            if not changed:
+                return
+
+            self.notify("Critical robot temperature reached.")
+            await self.shutdown_fps()
+
+        elif temperature >= robot_config["warning"]:
+            self.set_keyword("alert_robot_temp_warning", True)
+            self.notify("Robot temperature exceeds safe limits.")
+
+        else:
+            self.set_keyword("alert_robot_temp_critical", False)
+            self.set_keyword("alert_robot_temp_warning", False)
+
+    async def _check_ieb(self):
+        """Checks IEB internal temperature."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify("IEB not connected. Cannot check IEB temperature.")
+            return
+
+        ieb_config = config["alerts"]["ieb"]
+
+        sensor = ieb_config["sensor"]
+        temperature = (await self.ieb.read_device(sensor, adapt=True))[0]
+
+        if temperature > ieb_config["critical"]:
+            changed = self.set_keyword("alert_ieb_temp_critical", True)
+            if not changed:
+                return
+
+            self.notify("Critical IEB temperature reached.")
+            await self.shutdown_fps(nucs=True, gfas=True, cans=True)
+
+        elif temperature >= ieb_config["warning"]:
+            self.set_keyword("alert_ieb_temp_warning", True)
+            self.notify("IEB temperature exceeds safe limits.")
+
+        else:
+            self.set_keyword("alert_ieb_temp_critical", False)
+            self.set_keyword("alert_ieb_temp_warning", False)
+
+    async def _check_camera_status(self, model: dict, key: TronKey):
+        """Check GFA temperatures."""
+
+        if key.name != "status":
+            return
+
+        gfa_config = config["alerts"]["gfa"]
+
+        camera_name: str = key.value[0]
+        if not camera_name.startswith("gfa"):
+            return
+
+        base_temperature: float = float(key.value[17])
+
+        if base_temperature >= gfa_config["critical"]:
+            changed = self.set_keyword("alert_gfa_temp_critical", True)
+            if not changed:
+                return
+
+            self.notify(f"Critical GFA temperature reached on camera {camera_name}.")
+            self._gfa_alerts[camera_name] = True
+
+            # This will only run once since once we shut down the GFAs the keyword
+            # is not output anymore.
+            await self.shutdown_gfas()
+
+        elif base_temperature >= gfa_config["warning"]:
+            self.set_keyword("alert_gfa_temp_warning", True)
+            self.notify(f"GFA {camera_name} temperature exceeds safe limits.")
+            self._gfa_alerts[camera_name] = True
+
+        else:
+            self._gfa_alerts[camera_name] = False
+            if all([value is False for value in self._gfa_alerts.values()]):
+                self.set_keyword("alert_gfa_temp_critical", False)
+                self.set_keyword("alert_gfa_temp_warning", False)
+
+    async def _check_flow(self):
+        """Check flow rates."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify("IEB not connected. Cannot check flow rates.")
+            return
+
+        flow_config = config["alerts"]["flow"]
+
+        sensor = flow_config["sensor"]
+        flow = (await self.ieb.read_device(sensor, adapt=True))[0]
+
+        if flow < flow_config["critical"]:
+            self.set_keyword("alert_fps_flow", True)
+            self.notify("FPS coolant flow below limits.")
+
+        else:
+            self.set_keyword("alert_fps_flow", False)
+
+    async def _check_outside_temperature(self):
+        """Checks if the outside temperature is close to the dew point."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify("IEB not connected. Cannot check outside temperature.")
+            return
+
+        temp_config = config["alerts"]["temperature"]
+
+        temp = (await self.ieb.read_device(temp_config["sensor_temp"], adapt=True))[0]
+        rh = (await self.ieb.read_device(temp_config["sensor_rh"], adapt=True))[0]
+
+        # Dewpoint temperature.
+        t_d = temp - (100 - rh) / 5.0
+
+        if temp < t_d + temp_config["dew_threshold"]:
+            self.set_keyword("alert_dew_point", True)
+            self.notify("Outside temperature is approaching dew point limit.")
+
+        else:
+            self.set_keyword("alert_dew_point", False)
