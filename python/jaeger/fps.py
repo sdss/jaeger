@@ -342,11 +342,8 @@ class FPS(BaseFPS["FPS"]):
                 )
 
         if isinstance(self.can, JaegerCAN):
-            if self.can._started:
-                return
-            else:
-                await self.can.start()
-                return
+            await self.can.start()
+            return
 
         self.can = await JaegerCAN.create(self.can, fps=self)
         return True

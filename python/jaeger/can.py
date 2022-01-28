@@ -126,6 +126,8 @@ class JaegerCAN(Generic[Bus_co]):
 
     async def start(self: T) -> T:
 
+        self.stop()
+
         itype = self.interface_type
 
         InterfaceClass: Type[Bus_co] = INTERFACES[itype]["class"]
@@ -500,6 +502,8 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         super().__post_init__()
         self._device_status = collections.defaultdict(dict)
 
+        self.device_status_poller: Poller | None = None
+
     async def start(self):
         r"""Starts CAN\@net connection."""
 
@@ -527,7 +531,9 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
         """Stops the interfaces."""
 
         super().stop()
-        asyncio.create_task(self.device_status_poller.stop())
+
+        if self.device_status_poller is not None:
+            asyncio.create_task(self.device_status_poller.stop())
 
     async def _process_reply_queue(self, msg: Message):
         """Processes a message checking first if it comes from the device."""
@@ -541,7 +547,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
     def device_status(self):
         """Returns a dictionary with the status of the device."""
 
-        if not self.device_status_poller.running:
+        if self.device_status_poller and not self.device_status_poller.running:
             raise ValueError("the device status poller is not running.")
 
         return self._device_status
