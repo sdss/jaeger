@@ -584,8 +584,9 @@ class FPS(BaseFPS["FPS"]):
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
 
-        # Start alerts monitoring
-        await self.alerts.start()
+        # Start alerts monitoring. Add a bit of delay to make sure the actor
+        # is connected when monitoring starts.
+        asyncio.create_task(self.alerts.start(delay=20))
 
         return self
 
