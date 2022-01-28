@@ -115,6 +115,11 @@ async def expose(
     type=float,
     help="Proportional term of the correction.",
 )
+@click.option(
+    "--no-write-summary",
+    is_flag=True,
+    help="Does not try to write a confSummaryF file.",
+)
 async def loop(
     command: Command[JaegerActor],
     fps: FPS,
@@ -127,6 +132,7 @@ async def loop(
     apply: bool = True,
     max_correction: float | None = None,
     k: float | None = None,
+    no_write_summary: bool = False,
 ):
     """Executes the FVC correction loop.
 
@@ -258,8 +264,9 @@ async def loop(
 
     finally:
 
-        command.info("Saving confSummaryF file.")
-        await asyncio.get_running_loop().run_in_executor(None, fvc.write_summary_F)
+        if no_write_summary is False:
+            command.info("Saving confSummaryF file.")
+            await asyncio.get_running_loop().run_in_executor(None, fvc.write_summary_F)
 
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
