@@ -35,6 +35,7 @@ from zc.lockfile import LockFile
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
+from jaeger.alerts import AlertsBot
 from jaeger.can import JaegerCAN
 from jaeger.commands import (
     Command,
@@ -270,6 +271,8 @@ class FPS(BaseFPS["FPS"]):
 
         self.observatory = config["observatory"]
 
+        self.alerts = AlertsBot(self)
+
         # Position and status pollers
         self.pollers = PollerList(
             [
@@ -339,11 +342,8 @@ class FPS(BaseFPS["FPS"]):
                 )
 
         if isinstance(self.can, JaegerCAN):
-            if self.can._started:
-                return
-            else:
-                await self.can.start()
-                return
+            await self.can.start()
+            return
 
         self.can = await JaegerCAN.create(self.can, fps=self)
         return True
@@ -583,6 +583,10 @@ class FPS(BaseFPS["FPS"]):
         # Start the pollers
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
+
+        # Start alerts monitoring. Add a bit of delay to make sure the actor
+        # is connected when monitoring starts.
+        asyncio.create_task(self.alerts.start(delay=20))
 
         return self
 

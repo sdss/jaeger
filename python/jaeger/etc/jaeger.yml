@@ -9,6 +9,8 @@ actor:
         delay: 5
     tron_host: sdss5-hub
     tron_port: 6093
+    models:
+        - fliswarm
     ieb_status_delay: 60
     schema: etc/schema.json
     log_dir: /data/logs/actors/jaeger
@@ -131,3 +133,27 @@ database:
     dbname: sdss5db
     host: null
     port: 5433
+
+alerts:
+    interval: 60
+    gfa:
+        warning: 30
+        critical: 35
+        shutdown: true
+    ieb:
+        sensor: RTD1
+        warning: 35
+        critical: 40
+        shutdown: true
+    robot:
+        sensor: RTD8
+        warning: 40
+        critical: 45
+        shutdown: true
+    flow:
+        sensor: FLOW1
+        critical: 0.1
+    temperature:
+        sensor_temp: T3
+        sensor_rh: RH3
+        dew_threshold: 3

@@ -19,6 +19,7 @@ jaeger_parser = command_parser
 JaegerCommandType = Command[JaegerActor]
 
 
+from .alerts import *
 from .can import *
 from .chiller import *
 from .configuration import *

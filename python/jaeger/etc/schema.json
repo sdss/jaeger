@@ -240,7 +240,15 @@
         },
         "trajectory_dump_file": {
             "type": "string"
-        }
+        },
+        "alert_gfa_temp_critical": { "type": "integer" },
+        "alert_gfa_temp_warning": { "type": "integer" },
+        "alert_ieb_temp_critical": { "type": "integer" },
+        "alert_ieb_temp_warning": { "type": "integer" },
+        "alert_robot_temp_critical": { "type": "integer" },
+        "alert_robot_temp_warning": { "type": "integer" },
+        "alert_fps_flow": { "type": "integer" },
+        "alert_dew_point": { "type": "integer" }
     },
     "additionalProperties": false
 }

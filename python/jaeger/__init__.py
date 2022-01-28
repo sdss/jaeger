@@ -1,15 +1,20 @@
 # encoding: utf-8
 # isort: skip_file
 
+from __future__ import annotations
+
 import logging
 import os
-from typing import Union
+from typing import TYPE_CHECKING
 import warnings
 
 from sdsstools import get_config, get_logger, get_package_version
 from sdsstools.configuration import __ENVVARS__
 
 from .exceptions import JaegerUserWarning
+
+if TYPE_CHECKING:
+    from .actor import JaegerActor
 
 
 NAME = "jaeger"
@@ -52,7 +57,7 @@ def start_file_loggers(start_log=True, start_can=True):
         can_log.start_file_logger(os.path.join(log_dir, "can.log"))
 
 
-actor_instance = None
+actor_instance: JaegerActor | None = None
 
 
 from .can import *
