@@ -161,7 +161,7 @@ async def load(
                 "No scale correction will be applied."
             )
         else:
-            guider_scale = guider_scale_cmd.replies[-1].keywords[0].values[0]
+            guider_scale = float(guider_scale_cmd.replies[-1].keywords[0].values[0])
             if guider_scale < 0:
                 command.warning(
                     "Invalid guider scale. No scale correction will be applied."
