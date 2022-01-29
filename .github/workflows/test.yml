@@ -35,7 +35,7 @@ jobs:
 
       - name: Create directories
         run: |
-          mkdir -p /data/logs/jaeger
+          mkdir -p /home/logs/jaeger
 
       - name: Clone fps_calibrations
         uses: actions/checkout@master
