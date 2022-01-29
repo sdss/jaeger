@@ -149,37 +149,35 @@ async def load(
 
         command.info(f"Loading design {designid}.")
 
-        # Query the guider for the historical scale from the previous exposure.
-        command.debug("Getting guider scale.")
-        guider_scale_cmd = await command.send_command(
-            "cherno",
-            "get-scale --max-age 600",
-        )
-        if guider_scale_cmd.status.did_fail:
-            command.warning(
-                "Failed getting scale from guider. "
-                "No scale correction will be applied."
+        if scale is None:
+            # Query the guider for the historical scale from the previous exposure.
+            command.debug("Getting guider scale.")
+            guider_scale_cmd = await command.send_command(
+                "cherno",
+                "get-scale --max-age 1200",
             )
-        else:
-            guider_scale = float(guider_scale_cmd.replies[-1].keywords[0].values[0])
-            if guider_scale < 0:
+            if guider_scale_cmd.status.did_fail:
                 command.warning(
-                    "Invalid guider scale. No scale correction will be applied."
-                )
-            elif (abs(guider_scale) - 1) * 1e6 > 500:
-                command.warning(
-                    "Unexpectedly large guider scale. Not applying scale "
-                    "correction but maybe check the scale?"
+                    "Failed getting scale from guider. "
+                    "No scale correction will be applied."
                 )
             else:
-                if scale is None:
-                    scale = FOCAL_SCALE
-
-                scale = scale * guider_scale
-                command.debug(
-                    "Text correcting focal plane scale with guider scale "
-                    f"{guider_scale}. Effective focal plane scale is {scale}."
-                )
+                guider_scale = float(guider_scale_cmd.replies[-1].keywords[0].values[0])
+                if guider_scale < 0:
+                    command.warning(
+                        "Invalid guider scale. No scale correction will be applied."
+                    )
+                elif (abs(guider_scale) - 1) * 1e6 > 300:
+                    command.warning(
+                        "Unexpectedly large guider scale. Not applying scale "
+                        "correction but maybe check the scale?"
+                    )
+                else:
+                    scale = FOCAL_SCALE * guider_scale
+                    command.debug(
+                        "Text correcting focal plane scale with guider scale "
+                        f"{guider_scale}. Effective focal plane scale is {scale}."
+                    )
 
         try:
             valid = Design.check_design(designid, command.actor.observatory)
