@@ -44,6 +44,17 @@ config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
 config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
 config["fps"]["use_lock"] = False
 
+if os.environ.get("CI", False):
+    tmp = os.environ.get("RUNNER_TEMP")
+
+    for section, subsection in [
+        ("actor", "log_dir"),
+        ("fps", "snapshot_path"),
+        ("fps", "configuration_snapshot_path"),
+        ("positioner", "trajectory_dump_path"),
+    ]:
+        config[section][subsection] = config[section][subsection].replace("/data", tmp)
+
 
 # Disable logging to file.
 if jaeger.log.fh:
