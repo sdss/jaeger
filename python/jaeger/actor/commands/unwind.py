@@ -64,6 +64,10 @@ async def unwind_command(
     # Check if the array is already folded. If so, do nothing.
     alphaL, betaL = config["kaiju"]["lattice_position"]
     positions_array = fps.get_positions()
+
+    if len(positions_array) == 0:
+        return command.fail("No positioners found.")
+
     if numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1):
         command.info(folded=True)
         return command.finish("All positioners are folded.")
