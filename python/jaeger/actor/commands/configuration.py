@@ -220,7 +220,7 @@ async def load(
         fps.configuration.configuration_id = -999
 
     if ingest and write_summary:
-        fps.configuration.write_summary(overwrite=True)
+        await fps.configuration.write_summary(overwrite=True)
 
     _output_configuration_loaded(command, fps)
 
@@ -387,7 +387,7 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
     await fps.configuration.get_paths()
 
     fps.configuration.write_to_database()
-    fps.configuration.write_summary(overwrite=True)
+    await fps.configuration.write_summary(overwrite=True)
 
     _output_configuration_loaded(command, fps)
 

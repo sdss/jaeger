@@ -40,6 +40,7 @@ from jaeger import FPS
 from jaeger import __version__ as jaeger_version
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.ieb import IEB
 from jaeger.kaiju import (
     decollide_in_executor,
     dump_robot_grid,
@@ -610,7 +611,7 @@ class BaseConfiguration:
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
-    def write_summary(
+    async def write_summary(
         self,
         flavour: str = "",
         overwrite: bool = False,
@@ -646,6 +647,11 @@ class BaseConfiguration:
 
         design = self.design
 
+        if self.fps and isinstance(self.fps.ieb, IEB):
+            temp: float = (await self.fps.ieb.read_device("T3"))[0]
+        else:
+            temp = -999.0
+
         header = {
             "configuration_id": self.configuration_id,
             "robostrategy_run": "NA",
@@ -661,13 +667,14 @@ class BaseConfiguration:
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
             "MJD": int(get_sjd(adata.observatory.upper())),
             "observatory": adata.observatory,
-            "temperature": -999,  # TODO
+            "temperature": round(temp, 1),
             "raCen": -999.0,
             "decCen": -999.0,
             "pa": -999.0,
             "is_dithered": 0,
             "parent_configuration": -999,
             "dither_radius": -999.0,
+            "cloned_from": -999.0,
         }
 
         if design:

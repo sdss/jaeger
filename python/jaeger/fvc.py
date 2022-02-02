@@ -943,7 +943,7 @@ class FVC:
         self.correction_applied = True
         self.log("Correction applied.")
 
-    def write_summary_F(self):
+    async def write_summary_F(self):
         """Updates data with the last measured positions and write confSummaryF."""
 
         if self.fps is None or self.fps.configuration is None:
@@ -989,7 +989,7 @@ class FVC:
                     update=True,
                 )
 
-        configuration_copy.write_summary(
+        await configuration_copy.write_summary(
             flavour="F",
             headers={"fvc_rms": self.fitrms},
             overwrite=True,
