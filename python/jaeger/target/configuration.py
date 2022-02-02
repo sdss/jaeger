@@ -160,7 +160,7 @@ class BaseConfiguration:
         self.parent_configuration: BaseConfiguration | None = None
         self.is_dither: bool = False
 
-        self._is_cloned:bool=False
+        self.is_cloned: bool = False
 
         self.design: Design | None = None
         self.design_id: int | None = None
@@ -208,7 +208,7 @@ class BaseConfiguration:
         new = self.copy()
 
         new.configuration_id = None
-        new._is_cloned = True
+        new.is_cloned = True
         new.write_to_database()
 
         await new.write_summary(headers={"cloned_from": original_configuration_id})

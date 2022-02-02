@@ -259,7 +259,7 @@ def _output_configuration_loaded(command: Command[JaegerActor], fps: FPS):
             boresight[0, 0] if boresight is not None else -999.0,
             boresight[0, 1] if boresight is not None else -999.0,
             configuration._summary_file or "",
-            configuration._is_cloned,
+            configuration.is_cloned,
         ]
     )
 
