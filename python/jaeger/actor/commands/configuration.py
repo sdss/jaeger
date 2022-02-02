@@ -259,8 +259,24 @@ def _output_configuration_loaded(command: Command[JaegerActor], fps: FPS):
             boresight[0, 0] if boresight is not None else -999.0,
             boresight[0, 1] if boresight is not None else -999.0,
             configuration._summary_file or "",
+            configuration._is_cloned,
         ]
     )
+
+
+@configuration.command()
+async def clone(command: Command[JaegerActor], fps: FPS):
+    """Clones a configuration."""
+
+    if fps.configuration is None:
+        return command.fail(error="A configuration must first be loaded.")
+
+    new = await fps.configuration.clone()
+    fps.configuration = new
+
+    _output_configuration_loaded(command, fps)
+
+    return command.finish()
 
 
 @configuration.command()
