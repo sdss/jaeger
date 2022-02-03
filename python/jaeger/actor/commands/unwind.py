@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 
 import click
 
-from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import explode, unwind
 
