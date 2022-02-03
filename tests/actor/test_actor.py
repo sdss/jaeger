@@ -32,7 +32,7 @@ async def test_status(actor):
     command = await actor.invoke_mock_command("status")
 
     assert command.status.did_succeed
-    assert len(actor.mock_replies) == 16
+    assert len(actor.mock_replies) == 17
 
 
 async def test_info(actor):

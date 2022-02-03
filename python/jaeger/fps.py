@@ -588,8 +588,8 @@ class FPS(BaseFPS["FPS"]):
 
         # Initialise alerts and chiller bots with a bit of delay to let the actor
         # time to start.
-        await self.alerts.start(delay=5)
-        await self.chiller.start(delay=5)
+        asyncio.create_task(self.alerts.start(delay=5))
+        asyncio.create_task(self.chiller.start(delay=5))
 
         return self
 
@@ -1335,6 +1335,9 @@ class FPS(BaseFPS["FPS"]):
         log.debug("Stopping all pollers.")
         if self.pollers:
             await self.pollers.stop()
+
+        await self.chiller.stop()
+        await self.alerts.stop()
 
         log.debug("Cancelling all pending tasks and shutting down.")
 

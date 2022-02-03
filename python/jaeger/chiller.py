@@ -107,4 +107,4 @@ class ChillerBot(BaseBot):
                         level=logging.ERROR,
                     )
 
-                await asyncio.sleep(60)
+            await asyncio.sleep(60)
