@@ -52,7 +52,7 @@ modules:
       DISPLAY_VALUE:
         adaptor: proportional
         adaptor_extra_params:
-        - 0.1
+          - 0.1
         address: 8991
         category: chiller
         description: Current Display Value
@@ -150,7 +150,7 @@ modules:
       FLOW_USER_SETPOINT:
         adaptor: proportional
         adaptor_extra_params:
-        - 0.1
+          - 0.1
         address: 9017
         category: chiller
         description: Process fluid setpoint flow Gallons Per Minute
@@ -168,7 +168,7 @@ modules:
       STATUS_DUTY_CYCLE_SV:
         adaptor: proportional
         adaptor_extra_params:
-        - 0.1
+          - 0.1
         address: 8970
         category: chiller
         description: PID controls to this value in [C]
@@ -186,7 +186,7 @@ modules:
       STATUS_FLUID_FLOW:
         adaptor: proportional
         adaptor_extra_params:
-        - 0.1
+          - 0.1
         address: 9011
         category: chiller
         description: .nan
@@ -249,7 +249,7 @@ modules:
       SYSTEM_PROCESS_FLUID_PV_SV:
         adaptor: proportional
         adaptor_extra_params:
-        - 0.1
+          - 0.1
         address: 8994
         category: chiller
         description: Process Fluid PV
@@ -282,7 +282,7 @@ modules:
       TEMPERATURE_USER_SETPOINT:
         adaptor: proportional
         adaptor_extra_params:
-        - 0.1
+          - 0.1
         address: 9018
         category: chiller
         description: Process fluid setpoint temperature C or F
