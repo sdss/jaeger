@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import suppress
 
 from typing import TYPE_CHECKING
 
@@ -70,13 +69,7 @@ async def status(command: JaegerCommandType, fps: FPS):
 async def disable(command: JaegerCommandType, fps: FPS):
     """Disables the chiller watcher."""
 
-    actor = command.actor
-
-    with suppress(asyncio.CancelledError):
-        if actor is not None and actor._chiller_watcher_task is not None:
-            actor._chiller_watcher_task.cancel()
-            await actor._chiller_watcher_task
-            actor._chiller_watcher_task = None
+    await fps.chiller.stop()
 
     return command.finish("Chiller watcher has been disabled.")
 
@@ -90,21 +83,13 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
     actor = command.actor
     assert actor
 
-    async def _stop_watcher():
-        with suppress(asyncio.CancelledError):
-            if actor is not None and actor._chiller_watcher_task is not None:
-                actor._chiller_watcher_task.cancel()
-                await actor._chiller_watcher_task
-                actor._chiller_watcher_task = None
-
     chiller = Chiller.create()
 
     if mode == "temperature":
         dev_name = "TEMPERATURE_USER_SETPOINT"
 
         if value == "auto":
-            await _stop_watcher()
-            actor._chiller_watcher_task = asyncio.create_task(actor._chiller_watcher())
+            await fps.chiller.start()
             command.info("Chiller temperature set to auto.")
             return command.finish()
         else:
@@ -112,7 +97,7 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
             if value < 0.1:
                 return command.fail("Minimum temperature is 0.1 C.")
             command.warning("Stopping chiller auto mode.")
-            await _stop_watcher()
+            await fps.chiller.stop()
 
     else:
         dev_name = "FLOW_USER_SETPOINT"
