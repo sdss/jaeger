@@ -19,7 +19,12 @@ from astropy.io import fits
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
 
-__all__ = ["load_holes", "load_fields", "get_designid_from_queue"]
+__all__ = [
+    "load_holes",
+    "load_fields",
+    "get_designid_from_queue",
+    "match_assignment_hash",
+]
 
 
 def check_database(f):
@@ -215,3 +220,15 @@ def load_fields(
             ]
 
         targetdb.Assignment.insert_many(insert_data).execute(targetdb.database)
+
+
+def match_assignment_hash(design_id1: int, design_id2: int):
+    """Checks if the assignment hashes of two designs match."""
+
+    if design_id1 == design_id2:
+        return True
+
+    design1 = targetdb.Target.get_by_id(design_id1)
+    design2 = targetdb.Target.get_by_id(design_id2)
+
+    return design1.assignment_hash.hex == design2.assignment_hash.hex

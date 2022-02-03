@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import warnings
 from copy import deepcopy
 
@@ -40,6 +41,7 @@ from jaeger import FPS
 from jaeger import __version__ as jaeger_version
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.ieb import IEB
 from jaeger.kaiju import (
     decollide_in_executor,
     dump_robot_grid,
@@ -158,6 +160,8 @@ class BaseConfiguration:
         self.parent_configuration: BaseConfiguration | None = None
         self.is_dither: bool = False
 
+        self.is_cloned: bool = False
+
         self.design: Design | None = None
         self.design_id: int | None = None
 
@@ -183,6 +187,53 @@ class BaseConfiguration:
                 v = None
             setattr(result, k, deepcopy(v, memo))
         return result
+
+    async def clone(
+        self,
+        copy_summary_F: bool = False,
+        write_to_database: bool = True,
+        write_summary: bool = True,
+    ) -> BaseConfiguration:
+        """Clones a configuration.
+
+        Parameters
+        ----------
+        copy_summary_F
+            If `True` and a `confSummaryF` exists for the current configuration,
+            copies it with the newly assigned configuration_id.
+        write_to_database
+            Write new configuration to database
+        write_summary
+            Write summary file for the new configuration.
+
+        Returns
+        -------
+        configuration
+            The cloned configuration.
+
+        """
+
+        original_configuration_id = self.configuration_id
+
+        new = self.copy()
+        new.robot_grid = self.robot_grid
+
+        new.configuration_id = None
+        new.is_cloned = True
+
+        if write_to_database:
+            new.write_to_database()
+
+        if write_summary:
+            await new.write_summary(headers={"cloned_from": original_configuration_id})
+
+        if copy_summary_F:
+            self_summary_F_path = self._get_summary_file_path("F")
+            if os.path.exists(self_summary_F_path):
+                new_summary_F_path = new._get_summary_file_path("F")
+                shutil.copy(self_summary_F_path, new_summary_F_path)
+
+        return new
 
     def copy(self):
         """Returns a deep copy of the configuration instance. Drops the robot grid."""
@@ -610,7 +661,26 @@ class BaseConfiguration:
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
-    def write_summary(
+    def _get_summary_file_path(self, flavour: str):
+
+        if self.configuration_id is None:
+            raise JaegerError("Configuration ID not set.")
+
+        if "SDSSCORE_DIR" not in os.environ:
+            raise JaegerError("$SDSSCORE_DIR is not set. Cannot write summary file.")
+
+        sdsscore_dir = os.environ["SDSSCORE_DIR"]
+        path = os.path.join(
+            sdsscore_dir,
+            self.assignment_data.observatory.lower(),
+            "summary_files",
+            f"{int(self.configuration_id / 100):04d}XX",
+            f"confSummary{flavour}-{self.configuration_id}.par",
+        )
+
+        return path
+
+    async def write_summary(
         self,
         flavour: str = "",
         overwrite: bool = False,
@@ -646,6 +716,11 @@ class BaseConfiguration:
 
         design = self.design
 
+        if self.fps and isinstance(self.fps.ieb, IEB):
+            temp: float = (await self.fps.ieb.read_device("T3"))[0]
+        else:
+            temp = -999.0
+
         header = {
             "configuration_id": self.configuration_id,
             "robostrategy_run": "NA",
@@ -661,13 +736,14 @@ class BaseConfiguration:
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
             "MJD": int(get_sjd(adata.observatory.upper())),
             "observatory": adata.observatory,
-            "temperature": -999,  # TODO
+            "temperature": round(temp, 1),
             "raCen": -999.0,
             "decCen": -999.0,
             "pa": -999.0,
             "is_dithered": 0,
             "parent_configuration": -999,
             "dither_radius": -999.0,
+            "cloned_from": -999.0,
         }
 
         if design:
@@ -768,17 +844,7 @@ class BaseConfiguration:
         fibermap = Table(fibermap)
         fibermap.sort(["positionerId", "fiberType"])
 
-        if "SDSSCORE_DIR" not in os.environ:
-            raise JaegerError("$SDSSCORE_DIR is not set. Cannot write summary file.")
-
-        sdsscore_dir = os.environ["SDSSCORE_DIR"]
-        path = os.path.join(
-            sdsscore_dir,
-            adata.observatory.lower(),
-            "summary_files",
-            f"{int(self.configuration_id / 100):04d}XX",
-            f"confSummary{flavour}-{self.configuration_id}.par",
-        )
+        path = self._get_summary_file_path(flavour)
 
         if os.path.exists(path):
             if overwrite:

@@ -266,7 +266,7 @@ async def loop(
 
         if no_write_summary is False:
             command.info("Saving confSummaryF file.")
-            await asyncio.get_running_loop().run_in_executor(None, fvc.write_summary_F)
+            await fvc.write_summary_F()
 
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
