@@ -18,32 +18,29 @@ from clu.legacy.tron import TronKey
 from drift import Device, Relay
 
 import jaeger
-from jaeger import config, log
+from jaeger import config
 from jaeger.ieb import IEB
+from jaeger.utils.helpers import BaseBot
 
 
 if TYPE_CHECKING:
     from jaeger import FPS
-    from jaeger.actor import JaegerActor
 
 
 __all__ = ["AlertsBot"]
 
 
-class AlertsBot:
+class AlertsBot(BaseBot):
     """Monitors values and raises alerts."""
 
     def __init__(self, fps: FPS):
 
-        self.fps = fps
-        self.ieb = fps.ieb
+        super().__init__(fps)
 
-        self.actor: JaegerActor | None = None
+        self.ieb = fps.ieb
 
         self.config: dict[str, Any] = config["alerts"]
         self.interval: float = self.config["interval"]
-
-        self._task: asyncio.Task | None = None
 
         self.keywords: dict[str, bool] = {}
         self._gfa_alerts: dict[str, bool] = {}
@@ -73,8 +70,6 @@ class AlertsBot:
         if delay is not False and delay > 0:
             await asyncio.sleep(delay)
 
-        self.actor = jaeger.actor_instance
-
         self._task = asyncio.create_task(self._loop())
 
         if self.actor and "fliswarm" in self.actor.models:
@@ -93,33 +88,6 @@ class AlertsBot:
             and self._check_camera_status in self.actor.models["fliswarm"]._callbacks
         ):
             self.actor.models["fliswarm"].remove_callback(self._check_camera_status)
-
-    def notify(self, message: str | dict, level=logging.WARNING):
-        """Logs a message and outputs it to the actor."""
-
-        if isinstance(message, str):
-            log.log(level, message)
-
-            # No need to output to actor as well if this is a warning or above
-            # because the ActorHandler already does it and we get duplicate messages.
-            if level >= logging.WARNING:
-                return
-
-        if self.actor:
-            message_code: str = "w"
-            if level == logging.DEBUG:
-                message_code = "d"
-            elif level == logging.INFO:
-                message_code = "i"
-            elif level == logging.WARNING:
-                message_code = "w"
-            elif level == logging.ERROR:
-                message_code = "e"
-
-            if isinstance(message, str):
-                message = {"text": message}
-
-            self.actor.write(message_code, message=message)
 
     def set_keyword(self, keyword: str, new_value: bool) -> bool:
         """Sets the value of an alert keyword and outputs it to the actor.

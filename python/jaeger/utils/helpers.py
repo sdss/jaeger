@@ -11,13 +11,21 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import enum
+import logging
 import warnings
 from concurrent.futures import Executor
 from contextlib import suppress
 from functools import partial
 from threading import Thread
 
-from typing import Callable, Generic, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Optional, Type, TypeVar
+
+from jaeger import log
+
+
+if TYPE_CHECKING:
+    from jaeger.actor import JaegerActor
+    from jaeger.fps import FPS
 
 
 __all__ = [
@@ -27,6 +35,7 @@ __all__ = [
     "Poller",
     "AsyncioExecutor",
     "run_in_executor",
+    "BaseBot",
 ]
 
 
@@ -478,3 +487,65 @@ async def run_in_executor(fn, *args, catch_warnings=False, executor="thread", **
             result = await asyncio.get_running_loop().run_in_executor(pool, fn)
 
     return result
+
+
+class BaseBot:
+    """A class that monitors a subsystem."""
+
+    def __init__(self, fps: FPS):
+
+        self.fps = fps
+        self.actor: JaegerActor | None = None
+
+        self._task: asyncio.Task | None = None
+
+    def set_actor(self, actor: JaegerActor):
+        self.actor = actor
+
+    async def start(self, delay: float | bool = False):
+        """Stars the monitoring loop."""
+
+        await self.stop()
+
+        if delay is not False and delay > 0:
+            await asyncio.sleep(delay)
+
+        self._task = asyncio.create_task(self._loop())
+
+    async def stop(self):
+        """Stops the monitoring loop."""
+
+        if self._task:
+            with suppress(asyncio.CancelledError):
+                self._task.cancel()
+                await self._task
+
+    async def _loop(self):
+        raise NotImplementedError()
+
+    def notify(self, message: str | dict, level=logging.WARNING):
+        """Logs a message and outputs it to the actor."""
+
+        if isinstance(message, str):
+            log.log(level, message)
+
+            # No need to output to actor as well if this is a warning or above
+            # because the ActorHandler already does it and we get duplicate messages.
+            if level >= logging.WARNING:
+                return
+
+        if self.actor:
+            message_code: str = "w"
+            if level == logging.DEBUG:
+                message_code = "d"
+            elif level == logging.INFO:
+                message_code = "i"
+            elif level == logging.WARNING:
+                message_code = "w"
+            elif level == logging.ERROR:
+                message_code = "e"
+
+            if isinstance(message, str):
+                message = {"text": message}
+
+            self.actor.write(message_code, message=message)
