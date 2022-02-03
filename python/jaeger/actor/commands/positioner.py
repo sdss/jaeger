@@ -301,7 +301,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
 
         n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
 
-        if pid in fps.positioner_to_bus:
+        if pid in fps.positioner_to_bus and isinstance(fps.can, JaegerCAN):
             interface, bus = fps.positioner_to_bus[pid]
             interface = fps.can.interfaces.index(interface) + 1
         else:
