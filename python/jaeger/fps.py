@@ -586,8 +586,10 @@ class FPS(BaseFPS["FPS"]):
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
 
-        await self.alerts.start()
-        await self.chiller.start()
+        # Initialise alerts and chiller bots with a bit of delay to let the actor
+        # time to start.
+        await self.alerts.start(delay=5)
+        await self.chiller.start(delay=5)
 
         return self
 

@@ -304,10 +304,11 @@ async def actor(fps_maker, no_tron: bool = False):
     fps_maker.initialise = False
 
     async with fps_maker as fps:
-        actor_: JaegerActor = await JaegerActor.from_config(actor_config, fps).start()
+        actor_: JaegerActor = JaegerActor.from_config(actor_config, fps)
 
         await fps.initialise()
 
+        await actor_.start()
         await actor_.run_forever()
 
 
