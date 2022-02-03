@@ -76,7 +76,7 @@ class SuperMessage(Message):
         self.uid = uid
 
         uid_bits = config["positioner"]["uid_bits"]
-        max_uid = 2 ** uid_bits
+        max_uid = 2**uid_bits
         assert self.uid < max_uid, f"UID must be <= {max_uid}."
 
         if extended_id:
@@ -320,7 +320,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         if not self.is_broadcast:
             for pid in self.positioner_ids:
                 if pid not in command_pool:
-                    command_pool[pid] = set(range(1, 2 ** uid_bits))
+                    command_pool[pid] = set(range(1, 2**uid_bits))
         else:
             if 0 not in command_pool:
                 command_pool[0] = set([0])

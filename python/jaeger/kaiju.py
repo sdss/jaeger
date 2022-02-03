@@ -56,7 +56,7 @@ def get_robot_grid(fps: FPS | None, seed: int | None = None, collision_buffer=No
 
     if seed is None:
         t = 1000 * time.time()
-        seed = int(int(t) % 2 ** 32 / 1000)
+        seed = int(int(t) % 2**32 / 1000)
 
     kaiju_config = config["kaiju"]
     ang_step = kaiju_config["ang_step"]

@@ -504,7 +504,7 @@ class FVC:
         # Calculate RMS from assigned fibres.
         dx = assigned.xwok - assigned.xwok_measured
         dy = assigned.ywok - assigned.ywok_measured
-        self.fitrms = numpy.round(numpy.sqrt(numpy.mean(dx ** 2 + dy ** 2)), 5)
+        self.fitrms = numpy.round(numpy.sqrt(numpy.mean(dx**2 + dy**2)), 5)
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
