@@ -157,3 +157,6 @@ alerts:
     sensor_temp: T3
     sensor_rh: RH3
     dew_threshold: 3
+  chiller:
+    sensor_supply: RTD10
+    threshold: 1

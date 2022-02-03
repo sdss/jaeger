@@ -22,7 +22,6 @@ from clu.tools import ActorHandler
 import jaeger
 from jaeger import FPS, __version__, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning
-from jaeger.ieb import IEB, Chiller
 
 
 __all__ = ["JaegerActor"]
@@ -106,9 +105,9 @@ class JaegerActor(clu.LegacyActor):
 
         self._alive_task = asyncio.create_task(self._report_alive())
         self._status_watcher_task = asyncio.create_task(self._status_watcher())
-        self._chiller_watcher_task: asyncio.Task | None = asyncio.create_task(
-            self._chiller_watcher()
-        )
+
+        self.fps.alerts.set_actor(self)
+        self.fps.chiller.set_actor(self)
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""
@@ -146,93 +145,3 @@ class JaegerActor(clu.LegacyActor):
 
         async for status in self.fps.async_status():
             self.write("i", fps_status=f"0x{status.value:x}")
-
-    async def _chiller_watcher(self):
-        """Sets the chiller set point temperature."""
-
-        last_changed: float | None = None
-        last_setpoint: float | None = None
-        failed: bool = False
-
-        chiller = Chiller.create()
-
-        while True:
-            # Keep this inside the loop to allow for IEB and chiller reconnects.
-            if isinstance(self.fps.ieb, IEB):
-                ieb = self.fps.ieb
-
-                dev_name = "TEMPERATURE_USER_SETPOINT"
-                dev = chiller.get_device(dev_name)
-
-                # Try up to 10 times since sometimes setting the temperature fails.
-                for _ in range(10):
-                    failed = False
-                    changed: bool = False
-
-                    try:
-                        ambient_temp = (await ieb.read_device("T3"))[0]
-
-                        if last_setpoint is None:
-                            last_setpoint = (await dev.read())[0]
-
-                        current_setpoint = (await dev.read())[0]
-
-                        if abs(last_setpoint - current_setpoint) > 1.0:
-                            # First we check if the set point has changed. If it has
-                            # this usually means a power failure and we want to
-                            # reset the set point immediately.
-
-                            self.write(
-                                "w",
-                                {
-                                    "text": "Chiller set-point has changed. "
-                                    "Maybe the chiller power cycled."
-                                },
-                            )
-                            await dev.write(int(last_setpoint * 10))
-                            last_changed = time()
-                            break
-
-                        else:
-                            # Compare the ambient temperature with the current
-                            # chiller temperature. If the delta is > 1 degrees
-                            # we reset the set point immediately, as we do if
-                            # last_changed is None (we have never set the set
-                            # point). Otherwise only set the temperature once
-                            # an hour.
-
-                            # New set point is one below ambient clipped to 1 degC.
-                            new_temp = ambient_temp - 1
-                            if new_temp <= 1:
-                                new_temp = 1
-
-                            delta_temp = abs(last_setpoint - new_temp)
-                            now = time()
-
-                            msg = {"text": f"Setting chiller to {round(new_temp, 1)} C"}
-
-                            if last_changed is None or delta_temp > 1:
-                                await dev.write(int(new_temp * 10))
-                                changed = True
-                            else:
-                                delta_time_hours = (now - last_changed) / 3600.0
-                                if delta_time_hours >= 1.0:
-                                    await dev.write(int(new_temp * 10))
-                                    changed = True
-
-                            if changed is True:
-                                self.write("i", msg)
-                                last_setpoint = new_temp
-                                last_changed = now
-
-                            break
-
-                    except Exception:
-                        failed = True
-                        await asyncio.sleep(2)
-                        continue
-
-                if failed is True:
-                    self.write("e", {"text": "Failed setting chiller temperature."})
-
-                await asyncio.sleep(60)

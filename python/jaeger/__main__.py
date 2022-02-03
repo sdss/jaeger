@@ -17,7 +17,7 @@ import sys
 import warnings
 from functools import wraps
 
-from typing import Any, Optional
+from typing import Optional
 
 import click
 import numpy
@@ -300,12 +300,15 @@ async def actor(fps_maker, no_tron: bool = False):
     if no_tron:
         actor_config.pop("tron", None)
 
+    # Do not initialise FPS so that we can define the actor instance first.
+    fps_maker.initialise = False
+
     async with fps_maker as fps:
-        actor_: Any = await JaegerActor.from_config(actor_config, fps).start()
-        await actor_.start_status_server(
-            config["actor"]["status"]["port"],
-            delay=config["actor"]["status"]["delay"],
-        )
+        actor_: JaegerActor = JaegerActor.from_config(actor_config, fps)
+
+        await fps.initialise()
+
+        await actor_.start()
         await actor_.run_forever()
 
 
