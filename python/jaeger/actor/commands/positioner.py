@@ -20,6 +20,7 @@ import numpy
 
 import clu
 
+from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID, SetCurrent, Trajectory
 from jaeger.commands.goto import goto as goto_
 from jaeger.commands.trajectory import send_trajectory
