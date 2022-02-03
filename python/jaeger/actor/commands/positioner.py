@@ -275,6 +275,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
     if len(positioners) == 0:
         command.actor.write("d", {"alive_at": time()}, broadcast=True)
         command.info(locked=fps.locked)
+        command.info(folded=(await fps.is_folded()))
         command.info(n_positioners=len(fps.positioners))
         command.info(fps_status=f"0x{fps.status.value:x}")
         command.info(message={k: int(v) for k, v in fps.alerts.keywords.items()})
