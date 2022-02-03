@@ -231,7 +231,7 @@ async def load(
     configuration = fps.configuration
     configuration.set_command(command)
 
-    if generate_paths:
+    if not configuration.is_cloned and generate_paths:
         try:
             command.info("Calculating trajectories.")
             await configuration.get_paths(decollide=not from_positions)

@@ -214,7 +214,9 @@ class BaseConfiguration:
         """
 
         original_configuration_id = self.configuration_id
+
         new = self.copy()
+        new.robot_grid = self.robot_grid
 
         new.configuration_id = None
         new.is_cloned = True
