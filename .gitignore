@@ -108,3 +108,5 @@ setup.py
 
 # Large data files
 tests/data/*.fits
+
+pyrightconfig.json

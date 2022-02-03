@@ -26,7 +26,7 @@ from jaeger.target.configuration import (
 )
 from jaeger.target.design import Design
 from jaeger.target.tools import create_random_configuration
-from jaeger.utils.database import get_designid_from_queue
+from jaeger.utils.database import get_designid_from_queue, match_assignment_hash
 
 from . import jaeger_parser
 
@@ -100,6 +100,12 @@ def configuration():
     type=float,
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
+@click.option(
+    "--no-clone",
+    is_flag=True,
+    help="If the new design has the same target set as the currently loaded one, "
+    "does not clone the configuration and instead loads the new design.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -115,6 +121,7 @@ async def load(
     execute: bool = False,
     reissue: bool = False,
     scale: float | None = None,
+    no_clone: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -149,51 +156,69 @@ async def load(
 
         command.info(f"Loading design {designid}.")
 
-        if scale is None:
-            # Query the guider for the historical scale from the previous exposure.
-            command.debug("Getting guider scale.")
-            guider_scale_cmd = await command.send_command(
-                "cherno",
-                "get-scale --max-age 1200",
+        valid = Design.check_design(designid, command.actor.observatory)
+        if valid is False:
+            return command.fail(
+                "The design does not exists or is not a valid "
+                f"{command.actor.observatory} design."
             )
-            if guider_scale_cmd.status.did_fail:
-                command.warning(
-                    "Failed getting scale from guider. "
-                    "No scale correction will be applied."
+
+        if (
+            no_clone is False
+            and fps.configuration is not None
+            and fps.configuration.design is not None
+            and match_assignment_hash(fps.configuration.design.design_id, designid)
+        ):
+            command.info(
+                f"Design {designid} matches previously loaded design "
+                f"{fps.configuration.design.design_id}. Cloning configuration."
+            )
+
+            fps.configuration = await fps.configuration.clone(
+                write_summary=False,
+                write_to_database=False,
+            )
+
+        else:
+
+            if scale is None:
+                # Query the guider for the historical scale from the previous exposure.
+                command.debug("Getting guider scale.")
+                get_scale_cmd = await command.send_command(
+                    "cherno",
+                    "get-scale --max-age 1200",
                 )
-            else:
-                guider_scale = float(guider_scale_cmd.replies[-1].keywords[0].values[0])
-                if guider_scale < 0:
+                if get_scale_cmd.status.did_fail:
                     command.warning(
-                        "Invalid guider scale. No scale correction will be applied."
-                    )
-                elif (abs(guider_scale) - 1) * 1e6 > 300:
-                    command.warning(
-                        "Unexpectedly large guider scale. Not applying scale "
-                        "correction but maybe check the scale?"
+                        "Failed getting scale from guider. "
+                        "No scale correction will be applied."
                     )
                 else:
-                    scale = FOCAL_SCALE * guider_scale
-                    command.debug(
-                        "Text correcting focal plane scale with guider scale "
-                        f"{guider_scale}. Effective focal plane scale is {scale}."
-                    )
+                    guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
+                    if guider_scale < 0:
+                        command.warning(
+                            "Invalid guider scale. No scale correction will be applied."
+                        )
+                    elif (abs(guider_scale) - 1) * 1e6 > 300:
+                        command.warning(
+                            "Unexpectedly large guider scale. Not applying scale "
+                            "correction but maybe check the scale?"
+                        )
+                    else:
+                        scale = FOCAL_SCALE * guider_scale
+                        command.debug(
+                            "Text correcting focal plane scale with guider scale "
+                            f"{guider_scale}. Effective focal plane scale is {scale}."
+                        )
 
-        try:
-            valid = Design.check_design(designid, command.actor.observatory)
-            if valid is False:
-                return command.fail(
-                    "The design does not exists or is not a valid "
-                    f"{command.actor.observatory} design."
-                )
+            try:
+                # Define the epoch for the configuration.
+                epoch = Time.now().jd + epoch_delay / 86400.0
+                design = await Design.create_async(designid, epoch=epoch, scale=scale)
+            except Exception as err:
+                return command.fail(error=f"Failed retrieving design: {err}")
 
-            # Define the epoch for the configuration.
-            epoch = Time.now().jd + epoch_delay / 86400.0
-            design = await Design.create_async(designid, epoch=epoch, scale=scale)
-        except Exception as err:
-            return command.fail(error=f"Failed retrieving design: {err}")
-
-        fps.configuration = design.configuration
+            fps.configuration = design.configuration
 
     assert isinstance(fps.configuration, (Configuration, ManualConfiguration))
 

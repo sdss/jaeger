@@ -188,7 +188,12 @@ class BaseConfiguration:
             setattr(result, k, deepcopy(v, memo))
         return result
 
-    async def clone(self, copy_summary_F: bool = False) -> BaseConfiguration:
+    async def clone(
+        self,
+        copy_summary_F: bool = False,
+        write_to_database: bool = True,
+        write_summary: bool = True,
+    ) -> BaseConfiguration:
         """Clones a configuration.
 
         Parameters
@@ -196,6 +201,10 @@ class BaseConfiguration:
         copy_summary_F
             If `True` and a `confSummaryF` exists for the current configuration,
             copies it with the newly assigned configuration_id.
+        write_to_database
+            Write new configuration to database
+        write_summary
+            Write summary file for the new configuration.
 
         Returns
         -------
@@ -209,9 +218,12 @@ class BaseConfiguration:
 
         new.configuration_id = None
         new.is_cloned = True
-        new.write_to_database()
 
-        await new.write_summary(headers={"cloned_from": original_configuration_id})
+        if write_to_database:
+            new.write_to_database()
+
+        if write_summary:
+            await new.write_summary(headers={"cloned_from": original_configuration_id})
 
         if copy_summary_F:
             self_summary_F_path = self._get_summary_file_path("F")
