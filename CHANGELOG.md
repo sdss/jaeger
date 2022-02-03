@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🚀 New
+
+* [#177](https://github.com/sdss/jaeger/issues/177) When `jaeger configuration load` is called with a design that has the same targets as the currently loaded (as it happens for multi-exposure fields), the existing configuration and metadata are copied but decollision is not run and new paths are not generated.
+
+
 ## 0.13.1 - December 14, 2021
 
 ### 🚀 New
