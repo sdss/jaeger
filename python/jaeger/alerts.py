@@ -36,8 +36,6 @@ class AlertsBot(BaseBot):
 
         super().__init__(fps)
 
-        self.ieb = fps.ieb
-
         self.config: dict[str, Any] = config["alerts"]
         self.interval: float = self.config["interval"]
 

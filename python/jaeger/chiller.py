@@ -12,15 +12,8 @@ import asyncio
 import logging
 from time import time
 
-from typing import TYPE_CHECKING
-
 from jaeger.ieb import IEB, Chiller
 from jaeger.utils.helpers import BaseBot
-
-
-if TYPE_CHECKING:
-    from jaeger.actor.actor import JaegerActor
-    from jaeger.fps import FPS
 
 
 __all__ = ["ChillerBot"]
@@ -28,13 +21,6 @@ __all__ = ["ChillerBot"]
 
 class ChillerBot(BaseBot):
     """Manages the FPS chiller."""
-
-    def __init__(self, fps: FPS):
-
-        self.fps = fps
-        self.ieb = fps.ieb
-
-        self.actor: JaegerActor | None = None
 
     async def _loop(self):
         """Sets the chiller set point temperature."""

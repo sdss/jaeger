@@ -495,6 +495,8 @@ class BaseBot:
     def __init__(self, fps: FPS):
 
         self.fps = fps
+        self.ieb = fps.ieb
+
         self.actor: JaegerActor | None = None
 
         self._task: asyncio.Task | None = None
