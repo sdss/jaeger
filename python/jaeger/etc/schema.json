@@ -1,256 +1,257 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "properties": {
-        "config_file": { "type": "string" },
-        "temperature": {
-            "type": "array",
-            "description": "Temperature measurements",
-            "items": [
-                { "title": "T1", "type": "number" },
-                { "title": "T3", "type": "number" },
-                { "title": "RTD1", "type": "number" },
-                { "title": "RTD2", "type": "number" },
-                { "title": "RTD3", "type": "number" },
-                { "title": "RTD4", "type": "number" },
-                { "title": "RTD6", "type": "number" },
-                { "title": "RTD7", "type": "number" },
-                { "title": "RTD8", "type": "number" },
-                { "title": "RTD9", "type": "number" },
-                { "title": "RTD10", "type": "number" },
-                { "title": "RTD11", "type": "number" },
-                { "title": "RTD12", "type": "number" }
-            ]
-        },
-        "humidity": {
-            "type": "array",
-            "description": "Relative humidity measurements",
-            "items": [
-                { "title": "RH1", "type": "number" },
-                { "title": "RH3", "type": "number" }
-            ]
-        },
-        "voltage": {
-            "type": "array",
-            "description": "Power supply voltage measurements",
-            "items": [
-                { "title": "PV24_1", "type": "number" },
-                { "title": "PV24_2", "type": "number" },
-                { "title": "PV24_3", "type": "number" },
-                { "title": "PV24_4", "type": "number" },
-                { "title": "PV24_5", "type": "number" },
-                { "title": "PV24_6", "type": "number" }
-            ]
-        },
-        "flow": {
-            "type": "array",
-            "description": "Coolant flow measurements",
-            "items": [
-                { "title": "FLOW1", "type": "number" },
-                { "title": "FLOW2", "type": "number" }
-            ]
-        },
-        "pressure": {
-            "type": "array",
-            "description": "Coolant pressure measurements",
-            "items": [
-                { "title": "PRESSURE1", "type": "number" },
-                { "title": "PRESSURE2", "type": "number" }
-            ]
-        },
-        "fbi_led": {
-            "type": "array",
-            "description": "Integration spheres LED power",
-            "items": [
-                { "title": "LED1", "type": "number" },
-                { "title": "LED2", "type": "number" },
-                { "title": "LED3", "type": "number" },
-                { "title": "LED4", "type": "number" }
-            ]
-        },
-        "power_sextant": {
-            "type": "array",
-            "description": "Power supply relays",
-            "items": [
-                { "title": "PS1", "type": "boolean" },
-                { "title": "PS2", "type": "boolean" },
-                { "title": "PS3", "type": "boolean" },
-                { "title": "PS4", "type": "boolean" },
-                { "title": "PS5", "type": "boolean" },
-                { "title": "PS6", "type": "boolean" }
-            ]
-        },
-        "power_can": {
-            "type": "array",
-            "description": "CANNet module relays",
-            "items": [
-                { "title": "CM1", "type": "boolean" },
-                { "title": "CM2", "type": "boolean" },
-                { "title": "CM3", "type": "boolean" },
-                { "title": "CM4", "type": "boolean" },
-                { "title": "CM5", "type": "boolean" },
-                { "title": "CM6", "type": "boolean" }
-            ]
-        },
-        "power_sync": {
-            "type": "array",
-            "description": "SYNC line status",
-            "items": [{ "title": "SYNC", "type": "boolean" }]
-        },
-        "power_gfa": {
-            "type": "array",
-            "description": "GFA power relays",
-            "items": [
-                { "title": "GFA1", "type": "boolean" },
-                { "title": "GFA2", "type": "boolean" },
-                { "title": "GFA3", "type": "boolean" },
-                { "title": "GFA4", "type": "boolean" },
-                { "title": "GFA5", "type": "boolean" },
-                { "title": "GFA6", "type": "boolean" }
-            ]
-        },
-        "power_nuc": {
-            "type": "array",
-            "description": "GFA NUC relays",
-            "items": [
-                { "title": "NUC1", "type": "boolean" },
-                { "title": "NUC2", "type": "boolean" },
-                { "title": "NUC3", "type": "boolean" },
-                { "title": "NUC4", "type": "boolean" },
-                { "title": "NUC5", "type": "boolean" },
-                { "title": "NUC6", "type": "boolean" }
-            ]
-        },
-        "fvc_temperature": {
-            "type": "array",
-            "description": "FVC temperature measurements",
-            "items": [
-                { "title": "RTD1", "type": "number" },
-                { "title": "RTD2", "type": "number" },
-                { "title": "RTD3", "type": "number" }
-            ]
-        },
-        "fvc_power_nuc": {
-            "type": "array",
-            "description": "FVC NUC power",
-            "items": [{ "title": "NUC", "type": "boolean" }]
-        },
-        "fvc_power_camera": {
-            "type": "array",
-            "description": "FVC camera power",
-            "items": [{ "title": "FVC", "type": "boolean" }]
-        },
-        "fvc_led": {
-            "type": "array",
-            "description": "FVC LED power",
-            "items": [{ "title": "LED1", "type": "number" }]
-        },
-        "move_time": { "type": "number" },
-        "alive_at": { "type": "number" },
-        "locked": { "type": "boolean" },
-        "locked_by": {
-            "type": "array",
-            "items": {
-                "type": "number"
-            }
-        },
-        "folded": { "type": "boolean" },
-        "n_positioners": { "type": "integer" },
-        "positioner_status": {
-            "type": "array",
-            "items": [
-                { "title": "positioner_id", "type": "integer" },
-                { "title": "alpha", "type": "number" },
-                { "title": "beta", "type": "number" },
-                { "title": "bits", "type": "string" },
-                { "title": "initialised", "type": "boolean" },
-                { "title": "disabled", "type": "boolean" },
-                { "title": "offline", "type": "boolean" },
-                { "title": "bootloader", "type": "boolean" },
-                { "title": "firmware", "type": "string" },
-                { "title": "interface", "type": "integer" },
-                { "title": "bus", "type": "integer" },
-                {
-                    "title": "n_trajectories",
-                    "oneOf": [{ "type": "integer" }, { "constant": "?" }]
-                }
-            ]
-        },
-        "fps_status": {
-            "type": "string"
-        },
-        "raw": {
-            "type": "array",
-            "items": [
-                { "title": "command_id", "type": "integer" },
-                { "title": "uid", "type": "integer" },
-                { "title": "response_code", "type": "integer" },
-                { "title": "data", "type": "string" }
-            ]
-        },
-        "configuration_loaded": {
-            "type": "array",
-            "items": [
-                { "title": "configuration_id", "type": "integer" },
-                { "title": "design_id", "type": "integer" },
-                { "title": "field_id", "type": "integer" },
-                { "title": "ra_boresight", "type": "number" },
-                { "title": "dec_boresight", "type": "number" },
-                { "title": "position_angle", "type": "number" },
-                { "title": "alt_boresight", "type": "number" },
-                { "title": "az_boresight", "type": "number" },
-                { "title": "summary_file", "type": "string" }
-            ]
-        },
-        "fvc_filename": {
-            "type": "string"
-        },
-        "fvc_rms": {
-            "type": "number"
-        },
-        "fvc_deltarms": {
-            "type": "number"
-        },
-        "snapshot": {
-            "type": "string"
-        },
-        "configuration_snapshot": {
-            "type": "string"
-        },
-        "kaiju_version": {
-            "type": "string"
-        },
-        "coordio_version": {
-            "type": "string"
-        },
-        "fps_calibrations_version": {
-            "type": "string"
-        },
-        "chiller_temperature_value": {
-            "type": "number"
-        },
-        "chiller_temperature_setpoint": {
-            "type": "number"
-        },
-        "chiller_flow_value": {
-            "type": "number"
-        },
-        "chiller_flow_setpoint": {
-            "type": "number"
-        },
-        "trajectory_dump_file": {
-            "type": "string"
-        },
-        "alert_gfa_temp_critical": { "type": "integer" },
-        "alert_gfa_temp_warning": { "type": "integer" },
-        "alert_ieb_temp_critical": { "type": "integer" },
-        "alert_ieb_temp_warning": { "type": "integer" },
-        "alert_robot_temp_critical": { "type": "integer" },
-        "alert_robot_temp_warning": { "type": "integer" },
-        "alert_fps_flow": { "type": "integer" },
-        "alert_dew_point": { "type": "integer" },
-        "alert_fluid_temperature": { "type": "integer" },
-        "alert_chiller_dew_point": { "type": "integer" }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "config_file": { "type": "string" },
+    "temperature": {
+      "type": "array",
+      "description": "Temperature measurements",
+      "items": [
+        { "title": "T1", "type": "number" },
+        { "title": "T3", "type": "number" },
+        { "title": "RTD1", "type": "number" },
+        { "title": "RTD2", "type": "number" },
+        { "title": "RTD3", "type": "number" },
+        { "title": "RTD4", "type": "number" },
+        { "title": "RTD6", "type": "number" },
+        { "title": "RTD7", "type": "number" },
+        { "title": "RTD8", "type": "number" },
+        { "title": "RTD9", "type": "number" },
+        { "title": "RTD10", "type": "number" },
+        { "title": "RTD11", "type": "number" },
+        { "title": "RTD12", "type": "number" }
+      ]
     },
-    "additionalProperties": false
+    "humidity": {
+      "type": "array",
+      "description": "Relative humidity measurements",
+      "items": [
+        { "title": "RH1", "type": "number" },
+        { "title": "RH3", "type": "number" }
+      ]
+    },
+    "voltage": {
+      "type": "array",
+      "description": "Power supply voltage measurements",
+      "items": [
+        { "title": "PV24_1", "type": "number" },
+        { "title": "PV24_2", "type": "number" },
+        { "title": "PV24_3", "type": "number" },
+        { "title": "PV24_4", "type": "number" },
+        { "title": "PV24_5", "type": "number" },
+        { "title": "PV24_6", "type": "number" }
+      ]
+    },
+    "flow": {
+      "type": "array",
+      "description": "Coolant flow measurements",
+      "items": [
+        { "title": "FLOW1", "type": "number" },
+        { "title": "FLOW2", "type": "number" }
+      ]
+    },
+    "pressure": {
+      "type": "array",
+      "description": "Coolant pressure measurements",
+      "items": [
+        { "title": "PRESSURE1", "type": "number" },
+        { "title": "PRESSURE2", "type": "number" }
+      ]
+    },
+    "fbi_led": {
+      "type": "array",
+      "description": "Integration spheres LED power",
+      "items": [
+        { "title": "LED1", "type": "number" },
+        { "title": "LED2", "type": "number" },
+        { "title": "LED3", "type": "number" },
+        { "title": "LED4", "type": "number" }
+      ]
+    },
+    "power_sextant": {
+      "type": "array",
+      "description": "Power supply relays",
+      "items": [
+        { "title": "PS1", "type": "boolean" },
+        { "title": "PS2", "type": "boolean" },
+        { "title": "PS3", "type": "boolean" },
+        { "title": "PS4", "type": "boolean" },
+        { "title": "PS5", "type": "boolean" },
+        { "title": "PS6", "type": "boolean" }
+      ]
+    },
+    "power_can": {
+      "type": "array",
+      "description": "CANNet module relays",
+      "items": [
+        { "title": "CM1", "type": "boolean" },
+        { "title": "CM2", "type": "boolean" },
+        { "title": "CM3", "type": "boolean" },
+        { "title": "CM4", "type": "boolean" },
+        { "title": "CM5", "type": "boolean" },
+        { "title": "CM6", "type": "boolean" }
+      ]
+    },
+    "power_sync": {
+      "type": "array",
+      "description": "SYNC line status",
+      "items": [{ "title": "SYNC", "type": "boolean" }]
+    },
+    "power_gfa": {
+      "type": "array",
+      "description": "GFA power relays",
+      "items": [
+        { "title": "GFA1", "type": "boolean" },
+        { "title": "GFA2", "type": "boolean" },
+        { "title": "GFA3", "type": "boolean" },
+        { "title": "GFA4", "type": "boolean" },
+        { "title": "GFA5", "type": "boolean" },
+        { "title": "GFA6", "type": "boolean" }
+      ]
+    },
+    "power_nuc": {
+      "type": "array",
+      "description": "GFA NUC relays",
+      "items": [
+        { "title": "NUC1", "type": "boolean" },
+        { "title": "NUC2", "type": "boolean" },
+        { "title": "NUC3", "type": "boolean" },
+        { "title": "NUC4", "type": "boolean" },
+        { "title": "NUC5", "type": "boolean" },
+        { "title": "NUC6", "type": "boolean" }
+      ]
+    },
+    "fvc_temperature": {
+      "type": "array",
+      "description": "FVC temperature measurements",
+      "items": [
+        { "title": "RTD1", "type": "number" },
+        { "title": "RTD2", "type": "number" },
+        { "title": "RTD3", "type": "number" }
+      ]
+    },
+    "fvc_power_nuc": {
+      "type": "array",
+      "description": "FVC NUC power",
+      "items": [{ "title": "NUC", "type": "boolean" }]
+    },
+    "fvc_power_camera": {
+      "type": "array",
+      "description": "FVC camera power",
+      "items": [{ "title": "FVC", "type": "boolean" }]
+    },
+    "fvc_led": {
+      "type": "array",
+      "description": "FVC LED power",
+      "items": [{ "title": "LED1", "type": "number" }]
+    },
+    "move_time": { "type": "number" },
+    "alive_at": { "type": "number" },
+    "locked": { "type": "boolean" },
+    "locked_by": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      }
+    },
+    "folded": { "type": "boolean" },
+    "n_positioners": { "type": "integer" },
+    "positioner_status": {
+      "type": "array",
+      "items": [
+        { "title": "positioner_id", "type": "integer" },
+        { "title": "alpha", "type": "number" },
+        { "title": "beta", "type": "number" },
+        { "title": "bits", "type": "string" },
+        { "title": "initialised", "type": "boolean" },
+        { "title": "disabled", "type": "boolean" },
+        { "title": "offline", "type": "boolean" },
+        { "title": "bootloader", "type": "boolean" },
+        { "title": "firmware", "type": "string" },
+        { "title": "interface", "type": "integer" },
+        { "title": "bus", "type": "integer" },
+        {
+          "title": "n_trajectories",
+          "oneOf": [{ "type": "integer" }, { "constant": "?" }]
+        }
+      ]
+    },
+    "fps_status": {
+      "type": "string"
+    },
+    "raw": {
+      "type": "array",
+      "items": [
+        { "title": "command_id", "type": "integer" },
+        { "title": "uid", "type": "integer" },
+        { "title": "response_code", "type": "integer" },
+        { "title": "data", "type": "string" }
+      ]
+    },
+    "configuration_loaded": {
+      "type": "array",
+      "items": [
+        { "title": "configuration_id", "type": "integer" },
+        { "title": "design_id", "type": "integer" },
+        { "title": "field_id", "type": "integer" },
+        { "title": "ra_boresight", "type": "number" },
+        { "title": "dec_boresight", "type": "number" },
+        { "title": "position_angle", "type": "number" },
+        { "title": "alt_boresight", "type": "number" },
+        { "title": "az_boresight", "type": "number" },
+        { "title": "summary_file", "type": "string" },
+        { "title": "cloned", "type": "boolean" }
+      ]
+    },
+    "fvc_filename": {
+      "type": "string"
+    },
+    "fvc_rms": {
+      "type": "number"
+    },
+    "fvc_deltarms": {
+      "type": "number"
+    },
+    "snapshot": {
+      "type": "string"
+    },
+    "configuration_snapshot": {
+      "type": "string"
+    },
+    "kaiju_version": {
+      "type": "string"
+    },
+    "coordio_version": {
+      "type": "string"
+    },
+    "fps_calibrations_version": {
+      "type": "string"
+    },
+    "chiller_temperature_value": {
+      "type": "number"
+    },
+    "chiller_temperature_setpoint": {
+      "type": "number"
+    },
+    "chiller_flow_value": {
+      "type": "number"
+    },
+    "chiller_flow_setpoint": {
+      "type": "number"
+    },
+    "trajectory_dump_file": {
+      "type": "string"
+    },
+    "alert_gfa_temp_critical": { "type": "integer" },
+    "alert_gfa_temp_warning": { "type": "integer" },
+    "alert_ieb_temp_critical": { "type": "integer" },
+    "alert_ieb_temp_warning": { "type": "integer" },
+    "alert_robot_temp_critical": { "type": "integer" },
+    "alert_robot_temp_warning": { "type": "integer" },
+    "alert_fps_flow": { "type": "integer" },
+    "alert_dew_point": { "type": "integer" },
+    "alert_fluid_temperature": { "type": "integer" },
+    "alert_chiller_dew_point": { "type": "integer" }
+  },
+  "additionalProperties": false
 }

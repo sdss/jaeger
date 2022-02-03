@@ -20,6 +20,7 @@ import numpy
 
 import clu
 
+from jaeger.can import JaegerCAN
 from jaeger.commands import CommandID, SetCurrent, Trajectory
 from jaeger.commands.goto import goto as goto_
 from jaeger.commands.trajectory import send_trajectory
@@ -275,6 +276,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
     if len(positioners) == 0:
         command.actor.write("d", {"alive_at": time()}, broadcast=True)
         command.info(locked=fps.locked)
+        command.info(folded=(await fps.is_folded()))
         command.info(n_positioners=len(fps.positioners))
         command.info(fps_status=f"0x{fps.status.value:x}")
         command.info(message={k: int(v) for k, v in fps.alerts.keywords.items()})
@@ -300,7 +302,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
 
         n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
 
-        if pid in fps.positioner_to_bus:
+        if pid in fps.positioner_to_bus and isinstance(fps.can, JaegerCAN):
             interface, bus = fps.positioner_to_bus[pid]
             interface = fps.can.interfaces.index(interface) + 1
         else:

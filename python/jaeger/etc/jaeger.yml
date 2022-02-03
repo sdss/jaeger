@@ -1,162 +1,162 @@
 ---
 actor:
-    name: jaeger
-    host: 0.0.0.0
-    port: 19990
-    verbose: 30
-    status:
-        port: 19991
-        delay: 5
-    tron_host: sdss5-hub
-    tron_port: 6093
-    models:
-        - fliswarm
-    ieb_status_delay: 60
-    schema: etc/schema.json
-    log_dir: /data/logs/actors/jaeger
+  name: jaeger
+  host: 0.0.0.0
+  port: 19990
+  verbose: 30
+  status:
+    port: 19991
+    delay: 5
+  tron_host: sdss5-hub
+  tron_port: 6093
+  models:
+    - fliswarm
+  ieb_status_delay: 60
+  schema: etc/schema.json
+  log_dir: /data/logs/actors/jaeger
 
 profiles:
-    default: cannet
-    cannet:
-        interface: cannet
-        channels:
-            - sdss-cannet1
-            - sdss-cannet2
-            - sdss-cannet3
-            - sdss-cannet4
-            - sdss-cannet5
-            - sdss-cannet6
-        port: 19228
-        buses: [1, 2, 3, 4]
-        bitrate: 1000000
-        timeout: 1
-        status_interval: 5
-    slcan:
-        interface: slcan
-        channel: /dev/tty.usbserial-LW3HTDSY
-        ttyBaudrate: 1000000
-        bitrate: 1000000
-    virtual:
-        interface: virtual
-        channel: test1
+  default: cannet
+  cannet:
+    interface: cannet
+    channels:
+      - sdss-cannet1
+      - sdss-cannet2
+      - sdss-cannet3
+      - sdss-cannet4
+      - sdss-cannet5
+      - sdss-cannet6
+    port: 19228
+    buses: [1, 2, 3, 4]
+    bitrate: 1000000
+    timeout: 1
+    status_interval: 5
+  slcan:
+    interface: slcan
+    channel: /dev/tty.usbserial-LW3HTDSY
+    ttyBaudrate: 1000000
+    bitrate: 1000000
+  virtual:
+    interface: virtual
+    channel: test1
 
 fps:
-    use_database: true
-    allow_unknown: true
-    initialise_timeouts: 0.5
-    start_pollers: false
-    status_poller_delay: 5
-    position_poller_delay: 5
-    disabled_positioners: [54, 463]
-    offline_positioners: null
-    disable_collision_detection_positioners: []
-    use_sync_line: false
-    snapshot_path: /data/logs/jaeger/snapshots/
-    configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
-    use_lock: True
+  use_database: true
+  allow_unknown: true
+  initialise_timeouts: 0.5
+  start_pollers: false
+  status_poller_delay: 5
+  position_poller_delay: 5
+  disabled_positioners: [54, 463]
+  offline_positioners: null
+  disable_collision_detection_positioners: []
+  use_sync_line: false
+  snapshot_path: /data/logs/jaeger/snapshots/
+  configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
+  use_lock: True
 
 ieb:
-    disabled_devices: ['GFA1']
+  disabled_devices: ['GFA1']
 
 positioner:
-    reduction_ratio: 1024
-    motor_steps: 1073741824
-    time_step: 0.0005
-    motor_speed: 2000
-    initialise_datums_timeout: 300
-    disable_precise_moves: true
-    uid_bits: 6
-    trajectory_data_n_points: 3
-    firmware_messages_per_positioner: 8
-    trajectory_dump_path: /data/logs/jaeger/trajectories/
+  reduction_ratio: 1024
+  motor_steps: 1073741824
+  time_step: 0.0005
+  motor_speed: 2000
+  initialise_datums_timeout: 300
+  disable_precise_moves: true
+  uid_bits: 6
+  trajectory_data_n_points: 3
+  firmware_messages_per_positioner: 8
+  trajectory_dump_path: /data/logs/jaeger/trajectories/
 
 kaiju:
-    speed: 2
-    ang_step: 0.1
-    collision_buffer: 2.0
-    smooth_points: 13
-    collision_shrink: 0.08
-    path_delay: 1
-    epsilon_factor: 2
-    lattice_position: [10., 170.]
+  speed: 2
+  ang_step: 0.1
+  collision_buffer: 2.0
+  smooth_points: 13
+  collision_shrink: 0.08
+  path_delay: 1
+  epsilon_factor: 2
+  lattice_position: [10., 170.]
 
 fvc:
-    zb_polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 28, 29]
-    exposure_time: 5.
-    fbi_level: 6.
-    background_sigma: 3.5
-    centroid_min_npix: 100
-    max_rough_fit_distance: 20.
-    max_fiducial_fit_distance: 5.
-    max_final_fit_distance: 1.
-    reference_rotator_position: 135.4
-    centre_rotation: [4115., 3092.]
-    target_rms: 5
-    target_delta_rms: 1
-    max_fvc_iterations: 5
-    k: 1.0
-    max_correction: 15
-    ieb_keys:
-        TEMPRTD2: rtd2
-        TEMPRTD3: rtd3
-        TEMPT3: t3
-        LED1: led1
-        LED2: led2
-        LED3: led3
-        LED4: led4
+  zb_polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 28, 29]
+  exposure_time: 5.
+  fbi_level: 6.
+  background_sigma: 3.5
+  centroid_min_npix: 100
+  max_rough_fit_distance: 20.
+  max_fiducial_fit_distance: 5.
+  max_final_fit_distance: 1.
+  reference_rotator_position: 135.4
+  centre_rotation: [4115., 3092.]
+  target_rms: 5
+  target_delta_rms: 1
+  max_fvc_iterations: 5
+  k: 1.0
+  max_correction: 15
+  ieb_keys:
+    TEMPRTD2: rtd2
+    TEMPRTD3: rtd3
+    TEMPT3: t3
+    LED1: led1
+    LED2: led2
+    LED3: led3
+    LED4: led4
 
 files:
-    log_dir: /data/logs/jaeger
-    ieb_config: etc/ieb.yaml
-    fvc_config: etc/fvc.yaml
-    chiller_config: etc/chiller.yaml
+  log_dir: /data/logs/jaeger
+  ieb_config: etc/ieb.yaml
+  fvc_config: etc/fvc.yaml
+  chiller_config: etc/chiller.yaml
 
 low_temperature:
-    sensor: RTD2
-    cold_threshold: 0
-    very_cold_threshold: -10
-    interval: 60
-    rpm_normal: 2000
-    rpm_cold: 1000
-    holding_torque_normal: [0, 30]
-    holding_torque_very_cold: [45, 30]
+  sensor: RTD2
+  cold_threshold: 0
+  very_cold_threshold: -10
+  interval: 60
+  rpm_normal: 2000
+  rpm_cold: 1000
+  holding_torque_normal: [0, 30]
+  holding_torque_very_cold: [45, 30]
 
 safe_mode:
-    min_beta: 160
-    max_beta: 180
+  min_beta: 160
+  max_beta: 180
 
 debug: false
 
 observatory: ${OBSERVATORY}
 
 database:
-    dbname: sdss5db
-    host: null
-    port: 5433
+  dbname: sdss5db
+  host: null
+  port: 5433
 
 alerts:
-    interval: 60
-    gfa:
-        warning: 30
-        critical: 35
-        shutdown: true
-    ieb:
-        sensor: RTD1
-        warning: 35
-        critical: 40
-        shutdown: true
-    robot:
-        sensor: RTD8
-        warning: 40
-        critical: 45
-        shutdown: true
-    flow:
-        sensor: FLOW1
-        critical: 0.1
-    temperature:
-        sensor_temp: T3
-        sensor_rh: RH3
-        dew_threshold: 3
-    chiller:
-        sensor_supply: RTD10
-        threshold: 1
+  interval: 60
+  gfa:
+    warning: 30
+    critical: 35
+    shutdown: true
+  ieb:
+    sensor: RTD1
+    warning: 35
+    critical: 40
+    shutdown: true
+  robot:
+    sensor: RTD8
+    warning: 40
+    critical: 45
+    shutdown: true
+  flow:
+    sensor: FLOW1
+    critical: 0.1
+  temperature:
+    sensor_temp: T3
+    sensor_rh: RH3
+    dew_threshold: 3
+  chiller:
+    sensor_supply: RTD10
+    threshold: 1

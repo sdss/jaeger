@@ -1028,6 +1028,16 @@ class FPS(BaseFPS["FPS"]):
 
         return True
 
+    async def is_folded(self):
+        """Returns `True` if the array if folded."""
+
+        alphaL, betaL = config["kaiju"]["lattice_position"]
+
+        await self.update_position()
+        positions_array = self.get_positions()
+
+        return numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1)
+
     async def stop_trajectory(self, clear_flags=False):
         """Stops all the positioners without clearing collided flags.
 

@@ -11,9 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import click
-import numpy
 
-from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
 from jaeger.kaiju import explode, unwind
 
@@ -61,14 +59,12 @@ async def unwind_command(
     await fps.update_position()
     positions = {p.positioner_id: (p.alpha, p.beta) for p in fps.positioners.values()}
 
-    # Check if the array is already folded. If so, do nothing.
-    alphaL, betaL = config["kaiju"]["lattice_position"]
     positions_array = fps.get_positions()
 
     if len(positions_array) == 0:
         return command.fail("No positioners found.")
 
-    if numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1):
+    if await fps.is_folded():
         command.info(folded=True)
         return command.finish("All positioners are folded.")
     else:
