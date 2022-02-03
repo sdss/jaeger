@@ -17,9 +17,8 @@ from typing import TYPE_CHECKING, Any
 from clu.legacy.tron import TronKey
 from drift import Device, Relay
 
-import jaeger
 from jaeger import config
-from jaeger.ieb import IEB
+from jaeger.ieb import IEB, Chiller
 from jaeger.utils.helpers import BaseBot
 
 
@@ -59,6 +58,8 @@ class AlertsBot(BaseBot):
             "alert_robot_temp_warning": False,
             "alert_fps_flow": False,
             "alert_dew_point": False,
+            "alert_chiller_dew_point": False,
+            "alert_fluid_temperature": False,
         }
         self._gfa_alerts = {}
 
@@ -124,6 +125,7 @@ class AlertsBot(BaseBot):
                 self._check_ieb,
                 self._check_flow,
                 self._check_outside_temperature,
+                self._check_chiller,
             ]:
                 try:
                     await coro()
@@ -133,6 +135,21 @@ class AlertsBot(BaseBot):
                     )
 
             await asyncio.sleep(self.interval)
+
+    async def get_dew_point_temperarure(self):
+        """Returns the ambient and dew point temperatures."""
+
+        assert isinstance(self.ieb, IEB)
+
+        temp_config = config["alerts"]["temperature"]
+
+        temp = (await self.ieb.read_device(temp_config["sensor_temp"], adapt=True))[0]
+        rh = (await self.ieb.read_device(temp_config["sensor_rh"], adapt=True))[0]
+
+        # Dewpoint temperature.
+        t_d = temp - (100 - rh) / 5.0
+
+        return temp, t_d
 
     async def shutdown_gfas(self):
         """Shutdowns the GFAs without touching the rest of the FPS."""
@@ -321,17 +338,47 @@ class AlertsBot(BaseBot):
             self.notify("IEB not connected. Cannot check outside temperature.")
             return
 
-        temp_config = config["alerts"]["temperature"]
+        temp, t_d = await self.get_dew_point_temperarure()
 
-        temp = (await self.ieb.read_device(temp_config["sensor_temp"], adapt=True))[0]
-        rh = (await self.ieb.read_device(temp_config["sensor_rh"], adapt=True))[0]
-
-        # Dewpoint temperature.
-        t_d = temp - (100 - rh) / 5.0
-
-        if temp < t_d + temp_config["dew_threshold"]:
+        if temp < t_d + config["alerts"]["temperature"]["dew_threshold"]:
             self.set_keyword("alert_dew_point", True)
             self.notify("Outside temperature is approaching dew point limit.")
 
         else:
             self.set_keyword("alert_dew_point", False)
+
+    async def _check_chiller(self):
+        """Checks the chiller status."""
+
+        if not isinstance(self.ieb, IEB):
+            self.notify("IEB not connected. Cannot run chiller checks.")
+            return
+
+        chiller = Chiller.create()
+
+        chiller_config = config["alerts"]["chiller"]
+
+        try:
+            setpoint = (await chiller.read_device("TEMPERATURE_USER_SETPOINT"))[0]
+            fluid_temp = (await chiller.read_device("DISPLAY_VALUE"))[0]
+        except Exception as err:
+            self.notify(f"Failed reading chiller values: {err}", level=logging.ERROR)
+            return
+
+        _, t_d = await self.get_dew_point_temperarure()
+
+        if fluid_temp < t_d + config["alerts"]["temperature"]["dew_threshold"]:
+            self.set_keyword("alert_chiller_dew_point", True)
+            self.notify("Fluid temperature is approaching dew point limit.")
+
+        else:
+            self.set_keyword("alert_chiller_dew_point", False)
+
+        supply_temp = (await self.ieb.read_device(chiller_config["sensor_supply"]))[0]
+
+        if abs(setpoint - supply_temp) > chiller_config["threshold"]:
+            self.set_keyword("alert_fluid_temperature", True)
+            self.notify("Chiller set point is different from supply temperature.")
+
+        else:
+            self.set_keyword("alert_fluid_temperature", False)
