@@ -53,10 +53,11 @@ modules:
         adaptor: proportional
         adaptor_extra_params:
           - 0.1
+        data_type: h
         address: 8991
         category: chiller
         description: Current Display Value
-        units: ''
+        units: 'C'
       FEL_AMBIENT_AIR_SV:
         address: 8988
         category: chiller
@@ -266,16 +267,19 @@ modules:
         units: C
       SYSTEM_SP_HI_SV:
         address: 8998
+        data_type: h
         category: chiller
         description: Sp Lo Limit, C or F
         units: C/F
       SYSTEM_SP_LOW_LIM_C_SV:
         address: 8999
+        data_type: h
         category: chiller
         description: SP low limit [C]
         units: C
       SYSTEM_SP_LOW_SV:
         address: 9000
+        data_type: h
         category: chiller
         description: Sp Hi Limit, C or F
         units: C/F
@@ -283,6 +287,7 @@ modules:
         adaptor: proportional
         adaptor_extra_params:
           - 0.1
+        data_type: h
         address: 9018
         category: chiller
         description: Process fluid setpoint temperature C or F
@@ -290,7 +295,7 @@ modules:
       USER_REMOTE_START_STOP_SV:
         address: 9019
         category: chiller
-        description: .nan
+        description:
         units: ''
       WARN_AMB_AIR_SV:
         address: 9001
@@ -325,7 +330,7 @@ modules:
       WARN_START_SV:
         address: 9006
         category: chiller
-        description: start signal warning current state; True=WARN
+        description: Start signal warning current state; True=WARN
         units: ''
     mode: holding_register
 port: 1111
