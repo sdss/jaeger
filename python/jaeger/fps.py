@@ -1038,6 +1038,9 @@ class FPS(BaseFPS["FPS"]):
         await self.update_position()
         positions_array = self.get_positions()
 
+        if len(positions_array) == 0:
+            return False
+
         return numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1)
 
     async def stop_trajectory(self, clear_flags=False):
