@@ -154,7 +154,7 @@ async def loop(
     if axis_cmd.status.did_fail:
         command.warning("Cannot check the status of the rotator.")
     else:
-        rot_status = axis_cmd.replies[0].keywords[0].values[2]
+        rot_status = axis_cmd.replies.get("AxisCmdState")[2]
         if rot_status != "Halted":
             return command.fail(f"Cannot expose FVC while the rotator is {rot_status}.")
         else:
