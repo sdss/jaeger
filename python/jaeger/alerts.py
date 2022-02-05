@@ -357,8 +357,8 @@ class AlertsBot(BaseBot):
         try:
             # setpoint = (await chiller.read_device("TEMPERATURE_USER_SETPOINT"))[0]
             fluid_temp = (await chiller.read_device("DISPLAY_VALUE"))[0]
-        except Exception as err:
-            self.notify(f"Failed reading chiller values: {err}", level=logging.ERROR)
+        except Exception:
+            # self.notify(f"Failed reading chiller values: {err}", level=logging.ERROR)
             return
 
         _, t_d = await self.get_dew_point_temperarure()
