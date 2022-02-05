@@ -1450,7 +1450,7 @@ numpy = ">=1.16.5,<1.23.0"
 
 [[package]]
 name = "sdss-clu"
-version = "1.5.6"
+version = "1.5.7"
 description = "A new protocol for SDSS actors."
 category = "main"
 optional = false
@@ -1968,7 +1968,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "virtualenv"
-version = "20.13.0"
+version = "20.13.1"
 description = "Virtual Python Environment builder"
 category = "dev"
 optional = false
@@ -2032,7 +2032,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7.1,<3.11"
-content-hash = "9323ab9757f8d1b4d79530367e8e8d1949718ca025934283ddf701055951ecf4"
+content-hash = "3a3e0ced00f7d4b057e7df577a26813d4f492ec0dec30b9755802fc40845cedd"
 
 [metadata.files]
 aio-pika = [
@@ -2747,6 +2747,9 @@ pickleshare = [
     {file = "pickleshare-0.7.5.tar.gz", hash = "sha256:87683d47965c1da65cdacaf31c8441d12b8044cdec9aca500cd78fc2c683afca"},
 ]
 pillow = [
+    {file = "Pillow-9.0.1-1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:a5d24e1d674dd9d72c66ad3ea9131322819ff86250b30dc5821cbafcfa0b96b4"},
+    {file = "Pillow-9.0.1-1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:2632d0f846b7c7600edf53c48f8f9f1e13e62f66a6dbc15191029d950bfed976"},
+    {file = "Pillow-9.0.1-1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:b9618823bd237c0d2575283f2939655f54d51b4527ec3972907a927acbcc5bfc"},
     {file = "Pillow-9.0.1-cp310-cp310-macosx_10_10_universal2.whl", hash = "sha256:9bfdb82cdfeccec50aad441afc332faf8606dfa5e8efd18a6692b5d6e79f00fd"},
     {file = "Pillow-9.0.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:5100b45a4638e3c00e4d2320d3193bdabb2d75e79793af7c3eb139e4f569f16f"},
     {file = "Pillow-9.0.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:528a2a692c65dd5cafc130de286030af251d2ee0483a5bf50c9348aefe834e8a"},
@@ -3157,8 +3160,8 @@ scipy = [
     {file = "scipy-1.7.3.tar.gz", hash = "sha256:ab5875facfdef77e0a47d5fd39ea178b58e60e454a4c85aa1e52fcb80db7babf"},
 ]
 sdss-clu = [
-    {file = "sdss-clu-1.5.6.tar.gz", hash = "sha256:0701ce732feccb691fb50cb42faa3604862d2a390748ee5f3ccf8af5e401223c"},
-    {file = "sdss_clu-1.5.6-py3-none-any.whl", hash = "sha256:519c586c2802b91b5760bc4d20323b96f5d1967e44fe7a77ec963411f3b85a45"},
+    {file = "sdss-clu-1.5.7.tar.gz", hash = "sha256:63b39ad17eeb7b6ca98d599a79a79347448b965c67c9cb38ee423e369a453937"},
+    {file = "sdss_clu-1.5.7-py3-none-any.whl", hash = "sha256:27413fa4cc85d3ffddb14f89e3dc7f84e7c8b7f341f7f2317726380089d9ee49"},
 ]
 sdss-coordio = [
     {file = "sdss-coordio-1.2.1.tar.gz", hash = "sha256:23c1574bcb7caa8fed16733fd1c1f402ca897293f0e52039a77ebe6db1fbd016"},
@@ -3471,8 +3474,8 @@ urllib3 = [
     {file = "urllib3-1.26.8.tar.gz", hash = "sha256:0e7c33d9a63e7ddfcb86780aac87befc2fbddf46c58dbb487e0855f7ceec283c"},
 ]
 virtualenv = [
-    {file = "virtualenv-20.13.0-py2.py3-none-any.whl", hash = "sha256:339f16c4a86b44240ba7223d0f93a7887c3ca04b5f9c8129da7958447d079b09"},
-    {file = "virtualenv-20.13.0.tar.gz", hash = "sha256:d8458cf8d59d0ea495ad9b34c2599487f8a7772d796f9910858376d1600dd2dd"},
+    {file = "virtualenv-20.13.1-py2.py3-none-any.whl", hash = "sha256:45e1d053cad4cd453181ae877c4ffc053546ae99e7dd049b9ff1d9be7491abf7"},
+    {file = "virtualenv-20.13.1.tar.gz", hash = "sha256:e0621bcbf4160e4e1030f05065c8834b4e93f4fcc223255db2a823440aca9c14"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},

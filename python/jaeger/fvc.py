@@ -179,14 +179,12 @@ class FVC:
         if expose_command.status.did_fail:
             raise FVCError("The FVC exposure failed.")
 
-        for reply in expose_command.replies:
-            for keyword in reply.keywords:
-                if keyword.name.lower() == "filename":
-                    filename = keyword.values[-1]
-                    self.log(f"FVC raw image is {filename}.", to_command=False)
-                    return pathlib.Path(filename)
-
-        raise FVCError("The exposure succeeded but did not output the filename.")
+        try:
+            filename = expose_command.replies.get("filename")[-1]
+            self.log(f"FVC raw image is {filename}.", to_command=False)
+            return pathlib.Path(filename)
+        except KeyError:
+            raise FVCError("The exposure succeeded but did not output the filename.")
 
     def process_fvc_image(
         self,
