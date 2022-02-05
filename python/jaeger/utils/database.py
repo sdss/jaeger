@@ -228,7 +228,7 @@ def match_assignment_hash(design_id1: int, design_id2: int):
     if design_id1 == design_id2:
         return True
 
-    design1 = targetdb.Target.get_by_id(design_id1)
-    design2 = targetdb.Target.get_by_id(design_id2)
+    design1 = targetdb.Design.get_by_id(design_id1)
+    design2 = targetdb.Design.get_by_id(design_id2)
 
     return design1.assignment_hash.hex == design2.assignment_hash.hex
