@@ -182,11 +182,14 @@ async def load(
         else:
 
             if scale is None:
+
+                clip_scale: float = config["configuration"]["clip_scale"]
+
                 # Query the guider for the historical scale from the previous exposure.
                 command.debug("Getting guider scale.")
                 get_scale_cmd = await command.send_command(
                     "cherno",
-                    "get-scale --max-age 1200",
+                    f"get-scale --max-age {config['configuration']['max_scale_age']}",
                 )
                 if get_scale_cmd.status.did_fail:
                     command.warning(
@@ -199,10 +202,16 @@ async def load(
                         command.warning(
                             "Invalid guider scale. No scale correction will be applied."
                         )
-                    elif (abs(guider_scale) - 1) * 1e6 > 300:
+                    elif (abs(guider_scale) - 1) * 1e6 > clip_scale:
+                        guider_scale = numpy.clip(
+                            guider_scale,
+                            1 - clip_scale / 1e6,
+                            1 + clip_scale / 1e6,
+                        )
+
                         command.warning(
-                            "Unexpectedly large guider scale. Not applying scale "
-                            "correction but maybe check the scale?"
+                            "Unexpectedly large guider scale. "
+                            f"Clipping to {guider_scale}."
                         )
                     else:
                         scale = FOCAL_SCALE * guider_scale
