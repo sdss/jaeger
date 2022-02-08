@@ -284,8 +284,8 @@ async def loop(
             else:
                 command.warning("Cannot write processed image.")
 
-        # FVC loop always succeeds.
-        return command.finish()
+    # FVC loop always succeeds.
+    return command.finish()
 
 
 @fvc_parser.command()

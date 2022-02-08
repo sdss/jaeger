@@ -238,8 +238,7 @@ class FVC:
                 raise FVCError("No fibre data and no configuration has been loaded.")
             fibre_data = self.fps.configuration.assignment_data.fibre_table
 
-        self.fibre_data = fibre_data.copy().reset_index().set_index("positioner_id")
-        fdata = self.fibre_data  # For shorts
+        fdata = fibre_data.copy().reset_index().set_index("positioner_id")
 
         self.log(f"Processing raw image {path}")
 
@@ -287,10 +286,10 @@ class FVC:
             plotPathPrefix=plot_path_root,
         )
 
-        self.centroids = fvc_transform.extractCentroids(image_data)
-        fvc_transform.fit(xWokReportColumn="xwok", yWokReportColumn="ywok")
+        self.centroids = fvc_transform.extractCentroids()
+        fvc_transform.fit()
 
-        measured = fvc_transform.positionerTableMeas.copy().set_index('positionerID')
+        measured = fvc_transform.positionerTableMeas.copy().set_index("positionerID")
 
         n_dubious = measured.wokErrWarn.sum()
         if n_dubious > 0:
@@ -300,12 +299,12 @@ class FVC:
             )
 
         metrology_data = fdata.copy().reset_index()
-        metrology_data = metrology_data.loc[fdata.fibre_type == fibre_type]
+        metrology_data = metrology_data.loc[metrology_data.fibre_type == fibre_type]
 
         # Create a column to mark positioners with dubious matches.
         fdata.loc[:, "dubious"] = 0
-        dubious_pid = measured.loc[measured.wokErrWarn, "positionerId"]
-        fdata.loc[fdata.positioner_id.isin(dubious_pid), "dubious"] = 1
+        dubious_pid = measured.loc[measured.wokErrWarn].index.values
+        fdata.loc[dubious_pid, "dubious"] = 1
 
         wok_measured = measured.loc[
             metrology_data.positioner_id, ["xWokMeasMetrology", "yWokMeasMetrology"]
@@ -318,17 +317,17 @@ class FVC:
         fdata = fdata.reset_index().set_index("fibre_type")
 
         # Only use online, assigned robots for final RMS. First get groups of fibres
-        # with an assigned robot, that are not offline or mismatched.
+        # with an assigned robot, that are not offline or dubious.
         if fdata.assigned.sum() > 0:
             assigned = fdata.groupby("positioner_id").filter(
                 lambda g: g.assigned.any()
                 & (g.offline == 0).all()
-                & (g.mismatched == 0).all()
+                & (g.dubious == 0).all()
             )
         else:
             self.log("No assigned fibres found. Using all matched fibres.")
             assigned = fdata.groupby("positioner_id").filter(
-                lambda g: (g.offline == 0).all() & (g.mismatched == 0).all()
+                lambda g: (g.offline == 0).all() & (g.dubious == 0).all()
             )
 
         # Now get the metrology fibre from those groups.
@@ -348,8 +347,9 @@ class FVC:
 
         fdata.reset_index(inplace=True)
         fdata.set_index(["hole_id", "fibre_type"], inplace=True)
-        self.proc_hdu = hdus[1]
 
+        self.fibre_data = fdata
+        self.proc_hdu = hdus[1]
         self.fvc_transform = fvc_transform
 
         self.log(f"Finished processing {path}", level=logging.DEBUG)

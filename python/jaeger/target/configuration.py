@@ -1157,7 +1157,7 @@ class BaseAssignmentData:
         ("offline", numpy.int8, 0),
         ("deadlocked", numpy.int8, 0),
         ("decollided", numpy.int8, 0),
-        ("mismatched", numpy.int8, 0),
+        ("dubious", numpy.int8, 0),
         ("wavelength", numpy.float32, numpy.nan),
         ("fiberId", numpy.int32, -999),
         ("ra_icrs", numpy.float64, numpy.nan),
