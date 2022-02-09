@@ -195,7 +195,13 @@ async def loop(
             command.debug(fvc_filename=str(filename))
 
             # 2. Process the new image.
-            await run_in_executor(fvc.process_fvc_image, filename, plot=plot)
+            positioner_coords = fps.get_positions_dict()
+            await run_in_executor(
+                fvc.process_fvc_image,
+                filename,
+                positioner_coords,
+                plot=plot,
+            )
 
             # 3. Set current RMS and delta.
             new_rms = fvc.fitrms * 1000.0
@@ -278,8 +284,8 @@ async def loop(
             else:
                 command.warning("Cannot write processed image.")
 
-        # FVC loop always succeeds.
-        return command.finish()
+    # FVC loop always succeeds.
+    return command.finish()
 
 
 @fvc_parser.command()
