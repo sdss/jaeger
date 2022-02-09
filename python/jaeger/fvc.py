@@ -289,6 +289,8 @@ class FVC:
         self.centroids = fvc_transform.extractCentroids()
         fvc_transform.fit()
 
+        assert fvc_transform.positionerTableMeas
+
         measured = fvc_transform.positionerTableMeas.copy().set_index("positionerID")
 
         n_dubious = measured.wokErrWarn.sum()
