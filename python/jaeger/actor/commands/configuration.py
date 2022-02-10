@@ -179,6 +179,9 @@ async def load(
                 write_to_database=False,
             )
 
+            if fps.configuration.design:
+                fps.configuration.design.design_id = designid
+
         else:
 
             if scale is None:
