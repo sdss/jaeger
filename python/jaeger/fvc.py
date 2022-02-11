@@ -289,7 +289,7 @@ class FVC:
         self.centroids = fvc_transform.extractCentroids()
         fvc_transform.fit()
 
-        assert fvc_transform.positionerTableMeas
+        assert fvc_transform.positionerTableMeas is not None
 
         measured = fvc_transform.positionerTableMeas.copy().set_index("positionerID")
 
