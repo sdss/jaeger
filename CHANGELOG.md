@@ -1,13 +1,29 @@
 # Changelog
 
-## Next version
+## 0.14.0 - Febuary 11, 2022
 
 ### 🚀 New
 
 * [#177](https://github.com/sdss/jaeger/issues/177) When `jaeger configuration load` is called with a design that has the same targets as the currently loaded (as it happens for multi-exposure fields), the existing configuration and metadata are copied but decollision is not run and new paths are not generated.
+* [#175](https://github.com/sdss/jaeger/issues/175) Added alert system.
+* [#176](https://github.com/sdss/jaeger/issues/176) Refine configuration focal plane scale using the guider measured scale.
+* Addded a scale factor when loading a configuration.
+* Allow to load a design from the queue.
+
+### ✨ Improved
+
+* [#178](https://github.com/sdss/jaeger/issues/178) Major refactor of the chiller code.
+* [#179](https://github.com/sdss/jaeger/issues/179) Refactored FVC code to use coordIO's `FVCTransformAPO`.
+* Add jaeger, kaiju, and coordio versions to confSummary.
+* Allow to disable chiller watcher.
+* Store positioners in trajectory data file. Dump trajectory data even if trajectory fails.
+
+### 🔧 Fixed
+
+* `jaeger status` now won't output additional information if the status of a single positioner is requested.
 
 
-## 0.13.1 - December 14, 2021
+## 0.13.1 - January 7, 2022
 
 ### 🚀 New
 
@@ -21,10 +37,12 @@
 
 * Check that the rotator is halted before exposing the FVC.
 * Added wok coordinates to summary files.
+* `jaeger configuration load` is now cancellable.
+* Restore parent configuration when reversing a dithered configuration.
 
 ### 🔧 Fixed
 
-* Increased length of `optical_prov` in `confSummary` files.
+* Increase `optical_prov` field in confSummary file to 30 characters.
 
 
 ## 0.13.0 - December 14, 2021
