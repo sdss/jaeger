@@ -234,12 +234,11 @@ class BaseConfiguration:
         if write_to_database:
             new.write_to_database()
 
-        assert new.configuration_id is not None
-
         if write_to_database and write_summary:
             await new.write_summary(headers={"cloned_from": original_configuration_id})
 
         if write_to_database and copy_summary_F:
+            assert new.configuration_id is not None
             copy_summary_file(
                 original_configuration_id,
                 new.configuration_id,

@@ -128,7 +128,6 @@ async def load(
     assert command.actor is not None
 
     cloned_from: int = -999
-    confSummaryF_orig = fps.configuration.
 
     if reissue is True:
         if fps.configuration is None or fps.configuration.design is None:
@@ -181,12 +180,10 @@ async def load(
             cloned_from = fps.configuration.configuration_id
 
             fps.configuration = await fps.configuration.clone(
+                design_id=designid,
                 write_summary=False,
                 write_to_database=False,
             )
-
-            if fps.configuration.design:
-                fps.configuration.design.design_id = designid
 
         else:
 

@@ -24,6 +24,7 @@ from coordio.conv import (
 )
 from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
 
+import jaeger.target
 from jaeger import config, log
 from jaeger.exceptions import JaegerError
 from jaeger.kaiju import (
@@ -31,7 +32,6 @@ from jaeger.kaiju import (
     get_path_pair_in_executor,
     get_robot_grid,
 )
-from jaeger.target import Configuration
 
 
 if TYPE_CHECKING:
@@ -311,7 +311,7 @@ def copy_summary_file(
 ):
     """Copies a summary file optionally modifying its design_id."""
 
-    orig_file = Configuration._get_summary_file_path(
+    orig_file = jaeger.target.Configuration._get_summary_file_path(
         configuration_id0,
         config["observatory"],
         flavour,
@@ -320,7 +320,7 @@ def copy_summary_file(
     if not os.path.exists(orig_file):
         return
 
-    new_file = Configuration._get_summary_file_path(
+    new_file = jaeger.target.Configuration._get_summary_file_path(
         configuration_id1,
         config["observatory"],
         flavour,
@@ -330,9 +330,23 @@ def copy_summary_file(
     new_path.parent.mkdir(parents=True, exist_ok=True)
 
     summaryF = open(orig_file, "r").read()
+    summaryF = re.sub(
+        r"(configuration_id\s)[0-9]+",
+        rf"\g<1>{configuration_id1}",
+        summaryF,
+    )
 
     if design_id1:
-        summaryF = re.sub(r"(design_id\s)[0-9]+", r"\1AAA", summaryF)
+        summaryF = re.sub(
+            rf"confSummaryF\-{configuration_id0}\.par",
+            f"confSummaryF-{configuration_id1}.par",
+            summaryF,
+        )
+        summaryF = re.sub(
+            r"(design_id\s)[0-9]+",
+            rf"\g<1>{design_id1}",
+            summaryF,
+        )
 
     with open(new_path, "w") as f:
         f.write(summaryF)
