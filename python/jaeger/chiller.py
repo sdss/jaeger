@@ -74,8 +74,8 @@ class ChillerBot(BaseBot):
                             # New set point is one below ambient clipped to 0 degC
                             # and above the dew point depression region.
                             new_temp = ambient_temp - 1
-                            if new_temp <= 0:
-                                new_temp = 0
+                            if new_temp <= 1:
+                                new_temp = 1
                             if new_temp < (t_d + 3):
                                 new_temp = t_d + 3
 
