@@ -180,6 +180,7 @@ async def loop(
 
     # Flag to determine when to exit the loop.
     finish: bool = False
+    failed: bool = False
 
     try:
 
@@ -264,11 +265,12 @@ async def loop(
             n += 1
 
     except Exception as err:
+        failed = True
         return command.fail(error=f"Failed processing image: {err}")
 
     finally:
 
-        if no_write_summary is False:
+        if no_write_summary is False and failed is False:
             command.info("Saving confSummaryF file.")
             await fvc.write_summary_F()
 
