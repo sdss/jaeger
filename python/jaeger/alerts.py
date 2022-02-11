@@ -57,6 +57,7 @@ class AlertsBot(BaseBot):
             "alert_fps_flow": False,
             "alert_dew_point": False,
             "alert_chiller_dew_point": False,
+            "alert_chiller_fault": False,
             "alert_fluid_temperature": False,
         }
         self._gfa_alerts = {}
@@ -380,3 +381,20 @@ class AlertsBot(BaseBot):
 
         # else:
         #     self.set_keyword("alert_fluid_temperature", False)
+
+        # Check if there are chiller alerts.
+        chiller_alerts: list[str] = []
+        chiller_mod = chiller.modules["chiller"]
+        for chiller_dev_name in chiller_mod.devices:
+            if chiller_dev_name.startswith("alert_"):
+                value: Any = await chiller.read_device(chiller_dev_name, adapt=False)
+                if value > 0:
+                    chiller_alerts.append(chiller_dev_name)
+
+        if len(chiller_alerts) > 0:
+            self.set_keyword("alert_chiller_fault", True)
+            self.notify(
+                "The following chiller alerts are active: " + ", ".join(chiller_alerts)
+            )
+        else:
+            self.set_keyword("alert_chiller_fault", False)

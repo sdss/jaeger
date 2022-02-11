@@ -251,7 +251,8 @@
     "alert_fps_flow": { "type": "integer" },
     "alert_dew_point": { "type": "integer" },
     "alert_fluid_temperature": { "type": "integer" },
-    "alert_chiller_dew_point": { "type": "integer" }
+    "alert_chiller_dew_point": { "type": "integer" },
+    "alert_chiller_fault": { "type": "integer" }
   },
   "additionalProperties": false
 }
