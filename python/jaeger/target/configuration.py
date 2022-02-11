@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 import warnings
 from copy import deepcopy
 
@@ -54,7 +53,7 @@ from jaeger.kaiju import (
 from jaeger.utils import get_sjd
 from jaeger.utils.helpers import run_in_executor
 
-from .tools import positioner_to_wok, wok_to_positioner
+from .tools import copy_summary_file, positioner_to_wok, wok_to_positioner
 
 
 if TYPE_CHECKING:
@@ -190,6 +189,7 @@ class BaseConfiguration:
 
     async def clone(
         self,
+        design_id: int | None = None,
         copy_summary_F: bool = False,
         write_to_database: bool = True,
         write_summary: bool = True,
@@ -198,6 +198,9 @@ class BaseConfiguration:
 
         Parameters
         ----------
+        design_id
+            If set, modifies the ``design_id`` in the configuration `.Design`
+            instance and copied summary files.
         copy_summary_F
             If `True` and a `confSummaryF` exists for the current configuration,
             copies it with the newly assigned configuration_id.
@@ -213,6 +216,8 @@ class BaseConfiguration:
 
         """
 
+        assert self.configuration_id is not None, "configuration_id not set."
+
         original_configuration_id = self.configuration_id
 
         new = self.copy()
@@ -221,17 +226,26 @@ class BaseConfiguration:
         new.configuration_id = None
         new.is_cloned = True
 
+        if design_id is not None and new.design_id is not None:
+            if new.design:
+                new.design.design_id = design_id
+            new.design_id = design_id
+
         if write_to_database:
             new.write_to_database()
 
-        if write_summary:
+        assert new.configuration_id is not None
+
+        if write_to_database and write_summary:
             await new.write_summary(headers={"cloned_from": original_configuration_id})
 
-        if copy_summary_F:
-            self_summary_F_path = self._get_summary_file_path("F")
-            if os.path.exists(self_summary_F_path):
-                new_summary_F_path = new._get_summary_file_path("F")
-                shutil.copy(self_summary_F_path, new_summary_F_path)
+        if write_to_database and copy_summary_F:
+            copy_summary_file(
+                original_configuration_id,
+                new.configuration_id,
+                new.design_id,
+                "F",
+            )
 
         return new
 
@@ -661,9 +675,10 @@ class BaseConfiguration:
         with opsdb.database.atomic():
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
-    def _get_summary_file_path(self, flavour: str):
+    @staticmethod
+    def _get_summary_file_path(configuration_id: int, observatory: str, flavour: str):
 
-        if self.configuration_id is None:
+        if configuration_id is None:
             raise JaegerError("Configuration ID not set.")
 
         if "SDSSCORE_DIR" not in os.environ:
@@ -672,10 +687,10 @@ class BaseConfiguration:
         sdsscore_dir = os.environ["SDSSCORE_DIR"]
         path = os.path.join(
             sdsscore_dir,
-            self.assignment_data.observatory.lower(),
+            observatory.lower(),
             "summary_files",
-            f"{int(self.configuration_id / 100):04d}XX",
-            f"confSummary{flavour}-{self.configuration_id}.par",
+            f"{int(configuration_id / 100):04d}XX",
+            f"confSummary{flavour}-{configuration_id}.par",
         )
 
         return path
@@ -743,7 +758,7 @@ class BaseConfiguration:
             "is_dithered": 0,
             "parent_configuration": -999,
             "dither_radius": -999.0,
-            "cloned_from": -999.0,
+            "cloned_from": -999,
         }
 
         if design:
@@ -844,7 +859,11 @@ class BaseConfiguration:
         fibermap = Table(fibermap)
         fibermap.sort(["positionerId", "fiberType"])
 
-        path = self._get_summary_file_path(flavour)
+        path = self._get_summary_file_path(
+            self.configuration_id,
+            self.assignment_data.observatory,
+            flavour,
+        )
 
         if os.path.exists(path):
             if overwrite:

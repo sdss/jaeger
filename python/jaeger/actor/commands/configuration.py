@@ -25,7 +25,7 @@ from jaeger.target.configuration import (
     ManualConfiguration,
 )
 from jaeger.target.design import Design
-from jaeger.target.tools import create_random_configuration
+from jaeger.target.tools import copy_summary_file, create_random_configuration
 from jaeger.utils.database import get_designid_from_queue, match_assignment_hash
 
 from . import jaeger_parser
@@ -127,6 +127,9 @@ async def load(
 
     assert command.actor is not None
 
+    cloned_from: int = -999
+    confSummaryF_orig = fps.configuration.
+
     if reissue is True:
         if fps.configuration is None or fps.configuration.design is None:
             return command.fail("No configuration loaded.")
@@ -166,6 +169,7 @@ async def load(
         if (
             no_clone is False
             and fps.configuration is not None
+            and fps.configuration.configuration_id is not None
             and fps.configuration.design is not None
             and match_assignment_hash(fps.configuration.design.design_id, designid)
         ):
@@ -173,6 +177,8 @@ async def load(
                 f"Design {designid} matches previously loaded design "
                 f"{fps.configuration.design.design_id}. Cloning configuration."
             )
+
+            cloned_from = fps.configuration.configuration_id
 
             fps.configuration = await fps.configuration.clone(
                 write_summary=False,
@@ -257,7 +263,18 @@ async def load(
         fps.configuration.configuration_id = -999
 
     if ingest and write_summary:
-        await fps.configuration.write_summary(overwrite=True)
+        await fps.configuration.write_summary(
+            overwrite=True,
+            headers={"cloned_from": cloned_from},
+        )
+
+        if cloned_from > 0 and fps.configuration.configuration_id:
+            copy_summary_file(
+                cloned_from,
+                fps.configuration.configuration_id,
+                fps.configuration.design_id,
+                "F",
+            )
 
     _output_configuration_loaded(command, fps)
 

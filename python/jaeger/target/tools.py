@@ -8,6 +8,10 @@
 
 from __future__ import annotations
 
+import os
+import pathlib
+import re
+
 from typing import TYPE_CHECKING
 
 import numpy
@@ -27,13 +31,14 @@ from jaeger.kaiju import (
     get_path_pair_in_executor,
     get_robot_grid,
 )
+from jaeger.target import Configuration
 
 
 if TYPE_CHECKING:
     from jaeger import FPS
 
 
-__all__ = ["wok_to_positioner", "positioner_to_wok"]
+__all__ = ["wok_to_positioner", "positioner_to_wok", "copy_summary_file"]
 
 
 def wok_to_positioner(
@@ -296,3 +301,38 @@ async def create_random_configuration(
         }
 
     return ManualConfiguration(data, **kwargs)
+
+
+def copy_summary_file(
+    configuration_id0: int,
+    configuration_id1: int,
+    design_id1: int | None = None,
+    flavour: str = "",
+):
+    """Copies a summary file optionally modifying its design_id."""
+
+    orig_file = Configuration._get_summary_file_path(
+        configuration_id0,
+        config["observatory"],
+        flavour,
+    )
+
+    if not os.path.exists(orig_file):
+        return
+
+    new_file = Configuration._get_summary_file_path(
+        configuration_id1,
+        config["observatory"],
+        flavour,
+    )
+
+    new_path = pathlib.Path(new_file)
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+
+    summaryF = open(orig_file, "r").read()
+
+    if design_id1:
+        summaryF = re.sub(r"(design_id\s)[0-9]+", r"\1AAA", summaryF)
+
+    with open(new_path, "w") as f:
+        f.write(summaryF)
