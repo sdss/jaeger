@@ -835,6 +835,8 @@ class BaseConfiguration:
                         "firstcarton": target["carton"] or "",
                         "program": target["program"] or "",
                         "category": target["category"] or "",
+                        "delta_ra": target["delta_ra"] or 0.0,
+                        "delta_dec": target["delta_dec"] or 0.0,
                     }
                 )
 
@@ -1502,8 +1504,8 @@ class BaseAssignmentData:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
 
-            ra = target_data["ra"]
-            dec = target_data["dec"]
+            ra = target_data["ra"] + target_data["delta_ra"]
+            dec = target_data["dec"] + target_data["delta_dec"]
             pmra = target_data["pmra"]
             pmdec = target_data["pmdec"]
             parallax = target_data["parallax"]

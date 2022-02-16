@@ -99,6 +99,8 @@ class Design:
                 targetdb.Assignment.pk.alias("assignment_pk"),
                 targetdb.CartonToTarget.pk.alias("carton_to_target_pk"),
                 targetdb.CartonToTarget.lambda_eff,
+                targetdb.CartonToTarget.delta_ra,
+                targetdb.CartonToTarget.delta_dec,
                 targetdb.Target,
                 targetdb.Magnitude,
                 targetdb.Hole.holeid,
