@@ -83,6 +83,7 @@ kaiju:
 configuration:
   max_scale_age: 7200
   clip_scale: 300
+  scale_kludge_factor: 1.0
 
 fvc:
   exposure_time: 5.

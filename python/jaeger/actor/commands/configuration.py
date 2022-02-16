@@ -190,6 +190,7 @@ async def load(
             if scale is None:
 
                 clip_scale: float = config["configuration"]["clip_scale"]
+                SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
 
                 # Query the guider for the historical scale from the previous exposure.
                 command.debug("Getting guider scale.")
@@ -208,19 +209,19 @@ async def load(
                         command.warning(
                             "Invalid guider scale. No scale correction will be applied."
                         )
-                    elif (abs(guider_scale) - 1) * 1e6 > clip_scale:
-                        guider_scale = numpy.clip(
-                            guider_scale,
-                            1 - clip_scale / 1e6,
-                            1 + clip_scale / 1e6,
-                        )
-
-                        command.warning(
-                            "Unexpectedly large guider scale. "
-                            f"Clipping to {guider_scale}."
-                        )
                     else:
-                        scale = FOCAL_SCALE * guider_scale
+                        if (abs(guider_scale) - 1) * 1e6 > clip_scale:
+                            guider_scale = numpy.clip(
+                                guider_scale,
+                                1 - clip_scale / 1e6,
+                                1 + clip_scale / 1e6,
+                            )
+                            command.warning(
+                                "Unexpectedly large guider scale. "
+                                f"Clipping to {guider_scale}."
+                            )
+
+                        scale = FOCAL_SCALE * guider_scale * SCALE_KLUDGE
                         command.debug(
                             "Text correcting focal plane scale with guider scale "
                             f"{guider_scale}. Effective focal plane scale is {scale}."
