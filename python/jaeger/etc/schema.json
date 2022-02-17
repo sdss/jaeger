@@ -212,6 +212,12 @@
     "fvc_deltarms": {
       "type": "number"
     },
+    "fvc_perc_95": {
+      "type": "number"
+    },
+    "fvc_n_reached": {
+      "type": "integer"
+    },
     "snapshot": {
       "type": "string"
     },

@@ -206,7 +206,10 @@ async def loop(
 
             # 3. Set current RMS and delta.
             new_rms = fvc.fitrms * 1000.0
+
             command.info(fvc_rms=new_rms)
+            command.info(fvc_perc_95=fvc.perc_95 * 100.0)
+            command.info(fvc_n_reached=fvc.n_reached)
 
             if current_rms is None:
                 pass

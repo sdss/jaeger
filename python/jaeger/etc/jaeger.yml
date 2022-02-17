@@ -88,7 +88,7 @@ configuration:
 fvc:
   exposure_time: 5.
   fbi_level: 6.
-  target_rms: 5
+  target_rms: 10
   target_delta_rms: 1
   max_fvc_iterations: 5
   k: 1.0
