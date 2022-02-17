@@ -741,6 +741,8 @@ class FVC:
         assert offsets is not None
         await self.fps.update_position()
 
+        target_rms = config["fvc"]["target_rms"]
+
         # Setup robot grid.
         grid = get_robot_grid(self.fps)
         for robot in grid.robotDict.values():
@@ -753,6 +755,9 @@ class FVC:
             row = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
             if row.isna().any():
                 log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
+                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            elif numpy.hypot(row.xwok_distance, row.ywok_distance) < target_rms:
+                # Skip robots that are already within target distance.
                 robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
             else:
                 robot.setDestinationAlphaBeta(row.alpha_new, row.beta_new)
