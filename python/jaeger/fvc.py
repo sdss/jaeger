@@ -757,16 +757,17 @@ class FVC:
 
             positioner = self.fps[robot.id]
             robot.setAlphaBeta(positioner.alpha, positioner.beta)
+            robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
 
-            row = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
-            if row.isna().any():
-                log.warning(f"Positioner {robot.id}: new position is NaN. Skipping.")
-                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
-            elif numpy.hypot(row.xwok_distance, row.ywok_distance) < target_rms:
-                # Skip robots that are already within target distance.
-                robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
+            if offsets.loc[robot.id].transformation_valid == 0:
+                continue
+
+            new = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
+            dist = offsets.loc[robot.id, ["xwok_distance", "ywok_distance"]] * 1000.0
+            if numpy.hypot(dist.xwok_distance, dist.ywok_distance) > target_rms:
+                robot.setDestinationAlphaBeta(new.alpha_new, new.beta_new)
             else:
-                robot.setDestinationAlphaBeta(row.alpha_new, row.beta_new)
+                robot.isOffline = True
 
         # Check for collisions. If robots are collided just leave them there.
         collided = grid.getCollidedRobotList()
