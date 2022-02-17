@@ -18,7 +18,7 @@ from coordio.defaults import FOCAL_SCALE
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.kaiju import check_trajectory
+from jaeger.kaiju import check_trajectory, explode
 from jaeger.target.configuration import (
     Configuration,
     DitheredConfiguration,
@@ -371,6 +371,8 @@ async def execute(command: Command[JaegerActor], fps: FPS):
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
+    fps.configuration.executed = True
+
     command.finish()
 
 
@@ -379,44 +381,59 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     """Executes a reverse trajectory (targets to folded)."""
 
     if fps.locked:
-        command.fail(error="The FPS is locked.")
+        return command.fail(error="The FPS is locked.")
 
-    if fps.configuration is None:
+    if await fps.is_folded():
+        return command.finish("Already folded.")
+
+    configuration = fps.configuration
+    if (fps.configuration is None or fps.configuration.executed is False) and (
+        len(fps._previous_configurations) > 0
+        and fps._previous_configurations[-1] is not None
+        and fps._previous_configurations[-1].executed is True
+    ):
+        configuration = fps._previous_configurations[-1]
+        command.warning("Using previous configuration reverse path.")
+
+    if configuration is None:
         return command.fail(error="A configuration must first be loaded.")
+
+    if configuration.executed is False:
+        return command.fail(error="The configuration was not executed. Try unwinding.")
 
     await fps.update_position()
 
-    if fps.configuration.is_dither:
-        trajectory = fps.configuration.from_destination
+    if configuration.is_dither:
+        trajectory = configuration.from_destination
     else:
-        trajectory = fps.configuration.to_destination
+        trajectory = configuration.to_destination
         if trajectory is None:
             return command.fail(
                 error="The configuration does not have a to_destination "
                 "path. Use unwind."
             )
 
-        # try:
-        #     # First we explode the robots a bit.
-        #     command.info("Exploding before reversing.")
-        #     current_positions = fps.get_positions_dict()
-        #     explode_path = await explode(
-        #         current_positions,
-        #         5.0,
-        #         disabled=[pid for pid in fps.positioners if fps[pid].disabled],
-        #     )
-        #     await fps.send_trajectory(explode_path, command=command)
+        try:
+            # First we explode the robots a bit.
+            command.info("Exploding before reversing.")
+            current_positions = fps.get_positions_dict()
+            explode_path = await explode(
+                current_positions,
+                5.0,
+                disabled=[pid for pid in fps.positioners if fps[pid].disabled],
+            )
+            await fps.send_trajectory(explode_path, command=command)
 
-        #     # Then we send a goto to the initial point of the reverse trajectory.
-        #     new_positions = {
-        #         pid: (trajectory[pid]["alpha"][0][0], trajectory[pid]["beta"][0][0])
-        #         for pid in trajectory
-        #     }
-        #     command.info("Reverting to final configuration positions.")
-        #     await fps.goto(new_positions)
+            # Then we send a goto to the initial point of the reverse trajectory.
+            new_positions = {
+                pid: (trajectory[pid]["alpha"][0][0], trajectory[pid]["beta"][0][0])
+                for pid in trajectory
+            }
+            command.info("Reverting to final configuration positions.")
+            await fps.goto(new_positions)
 
-        # except Exception as err:
-        #     return command.fail(f"Failed preparing to send reverse trajectory: {err}")
+        except Exception as err:
+            return command.fail(f"Failed preparing to send reverse trajectory: {err}")
 
     command.info(text="Sending and executing reverse trajectory.")
 
@@ -425,9 +442,9 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
-    if fps.configuration.is_dither:
+    if configuration.is_dither:
         command.info("Restoring parent configuration.")
-        fps.configuration = fps.configuration.parent_configuration
+        fps.configuration = configuration.parent_configuration
         _output_configuration_loaded(command, fps)
 
     command.finish()
@@ -463,6 +480,8 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
     execute_cmd = await command.send_command("jaeger", "configuration execute")
     if execute_cmd.status.did_fail:
         command.fail("Failed executing configuration.")
+
+    fps.configuration.executed = True
 
     command.finish(
         f"Dithered configuration {fps.configuration.configuration_id} "

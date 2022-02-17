@@ -177,6 +177,8 @@ class BaseConfiguration:
         self.to_destination: dict | None = None
         self.from_destination: dict | None = None
 
+        self.executed: bool = False
+
     def __deepcopy__(self, memo):
         cls = self.__class__
         result = cls.__new__(cls)

@@ -215,7 +215,6 @@ class FPS(BaseFPS["FPS"]):
 
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
-    configuration: BaseConfiguration | None = None
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
@@ -274,6 +273,9 @@ class FPS(BaseFPS["FPS"]):
 
         self.alerts = AlertsBot(self)
         self.chiller = ChillerBot(self)
+
+        self._configuration: BaseConfiguration | None = None
+        self._previous_configurations: list[BaseConfiguration] = []
 
         # Position and status pollers
         self.pollers = PollerList(
@@ -370,6 +372,25 @@ class FPS(BaseFPS["FPS"]):
             self.positioner_to_bus[positioner.positioner_id] = (interface, bus)
 
         return positioner
+
+    @property
+    def configuration(self):
+        """Returns the configuration."""
+
+        return self._configuration
+
+    @configuration.setter
+    def configuration(self, new: BaseConfiguration | None):
+        """Sets the new configuration."""
+
+        # Store current configuration.
+        if self._configuration is not None:
+            self._previous_configurations.append(self._configuration)
+
+        # Keep only 10 previous configurations.
+        self._previous_configurations = self._previous_configurations[-10:]
+
+        self._configuration = new
 
     async def initialise(
         self: T,
