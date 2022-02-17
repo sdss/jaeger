@@ -18,7 +18,8 @@ from coordio.defaults import FOCAL_SCALE
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.kaiju import check_trajectory, explode
+from jaeger.kaiju import check_trajectory
+from jaeger.kaiju import explode as kaiju_explode
 from jaeger.target.configuration import (
     Configuration,
     DitheredConfiguration,
@@ -377,7 +378,8 @@ async def execute(command: Command[JaegerActor], fps: FPS):
 
 
 @configuration.command()
-async def reverse(command: Command[JaegerActor], fps: FPS):
+@click.option("--explode", is_flag=True, help="Explode before reversing.")
+async def reverse(command: Command[JaegerActor], fps: FPS, explode: bool = False):
     """Executes a reverse trajectory (targets to folded)."""
 
     if fps.locked:
@@ -415,14 +417,15 @@ async def reverse(command: Command[JaegerActor], fps: FPS):
 
         try:
             # First we explode the robots a bit.
-            command.info("Exploding before reversing.")
-            current_positions = fps.get_positions_dict()
-            explode_path = await explode(
-                current_positions,
-                5.0,
-                disabled=[pid for pid in fps.positioners if fps[pid].disabled],
-            )
-            await fps.send_trajectory(explode_path, command=command)
+            if explode:
+                command.info("Exploding before reversing.")
+                current_positions = fps.get_positions_dict()
+                explode_path = await kaiju_explode(
+                    current_positions,
+                    5.0,
+                    disabled=[pid for pid in fps.positioners if fps[pid].disabled],
+                )
+                await fps.send_trajectory(explode_path, command=command)
 
             # Then we send a goto to the initial point of the reverse trajectory.
             new_positions = {
