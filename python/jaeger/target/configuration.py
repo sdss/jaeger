@@ -1504,7 +1504,8 @@ class BaseAssignmentData:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
 
-            ra = target_data["ra"] + target_data["delta_ra"]
+            ra = target_data["ra"]
+            ra += target_data["delta_ra"] / numpy.cos(numpy.deg2rad(target_data["dec"]))
             dec = target_data["dec"] + target_data["delta_dec"]
             pmra = target_data["pmra"]
             pmdec = target_data["pmdec"]
