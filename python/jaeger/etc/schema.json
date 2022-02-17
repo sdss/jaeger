@@ -215,8 +215,8 @@
     "fvc_perc_95": {
       "type": "number"
     },
-    "fvc_n_reached": {
-      "type": "integer"
+    "fvc_percent_reached": {
+      "type": "number"
     },
     "snapshot": {
       "type": "string"
