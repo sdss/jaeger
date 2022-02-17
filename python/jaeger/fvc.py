@@ -345,7 +345,7 @@ class FVC:
 
         # Also calculate 95% percentile and percentage of targets blow threshold.
         distance = numpy.sqrt(dx**2 + dy**2)
-        self.perc_95 = numpy.percentile(distance, 95)
+        self.perc_95 = numpy.round(numpy.percentile(distance, 95), 5)
         self.n_reached = numpy.sum(distance <= config["fvc"]["target_rms"])
 
         # FITSRMS is the RMS of measured - expected for assigned, non-disabled
