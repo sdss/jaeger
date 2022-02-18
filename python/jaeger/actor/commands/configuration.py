@@ -151,7 +151,7 @@ async def _load_design(
 
         try:
             # Define the epoch for the configuration.
-            command.debug(text=f"Epoch delay {round(epoch_delay, 1)}.")
+            command.debug(text=f"Epoch delay: {round(epoch_delay, 1)} seconds.")
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(design_id, epoch=epoch, scale=scale)
         except Exception as err:
