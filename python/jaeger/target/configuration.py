@@ -12,6 +12,7 @@ import logging
 import os
 import warnings
 from copy import deepcopy
+from time import time
 
 from typing import TYPE_CHECKING, Optional, Union, cast
 
@@ -178,6 +179,7 @@ class BaseConfiguration:
         self.to_destination: dict | None = None
         self.from_destination: dict | None = None
 
+        self.created_time = time()
         self.executed: bool = False
 
     def __deepcopy__(self, memo):

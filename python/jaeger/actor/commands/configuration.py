@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from time import time
+
 from typing import TYPE_CHECKING
 
 import click
@@ -57,7 +59,9 @@ async def _load_design(
     """Helper to load or preload a design."""
 
     if design_id is None:
-        design_id = get_designid_from_queue(pop=not preload)
+        design_id, _epoch_delay = get_designid_from_queue(pop=False, epoch_delay=True)
+        if epoch_delay == 0.0 and _epoch_delay is not None:
+            epoch_delay = _epoch_delay
 
     if design_id is None:
         command.error("Failed getting a new design from the queue.")
@@ -76,9 +80,15 @@ async def _load_design(
         )
         return False
 
+    # If the original configuration was create longer than max_cloned_time,
+    # then do not clone again since we want a chance to update the positions
+    # of the robots for the current epoch.
+    max_cloned_time = config["configuration"]["max_cloned_time"]
+
     if (
         no_clone is False
         and fps.configuration is not None
+        and time() - fps.configuration.created_time < max_cloned_time
         and fps.configuration.configuration_id is not None
         and fps.configuration.design is not None
         and match_assignment_hash(fps.configuration.design.design_id, design_id)
@@ -138,6 +148,7 @@ async def _load_design(
 
         try:
             # Define the epoch for the configuration.
+            command.debug(text=f"Epoch delay {round(epoch_delay, 1)}.")
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(design_id, epoch=epoch, scale=scale)
         except Exception as err:
