@@ -23,7 +23,7 @@ packages = [
 include = ["python/jaeger/etc/*"]
 
 [tool.poetry.dependencies]
-python = "^3.7.1,<3.11"
+python = "^3.8,<3.11"
 numpy = "^1.21.0"
 progressbar2 = "^3.39.3"
 sdss-drift = "^0.4.1"
@@ -32,7 +32,7 @@ sdsstools = "^0.4.13"
 click_default_group = "^1.2.2"
 sdssdb = "^0.4.11"
 pandas = "^1.3.4"
-astropy = "^4.3.1"
+astropy = "^5.0.0"
 sdss-kaiju = ">=1.2.1"
 sdss-coordio = {version = ">=1.2.0", allow-prereleases = true}
 pydl = "^0.7.0"

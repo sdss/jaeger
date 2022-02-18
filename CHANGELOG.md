@@ -2,6 +2,11 @@
 
 ## Next version
 
+
+### 🔥 Breaking changes
+
+* Minimum Python version is now 3.8.
+
 ### 🚀 New
 
 * [#180](https://github.com/sdss/jaeger/issues/180) A design can now be preloaded using `jaeger configuration preload [DESIGNID]`. If a design ID is not provied, the first element from the queue will be used. Preloading calculates the trajectories for the new configuration but does not write to the database, generate the configuration summary file, or output keywords. To make the preloaded design active, use `jaeger configuration load --from-preloaded`.
