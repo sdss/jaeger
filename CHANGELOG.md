@@ -2,7 +2,6 @@
 
 ## Next version
 
-
 ### 🔥 Breaking changes
 
 * Minimum Python version is now 3.8.
@@ -10,6 +9,7 @@
 ### 🚀 New
 
 * [#180](https://github.com/sdss/jaeger/issues/180) A design can now be preloaded using `jaeger configuration preload [DESIGNID]`. If a design ID is not provied, the first element from the queue will be used. Preloading calculates the trajectories for the new configuration but does not write to the database, generate the configuration summary file, or output keywords. To make the preloaded design active, use `jaeger configuration load --from-preloaded`.
+* [#181](https://github.com/sdss/jaeger/issues/181) Automatically determine the epoch delay for a new configuration created from a design in the queue. If there are multiple consecutive designs in the queue with the same hash (i.e., that will be cloned), determines the epoch delay so that the array is reconfigured for the middle epoch of the observations.
 * Added `fvc_percent_reached` and `perc_95` keywords to the FVC loop to show the percentage of robots that have reached their positions (within the FVC tolerance) and the 95% percentile respectively.
 * `delta_ra` and `delta_dec` from the database are now applied.
 
