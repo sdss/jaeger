@@ -1,6 +1,19 @@
 # Changelog
 
-## 0.14.0 - Febuary 11, 2022
+## Next version
+
+### 🚀 New
+
+* [#180](https://github.com/sdss/jaeger/issues/180) A design can now be preloaded using `jaeger configuration preload [DESIGNID]`. If a design ID is not provied, the first element from the queue will be used. Preloading calculates the trajectories for the new configuration but does not write to the database, generate the configuration summary file, or output keywords. To make the preloaded design active, use `jaeger configuration load --from-preloaded`.
+* Added `fvc_percent_reached` and `perc_95` keywords to the FVC loop to show the percentage of robots that have reached their positions (within the FVC tolerance) and the 95% percentile respectively.
+* `delta_ra` and `delta_dec` from the database are now applied.
+
+### ✨ Improved
+
+* If a new configuration is loaded while the array is unfolded and `jaeger configuration reverse` is called, the reverse trajectory from the previous configuration will be used.
+
+
+## 0.14.0 - February 11, 2022
 
 ### 🚀 New
 
