@@ -38,10 +38,19 @@ def check_database(f):
 
 
 @check_database
-def get_designid_from_queue() -> int | None:
+def get_designid_from_queue(pop: bool = True) -> int | None:
     """Pops a design from the queue."""
 
-    design = opsdb.Queue.pop()
+    if pop:
+        design = opsdb.Queue.pop()
+    else:
+        design = (
+            opsdb.Queue.select()
+            .where(opsdb.Queue.position > 0)
+            .order_by(opsdb.Queue.position)
+            .first()
+        )
+
     if design is None:
         return None
 

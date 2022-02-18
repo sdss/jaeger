@@ -203,6 +203,9 @@
         { "title": "cloned", "type": "boolean" }
       ]
     },
+    "design_preloaded": {
+      "type": "integer"
+    },
     "fvc_filename": {
       "type": "string"
     },
