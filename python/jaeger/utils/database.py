@@ -87,23 +87,27 @@ def get_designid_from_queue(
         opsdb.Queue.select(opsdb.Queue.position)
         .join(targetdb.Design, on=(targetdb.Design.design_id == opsdb.Queue.design_id))
         .where(targetdb.Design.assignment_hash == hash)
+        .where(opsdb.Queue.position >= (1 if pop is False else -1))
         .order_by(opsdb.Queue.position)
         .tuples()
     )
 
     # This should not happen, but if the first entry does not have position 1,
-    # just leave because something weird happened.
+    # just leave because something weird happened. Note that the position can be -1
+    # if we have pop the design.
     positions = list(zip(*design_hashes))[0]
-    if positions[0] != 1:
+    if positions[0] > 1:
         return (design.design_id, 0.0)
 
     # Count how many consecutive positions there are.
     n_positions = 1
-    for idx in range(1, len(positions)):
-        if positions[idx] == positions[idx - 1] + 1:
-            n_positions += 1
-        else:
-            break
+    if len(positions) > 1:
+        positions = [p if p >= 0 else p + 1 for p in positions]
+        for idx in range(1, len(positions)):
+            if positions[idx] == positions[idx - 1] + 1:
+                n_positions += 1
+            else:
+                break
 
     # Cap to 4 exposures (1 hour of observations)
     if n_positions > 4:
