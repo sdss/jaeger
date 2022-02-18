@@ -57,7 +57,9 @@ async def _load_design(
     """Helper to load or preload a design."""
 
     if design_id is None:
-        design_id = get_designid_from_queue(pop=not preload)
+        design_id, _epoch_delay = get_designid_from_queue(pop=False, epoch_delay=True)
+        if epoch_delay == 0.0 and _epoch_delay is not None:
+            epoch_delay = _epoch_delay
 
     if design_id is None:
         command.error("Failed getting a new design from the queue.")
@@ -138,6 +140,7 @@ async def _load_design(
 
         try:
             # Define the epoch for the configuration.
+            command.debug(text=f"Epoch delay {round(epoch_delay, 1)}.")
             epoch = Time.now().jd + epoch_delay / 86400.0
             design = await Design.create_async(design_id, epoch=epoch, scale=scale)
         except Exception as err:

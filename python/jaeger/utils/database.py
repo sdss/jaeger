@@ -38,8 +38,30 @@ def check_database(f):
 
 
 @check_database
-def get_designid_from_queue(pop: bool = True) -> int | None:
-    """Pops a design from the queue."""
+def get_designid_from_queue(
+    pop: bool = True,
+    epoch_delay: bool = False,
+) -> tuple[int | None, float | None]:
+    """Pops a design from the queue.
+
+    Parameters
+    ----------
+    pop
+        If `True`, pops the next design from the queue. Otherwise just returns the
+        design ID.
+    epoch_delay
+        If `True`, calculates the delta epoch that optimises observing all the
+        queued designs with the same hash.
+
+    Returns
+    -------
+    result
+        A tuple with the design ID as the first element and the delta epoch, in
+        seconds as the second one. If ``epoch_delay=False``, the delta epoch is
+        `None`.
+
+
+    """
 
     if pop:
         design = opsdb.Queue.pop()
@@ -52,9 +74,42 @@ def get_designid_from_queue(pop: bool = True) -> int | None:
         )
 
     if design is None:
-        return None
+        return (None, None)
 
-    return design.design_id
+    if epoch_delay is False:
+        return (design.design_id, None)
+
+    # Get a list of all the entries in the queue that have the
+    # same hash as the first one.
+    hash = targetdb.Design.get_by_id(design.design_id).assignment_hash.hex
+
+    design_hashes = (
+        opsdb.Queue.select(opsdb.Queue.position)
+        .join(targetdb.Design, on=(targetdb.Design.design_id == opsdb.Queue.design_id))
+        .where(targetdb.Design.assignment_hash == hash)
+        .order_by(opsdb.Queue.position)
+        .tuples()
+    )
+
+    # This should not happen, but if the first entry does not have position 1,
+    # just leave because something weird happened.
+    positions = list(zip(*design_hashes))[0]
+    if positions[0] != 1:
+        return (design.design_id, 0.0)
+
+    # Count how many consecutive positions there are.
+    n_positions = 1
+    for idx in range(1, len(positions)):
+        if positions[idx] == positions[idx - 1] + 1:
+            n_positions += 1
+        else:
+            break
+
+    # Cap to 4 exposures (1 hour of observations)
+    if n_positions > 4:
+        n_positions = 4
+
+    return (design.design_id, n_positions / 2 * 900.0)
 
 
 @check_database
