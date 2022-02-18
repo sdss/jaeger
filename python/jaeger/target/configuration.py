@@ -160,6 +160,7 @@ class BaseConfiguration:
         self.is_dither: bool = False
 
         self.is_cloned: bool = False
+        self.cloned_from: int | None = None
 
         self.design: Design | None = None
         self.design_id: int | None = None
@@ -227,6 +228,7 @@ class BaseConfiguration:
 
         new.configuration_id = None
         new.is_cloned = True
+        new.cloned_from = original_configuration_id
 
         if design_id is not None and new.design_id is not None:
             if new.design:
@@ -237,7 +239,7 @@ class BaseConfiguration:
             new.write_to_database()
 
         if write_to_database and write_summary:
-            await new.write_summary(headers={"cloned_from": original_configuration_id})
+            await new.write_summary(headers={"cloned_from": new.cloned_from})
 
         if write_to_database and copy_summary_F:
             assert new.configuration_id is not None

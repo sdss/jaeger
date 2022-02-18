@@ -12,9 +12,11 @@ from typing import TYPE_CHECKING
 
 import click
 import numpy
+import peewee
 from astropy.time import Time
 
 from coordio.defaults import FOCAL_SCALE
+from sdssdb.peewee.sdss5db import opsdb
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
@@ -35,11 +37,120 @@ from . import jaeger_parser
 if TYPE_CHECKING:
     from clu.command import Command
 
-    from jaeger.actor import JaegerActor
+    from jaeger.actor import JaegerActor, JaegerCommandType
     from jaeger.fps import FPS
 
 
 __all__ = ["configuration"]
+
+
+async def _load_design(
+    command: JaegerCommandType,
+    fps: FPS,
+    design_id: int | None = None,
+    preload: bool = False,
+    no_clone: bool = False,
+    scale: float | None = None,
+    epoch_delay: float = 0.0,
+    get_paths: bool = True,
+):
+    """Helper to load or preload a design."""
+
+    if design_id is None:
+        design_id = get_designid_from_queue(pop=not preload)
+
+    if design_id is None:
+        command.error("Failed getting a new design from the queue.")
+        return False
+
+    if preload:
+        command.info(f"Preloading design {design_id}.")
+    else:
+        command.info(f"Loading design {design_id}.")
+
+    valid = Design.check_design(design_id, command.actor.observatory)
+    if valid is False:
+        command.error(
+            "The design does not exists or is not a valid "
+            f"{command.actor.observatory} design."
+        )
+        return False
+
+    if (
+        no_clone is False
+        and fps.configuration is not None
+        and fps.configuration.configuration_id is not None
+        and fps.configuration.design is not None
+        and match_assignment_hash(fps.configuration.design.design_id, design_id)
+    ):
+        command.info(
+            f"Design {design_id} matches previously loaded design "
+            f"{fps.configuration.design.design_id}. Cloning configuration."
+        )
+
+        configuration = await fps.configuration.clone(
+            design_id=design_id,
+            write_summary=False,
+            write_to_database=False,
+        )
+
+    else:
+
+        if scale is None:
+
+            clip_scale: float = config["configuration"]["clip_scale"]
+            SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
+
+            # Query the guider for the historical scale from the previous exposure.
+            command.debug("Getting guider scale.")
+            get_scale_cmd = await command.send_command(
+                "cherno",
+                f"get-scale --max-age {config['configuration']['max_scale_age']}",
+            )
+            if get_scale_cmd.status.did_fail:
+                command.warning(
+                    "Failed getting scale from guider. "
+                    "No scale correction will be applied."
+                )
+            else:
+                guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
+                if guider_scale < 0:
+                    command.warning(
+                        "Invalid guider scale. No scale correction will be applied."
+                    )
+                else:
+                    if (abs(guider_scale) - 1) * 1e6 > clip_scale:
+                        guider_scale = numpy.clip(
+                            guider_scale,
+                            1 - clip_scale / 1e6,
+                            1 + clip_scale / 1e6,
+                        )
+                        command.warning(
+                            "Unexpectedly large guider scale. "
+                            f"Clipping to {guider_scale}."
+                        )
+
+                    scale = FOCAL_SCALE * guider_scale * SCALE_KLUDGE
+                    command.debug(
+                        "Text correcting focal plane scale with guider scale "
+                        f"{guider_scale}. Effective focal plane scale is {scale}."
+                    )
+
+        try:
+            # Define the epoch for the configuration.
+            epoch = Time.now().jd + epoch_delay / 86400.0
+            design = await Design.create_async(design_id, epoch=epoch, scale=scale)
+        except Exception as err:
+            command.error(error=f"Failed retrieving design: {err}")
+            return False
+
+        configuration = design.configuration
+
+    if get_paths:
+        command.info("Calculating trajectories.")
+        await configuration.get_paths(decollide=True)
+
+    return configuration
 
 
 @jaeger_parser.group()
@@ -74,6 +185,11 @@ def configuration():
     "--from-positions",
     is_flag=True,
     help="Loads a configuration from the current robot positions.",
+)
+@click.option(
+    "--from-preloaded",
+    is_flag=True,
+    help="Finishes loading a preloaded configuration.",
 )
 @click.option(
     "--ingest/--no-ingest",
@@ -115,6 +231,7 @@ async def load(
     reload: bool = False,
     replace: bool = False,
     from_positions: bool = False,
+    from_preloaded: bool = False,
     generate_paths: bool = False,
     epoch_delay: float = 0.0,
     ingest: bool = False,
@@ -127,8 +244,6 @@ async def load(
     """Creates and ingests a configuration from a design in the database."""
 
     assert command.actor is not None
-
-    cloned_from: int = -999
 
     if reissue is True:
         if fps.configuration is None or fps.configuration.design is None:
@@ -144,98 +259,33 @@ async def load(
         designid = fps.configuration.design_id
         fps.configuration.configuration_id = None
 
+    elif from_preloaded is True:
+        if fps._preloaded_configuration is None:
+            return command.fail("No preloaded configuration available.")
+
+        fps.configuration = fps._preloaded_configuration
+
     elif from_positions is True:
         await fps.update_position()
         positions = fps.get_positions_dict()
         fps.configuration = ManualConfiguration.create_from_positions(positions)
 
     else:
+        configuration = await _load_design(
+            command,
+            fps,
+            design_id=designid,
+            preload=False,
+            no_clone=no_clone,
+            scale=scale,
+            epoch_delay=epoch_delay,
+        )
 
-        if designid is None:
-            designid = get_designid_from_queue()
-
-        if designid is None:
-            return command.fail("Failed getting a new design from the queue.")
-
-        command.info(f"Loading design {designid}.")
-
-        valid = Design.check_design(designid, command.actor.observatory)
-        if valid is False:
-            return command.fail(
-                "The design does not exists or is not a valid "
-                f"{command.actor.observatory} design."
-            )
-
-        if (
-            no_clone is False
-            and fps.configuration is not None
-            and fps.configuration.configuration_id is not None
-            and fps.configuration.design is not None
-            and match_assignment_hash(fps.configuration.design.design_id, designid)
-        ):
-            command.info(
-                f"Design {designid} matches previously loaded design "
-                f"{fps.configuration.design.design_id}. Cloning configuration."
-            )
-
-            cloned_from = fps.configuration.configuration_id
-
-            fps.configuration = await fps.configuration.clone(
-                design_id=designid,
-                write_summary=False,
-                write_to_database=False,
-            )
-
+        if configuration is False:
+            # _load_design already issues an error so we just fail.
+            return command.fail()
         else:
-
-            if scale is None:
-
-                clip_scale: float = config["configuration"]["clip_scale"]
-                SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
-
-                # Query the guider for the historical scale from the previous exposure.
-                command.debug("Getting guider scale.")
-                get_scale_cmd = await command.send_command(
-                    "cherno",
-                    f"get-scale --max-age {config['configuration']['max_scale_age']}",
-                )
-                if get_scale_cmd.status.did_fail:
-                    command.warning(
-                        "Failed getting scale from guider. "
-                        "No scale correction will be applied."
-                    )
-                else:
-                    guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
-                    if guider_scale < 0:
-                        command.warning(
-                            "Invalid guider scale. No scale correction will be applied."
-                        )
-                    else:
-                        if (abs(guider_scale) - 1) * 1e6 > clip_scale:
-                            guider_scale = numpy.clip(
-                                guider_scale,
-                                1 - clip_scale / 1e6,
-                                1 + clip_scale / 1e6,
-                            )
-                            command.warning(
-                                "Unexpectedly large guider scale. "
-                                f"Clipping to {guider_scale}."
-                            )
-
-                        scale = FOCAL_SCALE * guider_scale * SCALE_KLUDGE
-                        command.debug(
-                            "Text correcting focal plane scale with guider scale "
-                            f"{guider_scale}. Effective focal plane scale is {scale}."
-                        )
-
-            try:
-                # Define the epoch for the configuration.
-                epoch = Time.now().jd + epoch_delay / 86400.0
-                design = await Design.create_async(designid, epoch=epoch, scale=scale)
-            except Exception as err:
-                return command.fail(error=f"Failed retrieving design: {err}")
-
-            fps.configuration = design.configuration
+            fps.configuration = configuration
 
     assert isinstance(fps.configuration, (Configuration, ManualConfiguration))
 
@@ -245,13 +295,16 @@ async def load(
     if fps.configuration.ingested is False:
         replace = False
 
-    configuration = fps.configuration
-    configuration.set_command(command)
+    fps.configuration.set_command(command)
 
-    if not configuration.is_cloned and generate_paths:
+    if (
+        not fps.configuration.is_cloned
+        and generate_paths
+        and fps.configuration.to_destination is None
+    ):
         try:
             command.info("Calculating trajectories.")
-            await configuration.get_paths(decollide=not from_positions)
+            await fps.configuration.get_paths(decollide=not from_positions)
         except Exception as err:
             return command.fail(error=f"Failed generating paths: {err}")
 
@@ -264,12 +317,12 @@ async def load(
     if ingest and write_summary:
         await fps.configuration.write_summary(
             overwrite=True,
-            headers={"cloned_from": cloned_from},
+            headers={"cloned_from": fps.configuration.cloned_from or -999},
         )
 
-        if cloned_from > 0 and fps.configuration.configuration_id:
+        if fps.configuration.cloned_from and fps.configuration.configuration_id:
             copy_summary_file(
-                cloned_from,
+                fps.configuration.cloned_from,
                 fps.configuration.configuration_id,
                 fps.configuration.design_id,
                 "F",
@@ -277,7 +330,7 @@ async def load(
 
     _output_configuration_loaded(command, fps)
 
-    snapshot = await configuration.save_snapshot()
+    snapshot = await fps.configuration.save_snapshot()
     command.info(configuration_snapshot=snapshot)
 
     if execute:
@@ -287,6 +340,19 @@ async def load(
                 return
             else:
                 return cmd.fail("Failed executing configuration.")
+
+    if from_preloaded:
+        fps._preloaded_configuration = None
+        command.debug(design_preloaded=-999)
+        design_id = fps.configuration.design_id
+        # Check if the design is in the queue and it would be the next one to pop.
+        # If so, pop it.
+        try:
+            queue_instance = opsdb.Queue.get(opsdb.Queue.design_id == design_id)
+            if queue_instance.position == 1:
+                opsdb.Queue.pop()
+        except peewee.DoesNotExist:
+            pass
 
     return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
@@ -328,6 +394,83 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     fps.configuration = new
 
     _output_configuration_loaded(command, fps)
+
+    return command.finish()
+
+
+@configuration.command(cancellable=True)
+@click.option(
+    "--epoch-delay",
+    type=float,
+    default=0.0,
+    help="A delay in seconds for the epoch for which the configuration is calculated.",
+)
+@click.option(
+    "--scale",
+    type=float,
+    help="Focal plane scale factor. If not passes, uses coordio default.",
+)
+@click.option(
+    "--no-clone",
+    is_flag=True,
+    help="If the new design has the same target set as the currently loaded one, "
+    "does not clone the configuration and instead loads the new design.",
+)
+@click.option(
+    "--make-active",
+    is_flag=True,
+    help="Loads the configuration after preloading.",
+)
+@click.argument("DESIGNID", type=int, required=False)
+async def preload(
+    command: JaegerCommandType,
+    fps: FPS,
+    designid: int | None = None,
+    epoch_delay: float = 0.0,
+    scale: float | None = None,
+    no_clone: bool = False,
+    make_active: bool = True,
+):
+    """Preloads a design.
+
+    Preloading a design works similar to loading it, but no files are generated, no
+    database entry is created, no configuration_loaded keyword is output, and the
+    new configuration is stored separately. To make the preloaded configuration
+    active either pass the --make-active flag or run
+    jaeger configuration load --from-preloaded.
+
+    """
+
+    configuration = await _load_design(
+        command,
+        fps,
+        design_id=designid,
+        preload=True,
+        no_clone=no_clone,
+        scale=scale,
+        epoch_delay=epoch_delay,
+    )
+
+    if configuration is False:
+        # _load_design already issues an error so we just fail.
+        return command.fail()
+    elif configuration.design_id is None:
+        return command.fail(
+            "Preloaded configuration does not have design ID. "
+            "This should never happen."
+        )
+    else:
+        fps._preloaded_configuration = configuration
+
+    command.info(design_preloaded=configuration.design_id)
+
+    if make_active:
+        load_cmd = await command.send_command(
+            "jaeger",
+            "configuration load --from-preloaded",
+        )
+        if load_cmd.status.did_fail:
+            return command.fail("Failed making the preloaded configuration active.")
 
     return command.finish()
 

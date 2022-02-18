@@ -276,6 +276,7 @@ class FPS(BaseFPS["FPS"]):
 
         self._configuration: BaseConfiguration | None = None
         self._previous_configurations: list[BaseConfiguration] = []
+        self._preloaded_configuration: BaseConfiguration | None = None
 
         # Position and status pollers
         self.pollers = PollerList(
