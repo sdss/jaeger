@@ -162,6 +162,7 @@ async def _load_design(
 
     if get_paths:
         command.info("Calculating trajectories.")
+        configuration.set_command(command)
         await configuration.get_paths(decollide=True)
 
     return configuration
@@ -293,6 +294,7 @@ async def load(
             no_clone=no_clone,
             scale=scale,
             epoch_delay=epoch_delay,
+            get_paths=False,
         )
 
         if configuration is False:
