@@ -52,6 +52,7 @@ async def _load_design(
     no_clone: bool = False,
     scale: float | None = None,
     epoch_delay: float = 0.0,
+    get_paths: bool = True,
 ):
     """Helper to load or preload a design."""
 
@@ -144,6 +145,10 @@ async def _load_design(
             return False
 
         configuration = design.configuration
+
+    if get_paths:
+        command.info("Calculating trajectories.")
+        await configuration.get_paths(decollide=True)
 
     return configuration
 
@@ -292,7 +297,11 @@ async def load(
 
     fps.configuration.set_command(command)
 
-    if not fps.configuration.is_cloned and generate_paths:
+    if (
+        not fps.configuration.is_cloned
+        and generate_paths
+        and fps.configuration.to_destination is None
+    ):
         try:
             command.info("Calculating trajectories.")
             await fps.configuration.get_paths(decollide=not from_positions)
@@ -334,6 +343,7 @@ async def load(
 
     if from_preloaded:
         fps._preloaded_configuration = None
+        command.debug(design_preloaded=-999)
         design_id = fps.configuration.design_id
         # Check if the design is in the queue and it would be the next one to pop.
         # If so, pop it.
