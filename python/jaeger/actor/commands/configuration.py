@@ -364,8 +364,13 @@ async def load(
         # Check if the design is in the queue and it would be the next one to pop.
         # If so, pop it.
         try:
-            queue_instance = opsdb.Queue.get(opsdb.Queue.design_id == design_id)
-            if queue_instance.position == 1:
+            queue_instance = (
+                opsdb.Queue.select()
+                .where(opsdb.Queue.design_id == design_id)
+                .order_by(opsdb.Queue.position)
+                .first()
+            )
+            if queue_instance and queue_instance.position == 1:
                 opsdb.Queue.pop()
         except peewee.DoesNotExist:
             pass
