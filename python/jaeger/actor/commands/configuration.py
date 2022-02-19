@@ -160,7 +160,7 @@ async def _load_design(
 
         configuration = design.configuration
 
-    if get_paths:
+    if get_paths and configuration.is_cloned is False:
         command.info("Calculating trajectories.")
         configuration.set_command(command)
         await configuration.get_paths(decollide=True)
