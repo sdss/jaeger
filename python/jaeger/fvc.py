@@ -192,6 +192,7 @@ class FVC:
         fibre_data: Optional[pandas.DataFrame] = None,
         fibre_type: str = "Metrology",
         use_winpos: bool = True,
+        use_new_invkin:bool=True,
         plot: bool | str = False,
         outdir: str | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
@@ -216,6 +217,8 @@ class FVC:
             ``fibre_type='Metrology'``.
         use_winpos
             Whether to use windowed position for centroid extraction.
+        use_new_invkin
+            Use new inverse kinnematic to calculate alpha/beta.
         plot
             Whether to save additional debugging plots along with the processed image.
             If ``plot`` is a string, it will be used as the directory to which to
@@ -292,7 +295,7 @@ class FVC:
         )
 
         self.centroids = fvc_transform.extractCentroids()
-        fvc_transform.fit(useWinpos=use_winpos)
+        fvc_transform.fit(useWinpos=use_winpos, newInvKin=use_new_invkin)
 
         assert fvc_transform.positionerTableMeas is not None
 

@@ -119,6 +119,11 @@ async def expose(
     help="Use windowed positions during centroid extraction.",
 )
 @click.option(
+    "--use-invkin/--no-use-invkin",
+    default=True,
+    help="Use new inverse kinnematics.",
+)
+@click.option(
     "--no-write-summary",
     is_flag=True,
     help="Does not try to write a confSummaryF file.",
@@ -136,6 +141,7 @@ async def loop(
     max_correction: float | None = None,
     k: float | None = None,
     use_winpos: bool = True,
+    use_new_invkin: bool = True,
     no_write_summary: bool = False,
 ):
     """Executes the FVC correction loop.
@@ -209,6 +215,7 @@ async def loop(
                 positioner_coords,
                 plot=plot,
                 use_winpos=use_winpos,
+                use_new_invkin=use_new_invkin,
             )
 
             # 3. Set current RMS and delta.
