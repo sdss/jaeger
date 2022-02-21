@@ -114,6 +114,11 @@ async def expose(
     help="Proportional term of the correction.",
 )
 @click.option(
+    "--use-winpos/--no-use-winpos",
+    default=True,
+    help="Use windowed positions during centroid extraction.",
+)
+@click.option(
     "--no-write-summary",
     is_flag=True,
     help="Does not try to write a confSummaryF file.",
@@ -130,6 +135,7 @@ async def loop(
     apply: bool = True,
     max_correction: float | None = None,
     k: float | None = None,
+    use_winpos: bool = True,
     no_write_summary: bool = False,
 ):
     """Executes the FVC correction loop.
@@ -202,6 +208,7 @@ async def loop(
                 filename,
                 positioner_coords,
                 plot=plot,
+                use_winpos=use_winpos,
             )
 
             # 3. Set current RMS and delta.
