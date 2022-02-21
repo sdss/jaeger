@@ -1063,7 +1063,8 @@ class FPS(BaseFPS["FPS"]):
         if len(positions_array) == 0:
             return False
 
-        return numpy.allclose(positions_array[:, 1:] - [alphaL, betaL], 0, atol=1)
+        lattice: Any = numpy.array([alphaL, betaL])
+        return numpy.allclose(positions_array[:, 1:] - lattice, 0, atol=1)
 
     async def stop_trajectory(self, clear_flags=False):
         """Stops all the positioners without clearing collided flags.
