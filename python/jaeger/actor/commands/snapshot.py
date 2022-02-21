@@ -33,6 +33,9 @@ async def snapshot(command: Command[JaegerActor], fps: FPS, path: str | None = N
     if path is not None:
         path = str(path)
 
-    filename = await fps.save_snapshot(path, write_to_actor=False)
+    try:
+        filename = await fps.save_snapshot(path, write_to_actor=False)
+    except Exception as err:
+        return command.fail(f"Snapshot failed with error: {err}")
 
     return command.finish(snapshot=filename)

@@ -512,6 +512,9 @@ async def get_snapshot(
 
     await fps.update_position()
 
+    if len(fps.positioners) == 0:
+        raise ValueError('No positioners connected.')
+
     data = {"collision_buffer": collision_buffer, "grid": {}}
     for pid in fps.positioners.keys():
         data["grid"][int(pid)] = (
