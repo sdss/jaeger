@@ -192,7 +192,7 @@ class FVC:
         fibre_data: Optional[pandas.DataFrame] = None,
         fibre_type: str = "Metrology",
         use_winpos: bool = True,
-        use_new_invkin:bool=True,
+        use_new_invkin: bool = True,
         plot: bool | str = False,
         outdir: str | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
@@ -320,8 +320,7 @@ class FVC:
             metrology_data.positioner_id, ["xWokMeasMetrology", "yWokMeasMetrology"]
         ]
         fdata.loc[
-            fdata.fibre_type == fibre_type,
-            ["xwok_measured", "ywok_measured"],
+            fdata.fibre_type == fibre_type, ["xwok_measured", "ywok_measured"]
         ] = wok_measured.values
 
         fdata = fdata.reset_index().set_index("fibre_type")
