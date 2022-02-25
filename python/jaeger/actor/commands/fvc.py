@@ -141,7 +141,7 @@ async def loop(
     max_correction: float | None = None,
     k: float | None = None,
     use_winpos: bool = True,
-    use_new_invkin: bool = True,
+    use_invkin: bool = True,
     no_write_summary: bool = False,
 ):
     """Executes the FVC correction loop.
@@ -215,7 +215,7 @@ async def loop(
                 positioner_coords,
                 plot=plot,
                 use_winpos=use_winpos,
-                use_new_invkin=use_new_invkin,
+                use_new_invkin=use_invkin,
             )
 
             # 3. Set current RMS and delta.
