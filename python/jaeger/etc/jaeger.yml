@@ -84,8 +84,8 @@ configuration:
   max_scale_age: 7200
   clip_scale: 300
   scale_kludge_factor: 1.0
-  max_cloned_time: 4500
-  max_designs_epoch: 5
+  max_cloned_time: 7200
+  max_designs_epoch: 8
 
 fvc:
   exposure_time: 5.
