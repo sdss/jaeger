@@ -222,8 +222,6 @@ async def loop(
             new_rms = fvc.fitrms * 1000.0
 
             command.info(fvc_rms=new_rms)
-            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
-            command.info(fvc_percent_reached=fvc.fvc_percent_reached)
 
             if current_rms is None:
                 pass
@@ -231,6 +229,9 @@ async def loop(
                 delta_rms = current_rms - new_rms
                 command.info(fvc_deltarms=delta_rms)
             current_rms = new_rms
+
+            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
+            command.info(fvc_percent_reached=fvc.fvc_percent_reached)
 
             # 4. Check if we have reached the distance criterion.
             if fvc.perc_90 * 1000.0 <= config["fvc"]["target_90_percentile"]:
