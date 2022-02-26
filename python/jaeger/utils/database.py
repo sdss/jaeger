@@ -18,6 +18,8 @@ from astropy.io import fits
 
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
+from jaeger import config
+
 
 __all__ = [
     "load_holes",
@@ -100,20 +102,21 @@ def get_designid_from_queue(
         return (design.design_id, 0.0)
 
     # Count how many consecutive positions there are.
-    n_positions = 1
+    n_designs: int = 1
     if len(positions) > 1:
         positions = [p if p >= 0 else p + 1 for p in positions]
         for idx in range(1, len(positions)):
             if positions[idx] == positions[idx - 1] + 1:
-                n_positions += 1
+                n_designs += 1
             else:
                 break
 
-    # Cap to 4 exposures (1 hour of observations)
-    if n_positions > 4:
-        n_positions = 4
+    # Cap to the number of designs after which we'll force a reconfiguration.
+    max_designs_epoch: int = config["configuration"]["max_designs_epoch"]
+    if n_designs > max_designs_epoch:
+        n_designs = max_designs_epoch
 
-    return (design.design_id, n_positions / 2 * 900.0)
+    return (design.design_id, n_designs / 2 * 900.0)
 
 
 @check_database
