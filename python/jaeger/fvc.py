@@ -89,7 +89,7 @@ class FVC:
 
         self.k = 1
         self.fitrms = -9.99
-        self.perc_95 = -9.99
+        self.perc_90 = -9.99
         self.fvc_percent_reached = -9.99
 
     def set_command(self, command: Command[JaegerActor]):
@@ -351,9 +351,9 @@ class FVC:
         self.fitrms = numpy.round(numpy.sqrt(numpy.mean(dx**2 + dy**2)), 5)
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
-        # Also calculate 95% percentile and percentage of targets below threshold.
+        # Also calculate 90% percentile and percentage of targets below threshold.
         distance = numpy.sqrt(dx**2 + dy**2)
-        self.perc_95 = numpy.round(numpy.percentile(distance, 95), 5)
+        self.perc_90 = numpy.round(numpy.percentile(distance, 90), 4)
         self.fvc_percent_reached = numpy.round(
             numpy.sum(distance <= (config["fvc"]["target_rms"] / 1000)) / len(dx) * 100,
             1,
@@ -364,7 +364,7 @@ class FVC:
         # FVCTransformAPO.getMetadata() that is measured - reported for all
         # positioners.
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
-        hdus[1].header["PERC95"] = (self.perc_95 * 1000, "95% percentile [um]")
+        hdus[1].header["PERC90"] = (self.perc_90 * 1000, "90% percentile [um]")
         hdus[1].header["FVCREACH"] = (
             self.fvc_percent_reached,
             "Targets that have reached their goal [%]",

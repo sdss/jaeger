@@ -215,7 +215,7 @@
     "fvc_deltarms": {
       "type": "number"
     },
-    "fvc_perc_95": {
+    "fvc_perc_90": {
       "type": "number"
     },
     "fvc_percent_reached": {

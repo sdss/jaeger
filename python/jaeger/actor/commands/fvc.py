@@ -222,7 +222,7 @@ async def loop(
             new_rms = fvc.fitrms * 1000.0
 
             command.info(fvc_rms=new_rms)
-            command.info(fvc_perc_95=fvc.perc_95 * 1000.0)
+            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
             command.info(fvc_percent_reached=fvc.fvc_percent_reached)
 
             if current_rms is None:
