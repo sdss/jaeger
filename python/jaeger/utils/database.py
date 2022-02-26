@@ -155,8 +155,8 @@ def load_holes(observatory: str):
 @check_database
 def load_fields(
     plan: str,
-    files: list[str] = None,
-    pattern: str = None,
+    files: list[str] | None = None,
+    pattern: str | None = None,
     sequential_field: bool = False,
 ):
     """Loads a series of field.
