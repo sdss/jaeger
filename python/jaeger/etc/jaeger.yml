@@ -90,9 +90,9 @@ configuration:
 fvc:
   exposure_time: 5.
   fbi_level: 6.
-  target_rms: 5
-  target_delta_rms: 1
-  max_fvc_iterations: 5
+  target_90_percentile: 30.0
+  target_distance: 5
+  max_fvc_iterations: 2
   k: 1.0
   max_correction: 15
   ieb_keys:

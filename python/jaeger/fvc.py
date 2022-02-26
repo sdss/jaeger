@@ -353,11 +353,11 @@ class FVC:
 
         # Also calculate 90% percentile and percentage of targets below threshold.
         distance = numpy.sqrt(dx**2 + dy**2)
+
         self.perc_90 = numpy.round(numpy.percentile(distance, 90), 4)
-        self.fvc_percent_reached = numpy.round(
-            numpy.sum(distance <= (config["fvc"]["target_rms"] / 1000)) / len(dx) * 100,
-            1,
-        )
+
+        n_reached = numpy.sum(distance <= (config["fvc"]["target_distance"] / 1000))
+        self.fvc_percent_reached = numpy.round(n_reached / len(dx) * 100, 1)
 
         # FITSRMS is the RMS of measured - expected for assigned, non-disabled
         # robots. This is different from FVC_RMS reported by
@@ -752,7 +752,7 @@ class FVC:
         assert offsets is not None
         await self.fps.update_position()
 
-        target_rms = config["fvc"]["target_rms"]
+        target_distance = config["fvc"]["target_distance"]
 
         # Setup robot grid.
         grid = get_robot_grid(self.fps)
@@ -769,7 +769,7 @@ class FVC:
 
             new = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
             dist = offsets.loc[robot.id, ["xwok_distance", "ywok_distance"]] * 1000.0
-            if numpy.hypot(dist.xwok_distance, dist.ywok_distance) > target_rms:
+            if numpy.hypot(dist.xwok_distance, dist.ywok_distance) > target_distance:
                 robot.setDestinationAlphaBeta(new.alpha_new, new.beta_new)
             else:
                 robot.isOffline = True

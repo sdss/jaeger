@@ -191,7 +191,7 @@ async def loop(
     proc_image_saved = False
 
     # Flag to determine when to exit the loop.
-    finish: bool = False
+    reached: bool = False
     failed: bool = False
 
     try:
@@ -230,20 +230,12 @@ async def loop(
             else:
                 delta_rms = current_rms - new_rms
                 command.info(fvc_deltarms=delta_rms)
-
             current_rms = new_rms
 
-            # 4. Check if the RMS or delta RMS criteria are met.
-            if current_rms < config["fvc"]["target_rms"]:
-                command.info("RMS target reached.")
-                finish = True
-            elif delta_rms is not None:
-                if delta_rms < config["fvc"]["target_delta_rms"]:
-                    command.info("Delta RMS reached. RMS target has not been reached.")
-                    finish = True
-                elif delta_rms < 0:
-                    command.warning("RMS has increased. Cancelling FVC loop.")
-                    finish = True
+            # 4. Check if we have reached the distance criterion.
+            if fvc.perc_90 * 1000.0 <= config["fvc"]["target_90_percentile"]:
+                command.info("Target 90% percentile reached.")
+                reached = True
 
             # 4. Update current positions and calculate offsets.
             command.debug("Calculating offsets.")
@@ -256,7 +248,7 @@ async def loop(
             )
 
             # 5. Apply corrections.
-            if finish is False and apply is True:
+            if reached is False and apply is True:
                 if n == max_iterations and one is False:
                     command.debug("Not applying correction during the last iteration.")
                 else:
@@ -268,7 +260,7 @@ async def loop(
             await fvc.write_proc_image(proc_path)
             proc_image_saved = True
 
-            if finish is True:
+            if reached is True:
                 break
 
             if one is True or apply is False:
@@ -303,8 +295,10 @@ async def loop(
             else:
                 command.warning("Cannot write processed image.")
 
-    # FVC loop always succeeds.
-    return command.finish()
+    if reached is True or apply is False:
+        return command.finish()
+    else:
+        return command.fail("The FVC loop failed.")
 
 
 @fvc_parser.command()
