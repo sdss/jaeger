@@ -357,9 +357,10 @@ async def load(
             else:
                 return cmd.fail("Failed executing configuration.")
 
-    if from_preloaded:
-        fps._preloaded_configuration = None
-        command.debug(design_preloaded=-999)
+    fps._preloaded_configuration = None
+    command.debug(design_preloaded=-999)
+
+    if fps.configuration.design_id is not None and fps.configuration.design_id > 0:
         design_id = fps.configuration.design_id
         # Check if the design is in the queue and it would be the next one to pop.
         # If so, pop it.
