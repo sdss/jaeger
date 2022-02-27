@@ -1058,7 +1058,7 @@ class FPS(BaseFPS["FPS"]):
         alphaL, betaL = config["kaiju"]["lattice_position"]
 
         await self.update_position()
-        positions_array = self.get_positions()
+        positions_array = self.get_positions(ignore_disabled=True)
 
         if len(positions_array) == 0:
             return False
