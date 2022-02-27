@@ -443,6 +443,11 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     is_flag=True,
     help="Loads the configuration after preloading.",
 )
+@click.option(
+    "--clear",
+    is_flag=True,
+    help="Clears the preloaded configuration.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def preload(
     command: JaegerCommandType,
@@ -452,6 +457,7 @@ async def preload(
     scale: float | None = None,
     no_clone: bool = False,
     make_active: bool = True,
+    clear: bool = False,
 ):
     """Preloads a design.
 
@@ -462,6 +468,10 @@ async def preload(
     jaeger configuration load --from-preloaded.
 
     """
+
+    if clear:
+        fps._preloaded_configuration = None
+        return command.finish(design_preloaded=-999)
 
     configuration = await _load_design(
         command,
