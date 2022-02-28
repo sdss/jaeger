@@ -200,6 +200,8 @@ async def loop(
         while True:
             command.info(f"FVC iteration {n}")
 
+            filename = None
+            fvc.proc_hdu = None
             proc_image_saved: bool = False
 
             # 1. Expose the FVC
