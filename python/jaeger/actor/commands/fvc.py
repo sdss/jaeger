@@ -209,14 +209,19 @@ async def loop(
 
             # 2. Process the new image.
             positioner_coords = fps.get_positions_dict()
-            await run_in_executor(
-                fvc.process_fvc_image,
-                filename,
-                positioner_coords,
-                plot=plot,
-                use_winpos=use_winpos,
-                use_new_invkin=use_invkin,
-            )
+            try:
+                await run_in_executor(
+                    fvc.process_fvc_image,
+                    filename,
+                    positioner_coords,
+                    plot=plot,
+                    use_winpos=use_winpos,
+                    use_new_invkin=use_invkin,
+                )
+            except Exception:
+                # Skip saving the processed image since we don't have an image at all.
+                proc_image_saved = True
+                raise
 
             # 3. Set current RMS and delta.
             new_rms = fvc.fitrms * 1000.0
