@@ -1520,7 +1520,6 @@ class BaseAssignmentData:
             if target_data["delta_dec"] is not None:
                 dec += target_data["delta_dec"] / 3600.0
 
-            dec = target_data["dec"] + target_data["delta_dec"] / 3600.0
             pmra = target_data["pmra"]
             pmdec = target_data["pmdec"]
             parallax = target_data["parallax"]
