@@ -332,14 +332,14 @@ class FVC:
                 lambda g: g.assigned.any()
                 & (g.offline == 0).all()
                 & (g.dubious == 0).all()
-                & (g.on_target == 1).any()
+                # & (g.on_target == 1).any()
             )
         else:
             self.log("No assigned fibres found. Using all matched fibres.")
             assigned = fdata.groupby("positioner_id").filter(
                 lambda g: (g.offline == 0).all()
                 & (g.dubious == 0).all()
-                & (g.on_target == 1).any()
+                # & (g.on_target == 1).any()
             )
 
         # Now get the metrology fibre from those groups.
