@@ -83,7 +83,7 @@ kaiju:
 configuration:
   max_scale_age: 7200
   clip_scale: 100
-  scale_kludge_factor: 0.99988
+  scale_kludge_factor: 0.99976
   max_cloned_time: 7200
   max_designs_epoch: 8
 
