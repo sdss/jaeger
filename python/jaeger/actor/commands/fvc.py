@@ -243,7 +243,7 @@ async def loop(
             command.info(fvc_percent_reached=fvc.fvc_percent_reached)
 
             # 4. Check if we have reached the distance criterion.
-            if fvc.perc_90 * 1000.0 <= target_90_percentile:
+            if target_90_percentile and fvc.perc_90 * 1000.0 <= target_90_percentile:
                 command.info("Target 90% percentile reached.")
                 reached = True
 
