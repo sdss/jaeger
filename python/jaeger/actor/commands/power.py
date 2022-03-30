@@ -281,7 +281,7 @@ async def on(
             "GFA6",
         ]
 
-    if not (await _power_sequence(command, ieb, on_seq, mode="on", delay=delay)):
+    if not (await _power_sequence(command, ieb, on_seq, mode="on", delay=int(delay))):
         return
 
     command.info("Waiting 15 seconds and reloading positioners.")
@@ -346,7 +346,7 @@ async def off(
     if nucs:
         off_seq += ["NUC1", "NUC2", "NUC3", "NUC4", "NUC5", "NUC6"]
 
-    if not (await _power_sequence(command, ieb, off_seq, mode="off", delay=delay)):
+    if not (await _power_sequence(command, ieb, off_seq, mode="off", delay=int(delay))):
         return
 
     command.info("Waiting 15 seconds and reloading positioners.")
