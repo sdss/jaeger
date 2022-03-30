@@ -109,6 +109,11 @@ async def expose(
     help="Maximum correction allowed, in degrees.",
 )
 @click.option(
+    "--target-90-percentile",
+    type=float,
+    help="90% percentile target, in microns, at which to stop iterating.",
+)
+@click.option(
     "-k",
     type=float,
     help="Proportional term of the correction.",
@@ -139,6 +144,7 @@ async def loop(
     plot: bool = True,
     apply: bool = True,
     max_correction: float | None = None,
+    target_90_percentile: float | None = None,
     k: float | None = None,
     use_winpos: bool = True,
     use_invkin: bool = True,
@@ -183,6 +189,7 @@ async def loop(
         )
 
     max_iterations = max_iterations or config["fvc"]["max_fvc_iterations"]
+    target_90_percentile = target_90_percentile or config["fvc"]["target_90_percentile"]
 
     current_rms = None
     delta_rms = None
@@ -236,7 +243,7 @@ async def loop(
             command.info(fvc_percent_reached=fvc.fvc_percent_reached)
 
             # 4. Check if we have reached the distance criterion.
-            if fvc.perc_90 * 1000.0 <= config["fvc"]["target_90_percentile"]:
+            if fvc.perc_90 * 1000.0 <= target_90_percentile:
                 command.info("Target 90% percentile reached.")
                 reached = True
 
