@@ -854,6 +854,10 @@ class FVC:
 
         await configuration_copy.write_summary(
             flavour="F",
-            headers={"fvc_rms": self.fitrms},
+            headers={
+                "fvc_rms": self.fitrms,
+                "fvc_90_perc": self.perc_90,
+                "fvc_percent_reached": self.fvc_percent_reached,
+            },
             overwrite=True,
         )
