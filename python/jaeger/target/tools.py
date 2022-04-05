@@ -329,24 +329,31 @@ def copy_summary_file(
     new_path = pathlib.Path(new_file)
     new_path.parent.mkdir(parents=True, exist_ok=True)
 
-    summaryF = open(orig_file, "r").read()
-    summaryF = re.sub(
+    summary_data = open(orig_file, "r").read()
+    summary_data = re.sub(
         r"(configuration_id\s)[0-9]+",
         rf"\g<1>{configuration_id1}",
-        summaryF,
+        summary_data,
     )
 
     if design_id1:
-        summaryF = re.sub(
-            rf"confSummaryF\-{configuration_id0}\.par",
-            f"confSummaryF-{configuration_id1}.par",
-            summaryF,
+        summary_data = re.sub(
+            rf"confSummary(F?)\-{configuration_id0}\.par",
+            rf"confSummary\g<1>-{configuration_id1}.par",
+            summary_data,
         )
-        summaryF = re.sub(
+
+        summary_data = re.sub(
             r"(design_id\s)[0-9]+",
             rf"\g<1>{design_id1}",
-            summaryF,
+            summary_data,
+        )
+
+        summary_data = re.sub(
+            r"cloned_from -999.0",
+            f"cloned_from {configuration_id0}",
+            summary_data,
         )
 
     with open(new_path, "w") as f:
-        f.write(summaryF)
+        f.write(summary_data)
