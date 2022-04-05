@@ -22,6 +22,7 @@ from sdssdb.peewee.sdss5db import opsdb
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.ieb import IEB
 from jaeger.kaiju import check_trajectory
 from jaeger.kaiju import explode as kaiju_explode
 from jaeger.target.configuration import (
@@ -121,10 +122,30 @@ async def _load_design(
                 f"get-scale --max-age {config['configuration']['max_scale_age']}",
             )
             if get_scale_cmd.status.did_fail:
-                command.warning(
-                    "Failed getting scale from guider. "
-                    "No scale correction will be applied."
-                )
+                command.warning("Failed getting scale from guider.")
+
+                # Try using the scale-temperature relationship instead.
+                try:
+                    if not isinstance(command.actor.fps.ieb, IEB):
+                        raise ValueError("IEB not connected")
+
+                    temperature = (await command.actor.fps.ieb.read_device("T3"))[0]
+                    if not isinstance(temperature, float) or temperature < -100:
+                        raise ValueError("invalid ambient temperature")
+
+                    coeff = config["configuration"]["scale_temperature_coeff"]
+                    scale = numpy.polyval(coeff, temperature)
+
+                    command.debug(
+                        "Using focal scale factor derived from ambient "
+                        f"temperature ({temperature:.2f} C): {scale}"
+                    )
+                except Exception as err:
+                    command.warning(
+                        f"Failed getting ambient temperature: {err}. "
+                        "No scale correction will be applied."
+                    )
+
             else:
                 guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
                 if guider_scale < 0:
