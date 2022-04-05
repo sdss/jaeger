@@ -350,7 +350,7 @@ def copy_summary_file(
         )
 
         summary_data = re.sub(
-            r"cloned_from -999.0",
+            r"cloned_from -999",
             f"cloned_from {configuration_id0}",
             summary_data,
         )
