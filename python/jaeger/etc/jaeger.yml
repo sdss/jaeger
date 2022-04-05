@@ -81,7 +81,7 @@ kaiju:
   lattice_position: [10., 170.]
 
 configuration:
-  scale_temperature_coeff: [2.56190330e-06, -1.70492454e-05, 9.99647534e-01]
+  scale_temperature_coeffs: [2.56190330e-06, -1.70492454e-05, 9.99647534e-01]
   max_scale_age: 7200
   clip_scale: 500
   scale_kludge_factor: 0.99976

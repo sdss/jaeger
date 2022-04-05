@@ -133,8 +133,8 @@ async def _load_design(
                     if not isinstance(temperature, float) or temperature < -100:
                         raise ValueError("invalid ambient temperature")
 
-                    coeff = config["configuration"]["scale_temperature_coeff"]
-                    scale = numpy.polyval(coeff, temperature)
+                    coeffs = config["configuration"]["scale_temperature_coeffs"]
+                    scale = numpy.polyval(coeffs, temperature)
 
                     command.debug(
                         "Using focal scale factor derived from ambient "
