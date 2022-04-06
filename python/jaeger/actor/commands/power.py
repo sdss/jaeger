@@ -224,7 +224,7 @@ def power(command, fps):
 
 @power.command()
 @click.argument("DEVICES", type=str, nargs=-1)
-@click.option("--gfas", is_flag=True, help="Do not power the GFAs.")
+@click.option("--gfas", is_flag=True, help="Power on the GFAs.")
 @click.option(
     "--delay",
     type=float,
