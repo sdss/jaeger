@@ -491,11 +491,18 @@ class Positioner(StatusMixIn):
             error="failed going to position.",
         )
 
-    async def home(self):
+    async def home(self, alpha: bool = True, beta: bool = True):
         """Homes the positioner.
 
         Zeroes the positioner by counter-clockwise rotating alpha and beta
         until they hit the hardstops. Blocks until the move is complete.
+
+        Parameters
+        ----------
+        alpha
+            Home the alpha arm.
+        beta
+            Home the beta arm.
 
         """
 
@@ -505,9 +512,21 @@ class Positioner(StatusMixIn):
         if not self.fps:
             raise PositionerError("the positioner is not linked to a FPS instance.")
 
-        await self.send_command(
-            "GO_TO_DATUMS", error="failed while sending GO_TO_DATUMS command."
-        )
+        if alpha and beta:
+            await self.send_command(
+                "GO_TO_DATUMS",
+                error="failed while sending GO_TO_DATUMS command.",
+            )
+        elif alpha:
+            await self.send_command(
+                "GO_TO_DATUMS_ALPHA",
+                error="failed while sending GO_TO_DATUMS_ALPHA command.",
+            )
+        elif beta:
+            await self.send_command(
+                "GO_TO_DATUMS_BETA",
+                error="failed while sending GO_TO_DATUMS_BETA command.",
+            )
 
         self._log("waiting to home.")
         await self.wait_for_status(self.flags.DISPLACEMENT_COMPLETED)
