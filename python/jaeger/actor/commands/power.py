@@ -234,7 +234,7 @@ def power(command, fps):
 @click.option(
     "--force",
     is_flag=True,
-    help="Forces a device to turn on/off even if disabled..",
+    help="Forces a device to turn on/off even if disabled.",
 )
 async def on(
     command: Command[JaegerActor],
