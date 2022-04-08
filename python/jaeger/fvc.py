@@ -53,6 +53,7 @@ class FVC:
     offsets: Optional[pandas.DataFrame]
 
     image_path: Optional[str]
+    proc_image_path: Optional[str]
     raw_hdu: Optional[fits.ImageHDU]
     proc_hdu: Optional[fits.ImageHDU]
 
@@ -84,6 +85,7 @@ class FVC:
         self.offsets = None
 
         self.image_path = None
+        self.proc_image_path = None
         self.raw_hdu = None
         self.proc_hdu = None
 
@@ -729,6 +731,7 @@ class FVC:
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 
         self.log(f"Processed HDU written to {new_filename}")
+        self.proc_image_path = os.path.abspath(new_filename)
 
         return proc_hdus
 
@@ -858,6 +861,7 @@ class FVC:
                 "fvc_rms": self.fitrms,
                 "fvc_90_perc": self.perc_90,
                 "fvc_percent_reached": self.fvc_percent_reached,
+                "fvc_image_path": self.proc_image_path if self.proc_image_path else "",
             },
             overwrite=True,
         )
