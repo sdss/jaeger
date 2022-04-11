@@ -54,7 +54,7 @@ async def switch(
 
     for idev, device in enumerate(devices):
 
-        if device.upper() in config["ieb"]["disabled_devices"]:
+        if device.upper() in config["ieb"]["disabled_devices"] and on is True:
             if force is False:
                 command.warning(text=f"{device} is disabled. Skipping.")
                 continue
@@ -301,23 +301,17 @@ async def on(
     default=1,
     help="When powering multiple devices, the delay to wait between them.",
 )
-@click.option(
-    "--force",
-    is_flag=True,
-    help="Forces a device to turn on/off even if disabled..",
-)
 async def off(
     command: Command[JaegerActor],
     fps: FPS,
     devices: list[str],
     nucs: bool = False,
     delay: float = 1,
-    force: bool = False,
 ):
     """Powers off all the FPS IEB components or a specific device."""
 
     if len(devices) > 0:
-        return await switch(command, fps, devices, on=False, force=force, delay=delay)
+        return await switch(command, fps, devices, on=False, force=True, delay=delay)
 
     command.info(text="Turning pollers off.")
     await fps.pollers.stop()
