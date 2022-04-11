@@ -56,7 +56,7 @@ fps:
   use_lock: True
 
 ieb:
-  disabled_devices: ['GFA1']
+  disabled_devices: ['GFA1', 'GFA6']
 
 positioner:
   reduction_ratio: 1024
