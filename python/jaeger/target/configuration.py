@@ -1536,7 +1536,7 @@ class BaseAssignmentData:
             assert self.site.time
             icrs_epoch = icrs.to_epoch(self.site.time.jd, site=self.site)
 
-            observed = Observed(icrs, wavelength=wavelength, site=self.site)
+            observed = Observed(icrs_epoch, wavelength=wavelength, site=self.site)
             field = Field(observed, field_center=self.boresight)
             focal = FocalPlane(
                 field,
@@ -1547,7 +1547,12 @@ class BaseAssignmentData:
             wok = Wok(focal, site=self.site, obsAngle=position_angle)
 
             positioner, tangent = wok_to_positioner(
-                hole_id, self.site.name, fibre_type, wok[0][0], wok[0][1], wok[0][2]
+                hole_id,
+                self.site.name,
+                fibre_type,
+                wok[0][0],
+                wok[0][1],
+                wok[0][2],
             )
 
         if update is False:
