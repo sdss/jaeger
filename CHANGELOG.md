@@ -4,7 +4,7 @@
 
 ### 🔥 Breaking changes
 
-* Minimum Python version is now 3.8.
+* Minimum Python version is now 3.8. Astropy 5 required.
 
 ### 🚀 New
 
@@ -12,10 +12,22 @@
 * [#181](https://github.com/sdss/jaeger/issues/181) Automatically determine the epoch delay for a new configuration created from a design in the queue. If there are multiple consecutive designs in the queue with the same hash (i.e., that will be cloned), determines the epoch delay so that the array is reconfigured for the middle epoch of the observations.
 * Added `fvc_percent_reached` and `perc_95` keywords to the FVC loop to show the percentage of robots that have reached their positions (within the FVC tolerance) and the 95% percentile respectively.
 * `delta_ra` and `delta_dec` from the database are now applied.
+* Require coordio 1.3.0.
 
 ### ✨ Improved
 
 * If a new configuration is loaded while the array is unfolded and `jaeger configuration reverse` is called, the reverse trajectory from the previous configuration will be used.
+* Update coordinates using `delta_ra` and `delta_dec` from `targetdb.carton_to_target`.
+* Introduced an empirical kludge factor for the guider scale that can be adjusted in the configuration file as `configuration.scale_kludge_factor`.
+* Use reverse trajectory from previous configurations if the current one has not been executed.
+* `jaeger configuration reverse` now accepts an `--explode` flag.
+* FVC loops succeeds if `fvc_perc_90 < 30`.
+* Add `fvc_image_path` to confSummaryF.
+* Allow to home alpha and beta independently.
+
+### 🔧 Fixed
+
+* Fixed an issue in which the epoch RA/Dec in a configuration had the correctly propagated proper motions but those were not used for observed, field, etc. coordinates. Those coordinated derived in practice from the catalogue coordinates at the catalogue epoch.
 
 
 ## 0.14.0 - February 11, 2022
