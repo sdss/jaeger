@@ -50,10 +50,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install poetry
-        uses: abatilo/actions-poetry@master
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 - --preview
 
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip wheel setuptools
           poetry install
 
       - name: Lint with flake8
