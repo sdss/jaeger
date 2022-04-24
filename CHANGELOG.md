@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.1 - Next release
+
+### 🔧 Fixed
+
+* Pin `pydl` 1.0.0rc1 since rc2 has been yanked.
+
+
 ## 0.15.0 - April 21, 2022
 
 ### 🔥 Breaking changes
