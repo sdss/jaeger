@@ -34,7 +34,7 @@ sdssdb = "^0.4.11"
 pandas = "^1.3.4"
 astropy = "^5.0.0"
 sdss-kaiju = ">=1.2.3"
-sdss-coordio = {version = ">=1.3.0", allow-prereleases = true}
+sdss-coordio = {version = ">=1.3.1", allow-prereleases = true}
 pydl = "1.0.0rc1"
 sep = "^1.2.0"
 "zc.lockfile" = "^2.0"
