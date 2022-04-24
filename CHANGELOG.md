@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.15.1 - Next release
+## 0.15.1 - April 24, 2022
 
 ### 🔧 Fixed
 
