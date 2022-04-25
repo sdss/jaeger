@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🔧 Fixed
+
+* Bump sdssdb to ^0.5.2 to ensure that `assignment_hash` is available
+
+
 ## 0.15.1 - April 24, 2022
 
 ### 🔧 Fixed
