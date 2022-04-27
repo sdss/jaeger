@@ -297,7 +297,7 @@ class FVC:
         )
 
         self.centroids = fvc_transform.extractCentroids()
-        fvc_transform.fit(useWinpos=use_winpos, newInvKin=use_new_invkin)
+        fvc_transform.fit(newInvKin=use_new_invkin)
 
         assert fvc_transform.positionerTableMeas is not None
 
