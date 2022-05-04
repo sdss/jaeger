@@ -15,7 +15,6 @@ import warnings
 
 from typing import TYPE_CHECKING, Optional
 
-import matplotlib.pyplot as plt
 import numpy
 import pandas
 from astropy.io import fits
@@ -880,11 +879,10 @@ class FVC:
         if self.proc_image_path:
             self.log("Creating FVC plots", level=logging.DEBUG)
 
-            fig = plot_fvc_distances(
+            outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
+
+            plot_fvc_distances(
                 self.fps.configuration,
                 configuration_copy.assignment_data.fibre_table,
+                path=outpath,
             )
-
-            outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
-            fig.savefig(outpath)
-            plt.close(fig)

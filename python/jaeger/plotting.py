@@ -6,17 +6,16 @@
 # @Filename: plotting.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import pathlib
 
 import matplotlib.pyplot as plt
 import numpy
 import pandas
 import seaborn
 
-
-if TYPE_CHECKING:
-    from jaeger.target.configuration import BaseConfiguration
+from jaeger.target.configuration import BaseConfiguration
 
 
 __all__ = ["plot_fvc_distances"]
@@ -27,7 +26,7 @@ def _plot_wok_distance(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool =
     colours = ["g", "r", "b"]
     for ii, fibre in enumerate(["Metrology", "APOGEE", "BOSS"]):
 
-        data_fibre = data_F.loc[pandas.IndexSlice[:, fibre.upper()], :].copy()
+        data_fibre = data_F.loc[pandas.IndexSlice[:, fibre], :].copy()
 
         if fibre != "Metrology" and is_dither is False:
             data_fibre = data_fibre.loc[
@@ -78,7 +77,7 @@ def _plot_sky_distance(
         if fibre == "Metrology" and not plot_metrology:
             continue
 
-        data_fibre = data_F.loc[pandas.IndexSlice[:, fibre.upper()], :].copy()
+        data_fibre = data_F.loc[pandas.IndexSlice[:, fibre], :].copy()
 
         if fibre != "Metrology" and is_dither is False:
             data_fibre = data_fibre.loc[
@@ -121,7 +120,7 @@ def _plot_sky_quiver(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = F
     key = False
     for ii, fibre in enumerate(["APOGEE", "BOSS"]):
 
-        data_fibre = data_F.loc[pandas.IndexSlice[:, fibre.upper()], :].copy()
+        data_fibre = data_F.loc[pandas.IndexSlice[:, fibre], :].copy()
 
         if is_dither is False:
             data_fibre = data_fibre.loc[
@@ -131,8 +130,8 @@ def _plot_sky_quiver(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = F
             continue
 
         q = ax.quiver(
-            data_fibre.ra,
-            data_fibre.dec,
+            data_fibre.ra_epoch,
+            data_fibre.dec_epoch,
             data_fibre.ra_distance,
             data_fibre.dec_distance,
             color=colours[ii],
@@ -161,6 +160,7 @@ def _plot_sky_quiver(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = F
 def plot_fvc_distances(
     configuration: BaseConfiguration,
     fibre_data_F: pandas.DataFrame,
+    path: str | pathlib.Path | None = None,
 ):
     """Plots several panels with FVC analysis and statistics.
 
@@ -195,58 +195,64 @@ def plot_fvc_distances(
     deccen = configuration.assignment_data.boresight[0][1]
     cos_dec = numpy.cos(numpy.deg2rad(float(deccen)))
 
-    data_F["ra_distance"] = (data.ra - data_F.ra) * cos_dec * 3600.0
-    data_F["dec_distance"] = (data.dec - data_F.dec) * 3600.0
+    data_F["ra_distance"] = (data.ra_epoch - data_F.ra_epoch) * cos_dec * 3600.0
+    data_F["dec_distance"] = (data.dec_epoch - data_F.dec_epoch) * 3600.0
     data_F["sky_distance"] = numpy.hypot(data_F.ra_distance, data_F.dec_distance)
 
     if not is_dither:
-        data_F["racat_distance"] = (data_F.racat - data_F.ra) * cos_dec * 3600.0
-        data_F["deccat_distance"] = (data_F.deccat - data_F.dec) * 3600.0
+        data_F["racat_distance"] = (data_F.ra_icrs - data_F.ra_epoch) * cos_dec * 3600.0
+        data_F["deccat_distance"] = (data_F.dec_icrs - data_F.dec_epoch) * 3600.0
         data_F["skycat_distance"] = numpy.hypot(
             data_F.racat_distance, data_F.deccat_distance
         )
 
     with plt.ioff():  # type: ignore
-        with seaborn.axes_style("darkgrid"):
 
-            plt.close("all")
-            fig, axes = plt.subplots(2, 2, figsize=(20, 20))
+        seaborn.set_theme()
 
-            if not is_dither:
-                data_F = data_F.groupby("positioner_id").filter(
-                    lambda g: g.assigned.any() & g.on_target.any() & g.valid.all()
-                )
+        fig, axes = plt.subplots(2, 2, figsize=(20, 20))
 
-            assert isinstance(axes, numpy.ndarray)
+        if not is_dither:
+            data_F = data_F.groupby("positioner_id").filter(
+                lambda g: g.assigned.any() & g.on_target.any() & g.valid.all()
+            )
 
-            _plot_wok_distance(data_F, axes[0, 0])
+        assert isinstance(axes, numpy.ndarray)
 
+        _plot_wok_distance(data_F, axes[0, 0])
+
+        _plot_sky_distance(
+            data_F,
+            axes[0, 1],
+            "sky_distance",
+            is_dither=is_dither,
+            plot_metrology=True,
+            title="Sky distance (ra/dec vs ra/dec)",
+        )
+
+        if not is_dither:
             _plot_sky_distance(
                 data_F,
-                axes[0, 1],
-                "sky_distance",
+                axes[1, 0],
+                "skycat_distance",
                 is_dither=is_dither,
-                plot_metrology=True,
-                title="Sky distance (ra/dec vs ra/dec)",
+                plot_metrology=False,
+                title="Sky distance (ra/dec vs racat/deccat)",
             )
 
-            if not is_dither:
-                _plot_sky_distance(
-                    data_F,
-                    axes[1, 0],
-                    "skycat_distance",
-                    is_dither=is_dither,
-                    plot_metrology=False,
-                    title="Sky distance (ra/dec vs racat/deccat)",
-                )
+        _plot_sky_quiver(data_F, axes[1, 1], is_dither=is_dither)
 
-            _plot_sky_quiver(data_F, axes[1, 1], is_dither=is_dither)
+        fig.suptitle(
+            f"Configuration ID: {configuration.configuration_id}"
+            + (" (dithered)" if is_dither else "")
+        )
 
-            fig.suptitle(
-                f"Configuration ID: {configuration.configuration_id}"
-                + (" (dithered)" if is_dither else "")
-            )
+        plt.tight_layout()
 
-            plt.tight_layout()
+        if path:
+            fig.savefig(str(path))
+            plt.close(fig)
+
+        seaborn.reset_defaults()
 
     return fig
