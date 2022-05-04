@@ -54,6 +54,7 @@ async def _load_design(
     preload: bool = False,
     no_clone: bool = False,
     scale: float | None = None,
+    epoch: float | None = None,
     epoch_delay: float = 0.0,
     get_paths: bool = True,
 ):
@@ -173,7 +174,11 @@ async def _load_design(
         try:
             # Define the epoch for the configuration.
             command.debug(text=f"Epoch delay: {round(epoch_delay, 1)} seconds.")
-            epoch = Time.now().jd + epoch_delay / 86400.0
+
+            if epoch is None:
+                epoch = float(Time.now().jd)
+            epoch += epoch_delay / 86400.0
+
             design = await Design.create_async(design_id, epoch=epoch, scale=scale)
         except Exception as err:
             command.error(error=f"Failed retrieving design: {err}")
@@ -210,6 +215,11 @@ def configuration():
     "--generate-paths/--no-generate-paths",
     default=True,
     help="Generates and stores the to and from destination paths.",
+)
+@click.option(
+    "--epoch",
+    type=float,
+    help="Epoch at which to create the configuration, as a Julian Day.",
 )
 @click.option(
     "--epoch-delay",
@@ -269,6 +279,7 @@ async def load(
     from_positions: bool = False,
     from_preloaded: bool = False,
     generate_paths: bool = False,
+    epoch: float | None = None,
     epoch_delay: float = 0.0,
     ingest: bool = False,
     write_summary: bool = False,
@@ -314,6 +325,7 @@ async def load(
             preload=False,
             no_clone=no_clone,
             scale=scale,
+            epoch=epoch,
             epoch_delay=epoch_delay,
             get_paths=False,
         )
@@ -443,6 +455,11 @@ async def clone(command: Command[JaegerActor], fps: FPS):
 
 @configuration.command(cancellable=True)
 @click.option(
+    "--epoch",
+    type=float,
+    help="Epoch at which to create the configuration, as a Julian Day.",
+)
+@click.option(
     "--epoch-delay",
     type=float,
     default=0.0,
@@ -474,6 +491,7 @@ async def preload(
     command: JaegerCommandType,
     fps: FPS,
     designid: int | None = None,
+    epoch: float | None = None,
     epoch_delay: float = 0.0,
     scale: float | None = None,
     no_clone: bool = False,
@@ -501,6 +519,7 @@ async def preload(
         preload=True,
         no_clone=no_clone,
         scale=scale,
+        epoch=epoch,
         epoch_delay=epoch_delay,
     )
 
