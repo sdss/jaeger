@@ -15,6 +15,7 @@ import warnings
 
 from typing import TYPE_CHECKING, Optional
 
+import matplotlib.pyplot as plt
 import numpy
 import pandas
 from astropy.io import fits
@@ -30,6 +31,7 @@ from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
 from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.kaiju import get_path_pair_in_executor, get_robot_grid
+from jaeger.plotting import plot_fvc_distances
 from jaeger.target.tools import wok_to_positioner
 from jaeger.utils import run_in_executor
 
@@ -865,3 +867,16 @@ class FVC:
             },
             overwrite=True,
         )
+
+        # Plot analysis of FVC loop.
+        if self.proc_image_path:
+            self.log("Creating FVC plots", level=logging.DEBUG)
+
+            fig = plot_fvc_distances(
+                self.fps.configuration,
+                configuration_copy.assignment_data.fibre_table,
+            )
+
+            outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
+            fig.savefig(outpath)
+            plt.close(fig)
