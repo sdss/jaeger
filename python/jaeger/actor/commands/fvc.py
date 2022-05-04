@@ -119,6 +119,11 @@ async def expose(
     help="Proportional term of the correction.",
 )
 @click.option(
+    "--centroid-method",
+    type=click.Choice(["nudge", "simple", "winpos", "sep"]),
+    help="The centroid method used to extract sources.",
+)
+@click.option(
     "--use-invkin/--no-use-invkin",
     default=True,
     help="Use new inverse kinnematics.",
@@ -141,6 +146,7 @@ async def loop(
     max_correction: float | None = None,
     target_90_percentile: float | None = None,
     k: float | None = None,
+    centroid_method: str | None = None,
     use_invkin: bool = True,
     no_write_summary: bool = False,
 ):
@@ -217,6 +223,7 @@ async def loop(
                 filename,
                 positioner_coords,
                 plot=plot,
+                centroid_method=centroid_method,
                 use_new_invkin=use_invkin,
             )
 

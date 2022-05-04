@@ -44,6 +44,7 @@ __all__ = ["FVC"]
 
 
 FVC_CONFIG = config["fvc"]
+DEFAULT_CENTROID_METHOD = "nudge"
 
 
 class FVC:
@@ -59,6 +60,7 @@ class FVC:
     raw_hdu: Optional[fits.ImageHDU]
     proc_hdu: Optional[fits.ImageHDU]
 
+    centroid_method: str | None
     fitrms: float
     k: float
 
@@ -95,6 +97,7 @@ class FVC:
         self.fitrms = -9.99
         self.perc_90 = -9.99
         self.fvc_percent_reached = -9.99
+        self.centroid_method = None
 
     def set_command(self, command: Command[JaegerActor]):
         """Sets the command."""
@@ -195,7 +198,7 @@ class FVC:
         positioner_coords: dict,
         fibre_data: Optional[pandas.DataFrame] = None,
         fibre_type: str = "Metrology",
-        use_winpos: bool = True,
+        centroid_method: str | None = None,
         use_new_invkin: bool = True,
         plot: bool | str = False,
         outdir: str | None = None,
@@ -219,8 +222,9 @@ class FVC:
         fibre_type
             The ``fibre_type`` rows in ``fibre_data`` to use. Defaults to
             ``fibre_type='Metrology'``.
-        use_winpos
-            Whether to use windowed position for centroid extraction.
+        centroid_method
+            The centroid method to use, one of ``"nudge"``, ``"sep"``, ``"winpos"``,
+            or ``"simple"``. Defaults to ``"nudge"``.
         use_new_invkin
             Use new inverse kinnematic to calculate alpha/beta.
         plot
@@ -240,6 +244,8 @@ class FVC:
 
         # Reset the instance
         self.reset()
+
+        centroid_method = centroid_method or DEFAULT_CENTROID_METHOD
 
         path = str(path)
         if not os.path.exists(path):
@@ -299,7 +305,8 @@ class FVC:
         )
 
         self.centroids = fvc_transform.extractCentroids()
-        fvc_transform.fit(newInvKin=use_new_invkin)
+        fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
+        self.centroid_method = centroid_method
 
         assert fvc_transform.positionerTableMeas is not None
 
@@ -860,6 +867,7 @@ class FVC:
         await configuration_copy.write_summary(
             flavour="F",
             headers={
+                "fvc_centroid_method": self.centroid_method or "?",
                 "fvc_rms": self.fitrms,
                 "fvc_90_perc": self.perc_90,
                 "fvc_percent_reached": self.fvc_percent_reached,
