@@ -31,7 +31,7 @@ from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.kaiju import get_path_pair_in_executor, get_robot_grid
 from jaeger.plotting import plot_fvc_distances
-from jaeger.target.configuration import Configuration
+from jaeger.target import Configuration, Design
 from jaeger.target.tools import read_confSummary, wok_to_positioner
 from jaeger.utils import run_in_executor
 
@@ -267,6 +267,8 @@ class FVC:
 
         if plot is True:
             plot_path_root = proc_path_root
+        elif plot is False or plot is None:
+            plot_path_root = None
         elif isinstance(plot, str):
             plot_path_root = os.path.join(plot, "proc-" + base[0 : base.find(".fit")])
         else:
@@ -822,6 +824,7 @@ class FVC:
         self,
         path: str | pathlib.Path | None = None,
         plot: bool = True,
+        extra_headers: dict = {},
     ):
         """Updates data with the last measured positions and write confSummaryF."""
 
@@ -868,16 +871,19 @@ class FVC:
                     update=True,
                 )
 
+        headers = {
+            "fvc_centroid_method": self.centroid_method or "?",
+            "fvc_rms": self.fitrms,
+            "fvc_90_perc": self.perc_90,
+            "fvc_percent_reached": self.fvc_percent_reached,
+            "fvc_image_path": self.proc_image_path if self.proc_image_path else "",
+        }
+        headers.update(extra_headers)
+
         await configuration_copy.write_summary(
             path=path,
             flavour="F",
-            headers={
-                "fvc_centroid_method": self.centroid_method or "?",
-                "fvc_rms": self.fitrms,
-                "fvc_90_perc": self.perc_90,
-                "fvc_percent_reached": self.fvc_percent_reached,
-                "fvc_image_path": self.proc_image_path if self.proc_image_path else "",
-            },
+            headers=headers,
             overwrite=True,
         )
 
@@ -928,7 +934,9 @@ async def reprocess_configuration(
 
     site = config["observatory"]
     confSummaryF_path = Configuration._get_summary_file_path(
-        configuration_id, site, "F"
+        configuration_id,
+        site,
+        "F",
     )
 
     if not os.path.exists(confSummaryF_path):
@@ -936,16 +944,19 @@ async def reprocess_configuration(
             f"Cannot find a confSummaryF file for {configuration_id}."
         )
 
-    header, fdata = read_confSummary(confSummaryF_path)
+    header, _ = read_confSummary(confSummaryF_path)
 
-    configuration = Configuration(
+    design = Design(
         header["design_id"],
         epoch=header["epoch"],
         scale=header["focal_scale"],
     )
 
     fps = FPS.get_instance()
-    fps.configuration = configuration
+    assert not fps.can, "This function cannot be called on a running FPS instance."
+
+    fps.configuration = design.configuration
+    fps.configuration.configuration_id = configuration_id
 
     fvc = FVC(site)
 
@@ -953,6 +964,8 @@ async def reprocess_configuration(
     fimg = proc_fimg.replace("proc-", "")
 
     posangles = fits.getdata(proc_fimg, "POSANGLES")
+    fiber_data = pandas.DataFrame(fits.getdata(proc_fimg, "FIBERDATA"))
+
     positioner_coords = {}
     for row in posangles:
         positioner_coords[row["positionerID"]] = (row["alphaReport"], row["betaReport"])
@@ -960,6 +973,7 @@ async def reprocess_configuration(
     fvc.process_fvc_image(
         fimg,
         positioner_coords,
+        fibre_data=fiber_data,
         centroid_method=centroid_method,
         plot=False,
     )
@@ -972,4 +986,12 @@ async def reprocess_configuration(
     if use_suffix:
         path = path.replace(".par", f"_{fvc.centroid_method}.par")
 
-    await fvc.write_summary_F(path=path, plot=False)
+    await fvc.write_summary_F(
+        path=path,
+        plot=False,
+        extra_headers={
+            "MJD": header["MJD"],
+            "obstime": header["obstime"],
+            "temperature": header["temperature"],
+        },
+    )
