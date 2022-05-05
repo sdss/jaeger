@@ -54,6 +54,7 @@ class FVC:
     measurements: Optional[pandas.DataFrame]
     centroids: Optional[pandas.DataFrame]
     offsets: Optional[pandas.DataFrame]
+    fvc_transform: Optional[FVCTransformAPO]
 
     image_path: Optional[str]
     proc_image_path: Optional[str]
@@ -657,6 +658,16 @@ class FVC:
             ("WOKCOORDS", wokCoords.reset_index()),
             ("FIDUCIALCOORDS", fiducialCoords.reset_index()),
         ]
+
+        if self.fvc_transform is not None:
+            if self.fvc_transform.positionerTableMeas is not None:
+                pos_table_meas = self.fvc_transform.positionerTableMeas
+                pos_table_meas = pos_table_meas.drop(columns=["index"])
+                dfs.append(("POSITIONERTABLEMEAS", pos_table_meas))
+            if self.fvc_transform.fiducialCoordsMeas is not None:
+                fid_coords_meas = self.fvc_transform.fiducialCoordsMeas
+                fid_coords_meas = fid_coords_meas.drop(columns=["index"])
+                dfs.append(("FIDUCIALCOORDSMEAS", fid_coords_meas))
 
         for name, df in dfs:
             rec = Table.from_pandas(df).as_array()
