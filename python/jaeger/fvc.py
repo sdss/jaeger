@@ -889,15 +889,22 @@ class FVC:
 
         # Plot analysis of FVC loop.
         if plot and self.proc_image_path:
-            self.log("Creating FVC plots", level=logging.DEBUG)
+            if self.fps.configuration.assignment_data.boresight is None:
+                self.log(
+                    "Configuration does not have boresight set. "
+                    "Cannot produce FVC plots.",
+                    level=logging.WARNING,
+                )
+            else:
+                self.log("Creating FVC plots", level=logging.DEBUG)
 
-            outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
+                outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
 
-            plot_fvc_distances(
-                self.fps.configuration,
-                configuration_copy.assignment_data.fibre_table,
-                path=outpath,
-            )
+                plot_fvc_distances(
+                    self.fps.configuration,
+                    configuration_copy.assignment_data.fibre_table,
+                    path=outpath,
+                )
 
 
 async def reprocess_configuration(
