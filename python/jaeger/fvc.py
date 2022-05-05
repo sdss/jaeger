@@ -31,7 +31,8 @@ from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.kaiju import get_path_pair_in_executor, get_robot_grid
 from jaeger.plotting import plot_fvc_distances
-from jaeger.target.tools import wok_to_positioner
+from jaeger.target.configuration import Configuration
+from jaeger.target.tools import read_confSummary, wok_to_positioner
 from jaeger.utils import run_in_executor
 
 
@@ -817,7 +818,11 @@ class FVC:
         self.correction_applied = True
         self.log("Correction applied.")
 
-    async def write_summary_F(self):
+    async def write_summary_F(
+        self,
+        path: str | pathlib.Path | None = None,
+        plot: bool = True,
+    ):
         """Updates data with the last measured positions and write confSummaryF."""
 
         if self.fps is None or self.fps.configuration is None:
@@ -864,6 +869,7 @@ class FVC:
                 )
 
         await configuration_copy.write_summary(
+            path=path,
             flavour="F",
             headers={
                 "fvc_centroid_method": self.centroid_method or "?",
@@ -876,7 +882,7 @@ class FVC:
         )
 
         # Plot analysis of FVC loop.
-        if self.proc_image_path:
+        if plot and self.proc_image_path:
             self.log("Creating FVC plots", level=logging.DEBUG)
 
             outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
@@ -886,3 +892,84 @@ class FVC:
                 configuration_copy.assignment_data.fibre_table,
                 path=outpath,
             )
+
+
+async def reprocess_configuration(
+    configuration_id: int,
+    path: pathlib.Path | str | None = None,
+    centroid_method: str | None = None,
+    use_suffix: bool = True,
+):
+    """Reprocesses the FVC image from a configuration with a different centroid method.
+
+    Outputs a new ``confSummaryF`` file.
+
+    Parameters
+    ----------
+    configuration_id
+        The configuration ID for which to reprocess data. Must have an existing
+        ``confSummaryF`` file in ``$SDSSCORE_DIR``.
+    path
+        The path where to write the new ``confSummaryF`` file. If `None`, defaults
+        to ``$SDSSCORE_DIR``.
+    centroid_method
+        The centroid method to use, one of ``"nudge"``, ``"sep"``, ``"winpos"``,
+        or ``"simple"``.
+    use_suffix
+        If `True`, the new ``confSummaryF`` path file will have a suffix
+        including the centroid mode used.
+
+    Returns
+    -------
+    path
+        The path to the new ``confSummaryF`` file.
+
+    """
+
+    site = config["observatory"]
+    confSummaryF_path = Configuration._get_summary_file_path(
+        configuration_id, site, "F"
+    )
+
+    if not os.path.exists(confSummaryF_path):
+        raise FileNotFoundError(
+            f"Cannot find a confSummaryF file for {configuration_id}."
+        )
+
+    header, fdata = read_confSummary(confSummaryF_path)
+
+    configuration = Configuration(
+        header["design_id"],
+        epoch=header["epoch"],
+        scale=header["focal_scale"],
+    )
+
+    fps = FPS.get_instance()
+    fps.configuration = configuration
+
+    fvc = FVC(site)
+
+    proc_fimg = header["fvc_image_path"]
+    fimg = proc_fimg.replace("proc-", "")
+
+    posangles = fits.getdata(proc_fimg, "POSANGLES")
+    positioner_coords = {}
+    for row in posangles:
+        positioner_coords[row["positionerID"]] = (row["alphaReport"], row["betaReport"])
+
+    fvc.process_fvc_image(
+        fimg,
+        positioner_coords,
+        centroid_method=centroid_method,
+        plot=False,
+    )
+
+    if path is None:
+        path = confSummaryF_path
+
+    path = str(path)
+
+    if use_suffix:
+        path = path.replace(".par", f"_{fvc.centroid_method}.par")
+
+    await fvc.write_summary_F(path=path, plot=False)
