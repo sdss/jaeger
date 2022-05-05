@@ -210,7 +210,7 @@ def plot_fvc_distances(
 
         seaborn.set_theme()
 
-        fig, axes = plt.subplots(2, 2, figsize=(20, 20))
+        fig, axes = plt.subplots(1, 3, figsize=(30, 10))
 
         if not is_dither:
             data_F = data_F.groupby("positioner_id").filter(
@@ -219,28 +219,28 @@ def plot_fvc_distances(
 
         assert isinstance(axes, numpy.ndarray)
 
-        _plot_wok_distance(data_F, axes[0, 0])
+        _plot_wok_distance(data_F, axes[0])
 
         _plot_sky_distance(
             data_F,
-            axes[0, 1],
+            axes[1],
             "sky_distance",
             is_dither=is_dither,
             plot_metrology=True,
             title="Sky distance (ra/dec vs ra/dec)",
         )
 
-        if not is_dither:
-            _plot_sky_distance(
-                data_F,
-                axes[1, 0],
-                "skycat_distance",
-                is_dither=is_dither,
-                plot_metrology=False,
-                title="Sky distance (ra/dec vs racat/deccat)",
-            )
+        # if not is_dither:
+        #     _plot_sky_distance(
+        #         data_F,
+        #         axes[1, 0],
+        #         "skycat_distance",
+        #         is_dither=is_dither,
+        #         plot_metrology=False,
+        #         title="Sky distance (ra/dec vs racat/deccat)",
+        #     )
 
-        _plot_sky_quiver(data_F, axes[1, 1], is_dither=is_dither)
+        _plot_sky_quiver(data_F, axes[2], is_dither=is_dither)
 
         fig.suptitle(
             f"Configuration ID: {configuration.configuration_id}"
