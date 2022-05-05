@@ -15,6 +15,8 @@ import re
 from typing import TYPE_CHECKING
 
 import numpy
+import pandas
+from pydl.pydlutils.sdss import yanny
 
 from coordio.conv import (
     positionerToTangent,
@@ -38,7 +40,12 @@ if TYPE_CHECKING:
     from jaeger import FPS
 
 
-__all__ = ["wok_to_positioner", "positioner_to_wok", "copy_summary_file"]
+__all__ = [
+    "wok_to_positioner",
+    "positioner_to_wok",
+    "copy_summary_file",
+    "read_confSummary",
+]
 
 
 def wok_to_positioner(
@@ -357,3 +364,28 @@ def copy_summary_file(
 
     with open(new_path, "w") as f:
         f.write(summary_data)
+
+
+def read_confSummary(path: str | pathlib.Path) -> tuple:
+
+    y = yanny(str(path))
+    header = dict(y)
+
+    fibermap = header.pop("FIBERMAP")
+    fibermap = fibermap[[col for col in fibermap.dtype.names if col != "mag"]]
+
+    df = pandas.DataFrame(fibermap)
+
+    for col in df.select_dtypes("object").columns:
+        df[col] = df[col].str.decode("utf-8")
+
+    for key, value in header.items():
+        try:
+            header[key] = int(value)
+        except ValueError:
+            try:
+                header[key] = float(value)
+            except ValueError:
+                pass
+
+    return header, df.set_index(["positionerId", "fiberType"])

@@ -82,7 +82,7 @@ class Design:
 
         self.configuration: Configuration
         if load_configuration:
-            self.configuration = Configuration(self, epoch=epoch)
+            self.configuration = Configuration(self, epoch=epoch, scale=scale)
 
     def get_target_data(self) -> dict[str, dict]:
         """Retrieves target data as a dictionary."""

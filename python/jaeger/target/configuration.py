@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import pathlib
 import warnings
 from copy import deepcopy
 from time import time
@@ -703,6 +704,7 @@ class BaseConfiguration:
     async def write_summary(
         self,
         flavour: str = "",
+        path: str | pathlib.Path | None = None,
         overwrite: bool = False,
         headers: dict = {},
         fibre_table: pandas.DataFrame | None = None,
@@ -866,11 +868,12 @@ class BaseConfiguration:
         fibermap = Table(fibermap)
         fibermap.sort(["positionerId", "fiberType"])
 
-        path = self._get_summary_file_path(
-            self.configuration_id,
-            self.assignment_data.observatory,
-            flavour,
-        )
+        if path is None:
+            path = self._get_summary_file_path(
+                self.configuration_id,
+                self.assignment_data.observatory,
+                flavour,
+            )
 
         if os.path.exists(path):
             if overwrite:
@@ -882,7 +885,7 @@ class BaseConfiguration:
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
         write_ndarray_to_yanny(
-            path,
+            str(path),
             [fibermap],
             structnames=["FIBERMAP"],
             hdr=header,
