@@ -366,7 +366,19 @@ def copy_summary_file(
         f.write(summary_data)
 
 
-def read_confSummary(path: str | pathlib.Path) -> tuple:
+def read_confSummary(input: str | pathlib.Path | int, flavour: str = "") -> tuple:
+    """Reads a configuration summary file and returns the header and data frame."""
+
+    if isinstance(input, (str, pathlib.Path)):
+        path = input
+    else:
+        sdsscore_dir = pathlib.Path(os.environ["SDSSCORE_DIR"])
+        summary_files = sdsscore_dir / "apo" / "summary_files"
+        conf_xx = summary_files / f"{int(input/100):04d}XX"
+        path = conf_xx / f"confSummary{flavour}-{input}.par"
+
+    if not os.path.exists(str(path)):
+        raise FileNotFoundError(f"{path} does not exist.")
 
     y = yanny(str(path))
     header = dict(y)
