@@ -670,13 +670,26 @@ async def reverse(command: Command[JaegerActor], fps: FPS, explode: bool = False
 
 @configuration.command()
 @click.argument("RADIUS", type=float)
-async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
+@click.option(
+    "--epoch",
+    type=str,
+    default="inherit",
+    help="Epoch to use for the dithered configuration. With 'inherit', the parent "
+    "configuration epoch is used; 'now' uses the current time. Otherwise provide a JD.",
+)
+async def dither(
+    command: Command[JaegerActor],
+    fps: FPS,
+    radius: float,
+    epoch: str = "inherit",
+):
     """Dither a loaded configuration."""
 
     if fps.configuration is None:
         return command.fail("A configuration must first be loaded.")
 
-    if isinstance(fps.configuration, DitheredConfiguration):
+    is_dithered = isinstance(fps.configuration, DitheredConfiguration)
+    if is_dithered and fps.configuration.parent_configuration is not None:
         parent_configuration = fps.configuration.parent_configuration
     else:
         parent_configuration = fps.configuration
@@ -686,7 +699,19 @@ async def dither(command: Command[JaegerActor], fps: FPS, radius: float):
         f"{parent_configuration.configuration_id}."
     )
 
-    fps.configuration = DitheredConfiguration(parent_configuration, radius)
+    epoch = epoch.lower()
+    if epoch == "inherit":
+        dither_epoch = None
+    elif epoch == "now":
+        dither_epoch = Time.now().jd
+    else:
+        dither_epoch = float(epoch)
+
+    fps.configuration = DitheredConfiguration(
+        parent_configuration,
+        radius,
+        epoch=dither_epoch,
+    )
     await fps.configuration.get_paths()
 
     fps.configuration.write_to_database()

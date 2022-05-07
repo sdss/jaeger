@@ -932,24 +932,24 @@ class DitheredConfiguration(BaseConfiguration):
 
     def __init__(
         self,
-        configuration: BaseConfiguration,
+        parent_configuration: BaseConfiguration,
         radius: float,
         epoch: float | None = None,
     ):
 
-        assert configuration.design
+        self.parent_configuration = parent_configuration
+        assert self.parent_configuration.design
 
-        super().__init__(scale=configuration.scale)
+        super().__init__(scale=parent_configuration.scale)
 
-        self.parent_configuration: BaseConfiguration = configuration
         self.is_dither = True
 
-        self.design = configuration.design
+        self.design = self.parent_configuration.design
         self.design_id = self.design.design_id
 
         self.assignment_data = AssignmentData(
             self,
-            epoch=epoch,
+            epoch=epoch or self.parent_configuration.epoch,
             computer_coordinates=False,
             scale=self.scale,
         )
@@ -957,7 +957,7 @@ class DitheredConfiguration(BaseConfiguration):
             self.parent_configuration.assignment_data.fibre_table.copy()
         )
 
-        self.assignment_data.site.set_time(epoch)
+        self.assignment_data.site.set_time(self.parent_configuration.epoch)
 
         icrs_bore = ICRS([[self.design.field.racen, self.design.field.deccen]])
         self.assignment_data.boresight = Observed(
@@ -965,10 +965,6 @@ class DitheredConfiguration(BaseConfiguration):
             site=self.assignment_data.site,
             wavelength=INST_TO_WAVE["GFA"],
         )
-
-        assert self.assignment_data.site.time
-
-        self.epoch = self.assignment_data.site.time.jd
 
         self.radius = radius
 
