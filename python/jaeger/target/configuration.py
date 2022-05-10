@@ -950,7 +950,7 @@ class DitheredConfiguration(BaseConfiguration):
         self.assignment_data = AssignmentData(
             self,
             epoch=epoch or self.parent_configuration.epoch,
-            computer_coordinates=False,
+            compute_coordinates=False,
             scale=self.scale,
         )
         self.assignment_data.fibre_table = (
@@ -1674,13 +1674,13 @@ class AssignmentData(BaseAssignmentData):
         self,
         configuration: Configuration | DitheredConfiguration,
         epoch: float | None = None,
-        computer_coordinates: bool = True,
+        compute_coordinates: bool = True,
         scale: float | None = None,
     ):
 
         super().__init__(configuration, scale=scale)
 
-        if computer_coordinates:
+        if compute_coordinates:
             self.compute_coordinates(epoch)
 
     def compute_coordinates(self, jd: Optional[float] = None):
