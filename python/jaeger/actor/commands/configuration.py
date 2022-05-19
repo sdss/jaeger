@@ -116,6 +116,8 @@ async def _load_design(
             clip_scale: float = config["configuration"]["clip_scale"]
             SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
 
+            guider_scale: float | None = None
+
             # Query the guider for the historical scale from the previous exposure.
             command.debug("Getting guider scale.")
             get_scale_cmd = await command.send_command(
@@ -124,7 +126,15 @@ async def _load_design(
             )
             if get_scale_cmd.status.did_fail:
                 command.warning("Failed getting scale from guider.")
+            else:
+                guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
+                if guider_scale < 0:
+                    command.warning(
+                        "Invalid guider scale. No scale correction will be applied."
+                    )
+                    guider_scale = None
 
+            if guider_scale is None:
                 # Try using the scale-temperature relationship instead.
                 try:
                     if not isinstance(command.actor.fps.ieb, IEB):
@@ -135,7 +145,7 @@ async def _load_design(
                         raise ValueError("invalid ambient temperature")
 
                     coeffs = config["configuration"]["scale_temperature_coeffs"]
-                    scale = numpy.polyval(coeffs, temperature)
+                    scale = numpy.polyval(coeffs, temperature)  # type:ignore
 
                     command.debug(
                         "Using focal scale factor derived from ambient "
@@ -148,23 +158,18 @@ async def _load_design(
                     )
 
             else:
-                guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
-                if guider_scale < 0:
-                    command.warning(
-                        "Invalid guider scale. No scale correction will be applied."
+                if (abs(guider_scale) - 1) * 1e6 > clip_scale:
+                    guider_scale = numpy.clip(
+                        guider_scale,
+                        1 - clip_scale / 1e6,
+                        1 + clip_scale / 1e6,
                     )
-                else:
-                    if (abs(guider_scale) - 1) * 1e6 > clip_scale:
-                        guider_scale = numpy.clip(
-                            guider_scale,
-                            1 - clip_scale / 1e6,
-                            1 + clip_scale / 1e6,
-                        )
-                        command.warning(
-                            "Unexpectedly large guider scale. "
-                            f"Clipping to {guider_scale}."
-                        )
+                    command.warning(
+                        "Unexpectedly large guider scale. "
+                        f"Clipping to {guider_scale}."
+                    )
 
+                    assert guider_scale is not None
                     scale = FOCAL_SCALE * guider_scale * SCALE_KLUDGE
                     command.debug(
                         "Text correcting focal plane scale with guider scale "
@@ -821,6 +826,9 @@ async def random(
 
     if len(positions) == 0:
         return command.fail("No positioners connected")
+
+    alphaL: float
+    betaL: float
 
     alphaL, betaL = config["kaiju"]["lattice_position"]
     if not numpy.allclose(positions[:, 1:] - [alphaL, betaL], 0, atol=1):
