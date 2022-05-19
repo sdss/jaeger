@@ -54,6 +54,7 @@ async def _load_design(
     preload: bool = False,
     no_clone: bool = False,
     scale: float | None = None,
+    kludge_factor: float | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     get_paths: bool = True,
@@ -129,9 +130,7 @@ async def _load_design(
             else:
                 guider_scale = float(get_scale_cmd.replies.get("scale_median")[0])
                 if guider_scale < 0:
-                    command.warning(
-                        "Invalid guider scale. No scale correction will be applied."
-                    )
+                    command.warning("Invalid guider scale.")
                     guider_scale = None
 
             if guider_scale is None:
@@ -142,14 +141,14 @@ async def _load_design(
 
                     temperature = (await command.actor.fps.ieb.read_device("T3"))[0]
                     if not isinstance(temperature, float) or temperature < -100:
-                        raise ValueError("invalid ambient temperature")
+                        raise ValueError("Invalid ambient temperature")
 
                     coeffs = config["configuration"]["scale_temperature_coeffs"]
                     scale = numpy.polyval(coeffs, temperature)  # type:ignore
 
                     command.debug(
                         "Using focal scale factor derived from ambient "
-                        f"temperature ({temperature:.2f} C): {scale}"
+                        f"temperature ({temperature:.2f} C): {scale:.6f}"
                     )
                 except Exception as err:
                     command.warning(
@@ -166,15 +165,21 @@ async def _load_design(
                     )
                     command.warning(
                         "Unexpectedly large guider scale. "
-                        f"Clipping to {guider_scale}."
+                        f"Clipping to {guider_scale:.6f}."
                     )
 
-                    assert guider_scale is not None
-                    scale = FOCAL_SCALE * guider_scale * SCALE_KLUDGE
-                    command.debug(
-                        "Text correcting focal plane scale with guider scale "
-                        f"{guider_scale}. Effective focal plane scale is {scale}."
-                    )
+                assert guider_scale is not None
+
+                kludge_factor = kludge_factor or SCALE_KLUDGE
+
+                command.debug(f"Scale kludge factor: {kludge_factor:.6f}")
+
+                scale = FOCAL_SCALE * guider_scale * kludge_factor
+
+                command.debug(
+                    "Text correcting focal plane scale with guider scale "
+                    f"{guider_scale}. Effective focal plane scale is {scale}."
+                )
 
         try:
             # Define the epoch for the configuration.
@@ -269,6 +274,12 @@ def configuration():
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
 @click.option(
+    "--kludge-factor",
+    type=float,
+    default=None,
+    help="Modify the default scale kludge factor.",
+)
+@click.option(
     "--no-clone",
     is_flag=True,
     help="If the new design has the same target set as the currently loaded one, "
@@ -291,6 +302,7 @@ async def load(
     execute: bool = False,
     reissue: bool = False,
     scale: float | None = None,
+    kludge_factor: float | None = None,
     no_clone: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
@@ -327,6 +339,7 @@ async def load(
             command,
             fps,
             design_id=designid,
+            kludge_factor=kludge_factor,
             preload=False,
             no_clone=no_clone,
             scale=scale,
@@ -476,6 +489,12 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
 @click.option(
+    "--kludge-factor",
+    type=float,
+    default=None,
+    help="Modify the default scale kludge factor.",
+)
+@click.option(
     "--no-clone",
     is_flag=True,
     help="If the new design has the same target set as the currently loaded one, "
@@ -499,6 +518,7 @@ async def preload(
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     scale: float | None = None,
+    kludge_factor: float | None = None,
     no_clone: bool = False,
     make_active: bool = True,
     clear: bool = False,
@@ -524,6 +544,7 @@ async def preload(
         preload=True,
         no_clone=no_clone,
         scale=scale,
+        kludge_factor=kludge_factor,
         epoch=epoch,
         epoch_delay=epoch_delay,
     )
