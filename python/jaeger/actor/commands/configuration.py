@@ -144,11 +144,11 @@ async def _load_design(
                         raise ValueError("Invalid ambient temperature")
 
                     coeffs = config["configuration"]["scale_temperature_coeffs"]
-                    scale = numpy.polyval(coeffs, temperature)  # type:ignore
+                    guider_scale = numpy.polyval(coeffs, temperature)  # type:ignore
 
                     command.debug(
                         "Using focal scale factor derived from ambient "
-                        f"temperature ({temperature:.2f} C): {scale:.6f}"
+                        f"temperature ({temperature:.2f} C): {guider_scale:.6f}"
                     )
                 except Exception as err:
                     command.warning(
@@ -168,7 +168,7 @@ async def _load_design(
                         f"Clipping to {guider_scale:.6f}."
                     )
 
-                assert guider_scale is not None
+            if guider_scale is not None:
 
                 kludge_factor = kludge_factor or SCALE_KLUDGE
 
@@ -178,7 +178,7 @@ async def _load_design(
 
                 command.debug(
                     "Text correcting focal plane scale with guider scale "
-                    f"{guider_scale}. Effective focal plane scale is {scale}."
+                    f"{guider_scale:.6f}. Effective focal plane scale is {scale:.6f}."
                 )
 
         try:
