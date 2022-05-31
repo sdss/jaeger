@@ -311,6 +311,9 @@ class FVC:
         fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
         self.centroid_method = centroid_method
 
+        if self.command:
+            self.command.info(fvc_centroid_method=self.centroid_method)
+
         assert fvc_transform.positionerTableMeas is not None
 
         measured = fvc_transform.positionerTableMeas.copy().set_index("positionerID")
