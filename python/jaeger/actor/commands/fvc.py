@@ -121,7 +121,6 @@ async def expose(
 @click.option(
     "--centroid-method",
     type=click.Choice(["nudge", "simple", "winpos", "sep", "zbplus", "zbminus"]),
-    default="zbplus",
     help="The centroid method used to extract sources.",
 )
 @click.option(

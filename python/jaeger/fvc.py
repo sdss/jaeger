@@ -44,7 +44,7 @@ __all__ = ["FVC"]
 
 
 FVC_CONFIG = config["fvc"]
-DEFAULT_CENTROID_METHOD = "nudge"
+DEFAULT_CENTROID_METHOD = "zbplus"
 
 
 class FVC:
