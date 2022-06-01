@@ -7,6 +7,10 @@
 * [#183](https://github.com/sdss/jaeger/issues/183) The `FVC.write_summaryF()` method now also produces some histograms and quiver plots that show the FVC convergence in wok and ra/dec coordinates.
 * [#184](https://github.com/sdss/jaeger/issues/184) Added a `jaeger.fvc.reprocess_configuration()` coroutine that allows to reprocess the final FVC image for a configuration with a different centroid method.
 
+### 🏷️ Changed
+
+* Default FVC centroid algorithm is now `zbplus`.
+
 ### 🔧 Fixed
 
 * Bump sdssdb to ^0.5.2 to ensure that `assignment_hash` is available
