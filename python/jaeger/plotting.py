@@ -117,7 +117,6 @@ def _plot_sky_distance(
 def _plot_sky_quiver(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = False):
 
     colours = ["r", "b"]
-    key = False
     for ii, fibre in enumerate(["APOGEE", "BOSS"]):
 
         data_fibre = data_F.loc[pandas.IndexSlice[:, fibre], :].copy()
@@ -138,16 +137,14 @@ def _plot_sky_quiver(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = F
             label=fibre,
         )
 
-        if key is False:
-            ax.quiverkey(
-                q,
-                X=0.05,
-                Y=0.05,
-                U=0.2,
-                label="0.2 arcsec",
-                labelpos="E",
-            )
-            key = True
+        ax.quiverkey(
+            q,
+            X=0.05,
+            Y=0.05 * (ii + 1),
+            U=0.2,
+            label="0.2 arcsec",
+            labelpos="E",
+        )
 
         ax.set_xlabel("Right Ascension")
         ax.set_ylabel("Declination")
