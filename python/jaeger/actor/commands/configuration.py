@@ -430,6 +430,28 @@ async def load(
     return command.finish(f"Configuration {fps.configuration.configuration_id} loaded.")
 
 
+@configuration.command()
+async def reload(command: Command[JaegerActor], fps: FPS):
+    """Reloads the current configuration.
+
+    This is equivalent to using jaeger configuration load --no-clone DESIGNID
+    where DESIGNID is the currently loaded design.
+
+    """
+
+    if (
+        fps.configuration is None
+        or fps.configuration.design_id is None
+        or fps.configuration.design_id == -999
+    ):
+        return command.fail("There is no configuration currently loaded.")
+
+    design_id = fps.configuration.design_id
+    await command.child_command(f"configuration load --no-clone {design_id}")
+
+    return command.finish()
+
+
 def _output_configuration_loaded(command: Command[JaegerActor], fps: FPS):
     """Outputs the loaded configuration."""
 
