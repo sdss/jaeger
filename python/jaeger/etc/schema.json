@@ -212,6 +212,9 @@
     "fvc_rms": {
       "type": "number"
     },
+    "fvc_centroid_method": {
+      "type": "string"
+    },
     "fvc_deltarms": {
       "type": "number"
     },
