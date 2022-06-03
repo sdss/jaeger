@@ -69,7 +69,7 @@ class IEB(Drift):
     def create(cls, path=None):
         """Creates an `.IEB` instance with the default configuration."""
 
-        observatory = os.environ.get('OBSERVATORY', None)
+        observatory = os.environ.get("OBSERVATORY", None)
         default_ieb_path = path or config["files"]["ieb_config"][observatory]
 
         default_ieb_path = os.path.expanduser(os.path.expandvars(default_ieb_path))
