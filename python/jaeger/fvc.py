@@ -885,7 +885,7 @@ class FVC:
                     update=True,
                 )
 
-        if self.proc_hdu and "IPA" in self.proc_hdu.header["IPA"]:
+        if self.proc_hdu and "IPA" in self.proc_hdu.header:
             rotator_angle = round(self.proc_hdu.header["IPA"], 2)
         else:
             rotator_angle = -999.0
