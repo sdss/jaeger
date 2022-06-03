@@ -291,7 +291,10 @@ async def loop(
 
         if no_write_summary is False and failed is False:
             command.info("Saving confSummaryF file.")
-            await fvc.write_summary_F()
+            try:
+                await fvc.write_summary_F()
+            except Exception as err:
+                command.error(f"Failed writing confSummaryF: {err}")
 
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
