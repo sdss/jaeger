@@ -289,16 +289,13 @@ async def loop(
 
     finally:
 
-        if no_write_summary is False and failed is False:
-            command.info("Saving confSummaryF file.")
-            try:
-                await fvc.write_summary_F()
-            except Exception as err:
-                command.error(f"Failed writing confSummaryF: {err}")
-
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
         await command.send_command("jaeger", "ieb fbi led2 0")
+
+        if no_write_summary is False and failed is False:
+            command.info("Saving confSummaryF file.")
+            await fvc.write_summary_F()
 
         if proc_image_saved is False:
             if filename is not None and fvc.proc_hdu is not None:
