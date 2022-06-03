@@ -241,7 +241,7 @@ class FPS(BaseFPS["FPS"]):
         self.locked_by: List[int] = []
 
         if self.ieb is None or self.ieb is True:
-            self.ieb = config["files"]["ieb_config"]
+            self.ieb = config["files"]["ieb_config"][self.observatory]
 
         if isinstance(self.ieb, pathlib.Path):
             self.ieb = str(self.ieb)
