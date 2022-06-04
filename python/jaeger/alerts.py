@@ -122,9 +122,9 @@ class AlertsBot(BaseBot):
             for coro in [
                 self._check_robots,
                 self._check_ieb,
-                self._check_flow,
+                # self._check_flow,
                 self._check_outside_temperature,
-                self._check_chiller,
+                # self._check_chiller,
             ]:
                 try:
                     await coro()
