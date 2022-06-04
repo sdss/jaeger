@@ -639,12 +639,7 @@ class FVC:
             image_path = pathlib.Path(self.image_path)
             new_filename = image_path.with_name("proc-" + image_path.name)
 
-        if (
-            self.fibre_data is None
-            or self.centroids is None
-            or self.raw_hdu is None
-            or self.proc_hdu is None
-        ):
+        if self.fibre_data is None or self.raw_hdu is None or self.proc_hdu is None:
             raise FVCError("Need to run process_fvc_image before writing the image.")
 
         proc_hdus = fits.HDUList([fits.PrimaryHDU(), self.proc_hdu])
@@ -752,7 +747,10 @@ class FVC:
             posangles = Table.from_pandas(current_positions).as_array()
         proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
-        rec = Table.from_pandas(self.centroids).as_array()
+        if self.centroids:
+            rec = Table.from_pandas(self.centroids).as_array()
+        else:
+            rec = None
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
         offsets = None
