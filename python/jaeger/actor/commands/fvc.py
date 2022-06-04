@@ -160,7 +160,7 @@ async def loop(
     """
 
     exposure_time = exposure_time or config["fvc"]["exposure_time"]
-    fbi_level = fbi_level or config["fvc"]["fbi_level"]
+    fbi_level = fbi_level if fbi_level is not None else config["fvc"]["fbi_level"]
     assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
 
     if fps.configuration is None:
