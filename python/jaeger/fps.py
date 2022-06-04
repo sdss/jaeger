@@ -737,6 +737,7 @@ class FPS(BaseFPS["FPS"]):
 
         if not isinstance(command, Command):
             command_flag = CommandID(command)
+            assert isinstance(command_flag, CommandID)
             CommandClass = command_flag.get_command_class()
             assert CommandClass, "CommandClass not defined"
 
