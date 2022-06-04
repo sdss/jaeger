@@ -429,9 +429,11 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         if not self.is_broadcast:
             UID_POOL[self.command_id][reply.positioner_id].add(reply.uid)
 
+        pid = reply.positioner_id
+
         if self.status == CommandStatus.TIMEDOUT:
             self._log(
-                "received a reply but the command has already timed out.",
+                f"received a reply from {pid} but the command has already timed out.",
                 level=logging.ERROR,
                 logs=[log, can_log],
             )
@@ -440,7 +442,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             return
         elif self.status != CommandStatus.RUNNING:
             self._log(
-                "received a reply but command is not running",
+                f"received a reply from {pid} but command is not running",
                 level=logging.ERROR,
                 logs=[log, can_log],
             )
@@ -449,7 +451,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         if not self.is_broadcast:
             if reply.positioner_id not in self.positioner_ids:
                 self._log(
-                    "received a reply from a non-commanded positioner.",
+                    f"received a reply from {pid} from a non-commanded positioner.",
                     level=logging.ERROR,
                     logs=[log, can_log],
                 )
