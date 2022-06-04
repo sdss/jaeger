@@ -259,6 +259,10 @@ class FVC:
 
         fdata = fibre_data.copy().reset_index().set_index("positioner_id")
 
+        # Set fibre_data initially so that if FVCTransform fails we have something.
+        self.fibre_data = fdata.copy().reset_index()
+        self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
+
         self.log(f"Processing raw image {path}")
 
         dirname, base = os.path.split(path)
@@ -279,6 +283,7 @@ class FVC:
 
         self.image_path = path
         self.raw_hdu = hdus[1].copy()
+        self.proc_hdu = hdus[1]
 
         # Invert columns
         hdus[1].data = hdus[1].data[:, ::-1]
@@ -288,7 +293,7 @@ class FVC:
 
         # Get the rotator angle so that we can derotate the centroids to the
         # x/ywok-aligned configuration.
-        rotpos = hdus[1].header.get("IPA", None)
+        rotpos = hdus[1].header.get("IPA", 135.4)
         if rotpos is None:
             raise FVCError("IPA keyword not found in the header.")
         rotpos = float(rotpos) % 360.0
@@ -391,7 +396,6 @@ class FVC:
         fdata.set_index(["hole_id", "fibre_type"], inplace=True)
 
         self.fibre_data = fdata
-        self.proc_hdu = hdus[1]
         self.fvc_transform = fvc_transform
 
         self.log(f"Finished processing {path}", level=logging.DEBUG)
@@ -702,7 +706,10 @@ class FVC:
 
         # Add header keywords from coordio.FVCTransfromAPO.
         if self.fvc_transform:
-            proc_hdus[1].header.extend(self.fvc_transform.getMetadata())
+            try:
+                proc_hdus[1].header.extend(self.fvc_transform.getMetadata())
+            except Exception as err:
+                self.log(f"Cannot get FVCTransform metadata: {err}", logging.WARNING)
 
         posangles = None
         if self.fps:

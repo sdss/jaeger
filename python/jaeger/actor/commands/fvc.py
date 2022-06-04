@@ -18,6 +18,7 @@ from jaeger import config
 from jaeger.exceptions import FVCError
 from jaeger.fvc import FVC
 from jaeger.ieb import FVC as FVC_IEB
+from jaeger.target.configuration import ManualConfiguration
 from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
@@ -293,7 +294,11 @@ async def loop(
         await command.send_command("jaeger", "ieb fbi led1 0")
         await command.send_command("jaeger", "ieb fbi led2 0")
 
-        if no_write_summary is False and failed is False:
+        if (
+            not isinstance(fps.configuration, ManualConfiguration)
+            and no_write_summary is False
+            and failed is False
+        ):
             command.info("Saving confSummaryF file.")
             await fvc.write_summary_F()
 
