@@ -240,6 +240,8 @@ class FPS(BaseFPS["FPS"]):
         self._locked = False
         self.locked_by: List[int] = []
 
+        self.observatory = config["observatory"]
+
         if self.ieb is None or self.ieb is True:
             self.ieb = config["files"]["ieb_config"][self.observatory]
 
@@ -268,8 +270,6 @@ class FPS(BaseFPS["FPS"]):
 
         self.__status_event = asyncio.Event()
         self.__temperature_task: asyncio.Task | None = None
-
-        self.observatory = config["observatory"]
 
         self.alerts = AlertsBot(self)
         self.chiller = ChillerBot(self)
@@ -499,7 +499,7 @@ class FPS(BaseFPS["FPS"]):
             warnings.warn("No positioners found.", JaegerUserWarning)
             return self
 
-        if len(set([pos.firmware for pos in self.values()])) > 1:
+        if len(set([pos.firmware for pos in self.values() if not pos.offline])) > 1:
             warnings.warn(
                 "Found positioners with different firmware versions.",
                 JaegerUserWarning,
@@ -517,12 +517,15 @@ class FPS(BaseFPS["FPS"]):
             pos_initialise = [
                 positioner.initialise(disable_precise_moves=disable_precise_moves)
                 for positioner in self.values()
+                if positioner.offline is False
             ]
             await asyncio.gather(*pos_initialise)
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
-        if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
+        if disable_precise_moves is True and any(
+            [self[i].precise_moves for i in self if self[i].offline is False]
+        ):
             log.error("Unable to disable precise moves for some positioners.")
 
         n_non_initialised = len(
@@ -530,8 +533,11 @@ class FPS(BaseFPS["FPS"]):
                 positioner
                 for positioner in self.positioners.values()
                 if (
-                    positioner.status == positioner.flags.UNKNOWN
-                    or not positioner.initialised
+                    positioner.offline is False
+                    and (
+                        positioner.status == positioner.flags.UNKNOWN
+                        or not positioner.initialised
+                    )
                 )
             ]
         )
@@ -610,8 +616,8 @@ class FPS(BaseFPS["FPS"]):
 
         # Initialise alerts and chiller bots with a bit of delay to let the actor
         # time to start.
-        asyncio.create_task(self.alerts.start(delay=5))
-        asyncio.create_task(self.chiller.start(delay=5))
+        # asyncio.create_task(self.alerts.start(delay=5))
+        # asyncio.create_task(self.chiller.start(delay=5))
 
         return self
 
@@ -645,7 +651,11 @@ class FPS(BaseFPS["FPS"]):
             return
 
         timeout = config["fps"]["initialise_timeouts"]
-        id_cmd = self.send_command(CommandID.GET_ID, timeout=timeout)
+        id_cmd = self.send_command(
+            CommandID.GET_ID,
+            positioner_ids=[0],
+            timeout=timeout,
+        )
         await id_cmd
 
         # Parse the replies
@@ -898,7 +908,8 @@ class FPS(BaseFPS["FPS"]):
             positioner_ids = [positioner_ids]
 
         if positioner_ids == [0]:
-            n_positioners = len(self) if len(self) > 0 else None
+            valid = [pid for pid in self if self[pid].offline is False]
+            n_positioners = len(valid) if len(valid) > 0 else None
         else:
             n_positioners = None
 
@@ -933,7 +944,7 @@ class FPS(BaseFPS["FPS"]):
         # First get the current bitmask without the status bit.
         current = self.status & ~FPSStatus.STATUS_BITS
 
-        pbits = numpy.array([int(p.status) for p in self.values()])
+        pbits = numpy.array([int(p.status) for p in self.values() if not p.disabled])
 
         coll_bits = PositionerStatus.COLLISION_ALPHA | PositionerStatus.COLLISION_BETA
 
@@ -1024,7 +1035,8 @@ class FPS(BaseFPS["FPS"]):
             positioner_ids = [positioner_ids]
 
         if positioner_ids == [0]:
-            n_positioners = len(self) if len(self) > 0 else None
+            valid = [pid for pid in self if self[pid].offline is False]
+            n_positioners = len(valid) if len(valid) > 0 else None
         else:
             n_positioners = None
 
