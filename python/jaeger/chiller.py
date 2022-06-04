@@ -30,6 +30,7 @@ class ChillerBot(BaseBot):
         failed: bool = False
 
         chiller = Chiller.create()
+        assert chiller is not None
 
         while True:
             # Keep this inside the loop to allow for IEB and chiller reconnects.

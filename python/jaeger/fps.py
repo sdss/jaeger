@@ -272,7 +272,11 @@ class FPS(BaseFPS["FPS"]):
         self.__temperature_task: asyncio.Task | None = None
 
         self.alerts = AlertsBot(self)
-        self.chiller = ChillerBot(self)
+
+        if config["files"].get("chiller_config", None) is not None:
+            self.chiller = ChillerBot(self)
+        else:
+            self.chiller = None
 
         self._configuration: BaseConfiguration | None = None
         self._previous_configurations: list[BaseConfiguration] = []
@@ -617,7 +621,8 @@ class FPS(BaseFPS["FPS"]):
         # Initialise alerts and chiller bots with a bit of delay to let the actor
         # time to start.
         asyncio.create_task(self.alerts.start(delay=5))
-        asyncio.create_task(self.chiller.start(delay=5))
+        if self.chiller:
+            asyncio.create_task(self.chiller.start(delay=5))
 
         return self
 
@@ -1374,7 +1379,9 @@ class FPS(BaseFPS["FPS"]):
         if self.pollers:
             await self.pollers.stop()
 
-        await self.chiller.stop()
+        if self.chiller:
+            await self.chiller.stop()
+
         await self.alerts.stop()
 
         log.debug("Cancelling all pending tasks and shutting down.")
