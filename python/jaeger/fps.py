@@ -616,8 +616,8 @@ class FPS(BaseFPS["FPS"]):
 
         # Initialise alerts and chiller bots with a bit of delay to let the actor
         # time to start.
-        # asyncio.create_task(self.alerts.start(delay=5))
-        # asyncio.create_task(self.chiller.start(delay=5))
+        asyncio.create_task(self.alerts.start(delay=5))
+        asyncio.create_task(self.chiller.start(delay=5))
 
         return self
 
