@@ -865,7 +865,7 @@ async def random(
 
     # Check that all positioners are folded.
     await fps.update_position()
-    positions = fps.get_positions()
+    positions = fps.get_positions(ignore_disabled=True)
 
     if len(positions) == 0:
         return command.fail("No positioners connected")
