@@ -354,6 +354,7 @@ class AlertsBot(BaseBot):
             return
 
         chiller = Chiller.create()
+        assert chiller is not None
 
         try:
             # setpoint = (await chiller.read_device("TEMPERATURE_USER_SETPOINT"))[0]
