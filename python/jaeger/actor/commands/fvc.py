@@ -289,26 +289,28 @@ async def loop(
         return command.fail(error=f"Failed processing image: {err}")
 
     finally:
+        try:
+            if (
+                not isinstance(fps.configuration, ManualConfiguration)
+                and no_write_summary is False
+                and failed is False
+            ):
+                command.info("Saving confSummaryF file.")
+                await fvc.write_summary_F()
+
+            if proc_image_saved is False:
+                if filename is not None and fvc.proc_hdu is not None:
+                    proc_path = filename.with_name("proc-" + filename.name)
+                    command.debug(f"Saving processed image {proc_path}")
+                    await fvc.write_proc_image(proc_path)
+                else:
+                    command.warning("Cannot write processed image.")
+        except Exception:
+            pass
 
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 0")
         await command.send_command("jaeger", "ieb fbi led2 0")
-
-        if (
-            not isinstance(fps.configuration, ManualConfiguration)
-            and no_write_summary is False
-            and failed is False
-        ):
-            command.info("Saving confSummaryF file.")
-            await fvc.write_summary_F()
-
-        if proc_image_saved is False:
-            if filename is not None and fvc.proc_hdu is not None:
-                proc_path = filename.with_name("proc-" + filename.name)
-                command.debug(f"Saving processed image {proc_path}")
-                await fvc.write_proc_image(proc_path)
-            else:
-                command.warning("Cannot write processed image.")
 
     if reached is True or apply is False:
         return command.finish()
