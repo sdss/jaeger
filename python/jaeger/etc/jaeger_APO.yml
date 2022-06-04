@@ -107,9 +107,7 @@ fvc:
 
 files:
   log_dir: /data/logs/jaeger
-  ieb_config:
-    APO: etc/ieb_APO.yaml
-    LCO: etc/ieb_LCO.yaml
+  ieb_config: etc/ieb_APO.yaml
   fvc_config: etc/fvc.yaml
   chiller_config: etc/chiller.yaml
 

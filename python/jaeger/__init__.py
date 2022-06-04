@@ -27,9 +27,13 @@ can_log = get_logger("jaeger_can", log_level=logging.ERROR, capture_warnings=Fal
 
 
 # Start by loading the internal configuration file.
-__ENVVARS__["OBSERVATORY"] = "?"
-config = get_config(NAME)
+__ENVVARS__["OBSERVATORY"] = "?"  # Fallback
 
+observatory = os.environ.get("OBSERVATORY", None)
+if observatory is None:
+    config = get_config(NAME)
+else:
+    config = get_config(NAME + f"_{observatory}")
 
 # If we are not in debug mode, remove some possible warnings.
 if config["debug"] is False:
