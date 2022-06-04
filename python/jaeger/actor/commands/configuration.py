@@ -916,4 +916,6 @@ async def random(
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 
+    configuration.executed = True
+
     command.finish()
