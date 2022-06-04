@@ -37,7 +37,7 @@ from jaeger.testing import VirtualFPS
 TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
 
 config["safe_mode"] = False
-config["files"]["ieb_config"] = {"APO": "etc/ieb_apo.yaml"}
+config["files"]["ieb_config"] = "etc/ieb_APO.yaml"
 config["fps"]["start_pollers"] = True
 
 config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
