@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 import click
 
+from jaeger import config
 from jaeger.ieb import Chiller
 
 from . import JaegerCommandType, command_parser
@@ -38,6 +39,8 @@ async def status(command: JaegerCommandType, fps: FPS):
     """Shows the status of the chiller."""
 
     chiller = Chiller.create()
+    if chiller is None:
+        return command.fail("Cannot access the chiller.")
 
     names = [
         ("chiller_temperature_value", "DISPLAY_VALUE"),
@@ -69,6 +72,9 @@ async def status(command: JaegerCommandType, fps: FPS):
 async def disable(command: JaegerCommandType, fps: FPS):
     """Disables the chiller watcher."""
 
+    if not fps.chiller:
+        return command.fail("The chiller bot is not running.")
+
     await fps.chiller.stop()
 
     return command.finish("Chiller watcher has been disabled.")
@@ -83,9 +89,10 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
     actor = command.actor
     assert actor
 
-    chiller = Chiller.create()
-
     if mode == "temperature":
+        if fps.chiller is None:
+            return command.fail("The chiller bot is not running.")
+
         dev_name = "TEMPERATURE_USER_SETPOINT"
 
         if value == "auto":
@@ -101,6 +108,13 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
 
     else:
         dev_name = "FLOW_USER_SETPOINT"
+
+    if config["files"].get("chiller_config", None) is None:
+        return command.fail("Chiller configuration not defined.")
+
+    chiller = Chiller.create()
+    if chiller is None:
+        return command.fail("Cannot access the chiller.")
 
     device = chiller.get_device(dev_name)
 
