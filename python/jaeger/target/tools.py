@@ -274,7 +274,7 @@ async def create_random_configuration(
                 }
             except JaegerError:
                 raise JaegerError(
-                    "Decollision failed. Cannot create random configuration."
+                    "Failed creating random configuration: cannot remove deadlocks."
                 )
 
             _, _, did_fail, deadlocks = await get_path_pair_in_executor(robot_grid)
