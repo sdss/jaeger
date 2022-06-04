@@ -21,7 +21,7 @@ import numpy
 import clu
 
 from jaeger.can import JaegerCAN
-from jaeger.commands import CommandID, SetCurrent, Trajectory
+from jaeger.commands import SetCurrent, Trajectory
 from jaeger.commands.goto import goto as goto_
 from jaeger.commands.trajectory import send_trajectory
 from jaeger.exceptions import JaegerError, TrajectoryError
@@ -287,12 +287,12 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
     except JaegerError as err:
         return command.fail(error=f"Failed reporting status: {err}")
 
-    n_trajs = (
-        await fps.send_command(
-            CommandID.GET_NUMBER_TRAJECTORIES,
-            positioner_ids=positioner_ids,
-        )
-    ).get_replies()
+    # n_trajs = (
+    #     await fps.send_command(
+    #         CommandID.GET_NUMBER_TRAJECTORIES,
+    #         positioner_ids=positioner_ids,
+    #     )
+    # ).get_replies()
 
     for pid in sorted(positioner_ids):
         p = fps[pid]
@@ -300,7 +300,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
         alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
         beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
 
-        n_trajs_pid = n_trajs[pid] if n_trajs[pid] is not None else "?"
+        n_trajs_pid = "?"
 
         if pid in fps.positioner_to_bus and isinstance(fps.can, JaegerCAN):
             interface, bus = fps.positioner_to_bus[pid]
