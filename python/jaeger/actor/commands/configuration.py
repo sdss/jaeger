@@ -742,10 +742,8 @@ async def dither(
     else:
         parent_configuration = fps.configuration
 
-    command.info(
-        "Creating dithered configuration from "
-        f"{parent_configuration.configuration_id}."
-    )
+    configuration_id = parent_configuration.configuration_id
+    command.info(f"Creating dithered configuration from {configuration_id}")
 
     epoch = epoch.lower()
     if epoch == "inherit":
@@ -774,10 +772,8 @@ async def dither(
 
     fps.configuration.executed = True
 
-    command.finish(
-        f"Dithered configuration {fps.configuration.configuration_id} "
-        "loaded and executed."
-    )
+    configuration_id = fps.configuration.configuration_id
+    command.finish(f"Dithered configuration {configuration_id} loaded and executed.")
 
 
 @configuration.command()
