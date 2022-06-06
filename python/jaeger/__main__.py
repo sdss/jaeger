@@ -186,7 +186,7 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 @click.option(
     "--allow-host",
     is_flag=True,
-    help="Allows running jager in a host other than sdss5-fps.",
+    help="Allows running jaeger in a host other than sdss5-fps.",
 )
 @click.option(
     "--no-lock",
