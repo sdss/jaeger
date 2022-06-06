@@ -11,7 +11,6 @@ actor:
   tron_port: 6093
   models:
     - fliswarm
-  ieb_status_delay: 60
   schema: etc/schema.json
   log_dir: /data/logs/actors/jaeger
 

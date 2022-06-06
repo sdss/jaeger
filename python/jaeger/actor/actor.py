@@ -21,6 +21,8 @@ from clu.tools import ActorHandler
 
 import jaeger
 from jaeger import FPS, __version__, log
+from jaeger.alerts import AlertsBot
+from jaeger.chiller import ChillerBot
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 
 
@@ -52,14 +54,7 @@ def merge_json(base: str, custom: str | None, write_temporary_file=False):
 class JaegerActor(clu.LegacyActor):
     """The jaeger SDSS-style actor."""
 
-    def __init__(
-        self,
-        fps: FPS,
-        *args,
-        ieb_status_delay: float = 60.0,
-        observatory: str | None = None,
-        **kwargs,
-    ):
+    def __init__(self, fps: FPS, *args, observatory: str | None = None, **kwargs):
 
         jaeger.actor_instance = self
 
@@ -106,9 +101,32 @@ class JaegerActor(clu.LegacyActor):
         self._alive_task = asyncio.create_task(self._report_alive())
         self._status_watcher_task = asyncio.create_task(self._status_watcher())
 
-        self.fps.alerts.set_actor(self)
-        if self.fps.chiller:
-            self.fps.chiller.set_actor(self)
+        # Define alerts and chiller bots.
+        self.alerts = AlertsBot(self.fps)
+        print(self.config)
+        chiller_config = self.config["files"].get("chiller_config", None)
+        if self.observatory == "APO" and chiller_config is not None:
+            self.chiller = ChillerBot(self.fps)
+        else:
+            self.chiller = None
+
+    async def start(self, *args, **kwargs):
+        """Starts the actor and the bots."""
+
+        await super().start(*args, **kwargs)
+
+        self.alerts.set_actor(self)
+        if self.chiller:
+            self.chiller.set_actor(self)
+
+    async def stop(self):
+        """Stops the actor and bots."""
+
+        await self.alerts.stop()
+        if self.chiller:
+            await self.chiller.stop()
+
+        return await super().stop()
 
     async def start_status_server(self, port, delay=1):
         """Starts a server that outputs the status as a JSON on a timer."""

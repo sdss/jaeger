@@ -35,9 +35,7 @@ from zc.lockfile import LockFile
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.alerts import AlertsBot
 from jaeger.can import JaegerCAN
-from jaeger.chiller import ChillerBot
 from jaeger.commands import (
     Command,
     CommandID,
@@ -270,13 +268,6 @@ class FPS(BaseFPS["FPS"]):
 
         self.__status_event = asyncio.Event()
         self.__temperature_task: asyncio.Task | None = None
-
-        self.alerts = AlertsBot(self)
-
-        if config["files"].get("chiller_config", None) is not None:
-            self.chiller = ChillerBot(self)
-        else:
-            self.chiller = None
 
         self._configuration: BaseConfiguration | None = None
         self._previous_configurations: list[BaseConfiguration] = []
@@ -617,12 +608,6 @@ class FPS(BaseFPS["FPS"]):
         # Start the pollers
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
-
-        # Initialise alerts and chiller bots with a bit of delay to let the actor
-        # time to start.
-        asyncio.create_task(self.alerts.start(delay=5))
-        if self.chiller:
-            asyncio.create_task(self.chiller.start(delay=5))
 
         return self
 
@@ -1394,11 +1379,6 @@ class FPS(BaseFPS["FPS"]):
         log.debug("Stopping all pollers.")
         if self.pollers:
             await self.pollers.stop()
-
-        if self.chiller:
-            await self.chiller.stop()
-
-        await self.alerts.stop()
 
         log.debug("Cancelling all pending tasks and shutting down.")
 

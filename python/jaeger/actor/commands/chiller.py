@@ -72,10 +72,10 @@ async def status(command: JaegerCommandType, fps: FPS):
 async def disable(command: JaegerCommandType, fps: FPS):
     """Disables the chiller watcher."""
 
-    if not fps.chiller:
+    if not command.actor.chiller:
         return command.fail("The chiller bot is not running.")
 
-    await fps.chiller.stop()
+    await command.actor.chiller.stop()
 
     return command.finish("Chiller watcher has been disabled.")
 
@@ -90,13 +90,13 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
     assert actor
 
     if mode == "temperature":
-        if fps.chiller is None:
+        if command.actor.chiller is None:
             return command.fail("The chiller bot is not running.")
 
         dev_name = "TEMPERATURE_USER_SETPOINT"
 
         if value == "auto":
-            await fps.chiller.start()
+            await command.actor.chiller.start()
             command.info("Chiller temperature set to auto.")
             return command.finish()
         else:
@@ -104,7 +104,7 @@ async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | floa
             if value < 0.1:
                 return command.fail("Minimum temperature is 0.1 C.")
             command.warning("Stopping chiller auto mode.")
-            await fps.chiller.stop()
+            await command.actor.chiller.stop()
 
     else:
         dev_name = "FLOW_USER_SETPOINT"

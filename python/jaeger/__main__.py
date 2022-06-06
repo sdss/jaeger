@@ -15,6 +15,7 @@ import signal
 import socket
 import sys
 import warnings
+from copy import deepcopy
 from functools import wraps
 
 from typing import Optional
@@ -293,22 +294,27 @@ async def actor(fps_maker, no_tron: bool = False):
     except ImportError:
         raise ImportError("CLU needs to be installed to run jaeger as an actor.")
 
-    actor_config = config["actor"].copy()
-    actor_config.pop("status", None)
+    config_copy = deepcopy(config)
+    if "actor" not in config_copy:
+        raise RuntimeError("Configuration file does not contain an actor section.")
+
+    config_copy["actor"].pop("status", None)
 
     if no_tron:
-        actor_config.pop("tron", None)
+        config_copy["actor"].pop("tron", None)
 
     # Do not initialise FPS so that we can define the actor instance first.
     fps_maker.initialise = False
 
     async with fps_maker as fps:
-        actor_: JaegerActor = JaegerActor.from_config(actor_config, fps)
+        actor_: JaegerActor = JaegerActor.from_config(config_copy, fps)
 
         await fps.initialise()
 
         await actor_.start()
         await actor_.run_forever()
+
+        await actor_.stop()
 
 
 @jaeger.command(name="upgrade-firmware")
