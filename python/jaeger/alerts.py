@@ -286,6 +286,17 @@ class AlertsBot(BaseBot):
             self.set_keyword("alert_ieb_temp_critical", False)
             self.set_keyword("alert_ieb_temp_warning", False)
 
+        # If a GFA has caused a temperature alert and it's then disconnected
+        # the alert won't clear because that camera stops reporting status.
+        # To prevent that here we loop over the power status of each camera
+        # and if it's off we disable the alert. This does not immediately disable
+        # the alarm but next time that _check_gfa() is called it will refresh
+        # the keywords.
+        for gfa_id in range(1, 7):
+            relay_status = await self.ieb.read_device(f"GFA{gfa_id}")
+            if relay_status == "open":
+                self._gfa_alerts.pop(f"gfa{gfa_id}", None)
+
     async def _check_gfa(self, model: dict, key: TronKey):
         """Check GFA temperatures."""
 
