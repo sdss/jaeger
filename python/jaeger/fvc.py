@@ -23,7 +23,7 @@ from astropy.table import Table
 from clu.command import Command
 from clu.legacy.tron import TronConnection
 from coordio.defaults import calibration
-from coordio.transforms import FVCTransformAPO
+from coordio.transforms import FVCTransformAPO, FVCTransformLCO
 
 from jaeger import config, log
 from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
@@ -47,6 +47,17 @@ FVC_CONFIG = config["fvc"]
 DEFAULT_CENTROID_METHOD = "zbplus"
 
 
+def get_transform(observatory: str):
+    """Returns the correct coordio FVC transform class for the observatory."""
+
+    if observatory.upper() == "APO":
+        return FVCTransformAPO
+    elif observatory.upper() == "LCO":
+        return FVCTransformLCO
+    else:
+        raise ValueError(f"Invalid observatory {observatory}.")
+
+
 class FVC:
     """Focal View Camera class."""
 
@@ -54,7 +65,7 @@ class FVC:
     measurements: Optional[pandas.DataFrame]
     centroids: Optional[pandas.DataFrame]
     offsets: Optional[pandas.DataFrame]
-    fvc_transform: Optional[FVCTransformAPO]
+    fvc_transform: Optional[FVCTransformAPO | FVCTransformLCO]
 
     image_path: Optional[str]
     proc_image_path: Optional[str]
@@ -84,7 +95,7 @@ class FVC:
     def reset(self):
         """Resets the instance."""
 
-        self.fvc_transform: FVCTransformAPO | None = None
+        self.fvc_transform: FVCTransformAPO | FVCTransformLCO | None = None
         self.fibre_data = None
         self.centroids = None
         self.offsets = None
@@ -305,7 +316,10 @@ class FVC:
         )
         positioner_df.index.set_names(["positionerID"], inplace=True)
 
-        fvc_transform = FVCTransformAPO(
+        FVCTransform = get_transform(self.fps.observatory)
+        self.log(f"Using FVC transform class {FVCTransform!r}.")
+
+        fvc_transform = FVCTransform(
             image_data,
             positioner_df,
             rotpos,
