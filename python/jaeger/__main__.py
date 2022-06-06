@@ -217,7 +217,10 @@ def jaeger(
         hostname = socket.getfqdn()
         if hostname.endswith("apo.nmsu.edu") or hostname.endswith("lco.cl"):
             if not hostname.startswith("sdss5-fps"):
-                raise RuntimeError("At the observatories jaeger must run on sdss5-fps.")
+                raise RuntimeError(
+                    "At the observatories jaeger must run on sdss5-fps. "
+                    "If you want to run jaeger on another computer use --allow-host."
+                )
 
     if verbose > 0 and quiet:
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
