@@ -123,9 +123,7 @@ low_temperature:
   holding_torque_normal: [0, 30]
   holding_torque_very_cold: [45, 30]
 
-safe_mode:
-  min_beta: 160
-  max_beta: 180
+safe_mode: false
 
 debug: false
 
