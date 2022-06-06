@@ -269,6 +269,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioners or list(fps.positioners.keys())
+    actor = command.actor
 
     if not check_positioners(positioner_ids, command, fps):
         return
@@ -279,7 +280,7 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
         command.info(folded=(await fps.is_folded()))
         command.info(n_positioners=len(fps.positioners))
         command.info(fps_status=f"0x{fps.status.value:x}")
-        command.info(message={k: int(v) for k, v in fps.alerts.keywords.items()})
+        command.info(message={k: int(v) for k, v in actor.alerts.keywords.items()})
 
     try:
         await fps.update_status(positioner_ids=0)
