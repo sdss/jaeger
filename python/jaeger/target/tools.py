@@ -172,6 +172,7 @@ async def create_random_configuration(
     max_deadlocks: int = 6,
     deadlock_retries: int = 5,
     n_failed: int = 0,
+    max_retries: int = 5,
     **kwargs,
 ):
     """Creates a random configuration using Kaiju."""
@@ -233,7 +234,7 @@ async def create_random_configuration(
     # If too many deadlocks, just try a new seed.
     n_deadlock = len(deadlocks)
     if did_fail and n_deadlock > max_deadlocks:
-        if n_failed >= 5:
+        if n_failed >= max_retries:
             raise JaegerError("Reached the limit of retries.")
 
         log.warning("Too many deadlocked robots. Trying new seed.")

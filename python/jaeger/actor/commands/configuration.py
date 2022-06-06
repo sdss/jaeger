@@ -843,6 +843,12 @@ async def slew(
     help="Send the trajectory to the FPS.",
     default=True,
 )
+@click.option(
+    "--max-retries",
+    type=int,
+    default=10,
+    help="Home many retries to allow due to deadlocks.",
+)
 async def random(
     command: Command[JaegerActor],
     fps: FPS,
@@ -851,6 +857,7 @@ async def random(
     uniform: str | None = None,
     collision_buffer: float | None = None,
     send_trajectory: bool = True,
+    max_retries: int = 10,
 ):
     """Executes a random, valid configuration."""
 
@@ -891,6 +898,7 @@ async def random(
             uniform=uniform_unpack,
             safe=not danger,
             collision_buffer=collision_buffer,
+            max_retries=max_retries,
         )
 
         command.info("Getting trajectory.")
