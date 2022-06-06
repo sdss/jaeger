@@ -884,15 +884,15 @@ async def random(
     else:
         uniform_unpack = None
 
-    configuration = await create_random_configuration(
-        fps,
-        seed=seed,
-        uniform=uniform_unpack,
-        safe=not danger,
-        collision_buffer=collision_buffer,
-    )
-
     try:
+        configuration = await create_random_configuration(
+            fps,
+            seed=seed,
+            uniform=uniform_unpack,
+            safe=not danger,
+            collision_buffer=collision_buffer,
+        )
+
         command.info("Getting trajectory.")
         trajectory = await configuration.get_paths(decollide=False)
     except JaegerError as err:
