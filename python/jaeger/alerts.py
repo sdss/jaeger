@@ -72,8 +72,14 @@ class AlertsBot(BaseBot):
 
         self._task = asyncio.create_task(self._loop())
 
-        if self.actor and "fliswarm" in self.actor.models:
-            self.actor.models["fliswarm"].register_callback(self._check_camera_status)
+        if "gfa" in self.config["enabled"]:
+            if self.actor and "fliswarm" in self.actor.models:
+                self.actor.models["fliswarm"].register_callback(self._check_gfa)
+            else:
+                self.notify(
+                    "Failed starting GFA alert monitoring.",
+                    level=logging.ERROR,
+                )
 
     async def stop(self):
         """Stops the monitoring loop."""
@@ -85,9 +91,9 @@ class AlertsBot(BaseBot):
         if (
             self.actor
             and "fliswarm" in self.actor.models
-            and self._check_camera_status in self.actor.models["fliswarm"]._callbacks
+            and self._check_gfa in self.actor.models["fliswarm"]._callbacks
         ):
-            self.actor.models["fliswarm"].remove_callback(self._check_camera_status)
+            self.actor.models["fliswarm"].remove_callback(self._check_gfa)
 
     def set_keyword(self, keyword: str, new_value: bool) -> bool:
         """Sets the value of an alert keyword and outputs it to the actor.
@@ -117,15 +123,21 @@ class AlertsBot(BaseBot):
     async def _loop(self):
         """The main monitoring loop."""
 
+        coros = []
+        if "robot" in self.config["enabled"]:
+            coros.append(self._check_robots)
+        if "ieb" in self.config["enabled"]:
+            coros.append(self._check_ieb)
+        if "flow" in self.config["enabled"]:
+            coros.append(self._check_flow)
+        if "temperature" in self.config["enabled"]:
+            coros.append(self._check_outside_temperature)
+        if "chiller" in self.config["enabled"]:
+            coros.append(self._check_chiller)
+
         while True:
 
-            for coro in [
-                self._check_robots,
-                self._check_ieb,
-                # self._check_flow,
-                self._check_outside_temperature,
-                # self._check_chiller,
-            ]:
+            for coro in coros:
                 try:
                     await coro()
                 except Exception as err:
@@ -274,7 +286,7 @@ class AlertsBot(BaseBot):
             self.set_keyword("alert_ieb_temp_critical", False)
             self.set_keyword("alert_ieb_temp_warning", False)
 
-    async def _check_camera_status(self, model: dict, key: TronKey):
+    async def _check_gfa(self, model: dict, key: TronKey):
         """Check GFA temperatures."""
 
         if key.name != "status":

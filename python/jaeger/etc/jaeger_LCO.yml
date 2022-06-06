@@ -135,6 +135,7 @@ database:
 
 alerts:
   interval: 60
+  enabled: ['ieb', 'robot', 'temperature']
   gfa:
     warning: 30
     critical: 35

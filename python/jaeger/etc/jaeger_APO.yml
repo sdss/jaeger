@@ -135,6 +135,7 @@ database:
 
 alerts:
   interval: 60
+  enabled: ['gfa', 'ieb', 'robot', 'flow', 'temperature', 'chiller']
   gfa:
     warning: 30
     critical: 35
