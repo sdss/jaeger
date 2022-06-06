@@ -187,6 +187,7 @@ async def actor(vfps):
         host="localhost",
         port=19990,
         log_dir=False,
+        config={"files": {"chiller_config": None}},
     )
     jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)  # type: ignore
 
