@@ -20,7 +20,6 @@ from functools import wraps
 from typing import Optional
 
 import click
-import numpy
 from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
@@ -577,100 +576,6 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
             return
 
         log.info(f"positioner {positioner_id} set to {(alpha, beta)}.")
-
-
-@jaeger.command()
-@click.argument("positioner_id", metavar="POSITIONER", type=int)
-@click.option(
-    "-n",
-    "--moves",
-    type=int,
-    help="Number of moves to perform. Otherwise runs forever.",
-)
-@click.option(
-    "--alpha",
-    type=(int, int),
-    default=(0, 360),
-    help="Range of alpha positions.",
-    show_default=True,
-)
-@click.option(
-    "--beta",
-    type=(int, int),
-    default=(0, 180),
-    help="Range of beta positions.",
-    show_default=True,
-)
-@click.option(
-    "--speed",
-    type=(int, int),
-    default=(500, 1500),
-    help="Range of speed.",
-    show_default=True,
-)
-@click.option(
-    "-f",
-    "--skip-errors",
-    is_flag=True,
-    help="If an error occurs, ignores it and commands another move.",
-)
-@pass_fps
-@cli_coro
-async def demo(
-    fps_maker,
-    positioner_id,
-    alpha=None,
-    beta=None,
-    speed=None,
-    moves=None,
-    skip_errors=False,
-):
-    """Moves a robot to random positions."""
-
-    if (alpha[0] >= alpha[1]) or (alpha[0] < 0 or alpha[1] > 360):
-        raise click.UsageError("alpha must be in the range [0, 360)")
-
-    if (beta[0] >= beta[1]) or (beta[0] < 0 or beta[1] > 360):
-        raise click.UsageError("beta must be in the range [0, 360)")
-
-    if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
-        raise click.UsageError("speed must be in the range [0, 3000)")
-
-    async with fps_maker as fps:
-
-        positioner = fps.positioners[positioner_id]
-        result = await positioner.initialise()
-        if not result:
-            log.error("positioner is not connected or failed to initialise.")
-            return
-
-        done_moves = 0
-        while True:
-
-            alpha_move = numpy.random.randint(low=alpha[0], high=alpha[1])
-            beta_move = numpy.random.randint(low=beta[0], high=beta[1])
-            alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
-            beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
-
-            warnings.warn(f"running step {done_moves+1}")
-
-            result = await positioner.goto(
-                alpha=alpha_move, beta=beta_move, speed=(alpha_speed, beta_speed)
-            )
-
-            if result is False:
-                if skip_errors is False:
-                    return
-                else:
-                    warnings.warn(
-                        "an error happened but ignoring it because skip-error=True"
-                    )
-                    continue
-
-            done_moves += 1
-
-            if moves is not None and done_moves == moves:
-                return
 
 
 @jaeger.command()
