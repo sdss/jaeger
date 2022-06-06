@@ -368,6 +368,7 @@ async def load(
         not fps.configuration.is_cloned
         and generate_paths
         and fps.configuration.to_destination is None
+        and not from_positions
     ):
         try:
             command.info("Calculating trajectories.")
@@ -400,7 +401,7 @@ async def load(
     snapshot = await fps.configuration.save_snapshot()
     command.info(configuration_snapshot=snapshot)
 
-    if execute:
+    if execute and not from_positions:
         cmd = await command.send_command("jaeger", "configuration execute")
         if cmd.status.did_fail:
             if cmd.status.is_done:
