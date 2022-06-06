@@ -192,7 +192,7 @@ class JaegerCAN(Generic[Bus_co]):
     async def create(
         cls,
         profile: Optional[str] = None,
-        fps: FPS = None,
+        fps: FPS | None = None,
         interface_type: Optional[str] = None,
         channels: list | tuple = [],
         interface_args: Dict[str, Any] = {},
