@@ -588,29 +588,6 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
 
 
 @jaeger.command()
-@click.argument("positioner_id", metavar="POSITIONER", type=int, required=False)
-@pass_fps
-@cli_coro
-async def home(fps_maker, positioner_id):
-    """Initialise datums."""
-
-    async with fps_maker as fps:
-
-        if positioner_id is None:
-            positioners = fps.positioners.values()
-        else:
-            positioners = [fps.positioners[positioner_id]]
-
-        valid_positioners = [
-            positioner for positioner in positioners if positioner.status.initialised
-        ]
-
-        await asyncio.gather(*[positioner.home() for positioner in valid_positioners])
-
-    return
-
-
-@jaeger.command()
 @click.argument("positioner_id", metavar="POSITIONER", type=int)
 @pass_fps
 @cli_coro
