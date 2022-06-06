@@ -747,7 +747,7 @@ class FVC:
             posangles = Table.from_pandas(current_positions).as_array()
         proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
-        if self.centroids:
+        if self.centroids is not None:
             rec = Table.from_pandas(self.centroids).as_array()
         else:
             rec = None
