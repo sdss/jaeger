@@ -108,7 +108,7 @@ files:
   log_dir: /data/logs/jaeger
   ieb_config: etc/ieb_APO.yaml
   fvc_config: etc/fvc.yaml
-  chiller_config: etc/chiller.yaml
+  chiller_config: etc/chiller_APO.yaml
 
 low_temperature:
   sensor: RTD2
