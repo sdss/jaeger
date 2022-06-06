@@ -825,19 +825,19 @@ class FPS(BaseFPS["FPS"]):
 
         await self.update_status()
 
-        axis = "?"
+        axes = "?"
 
         if by and len(by) > 0:
             self.locked_by += by
 
             status_bits = self.positioners[by[0]].status
             if status_bits & PositionerStatus.COLLISION_ALPHA:
-                axis = "alpha"
+                axes = "alpha"
             if status_bits & PositionerStatus.COLLISION_BETA:
-                if axis == "alpha":
-                    axis = "both"
+                if axes == "alpha":
+                    axes = "both"
                 else:
-                    axis = "beta"
+                    axes = "beta"
 
         if jaeger.actor_instance:
             jaeger.actor_instance.write(
@@ -845,7 +845,7 @@ class FPS(BaseFPS["FPS"]):
                 {
                     "locked": True,
                     "locked_by": self.locked_by,
-                    "locked_axis": axis,
+                    "locked_axes": axes,
                 },
             )
 
