@@ -26,6 +26,7 @@ from .configuration import *
 from .debug import *
 from .disable import *
 from .fvc import *
+from .home import *
 from .ieb import *
 from .pollers import *
 from .positioner import *
