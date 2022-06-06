@@ -25,12 +25,15 @@ __all__ = ["home"]
 
 
 @jaeger_parser.command()
-@click.argument("AXIS", type=click.Choice(["alpha", "beta"], case_sensitive=False))
+@click.argument(
+    "AXIS",
+    type=click.Choice(["alpha", "beta", "both"], case_sensitive=False),
+)
 @click.argument("POSITIONER_IDS", nargs=-1, required=False)
 @click.option(
-    "/--no-datums",
+    "--no-datums",
     is_flag=True,
-    default=True,
+    default=False,
     help="Do not calibrate datums.",
 )
 @click.option(
@@ -49,11 +52,19 @@ async def home(
     command: JaegerCommandType,
     fps: FPS,
     axis: str,
-    positioner_ids: tuple[int, ...] | None = None,
-    datums: bool = True,
+    positioner_ids: tuple[int, ...] = (),
+    no_datums: bool = False,
     motor: bool = False,
     cogging_torque: bool = False,
 ):
     """Re-homes positioners."""
 
-    pass
+    if axis.lower() == "both" and positioner_ids == ():
+        return command.fail("Cannot home all robots in both axes at the same time.")
+
+    axes = [axis.lower()] if axis.lower() != "both" else ["alpha", "beta"]
+
+    for ax in axes:
+        pass
+
+    return command.finish()
