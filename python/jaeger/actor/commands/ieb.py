@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from typing import TYPE_CHECKING, Tuple
 
 import click
@@ -110,7 +112,10 @@ async def fbi(command, fps: FPS, device_names: Tuple[str], value: float):
 
         await device.write(raw_value)
 
-    return command.finish()
+    await asyncio.sleep(0.2)
+    fbi_led = await _get_category_data(command, "fbi_led")
+
+    return command.finish(fbi_led=fbi_led)
 
 
 @ieb.command()
