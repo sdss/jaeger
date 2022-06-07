@@ -138,6 +138,8 @@ async def send_trajectory(
     if use_sync_line is None:
         use_sync_line = config["fps"]["use_sync_line"]
 
+    assert isinstance(use_sync_line, bool)
+
     if use_sync_line:
         if not isinstance(fps.ieb, IEB) or fps.ieb.disabled:
             raise TrajectoryError("IEB is not connected. Cannot use SYNC line.", traj)
@@ -535,7 +537,7 @@ class Trajectory(object):
 
         return True
 
-    async def start(self, use_sync_line=True):
+    async def start(self, use_sync_line: bool = True):
         """Starts the trajectory."""
 
         if not self._ready_to_start or self.failed:
