@@ -419,7 +419,11 @@ async def take_fvc_loop(
         command.debug("Turning LEDs off.")
         await command.send_command("jaeger", "ieb fbi led1 led2 0")
 
-        if no_write_summary is False and failed is False:
+        if (
+            not isinstance(fps.configuration, ManualConfiguration)
+            and no_write_summary is False
+            and failed is False
+        ):
             command.info("Saving confSummaryF file.")
             await fvc.write_summary_F()
 
