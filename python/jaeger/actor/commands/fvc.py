@@ -442,6 +442,6 @@ async def take_fvc_loop(
                 command.warning("Cannot write processed image.")
 
     if reached is True or apply is False:
-        return False
-    else:
         return True
+    else:
+        return False
