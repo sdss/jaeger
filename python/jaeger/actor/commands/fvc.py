@@ -18,6 +18,7 @@ from jaeger import config
 from jaeger.exceptions import FVCError
 from jaeger.fvc import FVC
 from jaeger.ieb import FVC as FVC_IEB
+from jaeger.target.configuration import ManualConfiguration
 from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
@@ -27,7 +28,8 @@ if TYPE_CHECKING:
     from clu import Command
 
     from jaeger import FPS
-    from jaeger.actor import JaegerActor
+    from jaeger.actor import JaegerActor, JaegerCommandType
+    from jaeger.target.configuration import BaseConfiguration
 
 
 __all__ = ["fvc_parser"]
@@ -133,23 +135,7 @@ async def expose(
     is_flag=True,
     help="Does not try to write a confSummaryF file.",
 )
-async def loop(
-    command: Command[JaegerActor],
-    fps: FPS,
-    exposure_time: float | None = None,
-    fbi_level: float | None = None,
-    one: bool = False,
-    max_iterations: int | None = None,
-    stack: int = 3,
-    plot: bool = True,
-    apply: bool = True,
-    max_correction: float | None = None,
-    target_90_percentile: float | None = None,
-    k: float | None = None,
-    centroid_method: str | None = None,
-    use_invkin: bool = True,
-    no_write_summary: bool = False,
-):
+async def loop(command: Command[JaegerActor], fps: FPS, **kwargs):
     """Executes the FVC correction loop.
 
     This routine will turn the FBI LEDs on, take FVC exposures, process them,
@@ -158,154 +144,14 @@ async def loop(
 
     """
 
-    exposure_time = exposure_time or config["fvc"]["exposure_time"]
-    fbi_level = fbi_level or config["fvc"]["fbi_level"]
-    assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
+    result = await take_fvc_loop(
+        command,
+        fps,
+        configuration=fps.configuration,
+        **kwargs,
+    )
 
-    if fps.configuration is None:
-        return command.fail("Configuration not loaded.")
-
-    fvc = FVC(fps.observatory, command=command)
-
-    # Check that the rotator is halted.
-    axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")
-    if axis_cmd.status.did_fail:
-        command.warning("Cannot check the status of the rotator.")
-    else:
-        rot_status = axis_cmd.replies.get("AxisCmdState")[2]
-        if rot_status != "Halted":
-            return command.fail(f"Cannot expose FVC while the rotator is {rot_status}.")
-        else:
-            command.debug("The rotator is halted.")
-
-    command.debug("Turning LEDs on.")
-    await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
-    await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
-
-    if one is True and apply is True:
-        command.warning(
-            "One correction will be applied. The confSummaryF "
-            "file will not reflect the final state."
-        )
-
-    max_iterations = max_iterations or config["fvc"]["max_fvc_iterations"]
-    target_90_percentile = target_90_percentile or config["fvc"]["target_90_percentile"]
-
-    current_rms = None
-    delta_rms = None
-
-    filename = None
-    proc_image_saved = False
-
-    # Flag to determine when to exit the loop.
-    reached: bool = False
-    failed: bool = False
-
-    try:
-
-        n = 1
-        while True:
-            command.info(f"FVC iteration {n}")
-
-            filename = None
-            fvc.proc_hdu = None
-            proc_image_saved: bool = False
-
-            # 1. Expose the FVC
-            command.debug("Taking exposure with fliswarm.")
-            filename = await fvc.expose(exposure_time=exposure_time, stack=stack)
-            command.debug(fvc_filename=str(filename))
-
-            # 2. Process the new image.
-            positioner_coords = fps.get_positions_dict()
-            await run_in_executor(
-                fvc.process_fvc_image,
-                filename,
-                positioner_coords,
-                plot=plot,
-                centroid_method=centroid_method,
-                use_new_invkin=use_invkin,
-            )
-
-            # 3. Set current RMS and delta.
-            new_rms = fvc.fitrms * 1000.0
-
-            command.info(fvc_rms=new_rms)
-
-            if current_rms is None:
-                pass
-            else:
-                delta_rms = current_rms - new_rms
-                command.info(fvc_deltarms=delta_rms)
-            current_rms = new_rms
-
-            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
-            command.info(fvc_percent_reached=fvc.fvc_percent_reached)
-
-            # 4. Check if we have reached the distance criterion.
-            if target_90_percentile and fvc.perc_90 * 1000.0 <= target_90_percentile:
-                command.info("Target 90% percentile reached.")
-                reached = True
-
-            # 4. Update current positions and calculate offsets.
-            command.debug("Calculating offsets.")
-            await fps.update_position()
-            await run_in_executor(
-                fvc.calculate_offsets,
-                fps.get_positions(),
-                k=k,
-                max_correction=max_correction,
-            )
-
-            # 5. Apply corrections.
-            if reached is False and apply is True:
-                if n == max_iterations and one is False:
-                    command.debug("Not applying correction during the last iteration.")
-                else:
-                    await fvc.apply_correction()
-
-            # 6. Save processed file.
-            proc_path = filename.with_name("proc-" + filename.name)
-            command.debug(f"Saving processed image {proc_path}")
-            await fvc.write_proc_image(proc_path)
-            proc_image_saved = True
-
-            if reached is True:
-                break
-
-            if one is True or apply is False:
-                command.warning("Cancelling FVC loop after one iteration.")
-                break
-
-            if n == max_iterations:
-                command.warning("Maximum number of iterations reached.")
-                break
-
-            n += 1
-
-    except Exception as err:
-        failed = True
-        return command.fail(error=f"Failed processing image: {err}")
-
-    finally:
-
-        command.debug("Turning LEDs off.")
-        await command.send_command("jaeger", "ieb fbi led1 0")
-        await command.send_command("jaeger", "ieb fbi led2 0")
-
-        if no_write_summary is False and failed is False:
-            command.info("Saving confSummaryF file.")
-            await fvc.write_summary_F()
-
-        if proc_image_saved is False:
-            if filename is not None and fvc.proc_hdu is not None:
-                proc_path = filename.with_name("proc-" + filename.name)
-                command.debug(f"Saving processed image {proc_path}")
-                await fvc.write_proc_image(proc_path)
-            else:
-                command.warning("Cannot write processed image.")
-
-    if reached is True or apply is False:
+    if result is True:
         return command.finish()
     else:
         return command.fail("The FVC loop failed.")
@@ -399,3 +245,203 @@ async def led(command: Command[JaegerActor], fps: FPS, level: int):
     await command.send_command("jaeger", "fvc status")
 
     return command.finish()
+
+
+@fvc_parser.command()
+async def snapshot(command: JaegerCommandType, fps: FPS):
+    """Takes an FPS snapshot with the FVC. Roughly equivalent to fvc loop --no-apply."""
+
+    # Create a configuration from positions but don't make it active in the FPS.
+    positions = fps.get_positions_dict()
+    configuration = ManualConfiguration.create_from_positions(positions)
+
+    result = await take_fvc_loop(
+        command,
+        fps,
+        apply=False,
+        configuration=configuration,
+        no_write_summary=True,
+    )
+
+    return command.finish() if result is True else command.fail()
+
+
+async def take_fvc_loop(
+    command: JaegerCommandType,
+    fps: FPS,
+    exposure_time: float | None = None,
+    fbi_level: float | None = None,
+    one: bool = False,
+    max_iterations: int | None = None,
+    stack: int = 3,
+    plot: bool = True,
+    apply: bool = True,
+    max_correction: float | None = None,
+    target_90_percentile: float | None = None,
+    k: float | None = None,
+    centroid_method: str | None = None,
+    use_invkin: bool = True,
+    no_write_summary: bool = False,
+    configuration: BaseConfiguration | None = None,
+):
+    """Helper to take an FVC loop that can be called externally."""
+
+    exposure_time = exposure_time or config["fvc"]["exposure_time"]
+    fbi_level = fbi_level or config["fvc"]["fbi_level"]
+    assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
+
+    configuration = configuration or fps.configuration
+
+    if configuration is None:
+        command.error("Configuration not loaded.")
+        return False
+
+    fvc = FVC(fps.observatory, command=command)
+
+    # Check that the rotator is halted.
+    axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")
+    if axis_cmd.status.did_fail:
+        command.warning("Cannot check the status of the rotator.")
+    else:
+        rot_status = axis_cmd.replies.get("AxisCmdState")[2]
+        if rot_status != "Halted":
+            command.error(f"Cannot expose FVC while the rotator is {rot_status}.")
+            return False
+        else:
+            command.debug("The rotator is halted.")
+
+    command.debug("Turning LEDs on.")
+    await command.send_command("jaeger", f"ieb fbi led1 led2 {fbi_level}")
+
+    if one is True and apply is True:
+        command.warning(
+            "One correction will be applied. The confSummaryF "
+            "file will not reflect the final state."
+        )
+
+    max_iterations = max_iterations or config["fvc"]["max_fvc_iterations"]
+    target_90_percentile = target_90_percentile or config["fvc"]["target_90_percentile"]
+
+    current_rms = None
+    delta_rms = None
+
+    filename = None
+    proc_image_saved = False
+
+    # Flag to determine when to exit the loop.
+    reached: bool = False
+    failed: bool = False
+
+    try:
+
+        n = 1
+        while True:
+            command.info(f"FVC iteration {n}")
+
+            filename = None
+            fvc.proc_hdu = None
+            proc_image_saved: bool = False
+
+            # 1. Expose the FVC
+            command.debug("Taking exposure with fliswarm.")
+            filename = await fvc.expose(exposure_time=exposure_time, stack=stack)
+            command.debug(fvc_filename=str(filename))
+
+            # 2. Process the new image.
+            positioner_coords = fps.get_positions_dict()
+            await run_in_executor(
+                fvc.process_fvc_image,
+                filename,
+                positioner_coords,
+                configuration=configuration,
+                plot=plot,
+                centroid_method=centroid_method,
+                use_new_invkin=use_invkin,
+            )
+
+            # 3. Set current RMS and delta.
+            new_rms = fvc.fitrms * 1000.0
+
+            command.info(fvc_rms=new_rms)
+
+            if current_rms is None:
+                pass
+            else:
+                delta_rms = current_rms - new_rms
+                command.info(fvc_deltarms=delta_rms)
+            current_rms = new_rms
+
+            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
+            command.info(fvc_percent_reached=fvc.fvc_percent_reached)
+
+            # 4. Check if we have reached the distance criterion.
+            if target_90_percentile and fvc.perc_90 * 1000.0 <= target_90_percentile:
+                command.info("Target 90% percentile reached.")
+                reached = True
+
+            # 4. Update current positions and calculate offsets.
+            command.debug("Calculating offsets.")
+            await fps.update_position()
+            await run_in_executor(
+                fvc.calculate_offsets,
+                fps.get_positions(),
+                k=k,
+                max_correction=max_correction,
+            )
+
+            # 5. Apply corrections.
+            if reached is False and apply is True:
+                if n == max_iterations and one is False:
+                    command.debug("Not applying correction during the last iteration.")
+                else:
+                    await fvc.apply_correction()
+
+            # 6. Save processed file.
+            proc_path = filename.with_name("proc-" + filename.name)
+            command.debug(f"Saving processed image {proc_path}")
+            await fvc.write_proc_image(proc_path)
+            proc_image_saved = True
+
+            if reached is True:
+                break
+
+            if one is True or apply is False:
+                command.warning("Cancelling FVC loop after one iteration.")
+                break
+
+            if n == max_iterations:
+                command.warning("Maximum number of iterations reached.")
+                break
+
+            n += 1
+
+    except Exception as err:
+        failed = True
+        command.error(error=f"Failed processing image: {err}")
+        return False
+
+    finally:
+
+        command.debug("Turning LEDs off.")
+        await command.send_command("jaeger", "ieb fbi led1 led2 0")
+
+        if (
+            not isinstance(fps.configuration, ManualConfiguration)
+            and no_write_summary is False
+            and failed is False
+        ):
+            command.info("Saving confSummaryF file.")
+            await fvc.write_summary_F()
+
+        if proc_image_saved is False:
+            if filename is not None and fvc.proc_hdu is not None:
+                proc_path = filename.with_name("proc-" + filename.name)
+                command.debug(f"Saving processed image {proc_path}")
+                await fvc.write_proc_image(proc_path)
+            else:
+                command.warning("Cannot write processed image.")
+
+    if reached is True or apply is False:
+        return False
+    else:
+        return True
