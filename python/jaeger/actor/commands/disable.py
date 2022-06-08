@@ -37,10 +37,10 @@ async def disable(
     if config["fps"]["offline_positioners"] is not None:
         permanently_disabled += list(config["fps"]["offline_positioners"].keys())
 
-    if positioner_id not in fps:
-        return command.fail(f"Positioner {positioner_id} is not in the array.")
-
     if positioner_id:
+
+        if positioner_id not in fps:
+            return command.fail(f"Positioner {positioner_id} is not in the array.")
 
         positioner = fps.positioners[positioner_id]
 
