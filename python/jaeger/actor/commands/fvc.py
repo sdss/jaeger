@@ -18,6 +18,7 @@ from jaeger import config
 from jaeger.exceptions import FVCError
 from jaeger.fvc import FVC
 from jaeger.ieb import FVC as FVC_IEB
+from jaeger.target.configuration import ManualConfiguration
 from jaeger.utils import run_in_executor
 
 from . import jaeger_parser
@@ -244,6 +245,19 @@ async def led(command: Command[JaegerActor], fps: FPS, level: int):
     await command.send_command("jaeger", "fvc status")
 
     return command.finish()
+
+
+@fvc_parser.command()
+async def snapshot(command: JaegerCommandType, fps: FPS):
+    """Takes an FPS snapshot with the FVC. Roughly equivalent to fvc loop --no-apply."""
+
+    # Create a configuration from positions but don't make it active in the FPS.
+    positions = fps.get_positions_dict()
+    configuration = ManualConfiguration.create_from_positions(positions)
+
+    result = await take_fvc_loop(command, fps, apply=False, configuration=configuration)
+
+    return command.finish() if result is True else command.fail()
 
 
 async def take_fvc_loop(
