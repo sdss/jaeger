@@ -397,6 +397,7 @@ class FPS(BaseFPS["FPS"]):
         self: T,
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
+        keep_disabled: bool = True,
     ) -> T:
         """Initialises all positioners with status and firmware version.
 
@@ -404,12 +405,22 @@ class FPS(BaseFPS["FPS"]):
         ----------
         start_pollers
             Whether to initialise the pollers.
+        enable_low_temperature
+            Enables the low temperature warnings.
+        keep_disabled
+            Maintain the list of disabled/offline robots.
 
         """
 
         if start_pollers is None:
             start_pollers = config["fps"]["start_pollers"]
         assert isinstance(start_pollers, bool)
+
+        disabled: list[int] = []
+        if keep_disabled:
+            for positioner in self.positioners.values():
+                if positioner.offline or positioner.disabled:
+                    disabled.append(positioner.positioner_id)
 
         # Clear all robots
         self.clear()
@@ -471,7 +482,10 @@ class FPS(BaseFPS["FPS"]):
             positioner.fps = self
             positioner.firmware = get_fw_command.get_firmware()[reply.positioner_id]
 
-            if positioner.positioner_id in config["fps"]["disabled_positioners"]:
+            if (
+                positioner.positioner_id in config["fps"]["disabled_positioners"]
+                or positioner.positioner_id in disabled
+            ):
                 positioner.disabled = True
 
         # Add offline robots. Offline positioners are physically in the array but
