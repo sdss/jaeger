@@ -6,7 +6,13 @@
 
 * [#183](https://github.com/sdss/jaeger/issues/183) The `FVC.write_summaryF()` method now also produces some histograms and quiver plots that show the FVC convergence in wok and ra/dec coordinates.
 * [#184](https://github.com/sdss/jaeger/issues/184) Added a `jaeger.fvc.reprocess_configuration()` coroutine that allows to reprocess the final FVC image for a configuration with a different centroid method.
+* [#186](https://github.com/sdss/jaeger/issues/186) New command `fvc snapshot` that creates a temporary configuration from the current positions and takes an FVC measurement.
 * Add `jaeger configuration reload` command. It's equivalent to using `jaeger configuration load --no-clone DESIGNID` where `DESIGNID` is the currently loaded design.
+* If called without arguments, `disable` now outputs the list of currently disabled robots.
+
+### ✨ Improved
+
+* The list of manually disabled positioners is kept during reinitialisation.
 
 ### 🏷️ Changed
 

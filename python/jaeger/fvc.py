@@ -38,6 +38,7 @@ from jaeger.utils import run_in_executor
 
 if TYPE_CHECKING:
     from jaeger.actor import JaegerActor
+    from jaeger.target.configuration import BaseConfiguration
 
 
 __all__ = ["FVC"]
@@ -61,6 +62,7 @@ def get_transform(observatory: str):
 class FVC:
     """Focal View Camera class."""
 
+    configuration: Optional[BaseConfiguration]
     fibre_data: Optional[pandas.DataFrame]
     measurements: Optional[pandas.DataFrame]
     centroids: Optional[pandas.DataFrame]
@@ -95,6 +97,7 @@ class FVC:
     def reset(self):
         """Resets the instance."""
 
+        self.configuration = None
         self.fvc_transform: FVCTransformAPO | FVCTransformLCO | None = None
         self.fibre_data = None
         self.centroids = None
@@ -208,6 +211,7 @@ class FVC:
         self,
         path: pathlib.Path | str,
         positioner_coords: dict,
+        configuration: Optional[BaseConfiguration] = None,
         fibre_data: Optional[pandas.DataFrame] = None,
         fibre_type: str = "Metrology",
         centroid_method: str | None = None,
@@ -224,6 +228,9 @@ class FVC:
         positioner_coords
             A dictionary of positioner ID to ``(alpha, beta)`` with the current
             positions of the robots.
+        configuration
+            A configuration object to use for processing. If `None`, defaults to the
+            current `.FPS` loaded configuration.
         fibre_data
             A Pandas data frame with the expected coordinates of the targets. It
             is expected the data frame will have columns ``positioner_id``,
@@ -263,10 +270,12 @@ class FVC:
         if not os.path.exists(path):
             raise FVCError(f"FVC image {path} does not exist.")
 
+        self.configuration = configuration or self.fps.configuration
+
         if fibre_data is None:
-            if self.fps is None or self.fps.configuration is None:
+            if configuration is None:
                 raise FVCError("No fibre data and no configuration has been loaded.")
-            fibre_data = self.fps.configuration.assignment_data.fibre_table
+            fibre_data = configuration.assignment_data.fibre_table
 
         fdata = fibre_data.copy().reset_index().set_index("positioner_id")
 
@@ -658,8 +667,8 @@ class FVC:
 
         proc_hdus = fits.HDUList([fits.PrimaryHDU(), self.proc_hdu])
 
-        if self.fps and self.fps.configuration:
-            proc_hdus[1].header["CONFIGID"] = self.fps.configuration.configuration_id
+        if self.configuration:
+            proc_hdus[1].header["CONFIGID"] = self.configuration.configuration_id
         else:
             proc_hdus[1].header["CONFIGID"] = -999.0
 
@@ -737,8 +746,8 @@ class FVC:
             current_positions["startAlpha"] = numpy.nan
             current_positions["startBeta"] = numpy.nan
 
-            if self.fps.configuration:
-                robot_grid = self.fps.configuration.robot_grid
+            if self.configuration:
+                robot_grid = self.configuration.robot_grid
 
                 _cmd_alpha = []
                 _cmd_beta = []
@@ -861,7 +870,7 @@ class FVC:
     ):
         """Updates data with the last measured positions and write confSummaryF."""
 
-        if self.fps is None or self.fps.configuration is None:
+        if self.configuration is None:
             raise FVCError("write_summary_F can only be called with a configuration.")
 
         if self.fibre_data is None:
@@ -890,7 +899,7 @@ class FVC:
             if not numpy.isnan(alpha):
                 fdata.loc[idx[pid, :], ["alpha", "beta"]] = (alpha, beta)
 
-        configuration_copy = self.fps.configuration.copy()
+        configuration_copy = self.configuration.copy()
         configuration_copy.assignment_data.fibre_table = fdata.copy()
 
         for pid in measured.index.get_level_values(0).tolist():
@@ -928,7 +937,7 @@ class FVC:
 
         # Plot analysis of FVC loop.
         if plot and self.proc_image_path:
-            if self.fps.configuration.assignment_data.boresight is None:
+            if self.configuration.assignment_data.boresight is None:
                 self.log(
                     "Configuration does not have boresight set. "
                     "Cannot produce FVC plots.",
@@ -940,7 +949,7 @@ class FVC:
                 outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
 
                 plot_fvc_distances(
-                    self.fps.configuration,
+                    self.configuration,
                     configuration_copy.assignment_data.fibre_table,
                     path=outpath,
                 )
@@ -1001,8 +1010,8 @@ async def reprocess_configuration(
     fps = FPS.get_instance()
     assert not fps.can, "This function cannot be called on a running FPS instance."
 
-    fps.configuration = design.configuration
-    fps.configuration.configuration_id = configuration_id
+    configuration = design.configuration
+    configuration.configuration_id = configuration_id
 
     fvc = FVC(site)
 
@@ -1019,6 +1028,7 @@ async def reprocess_configuration(
     fvc.process_fvc_image(
         fimg,
         positioner_coords,
+        configuration=configuration,
         fibre_data=fiber_data,
         centroid_method=centroid_method,
         plot=False,

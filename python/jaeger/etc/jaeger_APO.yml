@@ -46,7 +46,7 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [54, 184, 463, 608, 1042, 1136, 1182]
+  disabled_positioners: [54, 184, 463, 608, 612, 1042, 1136, 1182, 1340]
   offline_positioners: null
   disable_collision_detection_positioners: []
   use_sync_line: false
