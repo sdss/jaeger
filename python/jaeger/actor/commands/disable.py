@@ -49,6 +49,7 @@ async def disable(
         command.warning(f"Positioner {positioner_id} is already disabled.")
 
     positioner.disabled = True
+    fps.disabled.add(positioner.positioner_id)
 
     return command.finish()
 
