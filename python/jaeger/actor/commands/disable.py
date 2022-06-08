@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 
 import click
 
+from jaeger import config
+
 from . import JaegerCommandType, jaeger_parser
 
 
@@ -31,11 +33,9 @@ async def disable(
 ):
     """Disables a positioner"""
 
-    disabled: list[int] = []
-
-    for positioner in fps.positioners.values():
-        if positioner.offline or positioner.disabled:
-            disabled.append(positioner.positioner_id)
+    permanently_disabled = config["fps"]["disabled_positioners"]
+    if config["fps"]["offline_positioners"] is not None:
+        permanently_disabled += list(config["fps"]["offline_positioners"].keys())
 
     if positioner_id not in fps:
         return command.fail(f"Positioner {positioner_id} is not in the array.")
@@ -50,7 +50,16 @@ async def disable(
         positioner.disabled = True
         fps.disabled.add(positioner.positioner_id)
 
-    return command.finish(disabled=list(sorted(disabled)))
+    manually_disabled: list[int] = []
+    for positioner in fps.positioners.values():
+        if positioner.offline or positioner.disabled:
+            if positioner.positioner_id not in permanently_disabled:
+                manually_disabled.append(positioner.positioner_id)
+
+    return command.finish(
+        permanently_disabled=list(sorted(permanently_disabled)),
+        manually_disabled=list(sorted(manually_disabled)),
+    )
 
 
 @jaeger_parser.command()

@@ -176,7 +176,11 @@
         }
       ]
     },
-    "disabled": { "type": "array", "items": { "type": "integer" } },
+    "permanently_disabled": {
+      "type": "array",
+      "items": { "type": "integer" }
+    },
+    "manually_disabled": { "type": "array", "items": { "type": "integer" } },
     "fps_status": {
       "type": "string"
     },
