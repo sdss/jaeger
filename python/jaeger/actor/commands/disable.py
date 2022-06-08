@@ -38,7 +38,7 @@ async def disable(
             if positioner.offline or positioner.disabled:
                 disabled.append(positioner.positioner_id)
 
-        return command.finish(disabled=disabled)
+        return command.finish(disabled=list(sorted(disabled)))
 
     if positioner_id not in fps:
         return command.fail(f"Positioner {positioner_id} is not in the array.")
