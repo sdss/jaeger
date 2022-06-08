@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from jaeger import FPS
     from jaeger.actor import JaegerActor, JaegerCommandType
+    from jaeger.target.configuration import BaseConfiguration
 
 
 __all__ = ["fvc_parser"]
@@ -142,7 +143,12 @@ async def loop(command: Command[JaegerActor], fps: FPS, **kwargs):
 
     """
 
-    result = await take_fvc_loop(command, fps, **kwargs)
+    result = await take_fvc_loop(
+        command,
+        fps,
+        configuration=fps.configuration,
+        **kwargs,
+    )
 
     if result is True:
         return command.finish()
@@ -256,6 +262,7 @@ async def take_fvc_loop(
     centroid_method: str | None = None,
     use_invkin: bool = True,
     no_write_summary: bool = False,
+    configuration: BaseConfiguration | None = None,
 ):
     """Helper to take an FVC loop that can be called externally."""
 
@@ -263,7 +270,9 @@ async def take_fvc_loop(
     fbi_level = fbi_level or config["fvc"]["fbi_level"]
     assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
 
-    if fps.configuration is None:
+    configuration = configuration or fps.configuration
+
+    if configuration is None:
         command.error("Configuration not loaded.")
         return False
 
@@ -282,8 +291,7 @@ async def take_fvc_loop(
             command.debug("The rotator is halted.")
 
     command.debug("Turning LEDs on.")
-    await command.send_command("jaeger", f"ieb fbi led1 {fbi_level}")
-    await command.send_command("jaeger", f"ieb fbi led2 {fbi_level}")
+    await command.send_command("jaeger", f"ieb fbi led1 led2 {fbi_level}")
 
     if one is True and apply is True:
         command.warning(
@@ -325,6 +333,7 @@ async def take_fvc_loop(
                 fvc.process_fvc_image,
                 filename,
                 positioner_coords,
+                configuration=configuration,
                 plot=plot,
                 centroid_method=centroid_method,
                 use_new_invkin=use_invkin,
@@ -394,8 +403,7 @@ async def take_fvc_loop(
     finally:
 
         command.debug("Turning LEDs off.")
-        await command.send_command("jaeger", "ieb fbi led1 0")
-        await command.send_command("jaeger", "ieb fbi led2 0")
+        await command.send_command("jaeger", "ieb fbi led1 led2 0")
 
         if no_write_summary is False and failed is False:
             command.info("Saving confSummaryF file.")
