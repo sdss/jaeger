@@ -255,7 +255,13 @@ async def snapshot(command: JaegerCommandType, fps: FPS):
     positions = fps.get_positions_dict()
     configuration = ManualConfiguration.create_from_positions(positions)
 
-    result = await take_fvc_loop(command, fps, apply=False, configuration=configuration)
+    result = await take_fvc_loop(
+        command,
+        fps,
+        apply=False,
+        configuration=configuration,
+        no_write_summary=True,
+    )
 
     return command.finish() if result is True else command.fail()
 
