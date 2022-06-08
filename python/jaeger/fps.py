@@ -240,6 +240,8 @@ class FPS(BaseFPS["FPS"]):
         self._locked = False
         self.locked_by: List[int] = []
 
+        self.disabled: set[int] = set([])
+
         if self.ieb is None or self.ieb is True:
             self.ieb = config["files"]["ieb_config"]
 
@@ -416,11 +418,12 @@ class FPS(BaseFPS["FPS"]):
             start_pollers = config["fps"]["start_pollers"]
         assert isinstance(start_pollers, bool)
 
-        disabled: list[int] = []
         if keep_disabled:
             for positioner in self.positioners.values():
                 if positioner.offline or positioner.disabled:
-                    disabled.append(positioner.positioner_id)
+                    self.disabled.add(positioner.positioner_id)
+        else:
+            self.disabled = set([])
 
         # Clear all robots
         self.clear()
@@ -484,9 +487,10 @@ class FPS(BaseFPS["FPS"]):
 
             if (
                 positioner.positioner_id in config["fps"]["disabled_positioners"]
-                or positioner.positioner_id in disabled
+                or positioner.positioner_id in self.disabled
             ):
                 positioner.disabled = True
+                self.disabled.add(positioner.positioner_id)
 
         # Add offline robots. Offline positioners are physically in the array but
         # they don't reply to commands and we need to specify their position. Once
@@ -502,6 +506,8 @@ class FPS(BaseFPS["FPS"]):
                 positioner.offline = True
                 positioner.alpha = off_alpha
                 positioner.beta = off_beta
+
+                self.disabled.add(positioner.positioner_id)
 
         # Mark as initialised here although we have some more work to do.
         self.initialised = True
