@@ -23,21 +23,34 @@ __all__ = ["disable", "enable"]
 
 
 @jaeger_parser.command()
-@click.argument("POSITIONER-ID", type=int)
-async def disable(command: JaegerCommandType, fps: FPS, positioner_id: int):
+@click.argument("POSITIONER-ID", type=int, required=False)
+async def disable(
+    command: JaegerCommandType,
+    fps: FPS,
+    positioner_id: int | None = None,
+):
     """Disables a positioner"""
+
+    disabled: list[int] = []
+
+    for positioner in fps.positioners.values():
+        if positioner.offline or positioner.disabled:
+            disabled.append(positioner.positioner_id)
 
     if positioner_id not in fps:
         return command.fail(f"Positioner {positioner_id} is not in the array.")
 
-    positioner = fps.positioners[positioner_id]
+    if positioner_id:
 
-    if positioner.disabled:
-        command.warning(f"Positioner {positioner_id} is already disabled.")
+        positioner = fps.positioners[positioner_id]
 
-    positioner.disabled = True
+        if positioner.disabled:
+            command.warning(f"Positioner {positioner_id} is already disabled.")
 
-    return command.finish()
+        positioner.disabled = True
+        fps.disabled.add(positioner.positioner_id)
+
+    return command.finish(disabled=list(sorted(disabled)))
 
 
 @jaeger_parser.command()
