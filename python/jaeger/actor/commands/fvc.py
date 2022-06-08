@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from clu import Command
 
     from jaeger import FPS
-    from jaeger.actor import JaegerActor
+    from jaeger.actor import JaegerActor, JaegerCommandType
 
 
 __all__ = ["fvc_parser"]
@@ -133,8 +133,115 @@ async def expose(
     is_flag=True,
     help="Does not try to write a confSummaryF file.",
 )
-async def loop(
-    command: Command[JaegerActor],
+async def loop(command: Command[JaegerActor], fps: FPS, **kwargs):
+    """Executes the FVC correction loop.
+
+    This routine will turn the FBI LEDs on, take FVC exposures, process them,
+    calculate the offset correction and applies them. Loops until the desided
+    convergence is achieved.
+
+    """
+
+    result = await take_fvc_loop(command, fps, **kwargs)
+
+    if result is True:
+        return command.finish()
+    else:
+        return command.fail("The FVC loop failed.")
+
+
+@fvc_parser.command()
+async def status(command: Command[JaegerActor], fps: FPS):
+    """Reports the status of the FVC."""
+
+    fvc_ieb = FVC_IEB.create()
+
+    try:
+        status = {}
+        categories = fvc_ieb.get_categories()
+        for category in sorted(categories):
+            cat_data = await fvc_ieb.read_category(category)
+            status[category] = []
+            for cd in cat_data:
+                value = cat_data[cd][0]
+                if value == "closed":
+                    value = True
+                elif value == "open":
+                    value = False
+                else:
+                    value = round(value, 1)
+                status[category].append(value)
+
+        command.finish(status)
+
+    except DriftError:
+        return command.fail(error="FVC IEB is unavailable or failed to connect.")
+
+
+async def _power_device(device: str, mode: str):
+    """Power on/off the device."""
+
+    fvc_ieb = FVC_IEB.create()
+
+    dev: Relay = cast(Relay, fvc_ieb.get_device(device))
+    if mode == "on":
+        await dev.close()
+    else:
+        await dev.open()
+
+
+async def _execute_on_off_command(
+    command: Command[JaegerActor], device: str, mode: str
+):
+    """Executes the on/off command."""
+
+    mode = mode.lower()
+
+    try:
+        await _power_device(device, mode)
+        command.info(text=f"{device} is now {mode}.")
+    except DriftError:
+        return command.fail(error=f"Failed to turn {device} {mode}.")
+
+    await command.send_command("jaeger", "fvc status")
+
+    return command.finish()
+
+
+@fvc_parser.command()
+@click.argument("MODE", type=click.Choice(["on", "off"], case_sensitive=False))
+async def camera(command: Command[JaegerActor], fps: FPS, mode: str):
+    """Turns camera on/off."""
+
+    await _execute_on_off_command(command, "FVC", mode)
+
+
+@fvc_parser.command()
+@click.argument("MODE", type=click.Choice(["on", "off"], case_sensitive=False))
+async def NUC(command: Command[JaegerActor], fps: FPS, mode: str):
+    """Turns NUC on/off."""
+
+    await _execute_on_off_command(command, "NUC", mode)
+
+
+@fvc_parser.command()
+@click.argument("LEVEL", type=int)
+async def led(command: Command[JaegerActor], fps: FPS, level: int):
+    """Sets the level of the FVC LED."""
+
+    fvc_ieb = FVC_IEB.create()
+    led = fvc_ieb.get_device("LED1")
+
+    raw_value = 32 * int(1023 * (level / 100))
+    await led.write(raw_value)
+
+    await command.send_command("jaeger", "fvc status")
+
+    return command.finish()
+
+
+async def take_fvc_loop(
+    command: JaegerCommandType,
     fps: FPS,
     exposure_time: float | None = None,
     fbi_level: float | None = None,
@@ -150,20 +257,15 @@ async def loop(
     use_invkin: bool = True,
     no_write_summary: bool = False,
 ):
-    """Executes the FVC correction loop.
-
-    This routine will turn the FBI LEDs on, take FVC exposures, process them,
-    calculate the offset correction and applies them. Loops until the desided
-    convergence is achieved.
-
-    """
+    """Helper to take an FVC loop that can be called externally."""
 
     exposure_time = exposure_time or config["fvc"]["exposure_time"]
     fbi_level = fbi_level or config["fvc"]["fbi_level"]
     assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
 
     if fps.configuration is None:
-        return command.fail("Configuration not loaded.")
+        command.error("Configuration not loaded.")
+        return False
 
     fvc = FVC(fps.observatory, command=command)
 
@@ -174,7 +276,8 @@ async def loop(
     else:
         rot_status = axis_cmd.replies.get("AxisCmdState")[2]
         if rot_status != "Halted":
-            return command.fail(f"Cannot expose FVC while the rotator is {rot_status}.")
+            command.error(f"Cannot expose FVC while the rotator is {rot_status}.")
+            return False
         else:
             command.debug("The rotator is halted.")
 
@@ -285,7 +388,8 @@ async def loop(
 
     except Exception as err:
         failed = True
-        return command.fail(error=f"Failed processing image: {err}")
+        command.error(error=f"Failed processing image: {err}")
+        return False
 
     finally:
 
@@ -306,96 +410,6 @@ async def loop(
                 command.warning("Cannot write processed image.")
 
     if reached is True or apply is False:
-        return command.finish()
+        return False
     else:
-        return command.fail("The FVC loop failed.")
-
-
-@fvc_parser.command()
-async def status(command: Command[JaegerActor], fps: FPS):
-    """Reports the status of the FVC."""
-
-    fvc_ieb = FVC_IEB.create()
-
-    try:
-        status = {}
-        categories = fvc_ieb.get_categories()
-        for category in sorted(categories):
-            cat_data = await fvc_ieb.read_category(category)
-            status[category] = []
-            for cd in cat_data:
-                value = cat_data[cd][0]
-                if value == "closed":
-                    value = True
-                elif value == "open":
-                    value = False
-                else:
-                    value = round(value, 1)
-                status[category].append(value)
-
-        command.finish(status)
-
-    except DriftError:
-        return command.fail(error="FVC IEB is unavailable or failed to connect.")
-
-
-async def _power_device(device: str, mode: str):
-    """Power on/off the device."""
-
-    fvc_ieb = FVC_IEB.create()
-
-    dev: Relay = cast(Relay, fvc_ieb.get_device(device))
-    if mode == "on":
-        await dev.close()
-    else:
-        await dev.open()
-
-
-async def _execute_on_off_command(
-    command: Command[JaegerActor], device: str, mode: str
-):
-    """Executes the on/off command."""
-
-    mode = mode.lower()
-
-    try:
-        await _power_device(device, mode)
-        command.info(text=f"{device} is now {mode}.")
-    except DriftError:
-        return command.fail(error=f"Failed to turn {device} {mode}.")
-
-    await command.send_command("jaeger", "fvc status")
-
-    return command.finish()
-
-
-@fvc_parser.command()
-@click.argument("MODE", type=click.Choice(["on", "off"], case_sensitive=False))
-async def camera(command: Command[JaegerActor], fps: FPS, mode: str):
-    """Turns camera on/off."""
-
-    await _execute_on_off_command(command, "FVC", mode)
-
-
-@fvc_parser.command()
-@click.argument("MODE", type=click.Choice(["on", "off"], case_sensitive=False))
-async def NUC(command: Command[JaegerActor], fps: FPS, mode: str):
-    """Turns NUC on/off."""
-
-    await _execute_on_off_command(command, "NUC", mode)
-
-
-@fvc_parser.command()
-@click.argument("LEVEL", type=int)
-async def led(command: Command[JaegerActor], fps: FPS, level: int):
-    """Sets the level of the FVC LED."""
-
-    fvc_ieb = FVC_IEB.create()
-    led = fvc_ieb.get_device("LED1")
-
-    raw_value = 32 * int(1023 * (level / 100))
-    await led.write(raw_value)
-
-    await command.send_command("jaeger", "fvc status")
-
-    return command.finish()
+        return True
