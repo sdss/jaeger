@@ -31,27 +31,26 @@ async def disable(
 ):
     """Disables a positioner"""
 
-    if positioner_id is None:
-        disabled: list[int] = []
+    disabled: list[int] = []
 
-        for positioner in fps.positioners.values():
-            if positioner.offline or positioner.disabled:
-                disabled.append(positioner.positioner_id)
-
-        return command.finish(disabled=list(sorted(disabled)))
+    for positioner in fps.positioners.values():
+        if positioner.offline or positioner.disabled:
+            disabled.append(positioner.positioner_id)
 
     if positioner_id not in fps:
         return command.fail(f"Positioner {positioner_id} is not in the array.")
 
-    positioner = fps.positioners[positioner_id]
+    if positioner_id:
 
-    if positioner.disabled:
-        command.warning(f"Positioner {positioner_id} is already disabled.")
+        positioner = fps.positioners[positioner_id]
 
-    positioner.disabled = True
-    fps.disabled.add(positioner.positioner_id)
+        if positioner.disabled:
+            command.warning(f"Positioner {positioner_id} is already disabled.")
 
-    return command.finish()
+        positioner.disabled = True
+        fps.disabled.add(positioner.positioner_id)
+
+    return command.finish(disabled=list(sorted(disabled)))
 
 
 @jaeger_parser.command()
