@@ -590,6 +590,33 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
 
 @jaeger.command()
 @click.argument("positioner_id", metavar="POSITIONER", type=int)
+@click.option(
+    "--axis",
+    type=click.Choice(["alpha", "beta"], case_sensitive=True),
+    help="The axis to home. If not set, homes both axes at the same time.",
+)
+@pass_fps
+@cli_coro
+async def home(fps_maker: FPSWrapper, positioner_id: int, axis: str | None = None):
+    """Home a single positioner, sending a GO_TO_DATUMS command."""
+
+    alpha: bool = axis == "alpha" or axis is None
+    beta: bool = axis == "beta" or axis is None
+
+    async with fps_maker as fps:
+
+        if positioner_id not in fps or fps[positioner_id].initialised is False:
+            raise ValueError("Positioner is not connected.")
+        if fps[positioner_id].disabled or fps[positioner_id].offline:
+            raise ValueError("Positioner has been disabled.")
+
+        await fps[positioner_id].home(alpha=alpha, beta=beta)
+
+    return
+
+
+@jaeger.command()
+@click.argument("positioner_id", metavar="POSITIONER", type=int)
 @pass_fps
 @cli_coro
 async def status(fps_maker: FPSWrapper, positioner_id: int):
