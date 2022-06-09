@@ -127,7 +127,8 @@ async def home(
                     pos.positioner_id: (alpha0, pos.beta)
                     for pos in fps.positioners.values()
                     if pos.positioner_id in positioner_ids and pos.beta is not None
-                }
+                },
+                go_cowboy=True,
             )
         except TrajectoryError as err:
             return command.fail(f"Trajectory failed with error {err}.")
@@ -274,7 +275,8 @@ async def _home_beta_phase(
                 pos.positioner_id: (pos.alpha, start_angle)
                 for pos in fps.positioners.values()
                 if pos.positioner_id in positioner_ids and pos.alpha is not None
-            }
+            },
+            go_cowboy=True,
         )
     except TrajectoryError as err:
         raise JaegerError(f"Trajectory failed with error {err}.")
