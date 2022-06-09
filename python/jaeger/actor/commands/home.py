@@ -57,6 +57,11 @@ ALPHA_FOLDED, BETA_FOLDED = config["kaiju"]["lattice_position"]
     help="Angle from which to start the calibration.",
 )
 @click.option(
+    "--skip-phase-1",
+    is_flag=True,
+    help="Do not run phase 1.",
+)
+@click.option(
     "-d",
     "--dry-run",
     is_flag=True,
@@ -68,6 +73,7 @@ async def home(
     axis: str,
     positioner_ids: tuple[int, ...] | list[int] = (),
     start_angle: float = 5.0,
+    skip_phase_1: bool = False,
     dry_run: bool = False,
 ):
     """Re-homes positioner datums in bulk."""
@@ -156,8 +162,11 @@ async def home(
 
         # All robots that should be moved in phase 1, even if won't be homed.
         phase_1_pids = [pid for pid in positioner_ids if pid not in phase_2_pids]
+
         # Robots in phase 1 that will be homed.
         phase_1_home_pids = list(set(positioner_ids) & set(phase_1_pids))
+        if skip_phase_1:
+            phase_1_home_pids = []
 
         if len(phase_1_home_pids) > 0:
 
