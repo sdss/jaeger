@@ -202,7 +202,7 @@ async def create_random_configuration(
         else:
             if safe:
                 safe_mode = config["safe_mode"]
-                if safe_mode is False:
+                if safe_mode is True:
                     safe_mode = {"min_beta": 165, "max_beta": 175}
 
                 robot.setAlphaBeta(
