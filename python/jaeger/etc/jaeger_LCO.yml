@@ -46,10 +46,8 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [611, 1193, 68, 744, 235, 392, 1159, 1242]
-  offline_positioners:
-    620: [180, 180]
-    1010: [180, 180]
+  disabled_positioners: []
+  offline_positioners: null
   disable_collision_detection_positioners: []
   open_loop_positioners: []
   use_sync_line: false
@@ -123,7 +121,7 @@ low_temperature:
   holding_torque_normal: [0, 30]
   holding_torque_very_cold: [45, 30]
 
-safe_mode: false
+safe_mode: true
 
 debug: false
 
