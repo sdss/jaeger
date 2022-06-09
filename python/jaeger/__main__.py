@@ -27,7 +27,7 @@ from sdsstools.daemonizer import DaemonGroup
 
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
-from jaeger.commands.calibration import calibrate_positioner
+from jaeger.commands.calibration import calibrate_positioners
 from jaeger.commands.goto import goto as goto_
 from jaeger.exceptions import (
     FPSLockedError,
@@ -463,8 +463,9 @@ async def calibrate(fps_maker, positioner_id, motors, datums, cogging):
 
     async with fps_maker as fps:
         await fps.initialise(start_pollers=False)
-        await calibrate_positioner(
+        await calibrate_positioners(
             fps,
+            "both",
             positioner_id,
             motors=motors,
             datums=datums,
