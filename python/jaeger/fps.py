@@ -624,7 +624,7 @@ class FPS(BaseFPS["FPS"]):
 
         # Ensure closed loop mode for remaining robots
         closed_loop_positioners = list(
-            set(self.positioners.keys())
+            set([pid for pid in self.positioners if not self[pid].disabled])
             - set(disable_collision)
             - set(open_loop_positioners)
         )
