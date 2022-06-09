@@ -531,12 +531,12 @@ class Positioner(StatusMixIn):
             )
         elif alpha:
             await self.send_command(
-                "GO_TO_DATUMS_ALPHA",
+                "GO_TO_DATUM_ALPHA",
                 error="failed while sending GO_TO_DATUMS_ALPHA command.",
             )
         elif beta:
             await self.send_command(
-                "GO_TO_DATUMS_BETA",
+                "GO_TO_DATUM_BETA",
                 error="failed while sending GO_TO_DATUMS_BETA command.",
             )
 
