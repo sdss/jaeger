@@ -40,6 +40,8 @@ COLLISION_BUFFER: float = 3.2
 ALPHA1: float = 115
 ALPHA2: float = 52
 
+ALPHA_FOLDED, BETA_FOLDED = config["kaiju"]["lattice_position"]
+
 
 @jaeger_parser.command()
 @click.argument(
@@ -71,8 +73,6 @@ async def home(
     """Re-homes positioner datums in bulk."""
 
     axis = axis.lower()
-
-    alpha0, beta0 = config["kaiju"]["lattice_position"]
 
     positioner_ids = list(positioner_ids)
     if positioner_ids == []:
@@ -124,7 +124,7 @@ async def home(
         try:
             await fps.goto(
                 {
-                    pos.positioner_id: (alpha0, pos.beta)
+                    pos.positioner_id: (ALPHA_FOLDED, pos.beta)
                     for pos in fps.positioners.values()
                     if pos.positioner_id in positioner_ids and pos.beta is not None
                 },
@@ -154,11 +154,14 @@ async def home(
                 robot.setAlphaBeta(ALPHA1, 180)
                 phase_2_pids.append(robot.id)
 
+        # All robots that should be moved in phase 1, even if won't be homed.
         phase_1_pids = [pid for pid in positioner_ids if pid not in phase_2_pids]
+        # Robots in phase 1 that will be homed.
+        phase_1_home_pids = list(set(positioner_ids) & set(phase_1_pids))
 
-        if set(positioner_ids) & set(phase_1_pids):
+        if len(phase_1_home_pids) > 0:
 
-            to_destination_1, from_destination_1, failed, _ = get_path_pair(
+            _, from_destination_1, failed, _ = get_path_pair(
                 grid1,
                 path_generation_mode="greedy",
             )
@@ -169,11 +172,10 @@ async def home(
                 await _home_beta_phase(
                     command,
                     fps,
-                    phase_1_pids,
+                    phase_1_home_pids,
                     1,
                     start_angle,
                     from_destination_1,
-                    to_destination_1,
                     dry_run=dry_run,
                 )
             except JaegerError as err:
@@ -183,7 +185,10 @@ async def home(
 
             command.info("No selected positioners in phase 1. Skipping ")
 
-        if set(phase_2_pids) & set(positioner_ids):
+        # Robots in phase 2 that will be homed.
+        phase_2_home_pids = list(set(positioner_ids) & set(phase_2_pids))
+
+        if len(phase_2_home_pids) > 0:
 
             command.info("Creating paths for phase 2.")
 
@@ -194,7 +199,7 @@ async def home(
                 else:
                     robot.setAlphaBeta(ALPHA2, 180)
 
-            to_destination_2, from_destination_2, failed, _ = get_path_pair(
+            _, from_destination_2, failed, _ = get_path_pair(
                 grid2,
                 path_generation_mode="greedy",
             )
@@ -205,12 +210,12 @@ async def home(
                 await _home_beta_phase(
                     command,
                     fps,
-                    phase_2_pids,
+                    phase_2_home_pids,
                     2,
                     start_angle,
                     from_destination_2,
-                    to_destination_2,
                     dry_run=dry_run,
+                    extra_zero_positioner_ids=phase_1_home_pids,
                 )
             except JaegerError as err:
                 return command.fail(f"Phase 2 homing failed with error: {err}")
@@ -251,12 +256,12 @@ async def check_positions(
 async def _home_beta_phase(
     command: JaegerCommandType,
     fps: FPS,
-    positioner_ids: list[int],
+    home_positioner_ids: list[int],
     phase: int,
     start_angle: float,
     from_destination: dict,
-    to_destination: dict,
     dry_run: bool = False,
+    extra_zero_positioner_ids: list[int] = [],
 ):
 
     command.info(f"Moving robots to phase {phase} initial position.")
@@ -267,12 +272,12 @@ async def _home_beta_phase(
 
     command.info(f"Starting phase {phase} calibration.")
 
-    command.debug(f"Homing positioners {positioner_ids}.")
+    command.debug(f"Homing positioners {home_positioner_ids}.")
 
     if dry_run is False:
         command.info("Homing in beta.")
         home_tasks = []
-        for pid in positioner_ids:
+        for pid in home_positioner_ids:
             home_tasks.append(fps[pid].home(alpha=False, beta=True))
         await asyncio.gather(*home_tasks)
     else:
@@ -286,14 +291,44 @@ async def _home_beta_phase(
             {
                 pos.positioner_id: (pos.alpha, start_angle)
                 for pos in fps.positioners.values()
-                if pos.positioner_id in positioner_ids and pos.alpha is not None
+                if pos.positioner_id in home_positioner_ids and pos.alpha is not None
             },
             go_cowboy=True,
         )
     except TrajectoryError as err:
         raise JaegerError(f"Trajectory failed with error {err}.")
 
+    # Although it's probably ok, we don't want to simply apply the to_destination
+    # trajectory because the offsets have changed and that may cause a collision.
+    # Instead we create a new grid, manually set the beta offsets to zero, then
+    # calculate and execute an unwind.
+
     command.info("Reverting to folded.")
+
+    await fps.update_position()
+
+    grid_unwind = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
+    for robot in grid_unwind.robotDict.values():
+        if robot.id in home_positioner_ids or robot.id in extra_zero_positioner_ids:
+            robot.betaOffDeg = 0.0
+        if robot.isOffline:
+            continue
+        robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
+        robot.setDestinationAlphaBeta(ALPHA_FOLDED, BETA_FOLDED)
+
+    # This is equivalent to the usual unwind function but using the customised
+    # grid with zeroed offsets.
+    to_destination, _, did_fail, deadlocks = get_path_pair(
+        grid_unwind,
+        path_generation_mode="greedy",
+        ignore_did_fail=False,
+        stop_if_deadlock=False,
+    )
+
+    if did_fail:
+        raise JaegerError("Cannot generate unwind trajectory.")
+    if len(deadlocks) > 0:
+        raise JaegerError(f"Deadlocks found in unwind trajectory: {deadlocks}")
 
     try:
         await fps.send_trajectory(to_destination, command=command)
