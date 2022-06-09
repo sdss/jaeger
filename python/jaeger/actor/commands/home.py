@@ -32,7 +32,7 @@ __all__ = ["home"]
 
 
 SAFE_BETA_MIN: float = 165.0
-SAFE_BETA_MAX: float = 180.0
+SAFE_BETA_MAX: float = 181.0
 
 START_ANGLE: float = 5.0
 COLLISION_BUFFER: float = 3.2
@@ -154,58 +154,70 @@ async def home(
                 robot.setAlphaBeta(ALPHA1, 180)
                 phase_2_pids.append(robot.id)
 
-        to_destination_1, from_destination_1, failed, _ = get_path_pair(
-            grid1,
-            path_generation_mode="greedy",
-        )
-        if failed:
-            return command.fail("Failed generating paths for beta homing phase 1.")
-
         phase_1_pids = [pid for pid in positioner_ids if pid not in phase_2_pids]
 
-        try:
-            await _home_beta_phase(
-                command,
-                fps,
-                phase_1_pids,
-                1,
-                start_angle,
-                from_destination_1,
-                to_destination_1,
-                dry_run=dry_run,
+        if set(positioner_ids) & set(phase_1_pids):
+
+            to_destination_1, from_destination_1, failed, _ = get_path_pair(
+                grid1,
+                path_generation_mode="greedy",
             )
-        except JaegerError as err:
-            return command.fail(f"Phase 1 homing failed with error: {err}")
+            if failed:
+                return command.fail("Failed generating paths for beta homing phase 1.")
 
-        command.info("Creating paths for phase 2.")
+            try:
+                await _home_beta_phase(
+                    command,
+                    fps,
+                    phase_1_pids,
+                    1,
+                    start_angle,
+                    from_destination_1,
+                    to_destination_1,
+                    dry_run=dry_run,
+                )
+            except JaegerError as err:
+                return command.fail(f"Phase 1 homing failed with error: {err}")
 
-        grid2 = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
-        for robot in grid2.values():
-            if robot.id in phase_2_pids:
-                robot.setAlphaBeta(ALPHA2, start_angle)
-            else:
-                robot.setAlphaBeta(ALPHA2, 180)
+        else:
 
-        to_destination_2, from_destination_2, failed, _ = get_path_pair(
-            grid2,
-            path_generation_mode="greedy",
-        )
-        if failed:
-            return command.fail("Failed generating paths for beta homing phase 2.")
+            command.info("No selected positioners in phase 1. Skipping ")
 
-        try:
-            await _home_beta_phase(
-                command,
-                fps,
-                phase_2_pids,
-                2,
-                start_angle,
-                from_destination_2,
-                to_destination_2,
-                dry_run=dry_run,
+        if set(phase_2_pids) & set(positioner_ids):
+
+            command.info("Creating paths for phase 2.")
+
+            grid2 = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
+            for robot in grid2.values():
+                if robot.id in phase_2_pids:
+                    robot.setAlphaBeta(ALPHA2, start_angle)
+                else:
+                    robot.setAlphaBeta(ALPHA2, 180)
+
+            to_destination_2, from_destination_2, failed, _ = get_path_pair(
+                grid2,
+                path_generation_mode="greedy",
             )
-        except JaegerError as err:
-            return command.fail(f"Phase 2 homing failed with error: {err}")
+            if failed:
+                return command.fail("Failed generating paths for beta homing phase 2.")
+
+            try:
+                await _home_beta_phase(
+                    command,
+                    fps,
+                    phase_2_pids,
+                    2,
+                    start_angle,
+                    from_destination_2,
+                    to_destination_2,
+                    dry_run=dry_run,
+                )
+            except JaegerError as err:
+                return command.fail(f"Phase 2 homing failed with error: {err}")
+
+        else:
+
+            command.info("No selected positioners in phase 2. Skipping ")
 
     return command.finish("Homing complete.")
 
