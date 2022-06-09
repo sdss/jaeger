@@ -46,7 +46,7 @@ ALPHA2: float = 52
     "AXIS",
     type=click.Choice(["alpha", "beta"], case_sensitive=False),
 )
-@click.argument("POSITIONER_IDS", nargs=-1, required=False)
+@click.argument("POSITIONER_IDS", type=int, nargs=-1, required=False)
 @click.option(
     "--start-angle",
     type=float,
@@ -83,7 +83,7 @@ async def home(
         ]
     else:
         for positioner_id in positioner_ids:
-            if positioner_id not in fps.positioners:
+            if positioner_id not in fps.positioners.keys():
                 return command.fail(f"Unknown positioner {positioner_id}.")
             if fps[positioner_id].disabled or fps[positioner_id].offline:
                 return command.fail(f"Cannot home disabled positioner {positioner_id}.")
