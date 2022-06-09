@@ -309,28 +309,36 @@ async def _home_beta_phase(
 
     grid_unwind = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
     for robot in grid_unwind.robotDict.values():
-        if robot.id in home_positioner_ids or robot.id in extra_zero_positioner_ids:
-            robot.betaOffDeg = 0.0
+        if dry_run is False:
+            if robot.id in home_positioner_ids or robot.id in extra_zero_positioner_ids:
+                robot.betaOffDeg = 0.0
         if robot.isOffline:
             continue
         robot.setAlphaBeta(fps[robot.id].alpha, fps[robot.id].beta)
         robot.setDestinationAlphaBeta(ALPHA_FOLDED, BETA_FOLDED)
 
-    # This is equivalent to the usual unwind function but using the customised
-    # grid with zeroed offsets.
+    # This is equivalent to unwind with force=True but using the customised
+    # grid with zeroed offsets. We want to force-unwind to ensure that most of
+    # the robots make it home and there are only a few deadlocked robots that
+    # need manual intervention.
     to_destination, _, did_fail, deadlocks = get_path_pair(
         grid_unwind,
         path_generation_mode="greedy",
-        ignore_did_fail=False,
-        stop_if_deadlock=False,
+        ignore_did_fail=True,
+        stop_if_deadlock=True,
     )
 
-    if did_fail:
-        raise JaegerError("Cannot generate unwind trajectory.")
     if len(deadlocks) > 0:
-        raise JaegerError(f"Deadlocks found in unwind trajectory: {deadlocks}")
+        command.warning("Deadlocks found in unwind trajectory but will unwind.")
 
     try:
         await fps.send_trajectory(to_destination, command=command)
     except TrajectoryError as err:
         raise JaegerError(f"Trajectory failed with error: {err}")
+
+    if len(deadlocks) > 0:
+        command.warning(f"Robots that have been homed in beta: {home_positioner_ids}")
+        raise JaegerError(
+            f"Failed to unwind robots {deadlocks}. Remove the beta offsets for the "
+            "homed robots in fps_calibrations, then try to manually unwind."
+        )
