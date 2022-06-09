@@ -49,6 +49,7 @@ fps:
   disabled_positioners: [54, 184, 463, 608, 612, 1042, 1136, 1182, 1340]
   offline_positioners: null
   disable_collision_detection_positioners: []
+  open_loop_positioners: []
   use_sync_line: false
   snapshot_path: /data/logs/jaeger/snapshots/
   configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/

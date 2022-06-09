@@ -51,6 +51,7 @@ fps:
     620: [180, 180]
     1010: [180, 180]
   disable_collision_detection_positioners: []
+  open_loop_positioners: []
   use_sync_line: false
   snapshot_path: /data/logs/jaeger/snapshots/
   configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/

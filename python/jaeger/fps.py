@@ -592,20 +592,50 @@ class FPS(BaseFPS["FPS"]):
 
         # Disable collision detection for listed robots.
         disable_collision = config["fps"]["disable_collision_detection_positioners"]
-        disable_connected = list(set(disable_collision) & set(self.positioners.keys()))
-        if len(disable_connected) > 0:
+        if len(disable_collision) > 0:
             warnings.warn(
-                f"Disabling collision detection for positioners {disable_connected}.",
+                f"Disabling collision detection for positioners: {disable_collision}.",
                 JaegerUserWarning,
             )
             await self.send_command(
                 CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_connected,
+                positioner_ids=disable_collision,
             )
             await self.send_command(
                 CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_connected,
+                positioner_ids=disable_collision,
             )
+
+        # Set robots to open loop mode
+        open_loop_positioners = config["fps"].get("open_loop_positioners", [])
+        if len(open_loop_positioners) > 0:
+            warnings.warn(
+                f"Setting open loop mode for positioners: {open_loop_positioners}.",
+                JaegerUserWarning,
+            )
+            await self.send_command(
+                CommandID.ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=open_loop_positioners,
+            )
+            await self.send_command(
+                CommandID.BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=open_loop_positioners,
+            )
+
+        # Ensure closed loop mode for remaining robots
+        closed_loop_positioners = list(
+            set(self.positioners.keys())
+            - set(disable_collision)
+            - set(open_loop_positioners)
+        )
+        await self.send_command(
+            CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
+            positioner_ids=closed_loop_positioners,
+        )
+        await self.send_command(
+            CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
+            positioner_ids=closed_loop_positioners,
+        )
 
         # Start temperature watcher.
         if self.__temperature_task is not None:
