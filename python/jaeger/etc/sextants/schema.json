@@ -1,55 +1,55 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "properties": {
-        "temperature": {
-            "type": "array",
-            "description": "Temperature measurements",
-            "items": [
-                { "title": "T1", "type": "number" },
-                { "title": "RTD1", "type": "number" },
-                { "title": "RTD2", "type": "number" }
-            ]
-        },
-        "humidity": {
-            "type": "array",
-            "description": "Relative humidity measurements",
-            "items": [{ "title": "RH1", "type": "number" }]
-        },
-        "voltage": {
-            "type": "array",
-            "description": "Power supply voltage measurements",
-            "items": [{ "title": "PV24", "type": "number" }]
-        },
-        "fbi_led": {
-            "type": "array",
-            "description": "Integration spheres LED power",
-            "items": [
-                { "title": "LED1", "type": "number" },
-                { "title": "LED2", "type": "number" }
-            ]
-        },
-        "power_sextant": {
-            "type": "array",
-            "description": "Power supply relays",
-            "items": [{ "title": "PS1", "type": "boolean" }]
-        },
-        "power_can": {
-            "type": "array",
-            "description": "CANNet module relays",
-            "items": [{ "title": "CM1", "type": "boolean" }]
-        },
-        "power_5v": {
-            "type": "array",
-            "description": "5V",
-            "items": [{ "title": "PS5V", "type": "boolean" }]
-        },
-
-        "power_sync": {
-            "type": "array",
-            "description": "SYNC line status",
-            "items": [{ "title": "SYNC", "type": "boolean" }]
-        }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "temperature": {
+      "type": "array",
+      "description": "Temperature measurements",
+      "items": [
+        { "title": "T1", "type": "number" },
+        { "title": "RTD1", "type": "number" },
+        { "title": "RTD2", "type": "number" }
+      ]
     },
-    "additionalProperties": false
+    "humidity": {
+      "type": "array",
+      "description": "Relative humidity measurements",
+      "items": [{ "title": "RH1", "type": "number" }]
+    },
+    "voltage": {
+      "type": "array",
+      "description": "Power supply voltage measurements",
+      "items": [{ "title": "PV24", "type": "number" }]
+    },
+    "fbi_led": {
+      "type": "array",
+      "description": "Integration spheres LED power",
+      "items": [
+        { "title": "LED1", "type": "number" },
+        { "title": "LED2", "type": "number" }
+      ]
+    },
+    "power_sextant": {
+      "type": "array",
+      "description": "Power supply relays",
+      "items": [{ "title": "PS1", "type": "boolean" }]
+    },
+    "power_can": {
+      "type": "array",
+      "description": "CANNet module relays",
+      "items": [{ "title": "CM1", "type": "boolean" }]
+    },
+    "power_5v": {
+      "type": "array",
+      "description": "5V",
+      "items": [{ "title": "PS5V", "type": "boolean" }]
+    },
+
+    "power_sync": {
+      "type": "array",
+      "description": "SYNC line status",
+      "items": [{ "title": "SYNC", "type": "boolean" }]
+    }
+  },
+  "additionalProperties": true
 }

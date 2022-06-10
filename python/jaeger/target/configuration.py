@@ -280,9 +280,10 @@ class BaseConfiguration:
             elif level == logging.ERROR:
                 self.command.error(msg)
 
-    def _initialise_grid(self):
+    def _initialise_grid(self, collision_buffer: float | None = None):
+        """Create a robot grid."""
 
-        self.robot_grid = get_robot_grid(self.fps)
+        self.robot_grid = get_robot_grid(self.fps, collision_buffer=collision_buffer)
 
         return self.robot_grid
 
@@ -312,6 +313,7 @@ class BaseConfiguration:
 
     async def get_paths(
         self,
+        collision_buffer: float | None = None,
         decollide: bool = True,
         simple_decollision: bool = False,
         resolve_deadlocks: bool = True,
@@ -325,6 +327,9 @@ class BaseConfiguration:
 
         Parameters
         ----------
+        collision_buffer
+            The collision buffer to use when generating paths. If `None`, defaults
+            to the configuration file value.
         decollide
             Runs the decollision routine.
         simple_decollision
@@ -347,7 +352,7 @@ class BaseConfiguration:
         assert isinstance(self, BaseConfiguration)
 
         # Just to be sure, reinitialise the grid.
-        self.robot_grid = self._initialise_grid()
+        self.robot_grid = self._initialise_grid(collision_buffer=collision_buffer)
 
         ftable = self.assignment_data.fibre_table
         alpha0, beta0 = config["kaiju"]["lattice_position"]
@@ -1033,9 +1038,10 @@ class DitheredConfiguration(BaseConfiguration):
         ftable.loc[:, "valid"] = 1
         self.assignment_data.validate()
 
-    async def get_paths(self):
+    async def get_paths(self, collision_buffer: float | None = None):
+        """Get trajectory paths."""
 
-        self.robot_grid = self._initialise_grid()
+        self.robot_grid = self._initialise_grid(collision_buffer=collision_buffer)
 
         await self.fps.update_position()
         positions = self.fps.get_positions_dict()

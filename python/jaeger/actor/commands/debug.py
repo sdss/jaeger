@@ -11,7 +11,7 @@ from jaeger import __version__, config
 from . import jaeger_parser
 
 
-__all__ = ["debug", "info_"]
+__all__ = ["debug"]
 
 
 @jaeger_parser.group(invoke_without_command=True)
@@ -21,7 +21,7 @@ def debug():
     return
 
 
-@jaeger_parser.command("info")
+@debug.command("info")
 def info_(command, fps):
     """Reports information about the system."""
 

@@ -99,6 +99,9 @@ class Positioner(StatusMixIn):
     def initialised(self):
         """Returns ``True`` if the system and datums have been initialised."""
 
+        if self.offline:
+            return True
+
         if self.status is None:
             return False
 
@@ -165,7 +168,7 @@ class Positioner(StatusMixIn):
 
     async def update_position(
         self,
-        position: Tuple[float, float] = None,
+        position: Tuple[float, float] | None = None,
         timeout=1,
     ):
         """Updates the position of the alpha and beta arms."""
@@ -192,7 +195,7 @@ class Positioner(StatusMixIn):
 
     async def update_status(
         self,
-        status: maskbits.PositionerStatus | int = None,
+        status: maskbits.PositionerStatus | int | None = None,
         timeout=1.0,
     ):
         """Updates the status of the positioner."""
@@ -294,6 +297,9 @@ class Positioner(StatusMixIn):
     async def initialise(self, disable_precise_moves=False):
         """Initialises the position watcher."""
 
+        if self.offline is True:
+            return True
+
         # Resets all.
         self.reset()
 
@@ -310,16 +316,19 @@ class Positioner(StatusMixIn):
         # Update position only if it's not bootloader.
         await self.update_position()
 
-        # Sets the default speed
-        await self.set_speed(
-            alpha=config["positioner"]["motor_speed"],
-            beta=config["positioner"]["motor_speed"],
-        )
+        # Sets the default speed and disable precise moves
+        if not self.disabled:
+            await self.set_speed(
+                alpha=config["positioner"]["motor_speed"],
+                beta=config["positioner"]["motor_speed"],
+            )
 
-        if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
-            self._log("Disabling precise moves requires >=04.01.17", logging.DEBUG)
+            if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
+                self._log("Disabling precise moves requires >=04.01.17", logging.DEBUG)
+            else:
+                await self.set_precise_move(mode=not disable_precise_moves)
         else:
-            await self.set_precise_move(mode=not disable_precise_moves)
+            self.precise_moves = not disable_precise_moves
 
         self._log("initialisation complete.")
 
@@ -360,6 +369,9 @@ class Positioner(StatusMixIn):
 
     def is_bootloader(self):
         """Returns True if we are in bootloader mode."""
+
+        if self.offline:
+            return False
 
         if self.firmware is None:
             return None
@@ -519,12 +531,12 @@ class Positioner(StatusMixIn):
             )
         elif alpha:
             await self.send_command(
-                "GO_TO_DATUMS_ALPHA",
+                "GO_TO_DATUM_ALPHA",
                 error="failed while sending GO_TO_DATUMS_ALPHA command.",
             )
         elif beta:
             await self.send_command(
-                "GO_TO_DATUMS_BETA",
+                "GO_TO_DATUM_BETA",
                 error="failed while sending GO_TO_DATUMS_BETA command.",
             )
 

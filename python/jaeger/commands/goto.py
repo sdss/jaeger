@@ -242,7 +242,7 @@ async def goto(
     new_positions: dict[int, tuple[float, float]],
     speed: Optional[float] = None,
     relative: bool = False,
-    use_sync_line: bool = None,
+    use_sync_line: bool | None = None,
     go_cowboy: bool = False,
     force: bool = False,
     command: CluCommand[JaegerActor] | None = None,

@@ -35,9 +35,7 @@ from zc.lockfile import LockFile
 
 import jaeger
 from jaeger import can_log, config, log, start_file_loggers
-from jaeger.alerts import AlertsBot
 from jaeger.can import JaegerCAN
-from jaeger.chiller import ChillerBot
 from jaeger.commands import (
     Command,
     CommandID,
@@ -240,6 +238,8 @@ class FPS(BaseFPS["FPS"]):
         self._locked = False
         self.locked_by: List[int] = []
 
+        self.observatory = config["observatory"]
+
         self.disabled: set[int] = set([])
 
         if self.ieb is None or self.ieb is True:
@@ -270,11 +270,6 @@ class FPS(BaseFPS["FPS"]):
 
         self.__status_event = asyncio.Event()
         self.__temperature_task: asyncio.Task | None = None
-
-        self.observatory = config["observatory"]
-
-        self.alerts = AlertsBot(self)
-        self.chiller = ChillerBot(self)
 
         self._configuration: BaseConfiguration | None = None
         self._previous_configurations: list[BaseConfiguration] = []
@@ -519,7 +514,7 @@ class FPS(BaseFPS["FPS"]):
             warnings.warn("No positioners found.", JaegerUserWarning)
             return self
 
-        if len(set([pos.firmware for pos in self.values()])) > 1:
+        if len(set([pos.firmware for pos in self.values() if not pos.offline])) > 1:
             warnings.warn(
                 "Found positioners with different firmware versions.",
                 JaegerUserWarning,
@@ -537,12 +532,15 @@ class FPS(BaseFPS["FPS"]):
             pos_initialise = [
                 positioner.initialise(disable_precise_moves=disable_precise_moves)
                 for positioner in self.values()
+                if positioner.offline is False
             ]
             await asyncio.gather(*pos_initialise)
         except (JaegerError, PositionerError) as err:
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
-        if disable_precise_moves is True and any([self[i].precise_moves for i in self]):
+        if disable_precise_moves is True and any(
+            [self[i].precise_moves for i in self if self[i].offline is False]
+        ):
             log.error("Unable to disable precise moves for some positioners.")
 
         n_non_initialised = len(
@@ -550,8 +548,11 @@ class FPS(BaseFPS["FPS"]):
                 positioner
                 for positioner in self.positioners.values()
                 if (
-                    positioner.status == positioner.flags.UNKNOWN
-                    or not positioner.initialised
+                    positioner.offline is False
+                    and (
+                        positioner.status == positioner.flags.UNKNOWN
+                        or not positioner.initialised
+                    )
                 )
             ]
         )
@@ -591,20 +592,50 @@ class FPS(BaseFPS["FPS"]):
 
         # Disable collision detection for listed robots.
         disable_collision = config["fps"]["disable_collision_detection_positioners"]
-        disable_connected = list(set(disable_collision) & set(self.positioners.keys()))
-        if len(disable_connected) > 0:
+        if len(disable_collision) > 0:
             warnings.warn(
-                f"Disabling collision detection for positioners {disable_connected}.",
+                f"Disabling collision detection for positioners: {disable_collision}.",
                 JaegerUserWarning,
             )
             await self.send_command(
                 CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_connected,
+                positioner_ids=disable_collision,
             )
             await self.send_command(
                 CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_connected,
+                positioner_ids=disable_collision,
             )
+
+        # Set robots to open loop mode
+        open_loop_positioners = config["fps"].get("open_loop_positioners", [])
+        if len(open_loop_positioners) > 0:
+            warnings.warn(
+                f"Setting open loop mode for positioners: {open_loop_positioners}.",
+                JaegerUserWarning,
+            )
+            await self.send_command(
+                CommandID.ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=open_loop_positioners,
+            )
+            await self.send_command(
+                CommandID.BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                positioner_ids=open_loop_positioners,
+            )
+
+        # Ensure closed loop mode for remaining robots
+        closed_loop_positioners = list(
+            set([pid for pid in self.positioners if not self[pid].disabled])
+            - set(disable_collision)
+            - set(open_loop_positioners)
+        )
+        await self.send_command(
+            CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
+            positioner_ids=closed_loop_positioners,
+        )
+        await self.send_command(
+            CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
+            positioner_ids=closed_loop_positioners,
+        )
 
         # Start temperature watcher.
         if self.__temperature_task is not None:
@@ -627,11 +658,6 @@ class FPS(BaseFPS["FPS"]):
         # Start the pollers
         if start_pollers and not self.is_bootloader():
             self.pollers.start()
-
-        # Initialise alerts and chiller bots with a bit of delay to let the actor
-        # time to start.
-        asyncio.create_task(self.alerts.start(delay=5))
-        asyncio.create_task(self.chiller.start(delay=5))
 
         return self
 
@@ -665,7 +691,11 @@ class FPS(BaseFPS["FPS"]):
             return
 
         timeout = config["fps"]["initialise_timeouts"]
-        id_cmd = self.send_command(CommandID.GET_ID, timeout=timeout)
+        id_cmd = self.send_command(
+            CommandID.GET_ID,
+            positioner_ids=[0],
+            timeout=timeout,
+        )
         await id_cmd
 
         # Parse the replies
@@ -742,6 +772,7 @@ class FPS(BaseFPS["FPS"]):
 
         if not isinstance(command, Command):
             command_flag = CommandID(command)
+            assert isinstance(command_flag, CommandID)
             CommandClass = command_flag.get_command_class()
             assert CommandClass, "CommandClass not defined"
 
@@ -827,15 +858,30 @@ class FPS(BaseFPS["FPS"]):
         if stop_trajectories:
             await self.stop_trajectory()
 
-        if by:
+        await self.update_status()
+
+        axes = "?"
+
+        if by and len(by) > 0:
             self.locked_by += by
 
-        await self.update_status()
+            status_bits = self.positioners[by[0]].status
+            if status_bits & PositionerStatus.COLLISION_ALPHA:
+                axes = "alpha"
+            if status_bits & PositionerStatus.COLLISION_BETA:
+                if axes == "alpha":
+                    axes = "both"
+                else:
+                    axes = "beta"
 
         if jaeger.actor_instance:
             jaeger.actor_instance.write(
                 "e",
-                {"locked": True, "locked_by": self.locked_by},
+                {
+                    "locked": True,
+                    "locked_by": self.locked_by,
+                    "locked_axes": axes,
+                },
             )
 
         if snapshot:
@@ -918,7 +964,8 @@ class FPS(BaseFPS["FPS"]):
             positioner_ids = [positioner_ids]
 
         if positioner_ids == [0]:
-            n_positioners = len(self) if len(self) > 0 else None
+            valid = [pid for pid in self if self[pid].offline is False]
+            n_positioners = len(valid) if len(valid) > 0 else None
         else:
             n_positioners = None
 
@@ -953,7 +1000,7 @@ class FPS(BaseFPS["FPS"]):
         # First get the current bitmask without the status bit.
         current = self.status & ~FPSStatus.STATUS_BITS
 
-        pbits = numpy.array([int(p.status) for p in self.values()])
+        pbits = numpy.array([int(p.status) for p in self.values() if not p.disabled])
 
         coll_bits = PositionerStatus.COLLISION_ALPHA | PositionerStatus.COLLISION_BETA
 
@@ -1044,7 +1091,8 @@ class FPS(BaseFPS["FPS"]):
             positioner_ids = [positioner_ids]
 
         if positioner_ids == [0]:
-            n_positioners = len(self) if len(self) > 0 else None
+            valid = [pid for pid in self if self[pid].offline is False]
+            n_positioners = len(valid) if len(valid) > 0 else None
         else:
             n_positioners = None
 
@@ -1381,9 +1429,6 @@ class FPS(BaseFPS["FPS"]):
         log.debug("Stopping all pollers.")
         if self.pollers:
             await self.pollers.stop()
-
-        await self.chiller.stop()
-        await self.alerts.stop()
 
         log.debug("Cancelling all pending tasks and shutting down.")
 

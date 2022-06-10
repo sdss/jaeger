@@ -11,7 +11,6 @@ actor:
   tron_port: 6093
   models:
     - fliswarm
-  ieb_status_delay: 60
   schema: etc/schema.json
   log_dir: /data/logs/actors/jaeger
 
@@ -47,16 +46,17 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [54, 184, 463, 608, 612, 1042, 1136, 1182, 1340]
+  disabled_positioners: [50]
   offline_positioners: null
   disable_collision_detection_positioners: []
+  open_loop_positioners: []
   use_sync_line: false
   snapshot_path: /data/logs/jaeger/snapshots/
   configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
   use_lock: True
 
 ieb:
-  disabled_devices: ['GFA1', 'GFA6']
+  disabled_devices: []
 
 positioner:
   reduction_ratio: 1024
@@ -107,9 +107,9 @@ fvc:
 
 files:
   log_dir: /data/logs/jaeger
-  ieb_config: etc/ieb.yaml
+  ieb_config: etc/ieb_LCO.yaml
   fvc_config: etc/fvc.yaml
-  chiller_config: etc/chiller.yaml
+  chiller_config: null
 
 low_temperature:
   sensor: RTD2
@@ -121,9 +121,7 @@ low_temperature:
   holding_torque_normal: [0, 30]
   holding_torque_very_cold: [45, 30]
 
-safe_mode:
-  min_beta: 160
-  max_beta: 180
+safe_mode: false
 
 debug: false
 
@@ -136,6 +134,7 @@ database:
 
 alerts:
   interval: 60
+  enabled: ['ieb', 'robot', 'temperature']
   gfa:
     warning: 30
     critical: 35

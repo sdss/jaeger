@@ -368,6 +368,7 @@ async def load(
         not fps.configuration.is_cloned
         and generate_paths
         and fps.configuration.to_destination is None
+        and not from_positions
     ):
         try:
             command.info("Calculating trajectories.")
@@ -400,7 +401,7 @@ async def load(
     snapshot = await fps.configuration.save_snapshot()
     command.info(configuration_snapshot=snapshot)
 
-    if execute:
+    if execute and not from_positions:
         cmd = await command.send_command("jaeger", "configuration execute")
         if cmd.status.did_fail:
             if cmd.status.is_done:
@@ -742,10 +743,8 @@ async def dither(
     else:
         parent_configuration = fps.configuration
 
-    command.info(
-        "Creating dithered configuration from "
-        f"{parent_configuration.configuration_id}."
-    )
+    configuration_id = parent_configuration.configuration_id
+    command.info(f"Creating dithered configuration from {configuration_id}")
 
     epoch = epoch.lower()
     if epoch == "inherit":
@@ -774,10 +773,8 @@ async def dither(
 
     fps.configuration.executed = True
 
-    command.finish(
-        f"Dithered configuration {fps.configuration.configuration_id} "
-        "loaded and executed."
-    )
+    configuration_id = fps.configuration.configuration_id
+    command.finish(f"Dithered configuration {configuration_id} loaded and executed.")
 
 
 @configuration.command()
@@ -847,6 +844,12 @@ async def slew(
     help="Send the trajectory to the FPS.",
     default=True,
 )
+@click.option(
+    "--max-retries",
+    type=int,
+    default=10,
+    help="Home many retries to allow due to deadlocks.",
+)
 async def random(
     command: Command[JaegerActor],
     fps: FPS,
@@ -855,6 +858,7 @@ async def random(
     uniform: str | None = None,
     collision_buffer: float | None = None,
     send_trajectory: bool = True,
+    max_retries: int = 10,
 ):
     """Executes a random, valid configuration."""
 
@@ -865,7 +869,7 @@ async def random(
 
     # Check that all positioners are folded.
     await fps.update_position()
-    positions = fps.get_positions()
+    positions = fps.get_positions(ignore_disabled=True)
 
     if len(positions) == 0:
         return command.fail("No positioners connected")
@@ -888,17 +892,21 @@ async def random(
     else:
         uniform_unpack = None
 
-    configuration = await create_random_configuration(
-        fps,
-        seed=seed,
-        uniform=uniform_unpack,
-        safe=not danger,
-        collision_buffer=collision_buffer,
-    )
-
     try:
+        configuration = await create_random_configuration(
+            fps,
+            seed=seed,
+            uniform=uniform_unpack,
+            safe=not danger,
+            collision_buffer=collision_buffer,
+            max_retries=max_retries,
+        )
+
         command.info("Getting trajectory.")
-        trajectory = await configuration.get_paths(decollide=False)
+        trajectory = await configuration.get_paths(
+            decollide=False,
+            collision_buffer=collision_buffer,
+        )
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 
@@ -915,5 +923,7 @@ async def random(
         await fps.send_trajectory(trajectory, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
+
+    configuration.executed = True
 
     command.finish()

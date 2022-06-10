@@ -27,40 +27,46 @@ import clu.testing
 from clu.testing import TestCommand
 from sdsstools import read_yaml_file
 
-import jaeger
-from jaeger import JaegerActor, config
-from jaeger.can import JaegerCAN
-from jaeger.ieb import IEB
-from jaeger.testing import VirtualFPS
+
+sys.modules["coordio.transforms"] = MagicMock()
 
 
-TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
+@pytest.fixture(scope="session")
+def setup_config():
 
-config["safe_mode"] = False
-config["files"]["ieb_config"] = "etc/ieb.yaml"
-config["fps"]["start_pollers"] = True
+    import jaeger
+    from jaeger import config
 
-config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
-config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
-config["fps"]["use_lock"] = False
+    TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
 
-if os.environ.get("CI", False):
-    tmp = os.environ.get("RUNNER_TEMP")
+    config["safe_mode"] = False
+    config["files"]["ieb_config"] = "etc/ieb_APO.yaml"
+    config["fps"]["start_pollers"] = True
 
-    for section, subsection in [
-        ("actor", "log_dir"),
-        ("fps", "snapshot_path"),
-        ("fps", "configuration_snapshot_path"),
-        ("positioner", "trajectory_dump_path"),
-    ]:
-        config[section][subsection] = config[section][subsection].replace("/data", tmp)
+    config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
+    config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
+    config["fps"]["use_lock"] = False
 
+    if os.environ.get("CI", False):
+        tmp = os.environ.get("RUNNER_TEMP")
 
-# Disable logging to file.
-if jaeger.log.fh:
-    jaeger.log.removeHandler(jaeger.log.fh)
-if jaeger.can_log.fh:
-    jaeger.can_log.removeHandler(jaeger.can_log.fh)
+        for section, subsection in [
+            ("actor", "log_dir"),
+            ("fps", "snapshot_path"),
+            ("fps", "configuration_snapshot_path"),
+            ("positioner", "trajectory_dump_path"),
+        ]:
+            config[section][subsection] = config[section][subsection].replace(
+                "/data", tmp
+            )
+
+    # Disable logging to file.
+    if jaeger.log.fh:
+        jaeger.log.removeHandler(jaeger.log.fh)
+    if jaeger.can_log.fh:
+        jaeger.can_log.removeHandler(jaeger.can_log.fh)
+
+    yield TEST_CONFIG_FILE
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -79,10 +85,10 @@ def download_data():
 
 
 @pytest.fixture(scope="session")
-def test_config():
+def test_config(setup_config):
     """Yield the test configuration as a dictionary."""
 
-    yield read_yaml_file(TEST_CONFIG_FILE)
+    yield read_yaml_file(setup_config)
 
 
 @pytest.fixture()
@@ -119,6 +125,11 @@ async def ieb_server(event_loop):
 @pytest.fixture()
 async def vfps(ieb_server, monkeypatch):
     """Sets up the virtual FPS."""
+
+    import jaeger
+    from jaeger.can import JaegerCAN
+    from jaeger.ieb import IEB
+    from jaeger.testing import VirtualFPS
 
     # Make initialisation faster.
     monkeypatch.setitem(jaeger.config["fps"], "initialise_timeouts", 0.05)
@@ -158,6 +169,8 @@ async def vpositioners(test_config, vfps):
 @pytest.fixture
 async def actor(vfps):
 
+    from jaeger.actor import JaegerActor
+
     await vfps.initialise()
     await asyncio.sleep(0.001)
 
@@ -167,6 +180,7 @@ async def actor(vfps):
         host="localhost",
         port=19990,
         log_dir=False,
+        config={"files": {"chiller_config": None}},
     )
     jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)  # type: ignore
 

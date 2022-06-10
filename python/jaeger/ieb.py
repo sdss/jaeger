@@ -8,12 +8,14 @@
 
 import math
 import os
+import warnings
 
 from typing import Any, Dict
 
 from drift import Drift, DriftError
 
 from jaeger import config
+from jaeger.exceptions import JaegerUserWarning
 
 
 __all__ = ["IEB", "FVC", "_get_category_data"]
@@ -151,6 +153,9 @@ class Chiller(IEB):
     def create(cls, path=None):
         """Creates a `.Chiller` instance with the default configuration."""
 
-        default_chiller_path = config["files"]["chiller_config"]
+        config_file = config["files"].get("chiller_config", None)
+        if config_file is None:
+            warnings.warn("Chiller configuration missing.", JaegerUserWarning)
+            return None
 
-        return super().create(default_chiller_path)
+        return super().create(config_file)

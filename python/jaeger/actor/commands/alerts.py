@@ -31,12 +31,16 @@ def alerts(*args):
 async def status(command: JaegerCommandType, fps: FPS):
     """Shows the status of the alerts."""
 
-    return command.finish(message={k: int(v) for k, v in fps.alerts.keywords.items()})
+    return command.finish(
+        message={k: int(v) for k, v in command.actor.alerts.keywords.items()}
+    )
 
 
 @alerts.command()
 async def reset(command: JaegerCommandType, fps: FPS):
     """Clears all the alerts. Needed after certain alerts have been raised."""
 
-    fps.alerts.reset()
-    return command.finish(message={k: int(v) for k, v in fps.alerts.keywords.items()})
+    command.actor.alerts.reset()
+    return command.finish(
+        message={k: int(v) for k, v in command.actor.alerts.keywords.items()}
+    )

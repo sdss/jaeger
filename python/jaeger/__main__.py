@@ -15,19 +15,19 @@ import signal
 import socket
 import sys
 import warnings
+from copy import deepcopy
 from functools import wraps
 
 from typing import Optional
 
 import click
-import numpy
 from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
 
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
-from jaeger.commands.calibration import calibrate_positioner
+from jaeger.commands.calibration import calibrate_positioners
 from jaeger.commands.goto import goto as goto_
 from jaeger.exceptions import (
     FPSLockedError,
@@ -186,7 +186,7 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 @click.option(
     "--allow-host",
     is_flag=True,
-    help="Allows running jager in a host other than sdss5-fps.",
+    help="Allows running jaeger in a host other than sdss5-fps.",
 )
 @click.option(
     "--no-lock",
@@ -217,7 +217,10 @@ def jaeger(
         hostname = socket.getfqdn()
         if hostname.endswith("apo.nmsu.edu") or hostname.endswith("lco.cl"):
             if not hostname.startswith("sdss5-fps"):
-                raise RuntimeError("At the observatories jaeger must run on sdss5-fps.")
+                raise RuntimeError(
+                    "At the observatories jaeger must run on sdss5-fps. "
+                    "If you want to run jaeger on another computer use --allow-host."
+                )
 
     if verbose > 0 and quiet:
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
@@ -294,22 +297,27 @@ async def actor(fps_maker, no_tron: bool = False):
     except ImportError:
         raise ImportError("CLU needs to be installed to run jaeger as an actor.")
 
-    actor_config = config["actor"].copy()
-    actor_config.pop("status", None)
+    config_copy = deepcopy(config)
+    if "actor" not in config_copy:
+        raise RuntimeError("Configuration file does not contain an actor section.")
+
+    config_copy["actor"].pop("status", None)
 
     if no_tron:
-        actor_config.pop("tron", None)
+        config_copy["actor"].pop("tron", None)
 
     # Do not initialise FPS so that we can define the actor instance first.
     fps_maker.initialise = False
 
     async with fps_maker as fps:
-        actor_: JaegerActor = JaegerActor.from_config(actor_config, fps)
+        actor_: JaegerActor = JaegerActor.from_config(config_copy, fps)
 
         await fps.initialise()
 
         await actor_.start()
         await actor_.run_forever()
+
+        await actor_.stop()
 
 
 @jaeger.command(name="upgrade-firmware")
@@ -455,8 +463,9 @@ async def calibrate(fps_maker, positioner_id, motors, datums, cogging):
 
     async with fps_maker as fps:
         await fps.initialise(start_pollers=False)
-        await calibrate_positioner(
+        await calibrate_positioners(
             fps,
+            "both",
             positioner_id,
             motors=motors,
             datums=datums,
@@ -582,116 +591,26 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
 @jaeger.command()
 @click.argument("positioner_id", metavar="POSITIONER", type=int)
 @click.option(
-    "-n",
-    "--moves",
-    type=int,
-    help="Number of moves to perform. Otherwise runs forever.",
-)
-@click.option(
-    "--alpha",
-    type=(int, int),
-    default=(0, 360),
-    help="Range of alpha positions.",
-    show_default=True,
-)
-@click.option(
-    "--beta",
-    type=(int, int),
-    default=(0, 180),
-    help="Range of beta positions.",
-    show_default=True,
-)
-@click.option(
-    "--speed",
-    type=(int, int),
-    default=(500, 1500),
-    help="Range of speed.",
-    show_default=True,
-)
-@click.option(
-    "-f",
-    "--skip-errors",
-    is_flag=True,
-    help="If an error occurs, ignores it and commands another move.",
+    "--axis",
+    type=click.Choice(["alpha", "beta"], case_sensitive=True),
+    help="The axis to home. If not set, homes both axes at the same time.",
 )
 @pass_fps
 @cli_coro
-async def demo(
-    fps_maker,
-    positioner_id,
-    alpha=None,
-    beta=None,
-    speed=None,
-    moves=None,
-    skip_errors=False,
-):
-    """Moves a robot to random positions."""
+async def home(fps_maker: FPSWrapper, positioner_id: int, axis: str | None = None):
+    """Home a single positioner, sending a GO_TO_DATUMS command."""
 
-    if (alpha[0] >= alpha[1]) or (alpha[0] < 0 or alpha[1] > 360):
-        raise click.UsageError("alpha must be in the range [0, 360)")
-
-    if (beta[0] >= beta[1]) or (beta[0] < 0 or beta[1] > 360):
-        raise click.UsageError("beta must be in the range [0, 360)")
-
-    if (speed[0] >= speed[1]) or (speed[0] < 0 or speed[1] >= 3000):
-        raise click.UsageError("speed must be in the range [0, 3000)")
+    alpha: bool = axis == "alpha" or axis is None
+    beta: bool = axis == "beta" or axis is None
 
     async with fps_maker as fps:
 
-        positioner = fps.positioners[positioner_id]
-        result = await positioner.initialise()
-        if not result:
-            log.error("positioner is not connected or failed to initialise.")
-            return
+        if positioner_id not in fps or fps[positioner_id].initialised is False:
+            raise ValueError("Positioner is not connected.")
+        if fps[positioner_id].disabled or fps[positioner_id].offline:
+            raise ValueError("Positioner has been disabled.")
 
-        done_moves = 0
-        while True:
-
-            alpha_move = numpy.random.randint(low=alpha[0], high=alpha[1])
-            beta_move = numpy.random.randint(low=beta[0], high=beta[1])
-            alpha_speed = numpy.random.randint(low=speed[0], high=speed[1])
-            beta_speed = numpy.random.randint(low=speed[0], high=speed[1])
-
-            warnings.warn(f"running step {done_moves+1}")
-
-            result = await positioner.goto(
-                alpha=alpha_move, beta=beta_move, speed=(alpha_speed, beta_speed)
-            )
-
-            if result is False:
-                if skip_errors is False:
-                    return
-                else:
-                    warnings.warn(
-                        "an error happened but ignoring it because skip-error=True"
-                    )
-                    continue
-
-            done_moves += 1
-
-            if moves is not None and done_moves == moves:
-                return
-
-
-@jaeger.command()
-@click.argument("positioner_id", metavar="POSITIONER", type=int, required=False)
-@pass_fps
-@cli_coro
-async def home(fps_maker, positioner_id):
-    """Initialise datums."""
-
-    async with fps_maker as fps:
-
-        if positioner_id is None:
-            positioners = fps.positioners.values()
-        else:
-            positioners = [fps.positioners[positioner_id]]
-
-        valid_positioners = [
-            positioner for positioner in positioners if positioner.status.initialised
-        ]
-
-        await asyncio.gather(*[positioner.home() for positioner in valid_positioners])
+        await fps[positioner_id].home(alpha=alpha, beta=beta)
 
     return
 

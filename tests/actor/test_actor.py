@@ -37,7 +37,7 @@ async def test_status(actor):
 
 async def test_info(actor):
 
-    command = await actor.invoke_mock_command("info")
+    command = await actor.invoke_mock_command("debug info")
     assert command.status.did_succeed
 
     data = actor.mock_replies

@@ -23,7 +23,6 @@ from astropy.table import Table
 from clu.command import Command
 from clu.legacy.tron import TronConnection
 from coordio.defaults import calibration
-from coordio.transforms import FVCTransformAPO
 
 from jaeger import config, log
 from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
@@ -37,6 +36,8 @@ from jaeger.utils import run_in_executor
 
 
 if TYPE_CHECKING:
+    from coordio.transforms import FVCTransformAPO, FVCTransformLCO
+
     from jaeger.actor import JaegerActor
     from jaeger.target.configuration import BaseConfiguration
 
@@ -48,6 +49,23 @@ FVC_CONFIG = config["fvc"]
 DEFAULT_CENTROID_METHOD = "zbplus"
 
 
+def get_transform(observatory: str):
+    """Returns the correct coordio FVC transform class for the observatory."""
+
+    if observatory.upper() == "APO":
+        from coordio.transforms import FVCTransformAPO
+
+        return FVCTransformAPO
+
+    elif observatory.upper() == "LCO":
+        from coordio.transforms import FVCTransformLCO
+
+        return FVCTransformLCO
+
+    else:
+        raise ValueError(f"Invalid observatory {observatory}.")
+
+
 class FVC:
     """Focal View Camera class."""
 
@@ -56,7 +74,7 @@ class FVC:
     measurements: Optional[pandas.DataFrame]
     centroids: Optional[pandas.DataFrame]
     offsets: Optional[pandas.DataFrame]
-    fvc_transform: Optional[FVCTransformAPO]
+    fvc_transform: Optional[FVCTransformAPO | FVCTransformLCO]
 
     image_path: Optional[str]
     proc_image_path: Optional[str]
@@ -87,7 +105,7 @@ class FVC:
         """Resets the instance."""
 
         self.configuration = None
-        self.fvc_transform: FVCTransformAPO | None = None
+        self.fvc_transform: FVCTransformAPO | FVCTransformLCO | None = None
         self.fibre_data = None
         self.centroids = None
         self.offsets = None
@@ -268,6 +286,10 @@ class FVC:
 
         fdata = fibre_data.copy().reset_index().set_index("positioner_id")
 
+        # Set fibre_data initially so that if FVCTransform fails we have something.
+        self.fibre_data = fdata.copy().reset_index()
+        self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
+
         self.log(f"Processing raw image {path}")
 
         dirname, base = os.path.split(path)
@@ -288,6 +310,7 @@ class FVC:
 
         self.image_path = path
         self.raw_hdu = hdus[1].copy()
+        self.proc_hdu = hdus[1]
 
         # Invert columns
         hdus[1].data = hdus[1].data[:, ::-1]
@@ -297,7 +320,7 @@ class FVC:
 
         # Get the rotator angle so that we can derotate the centroids to the
         # x/ywok-aligned configuration.
-        rotpos = hdus[1].header.get("IPA", None)
+        rotpos = hdus[1].header.get("IPA", 135.4)
         if rotpos is None:
             raise FVCError("IPA keyword not found in the header.")
         rotpos = float(rotpos) % 360.0
@@ -309,7 +332,10 @@ class FVC:
         )
         positioner_df.index.set_names(["positionerID"], inplace=True)
 
-        fvc_transform = FVCTransformAPO(
+        FVCTransform = get_transform(self.fps.observatory)
+        self.log(f"Using FVC transform class {FVCTransform!r}.")
+
+        fvc_transform = FVCTransform(
             image_data,
             positioner_df,
             rotpos,
@@ -400,7 +426,6 @@ class FVC:
         fdata.set_index(["hole_id", "fibre_type"], inplace=True)
 
         self.fibre_data = fdata
-        self.proc_hdu = hdus[1]
         self.fvc_transform = fvc_transform
 
         self.log(f"Finished processing {path}", level=logging.DEBUG)
@@ -644,12 +669,7 @@ class FVC:
             image_path = pathlib.Path(self.image_path)
             new_filename = image_path.with_name("proc-" + image_path.name)
 
-        if (
-            self.fibre_data is None
-            or self.centroids is None
-            or self.raw_hdu is None
-            or self.proc_hdu is None
-        ):
+        if self.fibre_data is None or self.raw_hdu is None or self.proc_hdu is None:
             raise FVCError("Need to run process_fvc_image before writing the image.")
 
         proc_hdus = fits.HDUList([fits.PrimaryHDU(), self.proc_hdu])
@@ -711,7 +731,10 @@ class FVC:
 
         # Add header keywords from coordio.FVCTransfromAPO.
         if self.fvc_transform:
-            proc_hdus[1].header.extend(self.fvc_transform.getMetadata())
+            try:
+                proc_hdus[1].header.extend(self.fvc_transform.getMetadata())
+            except Exception as err:
+                self.log(f"Cannot get FVCTransform metadata: {err}", logging.WARNING)
 
         posangles = None
         if self.fps:
@@ -754,7 +777,10 @@ class FVC:
             posangles = Table.from_pandas(current_positions).as_array()
         proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
-        rec = Table.from_pandas(self.centroids).as_array()
+        if self.centroids is not None:
+            rec = Table.from_pandas(self.centroids).as_array()
+        else:
+            rec = None
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
         offsets = None

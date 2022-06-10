@@ -171,6 +171,8 @@ async def create_random_configuration(
     collision_buffer: float | None = None,
     max_deadlocks: int = 6,
     deadlock_retries: int = 5,
+    n_failed: int = 0,
+    max_retries: int = 5,
     **kwargs,
 ):
     """Creates a random configuration using Kaiju."""
@@ -200,7 +202,7 @@ async def create_random_configuration(
         else:
             if safe:
                 safe_mode = config["safe_mode"]
-                if safe_mode is False:
+                if isinstance(safe_mode, bool) or safe_mode is None:
                     safe_mode = {"min_beta": 165, "max_beta": 175}
 
                 robot.setAlphaBeta(
@@ -232,6 +234,9 @@ async def create_random_configuration(
     # If too many deadlocks, just try a new seed.
     n_deadlock = len(deadlocks)
     if did_fail and n_deadlock > max_deadlocks:
+        if n_failed >= max_retries:
+            raise JaegerError("Reached the limit of retries.")
+
         log.warning("Too many deadlocked robots. Trying new seed.")
         return await create_random_configuration(
             fps,
@@ -239,6 +244,7 @@ async def create_random_configuration(
             uniform=uniform,
             collision_buffer=collision_buffer,
             deadlock_retries=deadlock_retries,
+            n_failed=n_failed + 1,
         )
 
     if did_fail and n_deadlock > 0:
@@ -274,7 +280,7 @@ async def create_random_configuration(
                 }
             except JaegerError:
                 raise JaegerError(
-                    "Decollision failed. Cannot create random configuration."
+                    "Failed creating random configuration: cannot remove deadlocks."
                 )
 
             _, _, did_fail, deadlocks = await get_path_pair_in_executor(robot_grid)
