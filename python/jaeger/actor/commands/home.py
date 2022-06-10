@@ -34,11 +34,11 @@ __all__ = ["home"]
 SAFE_BETA_MIN: float = 165.0
 SAFE_BETA_MAX: float = 181.0
 
-START_ANGLE: float = 5.0
+START_ANGLE: float = 0.0
 COLLISION_BUFFER: float = 3.2
 
-ALPHA1: float = 115
-ALPHA2: float = 52
+ALPHA1: float = 118
+ALPHA2: float = 58
 
 ALPHA_FOLDED, BETA_FOLDED = config["kaiju"]["lattice_position"]
 
