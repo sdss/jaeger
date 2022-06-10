@@ -69,13 +69,6 @@ def setup_config():
     yield TEST_CONFIG_FILE
 
 
-# @pytest.fixture(autouse=True)
-# def mock_fvctransformlco(monkeypatch, mocker):
-
-#     print("here")
-#     monkeypatch.setattr("coordio.transforms.FVCTransformLCO", mocker.MagicMock())
-
-
 @pytest.fixture(scope="session", autouse=True)
 def download_data():
     """Download large files needed for testing."""

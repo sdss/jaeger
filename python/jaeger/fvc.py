@@ -23,7 +23,6 @@ from astropy.table import Table
 from clu.command import Command
 from clu.legacy.tron import TronConnection
 from coordio.defaults import calibration
-from coordio.transforms import FVCTransformAPO, FVCTransformLCO
 
 from jaeger import config, log
 from jaeger.exceptions import FVCError, JaegerUserWarning, TrajectoryError
@@ -37,6 +36,8 @@ from jaeger.utils import run_in_executor
 
 
 if TYPE_CHECKING:
+    from coordio.transforms import FVCTransformAPO, FVCTransformLCO
+
     from jaeger.actor import JaegerActor
     from jaeger.target.configuration import BaseConfiguration
 
@@ -52,9 +53,15 @@ def get_transform(observatory: str):
     """Returns the correct coordio FVC transform class for the observatory."""
 
     if observatory.upper() == "APO":
+        from coordio.transforms import FVCTransformAPO
+
         return FVCTransformAPO
+
     elif observatory.upper() == "LCO":
+        from coordio.transforms import FVCTransformLCO
+
         return FVCTransformLCO
+
     else:
         raise ValueError(f"Invalid observatory {observatory}.")
 
