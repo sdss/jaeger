@@ -1,21 +1,21 @@
 # Changelog
 
-## Next version
+## 0.16.0 - June 10, 2022
 
 ### 🚀 New
 
 * [#183](https://github.com/sdss/jaeger/issues/183) The `FVC.write_summaryF()` method now also produces some histograms and quiver plots that show the FVC convergence in wok and ra/dec coordinates.
 * [#184](https://github.com/sdss/jaeger/issues/184) Added a `jaeger.fvc.reprocess_configuration()` coroutine that allows to reprocess the final FVC image for a configuration with a different centroid method.
 * [#185](https://github.com/sdss/jaeger/issues/185) Support for LCO and additional improvements:
-    - General support for running jaeger at APO and LCO.
-    - The `jaeger` and `ieb` configuration files have been split into `_APO` and `_LCO`.
-    - Makes `fvc loop` more reliable. The `proc-` image is now saved in most conditions.
-    - Use `FVCTransformAPO` or `FVCTransformLCO` depending on the observatory.
-    - Fix `fvc loop` with `--fbi-level 0`.
-    - Chiller and alerts bots are now run as part of the actor instead of in the `FPS` object. Alerts are now observatory-specific.
-    - Do not calculate paths when using `jaeger configuration load --from-positions`.
-    - Fix for #182: GFA alerts are disabled if the camera is powered off.
-    - New `home` command to send `GO_TO_DATUMS` to multiple or all positioners at once.
+  * General support for running jaeger at APO and LCO.
+  * The `jaeger` and `ieb` configuration files have been split into `_APO` and `_LCO`.
+  * Makes `fvc loop` more reliable. The `proc-` image is now saved in most conditions.
+  * Use `FVCTransformAPO` or `FVCTransformLCO` depending on the observatory.
+  * Fix `fvc loop` with `--fbi-level 0`.
+  * Chiller and alerts bots are now run as part of the actor instead of in the `FPS` object. Alerts are now observatory-specific.
+  * Do not calculate paths when using `jaeger configuration load --from-positions`.
+  * Fix for #182: GFA alerts are disabled if the camera is powered off.
+  * New `home` command to send `GO_TO_DATUMS` to multiple or all positioners at once.
 * [#186](https://github.com/sdss/jaeger/issues/186) New command `fvc snapshot` that creates a temporary configuration from the current positions and takes an FVC measurement.
 * Add `jaeger configuration reload` command. It's equivalent to using `jaeger configuration load --no-clone DESIGNID` where `DESIGNID` is the currently loaded design.
 * If called without arguments, `disable` now outputs the list of currently disabled robots.
