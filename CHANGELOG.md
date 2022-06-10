@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.0 - June 10, 2022
+## 0.16.1 - June 10, 2022
 
 ### 🚀 New
 
@@ -32,6 +32,11 @@
 
 * [#182](https://github.com/sdss/jaeger/issues/182) GFA alert for a camera is disabled if the camera is off.
 * Bump sdssdb to ^0.5.2 to ensure that `assignment_hash` is available
+
+
+## 0.16.0 - June 10, 2022
+
+* Yanked due to error releasing.
 
 
 ## 0.15.1 - April 24, 2022
