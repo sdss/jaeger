@@ -147,7 +147,7 @@ async def home(
         command.info("Creating paths for phase 1.")
 
         grid1 = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
-        for robot in grid1.values():
+        for robot in grid1.robotDict.values():
             if fps[robot.id].disabled is False:
                 robot.setAlphaBeta(ALPHA1, start_angle)
 
@@ -162,9 +162,27 @@ async def home(
 
         # All robots that should be moved in phase 1, even if won't be homed.
         phase_1_pids = [pid for pid in positioner_ids if pid not in phase_2_pids]
-
         # Robots in phase 1 that will be homed.
         phase_1_home_pids = list(set(positioner_ids) & set(phase_1_pids))
+
+        command.info("Creating paths for phase 2.")
+
+        grid2 = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
+        for robot in grid2.robotDict.values():
+            if robot.id in phase_1_home_pids and dry_run is False:
+                robot.betaOffDeg = 0.0
+            if robot.id in phase_2_pids:
+                robot.setAlphaBeta(ALPHA2, start_angle)
+            else:
+                robot.setAlphaBeta(ALPHA2, 180)
+
+        _, from_destination_2, failed, _ = get_path_pair(
+            grid2,
+            path_generation_mode="greedy",
+        )
+        if failed:
+            return command.fail("Failed generating paths for beta homing phase 2.")
+
         if skip_phase_1:
             phase_1_home_pids = []
 
@@ -198,22 +216,6 @@ async def home(
         phase_2_home_pids = list(set(positioner_ids) & set(phase_2_pids))
 
         if len(phase_2_home_pids) > 0:
-
-            command.info("Creating paths for phase 2.")
-
-            grid2 = get_robot_grid(fps, collision_buffer=COLLISION_BUFFER)
-            for robot in grid2.values():
-                if robot.id in phase_2_pids:
-                    robot.setAlphaBeta(ALPHA2, start_angle)
-                else:
-                    robot.setAlphaBeta(ALPHA2, 180)
-
-            _, from_destination_2, failed, _ = get_path_pair(
-                grid2,
-                path_generation_mode="greedy",
-            )
-            if failed:
-                return command.fail("Failed generating paths for beta homing phase 2.")
 
             try:
                 await _home_beta_phase(
