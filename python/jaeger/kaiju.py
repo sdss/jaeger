@@ -317,11 +317,14 @@ def get_path_pair(
             ignoreInitialCollisions=ignore_initial_collisions,
         )
 
-    elif path_generation_mode == "greedy":
+    elif path_generation_mode == "mdp":
         greed = greed or config["kaiju"]["greed"]
         phobia = phobia or config["kaiju"]["phobia"]
         log.debug(f"Running pathGenMDP with phobia={phobia}, greed={greed}.")
         robot_grid.pathGenMDP(greed=greed, phobia=phobia)
+
+    else:
+        raise ValueError(f"Invalid path_generation_mode={path_generation_mode!r}.")
 
     if path_generation_mode in ["greedy", "mdp"]:
         # Check for deadlocks.
