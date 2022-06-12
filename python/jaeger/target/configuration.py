@@ -1060,6 +1060,7 @@ class DitheredConfiguration(BaseConfiguration):
             *_,
         ) = await get_path_pair_in_executor(
             self.robot_grid,
+            path_generation_mode="greedy",
             ignore_did_fail=True,
             stop_if_deadlock=True,
             ignore_initial_collisions=True,

@@ -355,6 +355,7 @@ async def goto(
         (to_destination, _, did_fail, deadlocks) = await run_in_executor(
             get_path_pair,
             data=data,
+            path_generation_mode="greedy",
             stop_if_deadlock=force,
             executor="process",
             ignore_did_fail=force,
