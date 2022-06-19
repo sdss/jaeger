@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from time import time
 
 from typing import TYPE_CHECKING
 
@@ -34,9 +33,6 @@ class ChillerBot(BaseBot):
         self.chiller_config = config.get("chiller", {})
         self.temperature: bool | float = self.chiller_config.get("temperature", False)
         self.flow: bool | float = self.chiller_config.get("flow", False)
-
-        self.temperature_last_changed: float | None = None
-        self.temperature_last_setpoint: float | None = None
 
         super().__init__(fps)
 
@@ -78,59 +74,41 @@ class ChillerBot(BaseBot):
                 # Dewpoint temperature.
                 t_d = ambient_temp - (100 - rh) / 5.0
 
-                if self.temperature_last_setpoint is None:
-                    self.temperature_last_setpoint = (await dev.read())[0]
-
                 current_setpoint = (await dev.read())[0]
 
                 # If we are maintaining a fixed temperature, check if we
                 # need to reset the set point and exit.
-                if isinstance(self.temperature, (float, int)):
+                if self.temperature is not True and self.temperature != "auto":
                     if abs(current_setpoint - self.temperature) > 0.1:
                         await dev.write(int(self.temperature * 10))
-                        self.temperature_last_changed = time()
+                        self.notify(
+                            f"Setting chiller to {self.temperature} C",
+                            logging.DEBUG,
+                        )
                     break
 
                 # What follows is if we are setting the set point
                 # based on the ambient temperature.
-                if abs(self.temperature_last_setpoint - current_setpoint) > 1.0:
-                    # First we check if the set point has changed. If it has
-                    # this usually means a power failure and we want to
-                    # reset the set point immediately.
 
-                    self.notify("Chiller set-point has changed.")
-                    await dev.write(int(self.temperature_last_setpoint * 10))
-                    self.temperature_last_changed = time()
-                    break
+                # Calculate the new set point temperature and write it
+                # to the device if it's different than the current one.
 
-                else:
-                    # Calculate the new set point temperature and write it
-                    # to the device if it's different than the current one.
+                # New set point is one below ambient clipped to 0 degC
+                # and above the dew point depression region.
+                new_temp = ambient_temp - 1
+                if new_temp <= 1:
+                    new_temp = 1
+                if new_temp < (t_d + 3):
+                    new_temp = t_d + 3
 
-                    # New set point is one below ambient clipped to 0 degC
-                    # and above the dew point depression region.
-                    new_temp = ambient_temp - 1
-                    if new_temp <= 1:
-                        new_temp = 1
-                    if new_temp < (t_d + 3):
-                        new_temp = t_d + 3
+                # Round to closest 0.5
+                new_temp = round(new_temp * 2) / 2.0
+                delta_temp = abs(current_setpoint - new_temp)
+                if delta_temp > 0.1:
+                    await dev.write(int(new_temp * 10))
+                    self.notify(f"Setting chiller to {new_temp} C", logging.DEBUG)
 
-                    # Round to closest 0.5
-                    new_temp = round(new_temp * 2) / 2.0
-
-                    delta_temp = abs(self.temperature_last_setpoint - new_temp)
-                    now = time()
-
-                    if self.temperature_last_changed is None or delta_temp > 0.1:
-                        await dev.write(int(new_temp * 10))
-                        self.notify(
-                            f"Setting chiller to {round(new_temp, 1)} C",
-                            level=logging.DEBUG,
-                        )
-                        self.temperature_last_setpoint = new_temp
-                        self.temperature_last_changed = now
-
-                    break
+                break
 
             except Exception:
                 failed = True
@@ -167,6 +145,10 @@ class ChillerBot(BaseBot):
                 if isinstance(self.flow, (float, int)):
                     if abs(current_setpoint - self.flow) > 0.1:
                         await dev.write(int(self.flow * 10))
+                        self.notify(
+                            f"Setting chiller flow to {self.flow:.1f} gpm.",
+                            level=logging.DEBUG,
+                        )
 
                 else:
                     self.notify(
