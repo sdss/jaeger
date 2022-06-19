@@ -113,8 +113,11 @@ class JaegerActor(clu.LegacyActor):
         await super().start(*args, **kwargs)
 
         self.alerts.set_actor(self)
+        await self.alerts.start()
+
         if self.chiller:
             self.chiller.set_actor(self)
+            await self.chiller.start()
 
     async def stop(self):
         """Stops the actor and bots."""
