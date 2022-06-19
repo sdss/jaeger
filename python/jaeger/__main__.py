@@ -251,10 +251,10 @@ def jaeger(
 
     if sextant:
         sextant_file = os.path.join(os.path.dirname(__file__), "etc/sextant.yaml")
-        config["files"]["ieb_config"] = sextant_file
+        config["ieb"]["config"] = sextant_file
         log.debug(f"Using internal IEB sextant onfiguration file {sextant_file}.")
 
-    if sextant or "sextants/" in config["files"]["ieb_config"]:
+    if sextant or "sextants/" in config["ieb"]["config"]:
         enable_low_temperature = False
     else:
         enable_low_temperature = True

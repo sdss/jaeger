@@ -522,6 +522,12 @@ class BaseBot:
                 self._task.cancel()
                 await self._task
 
+    async def restart(self):
+        """Restarts the loop."""
+
+        await self.stop()
+        await self.start(delay=1)
+
     async def _loop(self):
         raise NotImplementedError()
 

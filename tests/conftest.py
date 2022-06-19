@@ -40,7 +40,7 @@ def setup_config():
     TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
 
     config["safe_mode"] = False
-    config["files"]["ieb_config"] = "etc/ieb_APO.yaml"
+    config["ieb"]["config"] = "etc/ieb_APO.yaml"
     config["fps"]["start_pollers"] = True
 
     config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
@@ -180,7 +180,7 @@ async def actor(vfps):
         host="localhost",
         port=19990,
         log_dir=False,
-        config={"files": {"chiller_config": None}},
+        config={"chiller": {"config": None}},
     )
     jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)  # type: ignore
 
