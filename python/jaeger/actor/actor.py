@@ -104,11 +104,8 @@ class JaegerActor(clu.LegacyActor):
         # Define alerts and chiller bots.
         self.alerts = AlertsBot(self.fps)
 
-        chiller_config = self.config["files"].get("chiller_config", None)
-        if self.observatory == "APO" and chiller_config is not None:
-            self.chiller = ChillerBot(self.fps)
-        else:
-            self.chiller = None
+        chiller_config = self.config["chiller"].get("config", None)
+        self.chiller = ChillerBot(self.fps) if chiller_config else None
 
     async def start(self, *args, **kwargs):
         """Starts the actor and the bots."""

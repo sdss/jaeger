@@ -105,11 +105,13 @@ fvc:
     LED3: led3
     LED4: led4
 
+chiller:
+  config: null
+
 files:
   log_dir: /data/logs/jaeger
   ieb_config: etc/ieb_LCO.yaml
   fvc_config: etc/fvc.yaml
-  chiller_config: null
 
 low_temperature:
   sensor: RTD2
