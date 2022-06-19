@@ -243,7 +243,7 @@ class FPS(BaseFPS["FPS"]):
         self.disabled: set[int] = set([])
 
         if self.ieb is None or self.ieb is True:
-            self.ieb = config["files"]["ieb_config"]
+            self.ieb = config["ieb"]["config"]
 
         if isinstance(self.ieb, pathlib.Path):
             self.ieb = str(self.ieb)

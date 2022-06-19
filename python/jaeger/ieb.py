@@ -141,7 +141,7 @@ class FVC(IEB):
     def create(cls, path=None):
         """Creates an `.FVC` instance with the default configuration."""
 
-        default_ieb_path = config["files"]["fvc_config"]
+        default_ieb_path = config["fvc"]["config"]
 
         return super().create(default_ieb_path)
 
@@ -153,7 +153,7 @@ class Chiller(IEB):
     def create(cls, path=None):
         """Creates a `.Chiller` instance with the default configuration."""
 
-        config_file = config["files"].get("chiller_config", None)
+        config_file = config["chiller"].get("config", None)
         if config_file is None:
             warnings.warn("Chiller configuration missing.", JaegerUserWarning)
             return None

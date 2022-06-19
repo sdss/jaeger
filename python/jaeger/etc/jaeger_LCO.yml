@@ -56,6 +56,7 @@ fps:
   use_lock: True
 
 ieb:
+  config: etc/ieb_LCO.yaml
   disabled_devices: []
 
 positioner:
@@ -89,6 +90,7 @@ configuration:
   max_designs_epoch: 8
 
 fvc:
+  config: etc/fvc.yaml
   exposure_time: 5.
   fbi_level: 6.
   target_90_percentile: 30.0
@@ -110,8 +112,6 @@ chiller:
 
 files:
   log_dir: /data/logs/jaeger
-  ieb_config: etc/ieb_LCO.yaml
-  fvc_config: etc/fvc.yaml
 
 low_temperature:
   sensor: RTD2
