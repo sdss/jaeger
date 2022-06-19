@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* [#188](https://github.com/sdss/jaeger/issues/188) Chiller temperature and flow can now be set to a fixed value which is monitored and reset if necessary. Temperature can still be set to an "auto" mode that will maintain the set point slightly below the ambient temperature. The `chiller set` command now accepts `auto`, `disable`, or a value for either `flow` or `temperature`. The default values can be set in the configuration file under `chiller.temperature` (`true` for automatic mode, `null` to disable monitoring, or a fixed value) or `chiller.flow` (accepts `null` or a fixed value).
+
+
 ## 0.16.1 - June 10, 2022
 
 ### 🚀 New
