@@ -152,7 +152,7 @@ async def _load_design(
                     )
                 except Exception as err:
                     command.warning(
-                        f"Failed getting ambient temperature: {err}. "
+                        f"Failed getting ambient temperature: {err} "
                         "No scale correction will be applied."
                     )
 
