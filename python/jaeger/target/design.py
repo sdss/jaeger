@@ -147,9 +147,11 @@ class Design:
 
         observatory = (
             targetdb.Design.select(targetdb.Observatory.label)
+            .join(targetdb.DesignToField)
             .join(targetdb.Field)
             .join(targetdb.Observatory)
             .where(targetdb.Design.design_id == design_id)
+            .limit(1)
             .scalar()
         )
 
