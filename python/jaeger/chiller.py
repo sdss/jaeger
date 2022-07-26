@@ -93,9 +93,9 @@ class ChillerBot(BaseBot):
                 # Calculate the new set point temperature and write it
                 # to the device if it's different than the current one.
 
-                # New set point is one below ambient clipped to 0 degC
+                # New set point is two degC below ambient clipped to 1 degC
                 # and above the dew point depression region.
-                new_temp = ambient_temp - 1
+                new_temp = ambient_temp - 2
                 if new_temp <= 1:
                     new_temp = 1
                 if new_temp < (t_d + 3):
