@@ -79,6 +79,7 @@ class FPSWrapper(object):
         initialise=True,
         npositioners=10,
         enable_low_temperature=True,
+        skip_fibre_assignments_check=False,
     ):
 
         self.profile = profile
@@ -87,6 +88,7 @@ class FPSWrapper(object):
 
         self.ieb = ieb
         self.enable_low_temperature = enable_low_temperature
+        self.skip_fibre_assignments_check = skip_fibre_assignments_check
         self.initialise = initialise
 
         self.vpositioners = []
@@ -111,7 +113,8 @@ class FPSWrapper(object):
 
         if self.initialise:
             await self.fps.initialise(
-                enable_low_temperature=self.enable_low_temperature
+                enable_low_temperature=self.enable_low_temperature,
+                skip_fibre_assignments_check=self.skip_fibre_assignments_check,
             )
             if self.enable_low_temperature is False:
                 warnings.warn(
@@ -193,6 +196,12 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
     is_flag=True,
     help="Do not use the lock file, or ignore it if present.",
 )
+@click.option(
+    "-x",
+    "--skip-fibre-assignments-check",
+    is_flag=True,
+    help="Do not fail if the fibre assignment check fails.",
+)
 @click.pass_context
 def jaeger(
     ctx,
@@ -206,6 +215,7 @@ def jaeger(
     npositioners,
     allow_host,
     no_lock,
+    skip_fibre_assignments_check,
 ):
     """CLI for the SDSS-V focal plane system.
 
@@ -267,6 +277,7 @@ def jaeger(
         ieb=ieb,
         npositioners=npositioners,
         enable_low_temperature=enable_low_temperature,
+        skip_fibre_assignments_check=skip_fibre_assignments_check,
     )
 
 
@@ -312,7 +323,9 @@ async def actor(fps_maker, no_tron: bool = False):
     async with fps_maker as fps:
         actor_: JaegerActor = JaegerActor.from_config(config_copy, fps)
 
-        await fps.initialise()
+        await fps.initialise(
+            skip_fibre_assignments_check=fps_maker.skip_fibre_assignments_check
+        )
 
         await actor_.start()
         await actor_.run_forever()

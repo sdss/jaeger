@@ -62,6 +62,12 @@ if TYPE_CHECKING:
     from jaeger.target.configuration import BaseConfiguration
 
 
+try:
+    from coordio import calibration
+except ImportError:
+    calibration = None
+
+
 __all__ = ["BaseFPS", "FPS"]
 
 
@@ -395,6 +401,7 @@ class FPS(BaseFPS["FPS"]):
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
         keep_disabled: bool = True,
+        skip_fibre_assignments_check: bool = False,
     ) -> T:
         """Initialises all positioners with status and firmware version.
 
@@ -406,6 +413,8 @@ class FPS(BaseFPS["FPS"]):
             Enables the low temperature warnings.
         keep_disabled
             Maintain the list of disabled/offline robots.
+        skip_fibre_assignments_check
+            Do not check fibre assignments.
 
         """
 
@@ -637,6 +646,9 @@ class FPS(BaseFPS["FPS"]):
             positioner_ids=closed_loop_positioners,
         )
 
+        # Check that all the robots match the fibre assignments.
+        self._check_fibre_assignments(raise_error=not skip_fibre_assignments_check)
+
         # Start temperature watcher.
         if self.__temperature_task is not None:
             self.__temperature_task.cancel()
@@ -660,6 +672,41 @@ class FPS(BaseFPS["FPS"]):
             self.pollers.start()
 
         return self
+
+    def _check_fibre_assignments(self, raise_error: bool = True):
+        """Checks that all the expected robots are present."""
+
+        if calibration is None:
+            msg = "coordio.calibrations failed to import. Cannot check assignments."
+            if raise_error:
+                raise JaegerError(msg)
+            else:
+                warnings.warn(msg, JaegerUserWarning)
+                return
+
+        cal_obs = calibration.fiberAssignments.loc[self.observatory]
+        cal_obs = cal_obs.loc[cal_obs.Device == "Positioner"]
+
+        failed: bool = False
+
+        for pid in list(cal_obs.positionerID):
+            if pid not in self:
+                warnings.warn(
+                    f"Positioner {pid} is in fiberAssigments but not connected.",
+                    JaegerUserWarning,
+                )
+                failed = True
+
+        for pid in self:
+            if pid not in list(cal_obs.positionerID):
+                warnings.warn(
+                    f"Positioner {pid} is connected but not in fiberAssigments.",
+                    JaegerUserWarning,
+                )
+                failed = True
+
+        if raise_error and failed:
+            raise JaegerError("Some positioners do not match fiberAssignments.csv.")
 
     def set_status(self, status: FPSStatus):
         """Sets the status of the FPS."""
