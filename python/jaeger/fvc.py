@@ -311,8 +311,10 @@ class FVC:
         self.raw_hdu = hdus[1].copy()
         self.proc_hdu = hdus[1]
 
-        # Invert columns
-        hdus[1].data = hdus[1].data[:, ::-1]
+        # Invert columns at APO.
+        if self.fps.observatory == "APO":
+            hdus[1].data = hdus[1].data[:, ::-1]
+
         image_data = hdus[1].data
 
         self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.INFO)
