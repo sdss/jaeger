@@ -53,6 +53,7 @@ from jaeger.kaiju import (
     warn,
 )
 from jaeger.utils import get_sjd
+from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
 from .tools import copy_summary_file, positioner_to_wok, wok_to_positioner
@@ -585,6 +586,9 @@ class BaseConfiguration:
 
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
+
+        if connect_database(targetdb.database) is False:
+            raise RuntimeError("Cannot connect to database.")
 
         if "admin" in targetdb.database._config:
             targetdb.database.become_admin()

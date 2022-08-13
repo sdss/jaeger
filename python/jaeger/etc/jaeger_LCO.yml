@@ -133,8 +133,9 @@ observatory: ${OBSERVATORY}
 
 database:
   dbname: sdss5db
-  host: null
-  port: 5433
+  user: sdss_user
+  host: sdss5-db
+  port: 5432
 
 alerts:
   interval: 60
