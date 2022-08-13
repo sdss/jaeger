@@ -738,8 +738,9 @@ class BaseConfiguration:
             right_index=True,
         ).set_index("positionerID_x")
 
-        fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
-        fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
+        if "APOGEEFiber" in fass and "BOSSFiber" in fass:
+            fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
+            fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
 
         fdata.fillna(-999, inplace=True)
 
