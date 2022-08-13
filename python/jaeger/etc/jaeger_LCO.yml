@@ -97,6 +97,7 @@ fvc:
   target_distance: 5
   max_fvc_iterations: 2
   centroid_method: sep
+  check_rotator: false
   k: 1.0
   max_correction: 15
   ieb_keys:

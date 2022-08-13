@@ -299,16 +299,17 @@ async def take_fvc_loop(
     fvc = FVC(fps.observatory, command=command)
 
     # Check that the rotator is halted.
-    axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")
-    if axis_cmd.status.did_fail:
-        command.warning("Cannot check the status of the rotator.")
-    else:
-        rot_status = axis_cmd.replies.get("AxisCmdState")[2]
-        if rot_status != "Halted":
-            command.error(f"Cannot expose FVC while the rotator is {rot_status}.")
-            return False
+    if config["fvc"]["check_rotator"] is True:
+        axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")
+        if axis_cmd.status.did_fail:
+            command.warning("Cannot check the status of the rotator.")
         else:
-            command.debug("The rotator is halted.")
+            rot_status = axis_cmd.replies.get("AxisCmdState")[2]
+            if rot_status != "Halted":
+                command.error(f"Cannot expose FVC while the rotator is {rot_status}.")
+                return False
+            else:
+                command.debug("The rotator is halted.")
 
     command.debug("Turning LEDs on.")
     await command.send_command("jaeger", f"ieb fbi led1 led2 {fbi_level}")
