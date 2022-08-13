@@ -46,7 +46,6 @@ __all__ = ["FVC"]
 
 
 FVC_CONFIG = config["fvc"]
-DEFAULT_CENTROID_METHOD = "zbplus"
 
 
 def get_transform(observatory: str):
@@ -119,7 +118,7 @@ class FVC:
         self.fitrms = -9.99
         self.perc_90 = -9.99
         self.fvc_percent_reached = -9.99
-        self.centroid_method = None
+        self.centroid_method = config["fvc"]["centroid_method"]
 
     def set_command(self, command: Command[JaegerActor]):
         """Sets the command."""
@@ -271,7 +270,7 @@ class FVC:
         # Reset the instance
         self.reset()
 
-        centroid_method = centroid_method or DEFAULT_CENTROID_METHOD
+        centroid_method = centroid_method or self.centroid_method
 
         path = str(path)
         if not os.path.exists(path):
