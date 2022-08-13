@@ -739,8 +739,13 @@ class BaseConfiguration:
         ).set_index("positionerID_x")
 
         if "APOGEEFiber" in fass and "BOSSFiber" in fass:
-            fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
-            fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
+            fdata.loc[
+                (fass.index, "APOGEE"), "fiberId"
+            ] = fass.APOGEEFiber.tolist()  # type:ignore
+
+            fdata.loc[
+                (fass.index, "BOSS"), "fiberId"
+            ] = fass.BOSSFiber.tolist()  # type:ignore
 
         fdata.fillna(-999, inplace=True)
 
@@ -1595,7 +1600,9 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = row
+            self.fibre_table.loc[
+                (positioner_id, fibre_type), row.keys()
+            ] = row  # type:ignore
 
         return row
 
@@ -1671,7 +1678,9 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = row
+            self.fibre_table.loc[
+                (positioner_id, fibre_type), row.keys()
+            ] = row  # type:ignore
 
         return row
 
