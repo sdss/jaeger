@@ -92,7 +92,7 @@ configuration:
 fvc:
   config: etc/fvc.yaml
   exposure_time: 5.
-  fbi_level: 9
+  fbi_level: 9.
   target_90_percentile: 30.0
   target_distance: 5
   max_fvc_iterations: 2
