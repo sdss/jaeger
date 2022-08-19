@@ -814,10 +814,16 @@ async def slew(
 
     command.info(f"Slewing to ({ra}, {dec}, {pa})")
 
-    slew_cmd = await command.send_command(
-        "tcc",
-        f"track {ra}, {dec} icrs /rottype=object /rotang={pa:g} /rotwrap=mid",
-    )
+    if fps.observatory == "APO":
+        slew_cmd = await command.send_command(
+            "tcc",
+            f"track {ra}, {dec} icrs /rottype=object /rotang={pa:g} /rotwrap=mid",
+        )
+    else:
+        slew_cmd = await command.send_command(
+            "lcotcc",
+            f"track {ra}, {dec} /rottype=pa /rotang={pa:.3f}",
+        )
 
     if slew_cmd.status.did_fail:
         return command.fail("Failed slewing to field.")
