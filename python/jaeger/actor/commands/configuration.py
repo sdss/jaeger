@@ -822,7 +822,7 @@ async def slew(
     else:
         slew_cmd = await command.send_command(
             "lcotcc",
-            f"track {ra}, {dec} /rottype=pa /rotang={pa:.3f}",
+            f"track {ra}, {dec} /posAngle={pa:.3f}",
         )
 
     if slew_cmd.status.did_fail:
