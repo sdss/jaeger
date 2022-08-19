@@ -927,3 +927,34 @@ async def random(
     configuration.executed = True
 
     command.finish()
+
+
+@configuration.command()
+@click.argument("RA", type=float)
+@click.argument("DEC", type=float)
+@click.argument("PA", type=float)
+async def fake_field(
+    command: Command[JaegerActor],
+    fps: FPS,
+    ra: float,
+    dec: float,
+    pa: float,
+):
+    """Output a fake field."""
+
+    command.info(
+        configuration_loaded=[
+            -999,
+            -999,
+            -999,
+            ra,
+            dec,
+            pa,
+            -999.0,
+            -999.0,
+            "?",
+            False,
+        ]
+    )
+
+    return command.finish()
