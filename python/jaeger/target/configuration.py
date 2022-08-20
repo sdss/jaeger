@@ -951,10 +951,14 @@ class DitheredConfiguration(BaseConfiguration):
         epoch: float | None = None,
     ):
 
-        self.parent_configuration = parent_configuration
-        assert self.parent_configuration.design
+        assert parent_configuration.design
 
         super().__init__(scale=parent_configuration.scale)
+
+        # This needs to be set after the __init__ beccause __init__ sets
+        # parent_configuration=None.
+        self.parent_configuration = parent_configuration
+        assert self.parent_configuration.design
 
         self.is_dither = True
 
