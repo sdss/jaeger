@@ -85,7 +85,7 @@ configuration:
   scale_temperature_coeffs: [1.47051192e-05, 1.00003900e+00]
   max_scale_age: 7200
   clip_scale: 500
-  scale_kludge_factor: 0.99982
+  scale_kludge_factor: 1.0
   max_cloned_time: 7200
   max_designs_epoch: 8
 
