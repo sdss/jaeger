@@ -224,7 +224,7 @@ class FVC:
         use_new_invkin: bool = True,
         plot: bool | str = False,
         outdir: str | None = None,
-    ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
+    ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame | None]:
         """Processes a raw FVC image.
 
         Parameters
@@ -334,7 +334,7 @@ class FVC:
         positioner_df.index.set_names(["positionerID"], inplace=True)
 
         FVCTransform = get_transform(self.fps.observatory)
-        self.log(f"Using FVC transform class {FVCTransform!r}.")
+        self.log(f"Using FVC transform class {FVCTransform.__name__!r}.")
 
         fvc_transform = FVCTransform(
             image_data,
@@ -345,7 +345,9 @@ class FVC:
 
         self.centroids = fvc_transform.extractCentroids()
         fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
-        self.centroid_method = centroid_method
+        self.centroid_method = fvc_transform.centType
+
+        self.log(f"Centroid method: {self.centroid_method}.")
 
         if self.command:
             self.command.info(fvc_centroid_method=self.centroid_method)
