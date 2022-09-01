@@ -58,6 +58,8 @@ class IEB(Drift):
 
     """
 
+    MAX_RETRIES: int = 5
+
     def __init__(self, *args, **kwargs):
 
         self.disabled = False
@@ -102,7 +104,7 @@ class IEB(Drift):
             await Drift.__aenter__(self)
         except DriftError:
             self._n_failures += 1
-            if self._n_failures >= 5:
+            if self._n_failures >= self.MAX_RETRIES:
                 self.disabled = True
                 raise DriftError("Failed connecting to the IEB. Disabling it.")
             else:
