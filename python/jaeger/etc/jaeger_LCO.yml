@@ -84,7 +84,8 @@ kaiju:
 configuration:
   default_focal_scale: 1
   scale_temperature_coeffs: null
-  max_scale_age: 7200
+  use_guider_scale: false
+  guider_max_scale_age: 7200
   clip_scale: 500
   scale_kludge_factor: 1.0
   max_cloned_time: 7200

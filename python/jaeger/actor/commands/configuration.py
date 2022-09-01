@@ -112,7 +112,8 @@ async def _load_design(
 
     else:
 
-        if scale is None:
+        use_guider_scale = config["configuration"].get("use_guider_scale", True)
+        if scale is None and use_guider_scale is True:
 
             clip_scale: float = config["configuration"]["clip_scale"]
             SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
@@ -121,9 +122,11 @@ async def _load_design(
 
             # Query the guider for the historical scale from the previous exposure.
             command.debug("Getting guider scale.")
+
+            max_scale_age = config["configuration"]["guider_max_scale_age"]
             get_scale_cmd = await command.send_command(
                 "cherno",
-                f"get-scale --max-age {config['configuration']['max_scale_age']}",
+                f"get-scale --max-age {max_scale_age}",
             )
             if get_scale_cmd.status.did_fail:
                 command.warning("Failed getting scale from guider.")
@@ -183,9 +186,9 @@ async def _load_design(
                     f"{guider_scale:.6f}. Effective focal plane scale is "
                     f"{scale:.6f}."
                 )
-        
+
         else:
-            scale = config['configuration'].get('default_focal_scale', 1.0)
+            scale = config["configuration"].get("default_focal_scale", 1.0)
 
         try:
             # Define the epoch for the configuration.
