@@ -188,7 +188,7 @@ async def _load_design(
                 )
 
         else:
-            scale = config["configuration"].get("default_focal_scale", 1.0)
+            scale = scale or config["configuration"].get("default_focal_scale", 1.0)
 
         try:
             # Define the epoch for the configuration.
