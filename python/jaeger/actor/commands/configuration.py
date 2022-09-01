@@ -183,6 +183,9 @@ async def _load_design(
                     f"{guider_scale:.6f}. Effective focal plane scale is "
                     f"{scale:.6f}."
                 )
+        
+        else:
+            scale = config['configuration'].get('default_focal_scale', 1.0)
 
         try:
             # Define the epoch for the configuration.

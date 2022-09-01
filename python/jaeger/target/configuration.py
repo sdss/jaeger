@@ -34,7 +34,7 @@ from coordio import (
     Wok,
 )
 from coordio import __version__ as coordio_version
-from coordio.defaults import FOCAL_SCALE, INST_TO_WAVE, POSITIONER_HEIGHT, calibration
+from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 
@@ -154,7 +154,7 @@ class BaseConfiguration:
         self.configuration_id: int | None = None
         self._summary_file: str | None = None
 
-        self.scale = scale or FOCAL_SCALE
+        self.scale = scale or 1.0
 
         # Whether the configuration is a dither. If True, there will be a base
         # configuration from which we dithered and the trajectory will be applied
@@ -1251,7 +1251,7 @@ class BaseAssignmentData:
         self.site = Site(self.observatory)
         self.site.set_time()
 
-        self.scale = scale or FOCAL_SCALE
+        self.scale = scale or 1.0
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords

@@ -82,6 +82,7 @@ kaiju:
   lattice_position: [10., 170.]
 
 configuration:
+  default_focal_scale: 1
   scale_temperature_coeffs: [1.47051192e-05, 1.00003900e+00]
   max_scale_age: 7200
   clip_scale: 500
