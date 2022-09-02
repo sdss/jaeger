@@ -361,7 +361,7 @@ async def take_fvc_loop(
             )
 
             # 3. Set current RMS and delta.
-            new_rms = fvc.fitrms * 1000.0
+            new_rms = round(fvc.fitrms * 1000.0, 2)
 
             command.info(fvc_rms=new_rms)
 
@@ -372,8 +372,8 @@ async def take_fvc_loop(
                 command.info(fvc_deltarms=delta_rms)
             current_rms = new_rms
 
-            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
-            command.info(fvc_percent_reached=fvc.fvc_percent_reached)
+            command.info(fvc_perc_90=round(fvc.perc_90 * 1000.0, 2))
+            command.info(fvc_percent_reached=round(fvc.fvc_percent_reached, 1))
 
             # 4. Check if we have reached the distance criterion.
             if target_90_percentile and fvc.perc_90 * 1000.0 <= target_90_percentile:
