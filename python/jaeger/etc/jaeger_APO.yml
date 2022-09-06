@@ -87,7 +87,7 @@ configuration:
   use_guider_scale: true
   guider_max_scale_age: 7200
   clip_scale: 500
-  scale_kludge_factor: 0.99982
+  scale_fudge_factor: 0.99982
   max_cloned_time: 7200
   max_designs_epoch: 8
 

@@ -283,10 +283,10 @@ def configuration():
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
 @click.option(
-    "--kludge-factor",
+    "--fudge-factor",
     type=float,
     default=None,
-    help="Modify the default scale kludge factor.",
+    help="Modify the default scale fudge factor.",
 )
 @click.option(
     "--no-clone",
@@ -311,7 +311,7 @@ async def load(
     execute: bool = False,
     reissue: bool = False,
     scale: float | None = None,
-    kludge_factor: float | None = None,
+    fudge_factor: float | None = None,
     no_clone: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
@@ -348,7 +348,7 @@ async def load(
             command,
             fps,
             design_id=designid,
-            kludge_factor=kludge_factor,
+            fudge_factor=fudge_factor,
             preload=False,
             no_clone=no_clone,
             scale=scale,
@@ -521,10 +521,10 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
 @click.option(
-    "--kludge-factor",
+    "--fudge-factor",
     type=float,
     default=None,
-    help="Modify the default scale kludge factor.",
+    help="Modify the default scale fudge factor.",
 )
 @click.option(
     "--no-clone",
@@ -550,7 +550,7 @@ async def preload(
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     scale: float | None = None,
-    kludge_factor: float | None = None,
+    fudge_factor: float | None = None,
     no_clone: bool = False,
     make_active: bool = True,
     clear: bool = False,
@@ -576,7 +576,7 @@ async def preload(
         preload=True,
         no_clone=no_clone,
         scale=scale,
-        kludge_factor=kludge_factor,
+        fudge_factor=fudge_factor,
         epoch=epoch,
         epoch_delay=epoch_delay,
     )
