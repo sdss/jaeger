@@ -17,7 +17,6 @@ import numpy
 import peewee
 from astropy.time import Time
 
-from coordio.defaults import FOCAL_SCALE
 from sdssdb.peewee.sdss5db import opsdb
 
 from jaeger import config
@@ -54,7 +53,7 @@ async def _load_design(
     preload: bool = False,
     no_clone: bool = False,
     scale: float | None = None,
-    kludge_factor: float | None = None,
+    fudge_factor: float | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     get_paths: bool = True,
@@ -112,15 +111,17 @@ async def _load_design(
 
     else:
 
+        default_scale = config["configuration"].get("default_focal_scale", 1.0)
         use_guider_scale = config["configuration"].get("use_guider_scale", True)
+
+        clip_scale: float = config["configuration"]["clip_scale"]
+        SCALE_FUDGE: float = config["configuration"]["scale_fudge_factor"]
+        fudge_factor = fudge_factor or SCALE_FUDGE
+
+        guider_scale: float | None = None
+
+        # Query the guider for the historical scale from the previous exposure.
         if scale is None and use_guider_scale is True:
-
-            clip_scale: float = config["configuration"]["clip_scale"]
-            SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
-
-            guider_scale: float | None = None
-
-            # Query the guider for the historical scale from the previous exposure.
             command.debug("Getting guider scale.")
 
             max_scale_age = config["configuration"]["guider_max_scale_age"]
@@ -135,12 +136,23 @@ async def _load_design(
                 if guider_scale < 0:
                     command.warning("Invalid guider scale.")
                     guider_scale = None
+                else:
+                    # Clip scale if needed.
+                    if (abs(guider_scale) - 1) * 1e6 > clip_scale:
+                        guider_scale = numpy.clip(
+                            guider_scale,
+                            1 - clip_scale / 1e6,
+                            1 + clip_scale / 1e6,
+                        )
+                        command.warning(
+                            "Unexpectedly large guider scale. "
+                            f"Clipping to {guider_scale:.6f}."
+                        )
 
             temp_coeffs = config["configuration"].get("scale_temperature_coeffs", None)
 
             if guider_scale is None and temp_coeffs is not None:
                 # Try using the scale-temperature relationship instead.
-
                 try:
                     if not isinstance(command.actor.fps.ieb, IEB):
                         raise ValueError("IEB not connected")
@@ -158,40 +170,25 @@ async def _load_design(
                 except Exception as err:
                     command.warning(
                         f"Failed getting ambient temperature: {err} "
-                        "No scale correction will be applied."
+                        "Using default scale."
                     )
 
-            elif guider_scale is not None:
+        # Second pass at setting the scale. Apply the fudge factor.
+        if guider_scale is not None:
+            scale = guider_scale * fudge_factor
+            command.debug(
+                f"Correcting guider scale {guider_scale:.6f} with fudge factor "
+                f"{fudge_factor:.6f}."
+            )
 
-                if (abs(guider_scale) - 1) * 1e6 > clip_scale:
-                    guider_scale = numpy.clip(
-                        guider_scale,
-                        1 - clip_scale / 1e6,
-                        1 + clip_scale / 1e6,
-                    )
-
-                    command.warning(
-                        "Unexpectedly large guider scale. "
-                        f"Clipping to {guider_scale:.6f}."
-                    )
-
-                assert guider_scale is not None
-
-                kludge_factor = kludge_factor or SCALE_KLUDGE
-                scale = FOCAL_SCALE * guider_scale * kludge_factor
-
-                command.debug(f"Scale kludge factor: {kludge_factor:.6f}")
-                command.debug(
-                    "Text correcting focal plane scale with guider scale "
-                    f"{guider_scale:.6f}. Effective focal plane scale is "
-                    f"{scale:.6f}."
-                )
-
+        if scale is not None:
+            command.info(f"Focal scale: {scale:.6f}.")
         else:
-            scale = scale or config["configuration"].get("default_focal_scale", 1.0)
+            scale = default_scale
+            command.info(f"Using default scale {scale:.6f}.")
 
+        # Define the epoch for the configuration.
         try:
-            # Define the epoch for the configuration.
             command.debug(text=f"Epoch delay: {round(epoch_delay, 1)} seconds.")
 
             if epoch is None:
