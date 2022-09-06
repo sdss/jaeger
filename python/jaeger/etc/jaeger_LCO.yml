@@ -82,9 +82,9 @@ kaiju:
   lattice_position: [10., 170.]
 
 configuration:
-  default_focal_scale: 1
+  default_focal_scale: 0.9985
   scale_temperature_coeffs: null
-  use_guider_scale: false
+  use_guider_scale: true
   guider_max_scale_age: 7200
   clip_scale: 500
   scale_fudge_factor: 0.9987
