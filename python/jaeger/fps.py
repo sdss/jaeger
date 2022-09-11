@@ -422,12 +422,11 @@ class FPS(BaseFPS["FPS"]):
             start_pollers = config["fps"]["start_pollers"]
         assert isinstance(start_pollers, bool)
 
+        self.disabled = set([])
         if keep_disabled:
             for positioner in self.positioners.values():
                 if positioner.offline or positioner.disabled:
                     self.disabled.add(positioner.positioner_id)
-        else:
-            self.disabled = set([])
 
         # Clear all robots
         self.clear()

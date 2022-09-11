@@ -25,6 +25,7 @@
 ### 🔧 Fixed
 
 * Alerts and chiller bots were not being started on init.
+* Solve a case in which a manually disabled positioner could not be re-enabled after the FPS had been power cycled or reinitialised.
 
 
 ## 0.16.1 - June 10, 2022

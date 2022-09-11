@@ -249,6 +249,18 @@ async def test_report_status(vfps, vpositioners):
 async def test_reinitialise_disabled(vfps, vpositioners):
 
     vfps[2].disabled = True
+
+    await vfps.initialise(keep_disabled=True)
+    assert vfps[2].disabled
+
+
+async def test_reinitialise_reenabled(vfps, vpositioners):
+
+    vfps[2].disabled = True
     await vfps.initialise(keep_disabled=True)
 
-    assert vfps[2].disabled
+    vfps[2].disabled = False
+    vfps[2].offline = False
+
+    await vfps.initialise(keep_disabled=True)
+    assert vfps[2].disabled is False
