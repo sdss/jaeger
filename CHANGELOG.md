@@ -5,6 +5,22 @@
 ### ✨ Improved
 
 * [#188](https://github.com/sdss/jaeger/issues/188) Chiller temperature and flow can now be set to a fixed value which is monitored and reset if necessary. Temperature can still be set to an "auto" mode that will maintain the set point slightly below the ambient temperature. The `chiller set` command now accepts `auto`, `disable`, or a value for either `flow` or `temperature`. The default values can be set in the configuration file under `chiller.temperature` (`true` for automatic mode, `null` to disable monitoring, or a fixed value) or `chiller.flow` (accepts `null` or a fixed value).
+* Added `--quiet` flag to `status` that does not print the status of each robot.
+* Added back `jaeger configuration fake-field` command.
+* Fixed `jaeger configuration slew` command to work with `lcotcc`.
+* Enabled additional alarms for LCO.
+
+### 🏷️ Changed
+
+* Reworked scale logic when loading a new design:
+  * If a `--scale` flag is passed, that scale is passed directly to coordio without any additional fudge factor.
+  * If the guider scale is available and `use_guider_scale=True`, the guider scale multiplied by the fudge factor is passed.
+  * If `use_guider_scale=True` and the `scale_temperature_coeffs` are defined, and the guider scale is not available, the guider scale is defined by the scale-temperature correlation and the fudge factor is applied.
+  * If `use_guider_scale=False` and `--scale` is not passed, or otherwise the guider scale cannot be defined, the `default_scale` value is used.
+* Use `targetdb.design_to_field` table.
+* Use difference centroiding methods for APO and LCO.
+* Change various configuration parameters for LCO.
+* Renamed `kludge_factor` and `--kludge-factor` to `fudge_factor` and `--fudge-factor`.
 
 ### 🔧 Fixed
 
