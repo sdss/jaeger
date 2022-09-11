@@ -6,10 +6,26 @@ Programmatic API
 
 .. _api-can:
 
+jaeger.alerts
+-------------
+
+.. automodule:: jaeger.alerts
+   :members:
+   :show-inheritance:
+
+
 jaeger.can
 ----------
 
 .. automodule:: jaeger.can
+   :members:
+   :show-inheritance:
+
+
+jaeger.chiller
+--------------
+
+.. automodule:: jaeger.chiller
    :members:
    :show-inheritance:
 
@@ -22,24 +38,18 @@ jaeger.fps
    :show-inheritance:
 
 
-jaeger.positioner
------------------
+jaeger.fvc
+----------
 
-.. automodule:: jaeger.positioner
+.. automodule:: jaeger.fvc
    :members:
    :show-inheritance:
 
 
-jaeger.helpers
---------------
+jaeger.ieb
+----------
 
-.. automodule:: jaeger.utils.helpers
-
-
-jaeger.utils
-------------
-
-.. automodule:: jaeger.utils.utils
+.. automodule:: jaeger.ieb
    :members:
    :show-inheritance:
 
@@ -50,3 +60,29 @@ jaeger.interfaces
 .. automodule:: jaeger.interfaces
    :imported-members:
    :show-inheritance:
+
+
+jaeger.kaiju
+------------
+
+.. automodule:: jaeger.kaiju
+   :members:
+   :show-inheritance:
+
+
+jaeger.positioner
+-----------------
+
+.. automodule:: jaeger.positioner
+   :members:
+   :show-inheritance:
+
+
+jaeger.utils
+------------
+
+.. automodule:: jaeger.utils.utils
+   :members:
+   :show-inheritance:
+
+.. automodule:: jaeger.utils.helpers
