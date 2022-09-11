@@ -92,6 +92,7 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 addopts = "-p no:logging --disable-warnings --cov jaeger --cov-report xml --cov-report html --cov-report term"
+asyncio_mode = "auto"
 filterwarnings = [
     "ignore:.*The loop argument is deprecated since.*",
     "ignore:.*Loading an empty FPS.*",

@@ -244,3 +244,11 @@ async def test_goto_fails(vfps, vpositioners, mocker):
 async def test_report_status(vfps, vpositioners):
 
     assert isinstance(await vfps.report_status(), dict)
+
+
+async def test_reinitialise_disabled(vfps, vpositioners):
+
+    vfps[2].disabled = True
+    await vfps.initialise(keep_disabled=True)
+
+    assert vfps[2].disabled

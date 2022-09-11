@@ -50,6 +50,9 @@ class VirtualFPS(jaeger.FPS):
 
         self._vpositioners[pid] = VirtualPositioner(pid, bus=self._vpositioner_bus)
 
+    def _check_fibre_assignments(self, *args, **kwargs):
+        pass
+
     async def process_messages(self):
 
         while True:
