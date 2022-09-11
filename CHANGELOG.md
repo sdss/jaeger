@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 - September 11, 2022
+
+### 🔧 Fixed
+
+* Bumped minimum version of `sdssdb` to 0.5.5 since jaeger requires the `Design.field` property.
+
+
 ## 1.0.0 - September 10, 2022
 
 ### ✨ Improved
