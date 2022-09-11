@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jaeger"
-version = "1.0.0a0"
+version = "1.0.0"
 description = "Controllers for the SDSS-V FPS"
 authors = ["José Sánchez-Gallego <gallegoj@uw.edu>"]
 license = "BSD-3-Clause"
