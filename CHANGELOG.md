@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Add `FVCITER` keyword to the FVC process image header with the number of the FVC iteration.
+
+
 ## 1.0.1 - September 11, 2022
 
 ### 🔧 Fixed

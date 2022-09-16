@@ -98,6 +98,9 @@ class FVC:
         self.command = command
         self.fps = FPS.get_instance()
 
+        # To be updated manually by the actor command.
+        self.iteration: int = 1
+
         self.reset()
 
     def reset(self):
@@ -418,6 +421,7 @@ class FVC:
         # robots. This is different from FVC_RMS reported by
         # FVCTransformAPO.getMetadata() that is measured - reported for all
         # positioners.
+        hdus[1].header["FVCITER"] = (self.iteration, "FVC iteration")
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
         hdus[1].header["PERC90"] = (self.perc_90 * 1000, "90% percentile [um]")
         hdus[1].header["FVCREACH"] = (

@@ -340,13 +340,14 @@ async def take_fvc_loop(
             command.info(f"FVC iteration {n}")
 
             filename = None
-            fvc.proc_hdu = None
             proc_image_saved: bool = False
 
             # 1. Expose the FVC
             command.debug("Taking exposure with fliswarm.")
             filename = await fvc.expose(exposure_time=exposure_time, stack=stack)
             command.debug(fvc_filename=str(filename))
+
+            fvc.iteration = n
 
             # 2. Process the new image.
             positioner_coords = fps.get_positions_dict()
