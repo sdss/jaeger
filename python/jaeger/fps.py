@@ -603,49 +603,68 @@ class FPS(BaseFPS["FPS"]):
         # Disable collision detection for listed robots.
         disable_collision = config["fps"]["disable_collision_detection_positioners"]
         if len(disable_collision) > 0:
-            warnings.warn(
-                f"Disabling collision detection for positioners: {disable_collision}.",
-                JaegerUserWarning,
-            )
-            await self.send_command(
-                CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_collision,
-            )
-            await self.send_command(
-                CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_collision,
-            )
+            if self.locked:
+                warnings.warn(
+                    "The FPS is locked. Cannot disable collision detection",
+                    JaegerUserWarning,
+                )
+
+            else:
+                warnings.warn(
+                    "Disabling collision detection for positioners: "
+                    f"{disable_collision}.",
+                    JaegerUserWarning,
+                )
+                await self.send_command(
+                    CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=disable_collision,
+                )
+                await self.send_command(
+                    CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=disable_collision,
+                )
 
         # Set robots to open loop mode
         open_loop_positioners = config["fps"].get("open_loop_positioners", [])
         if len(open_loop_positioners) > 0:
-            warnings.warn(
-                f"Setting open loop mode for positioners: {open_loop_positioners}.",
-                JaegerUserWarning,
-            )
-            await self.send_command(
-                CommandID.ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=open_loop_positioners,
-            )
-            await self.send_command(
-                CommandID.BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=open_loop_positioners,
-            )
+            if self.locked:
+                warnings.warn(
+                    "The FPS is locked. Cannot set open loop mode.",
+                    JaegerUserWarning,
+                )
 
-        # Ensure closed loop mode for remaining robots
-        closed_loop_positioners = list(
-            set([pid for pid in self.positioners if not self[pid].disabled])
-            - set(disable_collision)
-            - set(open_loop_positioners)
-        )
-        await self.send_command(
-            CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
-            positioner_ids=closed_loop_positioners,
-        )
-        await self.send_command(
-            CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
-            positioner_ids=closed_loop_positioners,
-        )
+            else:
+                warnings.warn(
+                    "Setting open loop mode for positioners: "
+                    f"{open_loop_positioners}.",
+                    JaegerUserWarning,
+                )
+                await self.send_command(
+                    CommandID.ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=open_loop_positioners,
+                )
+                await self.send_command(
+                    CommandID.BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=open_loop_positioners,
+                )
+
+        # Ensure closed loop mode for remaining robots. This does not work if
+        # any of the robots is collided.
+        if not self.locked:
+
+            closed_loop_positioners = list(
+                set([pid for pid in self.positioners if not self[pid].disabled])
+                - set(disable_collision)
+                - set(open_loop_positioners)
+            )
+            await self.send_command(
+                CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
+                positioner_ids=closed_loop_positioners,
+            )
+            await self.send_command(
+                CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
+                positioner_ids=closed_loop_positioners,
+            )
 
         # Check that all the robots match the fibre assignments.
         self._check_fibre_assignments(raise_error=not skip_fibre_assignments_check)

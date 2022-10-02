@@ -6,6 +6,10 @@
 
 * Add `FVCITER` keyword to the FVC process image header with the number of the FVC iteration.
 
+### 🔧 Fixed
+
+* [#189](https://github.com/sdss/jaeger/issues/189) Prevent FPS initialisation from failing if a positioner is reporting a collided status.
+
 
 ## 1.0.1 - September 11, 2022
 
