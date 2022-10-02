@@ -632,20 +632,23 @@ class FPS(BaseFPS["FPS"]):
                 positioner_ids=open_loop_positioners,
             )
 
-        # Ensure closed loop mode for remaining robots
-        closed_loop_positioners = list(
-            set([pid for pid in self.positioners if not self[pid].disabled])
-            - set(disable_collision)
-            - set(open_loop_positioners)
-        )
-        await self.send_command(
-            CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
-            positioner_ids=closed_loop_positioners,
-        )
-        await self.send_command(
-            CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
-            positioner_ids=closed_loop_positioners,
-        )
+        # Ensure closed loop mode for remaining robots. This does not work if
+        # any of the robots is collided.
+        if not self.locked:
+
+            closed_loop_positioners = list(
+                set([pid for pid in self.positioners if not self[pid].disabled])
+                - set(disable_collision)
+                - set(open_loop_positioners)
+            )
+            await self.send_command(
+                CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
+                positioner_ids=closed_loop_positioners,
+            )
+            await self.send_command(
+                CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
+                positioner_ids=closed_loop_positioners,
+            )
 
         # Check that all the robots match the fibre assignments.
         self._check_fibre_assignments(raise_error=not skip_fibre_assignments_check)

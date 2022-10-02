@@ -264,3 +264,11 @@ async def test_reinitialise_reenabled(vfps, vpositioners):
 
     await vfps.initialise(keep_disabled=True)
     assert vfps[2].disabled is False
+
+
+async def test_reinitialise_locked(vfps, vpositioners):
+
+    vpositioners[1].status |= PositionerStatus.COLLISION_BETA
+    await vfps.initialise()
+
+    assert vfps.locked
