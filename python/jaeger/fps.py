@@ -155,9 +155,11 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
 
         if isinstance(positioner, self.positioner_class):
             positioner_id = positioner.positioner_id
-        else:
+        elif isinstance(positioner, int):
             positioner_id = positioner
             positioner = self.positioner_class(positioner_id, None, centre=centre)
+        else:
+            raise TypeError(f"Invalid parameter positioner of type {type(positioner)}")
 
         if positioner_id in self.positioners:
             raise JaegerError(
