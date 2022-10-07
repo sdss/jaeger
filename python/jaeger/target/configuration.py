@@ -37,6 +37,7 @@ from coordio import __version__ as coordio_version
 from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
+from sdsstools.time import get_sjd
 
 from jaeger import FPS
 from jaeger import __version__ as jaeger_version
@@ -52,7 +53,6 @@ from jaeger.kaiju import (
     load_robot_grid,
     warn,
 )
-from jaeger.utils import get_sjd
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -545,7 +545,12 @@ class BaseConfiguration:
     async def save_snapshot(self, highlight=None):
         """Saves a snapshot of the current robot grid."""
 
-        mjd = int(Time.now().mjd)
+        if self.assignment_data and self.assignment_data.observatory:
+            observatory = self.assignment_data.observatory.upper()
+        else:
+            observatory = None
+
+        mjd = get_sjd(observatory)
         dirpath = os.path.join(config["fps"]["configuration_snapshot_path"], str(mjd))
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
@@ -770,7 +775,7 @@ class BaseConfiguration:
             "instruments": "BOSS APOGEE",
             "epoch": adata.site.time.jd if adata.site.time else -999,
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
-            "MJD": int(get_sjd(adata.observatory.upper())),
+            "MJD": get_sjd(adata.observatory.upper()),
             "observatory": adata.observatory,
             "temperature": round(temp, 1),
             "raCen": -999.0,
