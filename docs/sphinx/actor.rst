@@ -1,7 +1,7 @@
 .. _actor:
 
-Actor
-=====
+Actor commands
+==============
 
 The jaeger actor provides a TCP/IP interface to the jaeger functionality. jaeger uses `CLU <https://clu.readthedocs.io/en/latest/>`__ to provide the actor framework. Most actor commands are thin wrappers around the functionality provided by the jaeger API.
 

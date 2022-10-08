@@ -142,7 +142,7 @@ class AlertsBot(BaseBot):
                     await coro()
                 except Exception as err:
                     self.notify(
-                        f"Failed running alerts coroutine {coro.__name__}: {err}."
+                        f"Failed running alerts coroutine {coro.__name__}: {err}"
                     )
 
             await asyncio.sleep(self.interval)

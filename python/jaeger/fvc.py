@@ -46,7 +46,6 @@ __all__ = ["FVC"]
 
 
 FVC_CONFIG = config["fvc"]
-DEFAULT_CENTROID_METHOD = "zbplus"
 
 
 def get_transform(observatory: str):
@@ -99,6 +98,9 @@ class FVC:
         self.command = command
         self.fps = FPS.get_instance()
 
+        # To be updated manually by the actor command.
+        self.iteration: int = 1
+
         self.reset()
 
     def reset(self):
@@ -119,7 +121,7 @@ class FVC:
         self.fitrms = -9.99
         self.perc_90 = -9.99
         self.fvc_percent_reached = -9.99
-        self.centroid_method = None
+        self.centroid_method = config["fvc"]["centroid_method"]
 
     def set_command(self, command: Command[JaegerActor]):
         """Sets the command."""
@@ -225,7 +227,7 @@ class FVC:
         use_new_invkin: bool = True,
         plot: bool | str = False,
         outdir: str | None = None,
-    ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame]:
+    ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame | None]:
         """Processes a raw FVC image.
 
         Parameters
@@ -271,7 +273,7 @@ class FVC:
         # Reset the instance
         self.reset()
 
-        centroid_method = centroid_method or DEFAULT_CENTROID_METHOD
+        centroid_method = centroid_method or self.centroid_method
 
         path = str(path)
         if not os.path.exists(path):
@@ -312,8 +314,10 @@ class FVC:
         self.raw_hdu = hdus[1].copy()
         self.proc_hdu = hdus[1]
 
-        # Invert columns
-        hdus[1].data = hdus[1].data[:, ::-1]
+        # Invert columns at APO.
+        if self.fps.observatory == "APO":
+            hdus[1].data = hdus[1].data[:, ::-1]
+
         image_data = hdus[1].data
 
         self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.INFO)
@@ -333,7 +337,7 @@ class FVC:
         positioner_df.index.set_names(["positionerID"], inplace=True)
 
         FVCTransform = get_transform(self.fps.observatory)
-        self.log(f"Using FVC transform class {FVCTransform!r}.")
+        self.log(f"Using FVC transform class {FVCTransform.__name__!r}.")
 
         fvc_transform = FVCTransform(
             image_data,
@@ -344,7 +348,9 @@ class FVC:
 
         self.centroids = fvc_transform.extractCentroids()
         fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
-        self.centroid_method = centroid_method
+        self.centroid_method = fvc_transform.centType
+
+        self.log(f"Centroid method: {self.centroid_method}.")
 
         if self.command:
             self.command.info(fvc_centroid_method=self.centroid_method)
@@ -415,6 +421,7 @@ class FVC:
         # robots. This is different from FVC_RMS reported by
         # FVCTransformAPO.getMetadata() that is measured - reported for all
         # positioners.
+        hdus[1].header["FVCITER"] = (self.iteration, "FVC iteration")
         hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
         hdus[1].header["PERC90"] = (self.perc_90 * 1000, "90% percentile [um]")
         hdus[1].header["FVCREACH"] = (

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "jaeger"
-version = "0.15.2-alpha.0"
+version = "1.0.2a0"
 description = "Controllers for the SDSS-V FPS"
 authors = ["José Sánchez-Gallego <gallegoj@uw.edu>"]
 license = "BSD-3-Clause"
@@ -27,15 +27,15 @@ python = "^3.8,<3.11"
 numpy = "^1.21.0"
 progressbar2 = "^3.39.3"
 sdss-drift = "^0.4.1"
-sdss-clu = {version = "^1.5.7", allow-prereleases = true}
-sdsstools = "^0.4.13"
+sdss-clu = "^1.5.7"
+sdsstools = "^0.5.0"
 click_default_group = "^1.2.2"
-sdssdb = "^0.5.2"
+sdssdb = "^0.5.5"
 pandas = "^1.3.4"
 tables = "^3.6.1"
 astropy = "^5.0.0"
-sdss-kaiju = ">=1.2.3"
-sdss-coordio = {version = ">=1.3.1", allow-prereleases = true}
+sdss-kaiju = "^1.2.3"
+sdss-coordio = "^1.3.1"
 pydl = "1.0.0rc1"
 sep = "^1.2.0"
 "zc.lockfile" = "^2.0"
@@ -92,6 +92,7 @@ lines_after_imports = 2
 
 [tool.pytest.ini_options]
 addopts = "-p no:logging --disable-warnings --cov jaeger --cov-report xml --cov-report html --cov-report term"
+asyncio_mode = "auto"
 filterwarnings = [
     "ignore:.*The loop argument is deprecated since.*",
     "ignore:.*Loading an empty FPS.*",
@@ -126,5 +127,5 @@ exclude_lines = [
 ]
 
 [build-system]
-requires = ["poetry-core>=1.1.0b2"]
+requires = ["poetry-core>=1.1.0"]
 build-backend = "poetry.core.masonry.api"

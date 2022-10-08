@@ -15,6 +15,7 @@ import peewee
 from coordio.defaults import calibration
 from sdssdb.peewee.sdss5db import targetdb
 
+from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
 from .configuration import Configuration
@@ -65,6 +66,9 @@ class Design:
 
         self.design_id = design_id
 
+        if connect_database(targetdb.database) is False:
+            raise RuntimeError("Cannot connect to database.")
+
         try:
             self.design = targetdb.Design.get(design_id=design_id)
         except peewee.DoesNotExist:
@@ -91,7 +95,7 @@ class Design:
         # query should run in < 1s, but at some point maybe we can change
         # this to use async-peewee and aiopg.
 
-        if targetdb.database.connected is False:
+        if connect_database(targetdb.database) is False:
             raise RuntimeError("Database is not connected.")
 
         target_data = (
@@ -134,7 +138,7 @@ class Design:
     def check_design(cls, design_id: int, site: str):
         """Checks if a design exists and is for the current observatory."""
 
-        if targetdb.database.connected is False:
+        if connect_database(targetdb.database) is False:
             raise RuntimeError("Database is not connected.")
 
         exists = (
@@ -147,9 +151,11 @@ class Design:
 
         observatory = (
             targetdb.Design.select(targetdb.Observatory.label)
+            .join(targetdb.DesignToField)
             .join(targetdb.Field)
             .join(targetdb.Observatory)
             .where(targetdb.Design.design_id == design_id)
+            .limit(1)
             .scalar()
         )
 

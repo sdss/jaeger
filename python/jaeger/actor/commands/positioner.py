@@ -265,7 +265,18 @@ async def initialise(command, fps, positioner_id, datums=False):
 
 @jaeger_parser.command()
 @click.argument("POSITIONERS", type=int, nargs=-1, required=False)
-async def status(command: JaegerCommandType, fps: FPS, positioners):
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    help="Do not print the status of each positioner.",
+)
+async def status(
+    command: JaegerCommandType,
+    fps: FPS,
+    positioners,
+    quiet: bool = False,
+):
     """Reports the position and status bit of a list of positioners."""
 
     positioner_ids = positioners or list(fps.positioners.keys())
@@ -288,48 +299,41 @@ async def status(command: JaegerCommandType, fps: FPS, positioners):
     except JaegerError as err:
         return command.fail(error=f"Failed reporting status: {err}")
 
-    # n_trajs = (
-    #     await fps.send_command(
-    #         CommandID.GET_NUMBER_TRAJECTORIES,
-    #         positioner_ids=positioner_ids,
-    #     )
-    # ).get_replies()
+    if quiet is False:
+        for pid in sorted(positioner_ids):
+            p = fps[pid]
 
-    for pid in sorted(positioner_ids):
-        p = fps[pid]
+            alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
+            beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
 
-        alpha_pos = -999 if p.alpha is None else numpy.round(p.alpha, 4)
-        beta_pos = -999 if p.beta is None else numpy.round(p.beta, 4)
+            n_trajs_pid = "?"
 
-        n_trajs_pid = "?"
+            if pid in fps.positioner_to_bus and isinstance(fps.can, JaegerCAN):
+                interface, bus = fps.positioner_to_bus[pid]
+                interface = fps.can.interfaces.index(interface) + 1
+            else:
+                interface = -1
+                bus = -1
 
-        if pid in fps.positioner_to_bus and isinstance(fps.can, JaegerCAN):
-            interface, bus = fps.positioner_to_bus[pid]
-            interface = fps.can.interfaces.index(interface) + 1
-        else:
-            interface = -1
-            bus = -1
+            command.write(
+                "i",
+                positioner_status=[
+                    p.positioner_id,
+                    alpha_pos,
+                    beta_pos,
+                    f"0x{int(p.status):x}",
+                    p.initialised,
+                    p.disabled,
+                    p.offline,
+                    p.is_bootloader() or False,
+                    p.firmware or "?",
+                    interface,
+                    bus,
+                    n_trajs_pid,
+                ],
+            )
 
-        command.write(
-            "i",
-            positioner_status=[
-                p.positioner_id,
-                alpha_pos,
-                beta_pos,
-                f"0x{int(p.status):x}",
-                p.initialised,
-                p.disabled,
-                p.offline,
-                p.is_bootloader() or False,
-                p.firmware or "?",
-                interface,
-                bus,
-                n_trajs_pid,
-            ],
-        )
-
-    if len(positioners) == 0:
-        await clu.Command("ieb status", parent=command).parse()
+    await clu.Command("ieb status", parent=command).parse()
 
     command.set_status(clu.CommandStatus.DONE)
 

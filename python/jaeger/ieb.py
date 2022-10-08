@@ -58,6 +58,8 @@ class IEB(Drift):
 
     """
 
+    MAX_RETRIES: int = 5
+
     def __init__(self, *args, **kwargs):
 
         self.disabled = False
@@ -102,7 +104,7 @@ class IEB(Drift):
             await Drift.__aenter__(self)
         except DriftError:
             self._n_failures += 1
-            if self._n_failures >= 5:
+            if self._n_failures >= self.MAX_RETRIES:
                 self.disabled = True
                 raise DriftError("Failed connecting to the IEB. Disabling it.")
             else:
@@ -141,7 +143,7 @@ class FVC(IEB):
     def create(cls, path=None):
         """Creates an `.FVC` instance with the default configuration."""
 
-        default_ieb_path = config["files"]["fvc_config"]
+        default_ieb_path = config["fvc"]["config"]
 
         return super().create(default_ieb_path)
 
@@ -153,7 +155,7 @@ class Chiller(IEB):
     def create(cls, path=None):
         """Creates a `.Chiller` instance with the default configuration."""
 
-        config_file = config["files"].get("chiller_config", None)
+        config_file = config["chiller"].get("config", None)
         if config_file is None:
             warnings.warn("Chiller configuration missing.", JaegerUserWarning)
             return None

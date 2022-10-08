@@ -62,6 +62,12 @@ if TYPE_CHECKING:
     from jaeger.target.configuration import BaseConfiguration
 
 
+try:
+    from coordio import calibration
+except ImportError:
+    calibration = None
+
+
 __all__ = ["BaseFPS", "FPS"]
 
 
@@ -149,9 +155,11 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
 
         if isinstance(positioner, self.positioner_class):
             positioner_id = positioner.positioner_id
-        else:
+        elif isinstance(positioner, int):
             positioner_id = positioner
             positioner = self.positioner_class(positioner_id, None, centre=centre)
+        else:
+            raise TypeError(f"Invalid parameter positioner of type {type(positioner)}")
 
         if positioner_id in self.positioners:
             raise JaegerError(
@@ -243,7 +251,7 @@ class FPS(BaseFPS["FPS"]):
         self.disabled: set[int] = set([])
 
         if self.ieb is None or self.ieb is True:
-            self.ieb = config["files"]["ieb_config"]
+            self.ieb = config["ieb"]["config"]
 
         if isinstance(self.ieb, pathlib.Path):
             self.ieb = str(self.ieb)
@@ -395,6 +403,7 @@ class FPS(BaseFPS["FPS"]):
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
         keep_disabled: bool = True,
+        skip_fibre_assignments_check: bool = False,
     ) -> T:
         """Initialises all positioners with status and firmware version.
 
@@ -406,6 +415,8 @@ class FPS(BaseFPS["FPS"]):
             Enables the low temperature warnings.
         keep_disabled
             Maintain the list of disabled/offline robots.
+        skip_fibre_assignments_check
+            Do not check fibre assignments.
 
         """
 
@@ -413,12 +424,11 @@ class FPS(BaseFPS["FPS"]):
             start_pollers = config["fps"]["start_pollers"]
         assert isinstance(start_pollers, bool)
 
+        self.disabled = set([])
         if keep_disabled:
             for positioner in self.positioners.values():
                 if positioner.offline or positioner.disabled:
                     self.disabled.add(positioner.positioner_id)
-        else:
-            self.disabled = set([])
 
         # Clear all robots
         self.clear()
@@ -593,49 +603,71 @@ class FPS(BaseFPS["FPS"]):
         # Disable collision detection for listed robots.
         disable_collision = config["fps"]["disable_collision_detection_positioners"]
         if len(disable_collision) > 0:
-            warnings.warn(
-                f"Disabling collision detection for positioners: {disable_collision}.",
-                JaegerUserWarning,
-            )
-            await self.send_command(
-                CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_collision,
-            )
-            await self.send_command(
-                CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=disable_collision,
-            )
+            if self.locked:
+                warnings.warn(
+                    "The FPS is locked. Cannot disable collision detection",
+                    JaegerUserWarning,
+                )
+
+            else:
+                warnings.warn(
+                    "Disabling collision detection for positioners: "
+                    f"{disable_collision}.",
+                    JaegerUserWarning,
+                )
+                await self.send_command(
+                    CommandID.ALPHA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=disable_collision,
+                )
+                await self.send_command(
+                    CommandID.BETA_CLOSED_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=disable_collision,
+                )
 
         # Set robots to open loop mode
         open_loop_positioners = config["fps"].get("open_loop_positioners", [])
         if len(open_loop_positioners) > 0:
-            warnings.warn(
-                f"Setting open loop mode for positioners: {open_loop_positioners}.",
-                JaegerUserWarning,
+            if self.locked:
+                warnings.warn(
+                    "The FPS is locked. Cannot set open loop mode.",
+                    JaegerUserWarning,
+                )
+
+            else:
+                warnings.warn(
+                    "Setting open loop mode for positioners: "
+                    f"{open_loop_positioners}.",
+                    JaegerUserWarning,
+                )
+                await self.send_command(
+                    CommandID.ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=open_loop_positioners,
+                )
+                await self.send_command(
+                    CommandID.BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
+                    positioner_ids=open_loop_positioners,
+                )
+
+        # Ensure closed loop mode for remaining robots. This does not work if
+        # any of the robots is collided.
+        if not self.locked:
+
+            closed_loop_positioners = list(
+                set([pid for pid in self.positioners if not self[pid].disabled])
+                - set(disable_collision)
+                - set(open_loop_positioners)
             )
             await self.send_command(
-                CommandID.ALPHA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=open_loop_positioners,
+                CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
+                positioner_ids=closed_loop_positioners,
             )
             await self.send_command(
-                CommandID.BETA_OPEN_LOOP_WITHOUT_COLLISION_DETECTION,
-                positioner_ids=open_loop_positioners,
+                CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
+                positioner_ids=closed_loop_positioners,
             )
 
-        # Ensure closed loop mode for remaining robots
-        closed_loop_positioners = list(
-            set([pid for pid in self.positioners if not self[pid].disabled])
-            - set(disable_collision)
-            - set(open_loop_positioners)
-        )
-        await self.send_command(
-            CommandID.ALPHA_CLOSED_LOOP_COLLISION_DETECTION,
-            positioner_ids=closed_loop_positioners,
-        )
-        await self.send_command(
-            CommandID.BETA_CLOSED_LOOP_COLLISION_DETECTION,
-            positioner_ids=closed_loop_positioners,
-        )
+        # Check that all the robots match the fibre assignments.
+        self._check_fibre_assignments(raise_error=not skip_fibre_assignments_check)
 
         # Start temperature watcher.
         if self.__temperature_task is not None:
@@ -660,6 +692,41 @@ class FPS(BaseFPS["FPS"]):
             self.pollers.start()
 
         return self
+
+    def _check_fibre_assignments(self, raise_error: bool = True):
+        """Checks that all the expected robots are present."""
+
+        if calibration is None:
+            msg = "coordio.calibrations failed to import. Cannot check assignments."
+            if raise_error:
+                raise JaegerError(msg)
+            else:
+                warnings.warn(msg, JaegerUserWarning)
+                return
+
+        cal_obs = calibration.fiberAssignments.loc[self.observatory]
+        cal_obs = cal_obs.loc[cal_obs.Device == "Positioner"]
+
+        failed: bool = False
+
+        for pid in list(cal_obs.positionerID):
+            if pid not in self:
+                warnings.warn(
+                    f"Positioner {pid} is in fiberAssigments but not connected.",
+                    JaegerUserWarning,
+                )
+                failed = True
+
+        for pid in self:
+            if pid not in list(cal_obs.positionerID):
+                warnings.warn(
+                    f"Positioner {pid} is connected but not in fiberAssigments.",
+                    JaegerUserWarning,
+                )
+                failed = True
+
+        if raise_error and failed:
+            raise JaegerError("Some positioners do not match fiberAssignments.csv.")
 
     def set_status(self, status: FPSStatus):
         """Sets the status of the FPS."""

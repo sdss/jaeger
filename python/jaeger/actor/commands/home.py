@@ -34,7 +34,7 @@ __all__ = ["home"]
 SAFE_BETA_MIN: float = 165.0
 SAFE_BETA_MAX: float = 181.0
 
-START_ANGLE: float = 0.0
+START_ANGLE: float = 5.0
 COLLISION_BUFFER: float = 3.2
 
 ALPHA1: float = 118
@@ -156,7 +156,7 @@ async def home(
             if robot.isOffline:
                 continue
             if grid1.isCollided(robot.id):
-                command.debug(f"Deferring positioner {robot.id} for phase 2.")
+                command.debug(f"Deferring positioner {robot.id} to phase 2.")
                 robot.setAlphaBeta(ALPHA1, 180)
                 phase_2_pids.append(robot.id)
 
@@ -295,7 +295,7 @@ async def _home_beta_phase(
         command.warning("Skipping homing in dry run.")
 
     command.info(f"Homing for phase {phase} finished.")
-    command.info("Reverting robots to starting angle.")
+    command.info("Reverting robots to initial angle.")
 
     try:
         await fps.goto(

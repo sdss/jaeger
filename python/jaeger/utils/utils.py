@@ -340,4 +340,4 @@ def get_sjd(observatory: Optional[str] = None) -> int:
     if observatory == "APO":
         return int(mjd + 0.3)
     else:
-        return int(mjd + 0.7)
+        return int(mjd + 0.4)

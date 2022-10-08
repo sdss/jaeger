@@ -288,7 +288,7 @@ async def take_fvc_loop(
 
     exposure_time = exposure_time or config["fvc"]["exposure_time"]
     fbi_level = fbi_level if fbi_level is not None else config["fvc"]["fbi_level"]
-    assert isinstance(exposure_time, float) and isinstance(fbi_level, float)
+    assert isinstance(exposure_time, float) and isinstance(fbi_level, (float, int))
 
     configuration = configuration or fps.configuration
 
@@ -299,16 +299,17 @@ async def take_fvc_loop(
     fvc = FVC(fps.observatory, command=command)
 
     # Check that the rotator is halted.
-    axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")
-    if axis_cmd.status.did_fail:
-        command.warning("Cannot check the status of the rotator.")
-    else:
-        rot_status = axis_cmd.replies.get("AxisCmdState")[2]
-        if rot_status != "Halted":
-            command.error(f"Cannot expose FVC while the rotator is {rot_status}.")
-            return False
+    if config["fvc"]["check_rotator"] is True:
+        axis_cmd = await command.send_command("keys", "getFor=tcc AxisCmdState")
+        if axis_cmd.status.did_fail:
+            command.warning("Cannot check the status of the rotator.")
         else:
-            command.debug("The rotator is halted.")
+            rot_status = axis_cmd.replies.get("AxisCmdState")[2]
+            if rot_status != "Halted":
+                command.error(f"Cannot expose FVC while the rotator is {rot_status}.")
+                return False
+            else:
+                command.debug("The rotator is halted.")
 
     command.debug("Turning LEDs on.")
     await command.send_command("jaeger", f"ieb fbi led1 led2 {fbi_level}")
@@ -339,13 +340,14 @@ async def take_fvc_loop(
             command.info(f"FVC iteration {n}")
 
             filename = None
-            fvc.proc_hdu = None
             proc_image_saved: bool = False
 
             # 1. Expose the FVC
             command.debug("Taking exposure with fliswarm.")
             filename = await fvc.expose(exposure_time=exposure_time, stack=stack)
             command.debug(fvc_filename=str(filename))
+
+            fvc.iteration = n
 
             # 2. Process the new image.
             positioner_coords = fps.get_positions_dict()
@@ -360,7 +362,7 @@ async def take_fvc_loop(
             )
 
             # 3. Set current RMS and delta.
-            new_rms = fvc.fitrms * 1000.0
+            new_rms = round(fvc.fitrms * 1000.0, 2)
 
             command.info(fvc_rms=new_rms)
 
@@ -371,8 +373,8 @@ async def take_fvc_loop(
                 command.info(fvc_deltarms=delta_rms)
             current_rms = new_rms
 
-            command.info(fvc_perc_90=fvc.perc_90 * 1000.0)
-            command.info(fvc_percent_reached=fvc.fvc_percent_reached)
+            command.info(fvc_perc_90=round(fvc.perc_90 * 1000.0, 2))
+            command.info(fvc_percent_reached=round(fvc.fvc_percent_reached, 1))
 
             # 4. Check if we have reached the distance criterion.
             if target_90_percentile and fvc.perc_90 * 1000.0 <= target_90_percentile:

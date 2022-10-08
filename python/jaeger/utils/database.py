@@ -11,6 +11,8 @@ from __future__ import annotations
 from functools import wraps
 from glob import glob
 
+from typing import TYPE_CHECKING
+
 import pandas
 import peewee
 from astropy import table
@@ -21,7 +23,11 @@ from sdssdb.peewee.sdss5db import opsdb, targetdb
 from jaeger import config
 
 
+if TYPE_CHECKING:
+    from sdssdb.connection import PeeweeDatabaseConnection
+
 __all__ = [
+    "connect_database",
     "load_holes",
     "load_fields",
     "get_designid_from_queue",
@@ -29,11 +35,23 @@ __all__ = [
 ]
 
 
+def connect_database(database: PeeweeDatabaseConnection, force: bool = False):
+    """Connects the database if it is not."""
+
+    if database.connected and force is False:
+        return True
+
+    database.connect(**config["database"])
+
+    return database.connected
+
+
 def check_database(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if targetdb.database.connected is False:
-            raise RuntimeError("Database is not connected.")
+            if connect_database(targetdb.database) is False:
+                raise RuntimeError("Database is not connected.")
         return f(*args, **kwargs)
 
     return wrapper

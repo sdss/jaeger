@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 import click
 
-from jaeger import config
 from jaeger.ieb import Chiller
 
 from . import JaegerCommandType, command_parser
@@ -84,50 +83,42 @@ async def disable(command: JaegerCommandType, fps: FPS):
 @click.argument("MODE", type=click.Choice(["temperature", "flow"]))
 @click.argument("VALUE", type=str)
 async def set(command: JaegerCommandType, fps: FPS, mode: str, value: str | float):
-    """Shows the temperature or flow of the chiller."""
+    """Shows the temperature or flow of the chiller.
+
+    The value of the chiller temperature or flow can be set to auto, disable,
+    or a fixed numerical value.
+
+    """
 
     actor = command.actor
     assert actor
 
-    if mode == "temperature":
-        if command.actor.chiller is None:
-            return command.fail("The chiller bot is not running.")
-
-        dev_name = "TEMPERATURE_USER_SETPOINT"
-
-        if value == "auto":
-            await command.actor.chiller.start()
-            command.info("Chiller temperature set to auto.")
-            return command.finish()
-        else:
-            value = float(value)
-            if value < 0.1:
-                return command.fail("Minimum temperature is 0.1 C.")
-            command.warning("Stopping chiller auto mode.")
-            await command.actor.chiller.stop()
-
-    else:
-        dev_name = "FLOW_USER_SETPOINT"
-
-    if config["files"].get("chiller_config", None) is None:
-        return command.fail("Chiller configuration not defined.")
-
-    chiller = Chiller.create()
-    if chiller is None:
-        return command.fail("Cannot access the chiller.")
-
-    device = chiller.get_device(dev_name)
-
-    value = int(float(value) * 10)
-
-    for _ in range(10):
+    if isinstance(value, str) and value.lower() not in ["disable", "auto"]:
         try:
-            await device.write(value)
-        except Exception:
-            await asyncio.sleep(1)
-            continue
+            value = float(value)
+        except ValueError:
+            return command.fail(f"Invalid value {value!r}.")
 
-        await command.send_command("jaeger", "chiller status")
-        return command.finish("Value set.")
+        if mode == "temperature" and value < 0.1:
+            return command.fail("Minimum temperature is 0.1 C.")
 
-    return command.fail("Timed out setting chiller values.")
+        if mode == "flow" and (value < 0.1 or value > 15):
+            return command.fail("Invalid flow rate.")
+
+    if command.actor.chiller is None:
+        return command.fail("The chiller bot does not exist.")
+
+    if value == "auto":
+        setattr(command.actor.chiller, mode, True)
+        command.info(f"Chiller {mode} set to auto.")
+    elif value == "disable":
+        setattr(command.actor.chiller, mode, False)
+        command.info(f"Chiller {mode} tracking disabled.")
+    else:
+        setattr(command.actor.chiller, mode, value)
+
+    await command.actor.chiller.restart()
+    await asyncio.sleep(3)
+    await command.send_command("jaeger", "chiller status")
+
+    return command.finish()

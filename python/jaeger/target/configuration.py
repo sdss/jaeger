@@ -34,9 +34,10 @@ from coordio import (
     Wok,
 )
 from coordio import __version__ as coordio_version
-from coordio.defaults import FOCAL_SCALE, INST_TO_WAVE, POSITIONER_HEIGHT, calibration
+from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
+from sdsstools.time import get_sjd
 
 from jaeger import FPS
 from jaeger import __version__ as jaeger_version
@@ -52,7 +53,7 @@ from jaeger.kaiju import (
     load_robot_grid,
     warn,
 )
-from jaeger.utils import get_sjd
+from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
 from .tools import copy_summary_file, positioner_to_wok, wok_to_positioner
@@ -153,7 +154,7 @@ class BaseConfiguration:
         self.configuration_id: int | None = None
         self._summary_file: str | None = None
 
-        self.scale = scale or FOCAL_SCALE
+        self.scale = scale or 1.0
 
         # Whether the configuration is a dither. If True, there will be a base
         # configuration from which we dithered and the trajectory will be applied
@@ -544,7 +545,12 @@ class BaseConfiguration:
     async def save_snapshot(self, highlight=None):
         """Saves a snapshot of the current robot grid."""
 
-        mjd = int(Time.now().mjd)
+        if self.assignment_data and self.assignment_data.observatory:
+            observatory = self.assignment_data.observatory.upper()
+        else:
+            observatory = None
+
+        mjd = get_sjd(observatory)
         dirpath = os.path.join(config["fps"]["configuration_snapshot_path"], str(mjd))
         if not os.path.exists(dirpath):
             os.makedirs(dirpath)
@@ -585,6 +591,9 @@ class BaseConfiguration:
 
     def write_to_database(self, replace=False):
         """Writes the configuration to the database."""
+
+        if connect_database(targetdb.database) is False:
+            raise RuntimeError("Cannot connect to database.")
 
         if "admin" in targetdb.database._config:
             targetdb.database.become_admin()
@@ -734,8 +743,13 @@ class BaseConfiguration:
             right_index=True,
         ).set_index("positionerID_x")
 
-        fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
-        fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
+        fdata.loc[
+            (fass.index, "APOGEE"), "fiberId"
+        ] = fass.APOGEEFiber.tolist()  # type:ignore
+
+        fdata.loc[
+            (fass.index, "BOSS"), "fiberId"
+        ] = fass.BOSSFiber.tolist()  # type:ignore
 
         fdata.fillna(-999, inplace=True)
 
@@ -761,7 +775,7 @@ class BaseConfiguration:
             "instruments": "BOSS APOGEE",
             "epoch": adata.site.time.jd if adata.site.time else -999,
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
-            "MJD": int(get_sjd(adata.observatory.upper())),
+            "MJD": get_sjd(adata.observatory.upper()),
             "observatory": adata.observatory,
             "temperature": round(temp, 1),
             "raCen": -999.0,
@@ -942,10 +956,14 @@ class DitheredConfiguration(BaseConfiguration):
         epoch: float | None = None,
     ):
 
-        self.parent_configuration = parent_configuration
-        assert self.parent_configuration.design
+        assert parent_configuration.design
 
         super().__init__(scale=parent_configuration.scale)
+
+        # This needs to be set after the __init__ beccause __init__ sets
+        # parent_configuration=None.
+        self.parent_configuration = parent_configuration
+        assert self.parent_configuration.design
 
         self.is_dither = True
 
@@ -1239,7 +1257,7 @@ class BaseAssignmentData:
         self.site = Site(self.observatory)
         self.site.set_time()
 
-        self.scale = scale or FOCAL_SCALE
+        self.scale = scale or 1.0
 
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
@@ -1591,7 +1609,9 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = row
+            self.fibre_table.loc[
+                (positioner_id, fibre_type), row.keys()
+            ] = row  # type:ignore
 
         return row
 
@@ -1667,7 +1687,9 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = row
+            self.fibre_table.loc[
+                (positioner_id, fibre_type), row.keys()
+            ] = row  # type:ignore
 
         return row
 

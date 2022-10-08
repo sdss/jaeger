@@ -2,20 +2,66 @@
 
 ## Next version
 
+### ✨ Improved
+
+* Add `FVCITER` keyword to the FVC process image header with the number of the FVC iteration.
+
+### 🔧 Fixed
+
+* [#189](https://github.com/sdss/jaeger/issues/189) Prevent FPS initialisation from failing if a positioner is reporting a collided status.
+
+
+## 1.0.1 - September 11, 2022
+
+### 🔧 Fixed
+
+* Bumped minimum version of `sdssdb` to 0.5.5 since jaeger requires the `Design.field` property.
+
+
+## 1.0.0 - September 10, 2022
+
+### ✨ Improved
+
+* [#188](https://github.com/sdss/jaeger/issues/188) Chiller temperature and flow can now be set to a fixed value which is monitored and reset if necessary. Temperature can still be set to an "auto" mode that will maintain the set point slightly below the ambient temperature. The `chiller set` command now accepts `auto`, `disable`, or a value for either `flow` or `temperature`. The default values can be set in the configuration file under `chiller.temperature` (`true` for automatic mode, `null` to disable monitoring, or a fixed value) or `chiller.flow` (accepts `null` or a fixed value).
+* Added `--quiet` flag to `status` that does not print the status of each robot.
+* Added back `jaeger configuration fake-field` command.
+* Fixed `jaeger configuration slew` command to work with `lcotcc`.
+* Enabled additional alarms for LCO.
+
+### 🏷️ Changed
+
+* Reworked scale logic when loading a new design:
+  * If a `--scale` flag is passed, that scale is passed directly to coordio without any additional fudge factor.
+  * If the guider scale is available and `use_guider_scale=True`, the guider scale multiplied by the fudge factor is passed.
+  * If `use_guider_scale=True` and the `scale_temperature_coeffs` are defined, and the guider scale is not available, the guider scale is defined by the scale-temperature correlation and the fudge factor is applied.
+  * If `use_guider_scale=False` and `--scale` is not passed, or otherwise the guider scale cannot be defined, the `default_scale` value is used.
+* Use `targetdb.design_to_field` table.
+* Use difference centroiding methods for APO and LCO.
+* Change various configuration parameters for LCO.
+* Renamed `kludge_factor` and `--kludge-factor` to `fudge_factor` and `--fudge-factor`.
+
+### 🔧 Fixed
+
+* Alerts and chiller bots were not being started on init.
+* Solve a case in which a manually disabled positioner could not be re-enabled after the FPS had been power cycled or reinitialised.
+
+
+## 0.16.1 - June 10, 2022
+
 ### 🚀 New
 
 * [#183](https://github.com/sdss/jaeger/issues/183) The `FVC.write_summaryF()` method now also produces some histograms and quiver plots that show the FVC convergence in wok and ra/dec coordinates.
 * [#184](https://github.com/sdss/jaeger/issues/184) Added a `jaeger.fvc.reprocess_configuration()` coroutine that allows to reprocess the final FVC image for a configuration with a different centroid method.
 * [#185](https://github.com/sdss/jaeger/issues/185) Support for LCO and additional improvements:
-    - General support for running jaeger at APO and LCO.
-    - The `jaeger` and `ieb` configuration files have been split into `_APO` and `_LCO`.
-    - Makes `fvc loop` more reliable. The `proc-` image is now saved in most conditions.
-    - Use `FVCTransformAPO` or `FVCTransformLCO` depending on the observatory.
-    - Fix `fvc loop` with `--fbi-level 0`.
-    - Chiller and alerts bots are now run as part of the actor instead of in the `FPS` object. Alerts are now observatory-specific.
-    - Do not calculate paths when using `jaeger configuration load --from-positions`.
-    - Fix for #182: GFA alerts are disabled if the camera is powered off.
-    - New `home` command to send `GO_TO_DATUMS` to multiple or all positioners at once.
+  * General support for running jaeger at APO and LCO.
+  * The `jaeger` and `ieb` configuration files have been split into `_APO` and `_LCO`.
+  * Makes `fvc loop` more reliable. The `proc-` image is now saved in most conditions.
+  * Use `FVCTransformAPO` or `FVCTransformLCO` depending on the observatory.
+  * Fix `fvc loop` with `--fbi-level 0`.
+  * Chiller and alerts bots are now run as part of the actor instead of in the `FPS` object. Alerts are now observatory-specific.
+  * Do not calculate paths when using `jaeger configuration load --from-positions`.
+  * Fix for #182: GFA alerts are disabled if the camera is powered off.
+  * New `home` command to send `GO_TO_DATUMS` to multiple or all positioners at once.
 * [#186](https://github.com/sdss/jaeger/issues/186) New command `fvc snapshot` that creates a temporary configuration from the current positions and takes an FVC measurement.
 * Add `jaeger configuration reload` command. It's equivalent to using `jaeger configuration load --no-clone DESIGNID` where `DESIGNID` is the currently loaded design.
 * If called without arguments, `disable` now outputs the list of currently disabled robots.
@@ -32,6 +78,11 @@
 
 * [#182](https://github.com/sdss/jaeger/issues/182) GFA alert for a camera is disabled if the camera is off.
 * Bump sdssdb to ^0.5.2 to ensure that `assignment_hash` is available
+
+
+## 0.16.0 - June 10, 2022
+
+* Yanked due to error releasing.
 
 
 ## 0.15.1 - April 24, 2022

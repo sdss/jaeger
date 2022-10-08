@@ -17,7 +17,6 @@ import numpy
 import peewee
 from astropy.time import Time
 
-from coordio.defaults import FOCAL_SCALE
 from sdssdb.peewee.sdss5db import opsdb
 
 from jaeger import config
@@ -54,7 +53,7 @@ async def _load_design(
     preload: bool = False,
     no_clone: bool = False,
     scale: float | None = None,
-    kludge_factor: float | None = None,
+    fudge_factor: float | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     get_paths: bool = True,
@@ -112,18 +111,23 @@ async def _load_design(
 
     else:
 
-        if scale is None:
+        default_scale = config["configuration"].get("default_focal_scale", 1.0)
+        use_guider_scale = config["configuration"].get("use_guider_scale", True)
 
-            clip_scale: float = config["configuration"]["clip_scale"]
-            SCALE_KLUDGE: float = config["configuration"]["scale_kludge_factor"]
+        clip_scale: float = config["configuration"]["clip_scale"]
+        SCALE_FUDGE: float = config["configuration"]["scale_fudge_factor"]
+        fudge_factor = fudge_factor or SCALE_FUDGE
 
-            guider_scale: float | None = None
+        guider_scale: float | None = None
 
-            # Query the guider for the historical scale from the previous exposure.
+        # Query the guider for the historical scale from the previous exposure.
+        if scale is None and use_guider_scale is True:
             command.debug("Getting guider scale.")
+
+            max_scale_age = config["configuration"]["guider_max_scale_age"]
             get_scale_cmd = await command.send_command(
                 "cherno",
-                f"get-scale --max-age {config['configuration']['max_scale_age']}",
+                f"get-scale --max-age {max_scale_age}",
             )
             if get_scale_cmd.status.did_fail:
                 command.warning("Failed getting scale from guider.")
@@ -132,8 +136,22 @@ async def _load_design(
                 if guider_scale < 0:
                     command.warning("Invalid guider scale.")
                     guider_scale = None
+                else:
+                    # Clip scale if needed.
+                    if (abs(guider_scale) - 1) * 1e6 > clip_scale:
+                        guider_scale = numpy.clip(
+                            guider_scale,
+                            1 - clip_scale / 1e6,
+                            1 + clip_scale / 1e6,
+                        )
+                        command.warning(
+                            "Unexpectedly large guider scale. "
+                            f"Clipping to {guider_scale:.6f}."
+                        )
 
-            if guider_scale is None:
+            temp_coeffs = config["configuration"].get("scale_temperature_coeffs", None)
+
+            if guider_scale is None and temp_coeffs is not None:
                 # Try using the scale-temperature relationship instead.
                 try:
                     if not isinstance(command.actor.fps.ieb, IEB):
@@ -143,8 +161,7 @@ async def _load_design(
                     if not isinstance(temperature, float) or temperature < -100:
                         raise ValueError("Invalid ambient temperature")
 
-                    coeffs = config["configuration"]["scale_temperature_coeffs"]
-                    guider_scale = numpy.polyval(coeffs, temperature)  # type:ignore
+                    guider_scale = float(numpy.polyval(temp_coeffs, temperature))
 
                     command.debug(
                         "Using focal scale factor derived from ambient "
@@ -152,37 +169,26 @@ async def _load_design(
                     )
                 except Exception as err:
                     command.warning(
-                        f"Failed getting ambient temperature: {err}. "
-                        "No scale correction will be applied."
+                        f"Failed getting ambient temperature: {err} "
+                        "Using default scale."
                     )
 
-            else:
-                if (abs(guider_scale) - 1) * 1e6 > clip_scale:
-                    guider_scale = numpy.clip(
-                        guider_scale,
-                        1 - clip_scale / 1e6,
-                        1 + clip_scale / 1e6,
-                    )
-                    command.warning(
-                        "Unexpectedly large guider scale. "
-                        f"Clipping to {guider_scale:.6f}."
-                    )
+        # Second pass at setting the scale. Apply the fudge factor.
+        if guider_scale is not None:
+            scale = guider_scale * fudge_factor
+            command.debug(
+                f"Correcting guider scale {guider_scale:.6f} with fudge factor "
+                f"{fudge_factor:.6f}."
+            )
 
-            if guider_scale is not None:
+        if scale is not None:
+            command.info(f"Focal scale: {scale:.6f}.")
+        else:
+            scale = default_scale
+            command.info(f"Using default scale {scale:.6f}.")
 
-                kludge_factor = kludge_factor or SCALE_KLUDGE
-
-                command.debug(f"Scale kludge factor: {kludge_factor:.6f}")
-
-                scale = FOCAL_SCALE * guider_scale * kludge_factor
-
-                command.debug(
-                    "Text correcting focal plane scale with guider scale "
-                    f"{guider_scale:.6f}. Effective focal plane scale is {scale:.6f}."
-                )
-
+        # Define the epoch for the configuration.
         try:
-            # Define the epoch for the configuration.
             command.debug(text=f"Epoch delay: {round(epoch_delay, 1)} seconds.")
 
             if epoch is None:
@@ -274,10 +280,10 @@ def configuration():
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
 @click.option(
-    "--kludge-factor",
+    "--fudge-factor",
     type=float,
     default=None,
-    help="Modify the default scale kludge factor.",
+    help="Modify the default scale fudge factor.",
 )
 @click.option(
     "--no-clone",
@@ -302,7 +308,7 @@ async def load(
     execute: bool = False,
     reissue: bool = False,
     scale: float | None = None,
-    kludge_factor: float | None = None,
+    fudge_factor: float | None = None,
     no_clone: bool = False,
 ):
     """Creates and ingests a configuration from a design in the database."""
@@ -339,7 +345,7 @@ async def load(
             command,
             fps,
             design_id=designid,
-            kludge_factor=kludge_factor,
+            fudge_factor=fudge_factor,
             preload=False,
             no_clone=no_clone,
             scale=scale,
@@ -512,10 +518,10 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="Focal plane scale factor. If not passes, uses coordio default.",
 )
 @click.option(
-    "--kludge-factor",
+    "--fudge-factor",
     type=float,
     default=None,
-    help="Modify the default scale kludge factor.",
+    help="Modify the default scale fudge factor.",
 )
 @click.option(
     "--no-clone",
@@ -541,7 +547,7 @@ async def preload(
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     scale: float | None = None,
-    kludge_factor: float | None = None,
+    fudge_factor: float | None = None,
     no_clone: bool = False,
     make_active: bool = True,
     clear: bool = False,
@@ -567,7 +573,7 @@ async def preload(
         preload=True,
         no_clone=no_clone,
         scale=scale,
-        kludge_factor=kludge_factor,
+        fudge_factor=fudge_factor,
         epoch=epoch,
         epoch_delay=epoch_delay,
     )
@@ -814,10 +820,16 @@ async def slew(
 
     command.info(f"Slewing to ({ra}, {dec}, {pa})")
 
-    slew_cmd = await command.send_command(
-        "tcc",
-        f"track {ra}, {dec} icrs /rottype=object /rotang={pa:g} /rotwrap=mid",
-    )
+    if fps.observatory == "APO":
+        slew_cmd = await command.send_command(
+            "tcc",
+            f"track {ra}, {dec} icrs /rottype=object /rotang={pa:g} /rotwrap=mid",
+        )
+    else:
+        slew_cmd = await command.send_command(
+            "lcotcc",
+            f"target {ra}, {dec} /posAngle={pa:.3f}",
+        )
 
     if slew_cmd.status.did_fail:
         return command.fail("Failed slewing to field.")
@@ -927,3 +939,34 @@ async def random(
     configuration.executed = True
 
     command.finish()
+
+
+@configuration.command()
+@click.argument("RA", type=float)
+@click.argument("DEC", type=float)
+@click.argument("PA", type=float)
+async def fake_field(
+    command: Command[JaegerActor],
+    fps: FPS,
+    ra: float,
+    dec: float,
+    pa: float,
+):
+    """Output a fake field."""
+
+    command.info(
+        configuration_loaded=[
+            -999,
+            -999,
+            -999,
+            ra,
+            dec,
+            pa,
+            -999.0,
+            -999.0,
+            "?",
+            False,
+        ]
+    )
+
+    return command.finish()

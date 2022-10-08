@@ -46,7 +46,7 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [54, 184, 463, 608, 612, 1042, 1136, 1182, 1340]
+  disabled_positioners: [54, 184, 758, 608, 612, 1042, 1136, 56, 1340, 1182]
   offline_positioners: null
   disable_collision_detection_positioners: []
   open_loop_positioners: []
@@ -56,7 +56,8 @@ fps:
   use_lock: True
 
 ieb:
-  disabled_devices: ['GFA1', 'GFA6']
+  config: etc/ieb_APO.yaml
+  disabled_devices: []
 
 positioner:
   reduction_ratio: 1024
@@ -84,19 +85,24 @@ kaiju:
   phobia: 0.3
 
 configuration:
+  default_focal_scale: 1
   scale_temperature_coeffs: [1.47051192e-05, 1.00003900e+00]
-  max_scale_age: 7200
+  use_guider_scale: true
+  guider_max_scale_age: 7200
   clip_scale: 500
-  scale_kludge_factor: 0.99982
+  scale_fudge_factor: 0.99982
   max_cloned_time: 7200
   max_designs_epoch: 8
 
 fvc:
+  config: etc/fvc.yaml
   exposure_time: 5.
   fbi_level: 6.
   target_90_percentile: 30.0
   target_distance: 5
   max_fvc_iterations: 2
+  centroid_method: zbplus
+  check_rotator: true
   k: 1.0
   max_correction: 15
   ieb_keys:
@@ -108,11 +114,13 @@ fvc:
     LED3: led3
     LED4: led4
 
+chiller:
+  config: etc/chiller_APO.yaml
+  temperature: auto
+  flow: 6
+
 files:
   log_dir: /data/logs/jaeger
-  ieb_config: etc/ieb_APO.yaml
-  fvc_config: etc/fvc.yaml
-  chiller_config: etc/chiller_APO.yaml
 
 low_temperature:
   sensor: RTD2
@@ -124,9 +132,7 @@ low_temperature:
   holding_torque_normal: [0, 30]
   holding_torque_very_cold: [45, 30]
 
-safe_mode:
-  min_beta: 160
-  max_beta: 180
+safe_mode: false
 
 debug: false
 
@@ -134,8 +140,9 @@ observatory: ${OBSERVATORY}
 
 database:
   dbname: sdss5db
-  host: null
-  port: 5433
+  user: sdss_user
+  host: sdss5-db
+  port: 5432
 
 alerts:
   interval: 60

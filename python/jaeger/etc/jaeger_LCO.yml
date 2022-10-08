@@ -46,7 +46,7 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [50]
+  disabled_positioners: []
   offline_positioners: null
   disable_collision_detection_positioners: []
   open_loop_positioners: []
@@ -56,6 +56,7 @@ fps:
   use_lock: True
 
 ieb:
+  config: etc/ieb_LCO.yaml
   disabled_devices: []
 
 positioner:
@@ -84,19 +85,24 @@ kaiju:
   phobia: 0.3
 
 configuration:
-  scale_temperature_coeffs: [1.47051192e-05, 1.00003900e+00]
-  max_scale_age: 7200
+  default_focal_scale: 0.9985
+  scale_temperature_coeffs: null
+  use_guider_scale: true
+  guider_max_scale_age: 7200
   clip_scale: 500
-  scale_kludge_factor: 0.99982
+  scale_fudge_factor: 0.9987
   max_cloned_time: 7200
   max_designs_epoch: 8
 
 fvc:
+  config: etc/fvc.yaml
   exposure_time: 5.
-  fbi_level: 6.
+  fbi_level: 9.
   target_90_percentile: 30.0
   target_distance: 5
   max_fvc_iterations: 2
+  centroid_method: null
+  check_rotator: false
   k: 1.0
   max_correction: 15
   ieb_keys:
@@ -108,11 +114,11 @@ fvc:
     LED3: led3
     LED4: led4
 
+chiller:
+  config: null
+
 files:
   log_dir: /data/logs/jaeger
-  ieb_config: etc/ieb_LCO.yaml
-  fvc_config: etc/fvc.yaml
-  chiller_config: null
 
 low_temperature:
   sensor: RTD2
@@ -132,12 +138,13 @@ observatory: ${OBSERVATORY}
 
 database:
   dbname: sdss5db
-  host: null
-  port: 5433
+  user: sdss_user
+  host: sdss5-db
+  port: 5432
 
 alerts:
   interval: 60
-  enabled: ['ieb', 'robot', 'temperature']
+  enabled: ['gfa', 'ieb', 'robot', 'flow', 'temperature']
   gfa:
     warning: 30
     critical: 35
