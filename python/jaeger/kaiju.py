@@ -321,7 +321,11 @@ def get_path_pair(
         greed = greed or config["kaiju"]["greed"]
         phobia = phobia or config["kaiju"]["phobia"]
         log.debug(f"Running pathGenMDP with phobia={phobia}, greed={greed}.")
-        robot_grid.pathGenMDP(greed=greed, phobia=phobia)
+        robot_grid.pathGenMDP2(
+            greed=greed,
+            phobia=phobia,
+            ignoreInitialCollisions=ignore_initial_collisions,
+        )
 
     else:
         raise ValueError(f"Invalid path_generation_mode={path_generation_mode!r}.")
