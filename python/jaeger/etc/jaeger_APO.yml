@@ -46,7 +46,7 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [54, 184, 758, 608, 612, 1042, 1136, 56, 1340, 1182]
+  disabled_positioners: []
   offline_positioners: null
   disable_collision_detection_positioners: []
   open_loop_positioners: []
@@ -68,7 +68,7 @@ positioner:
   disable_precise_moves: true
   uid_bits: 6
   trajectory_data_n_points: 3
-  firmware_messages_per_positioner: 8
+  firmware_messages_per_positioner: 16
   trajectory_dump_path: /data/logs/jaeger/trajectories/
 
 kaiju:
