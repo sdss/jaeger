@@ -6,6 +6,10 @@
 
 * Add `FVCITER` keyword to the FVC process image header with the number of the FVC iteration.
 
+### 🏷️ Changed
+
+* `IEB` never disables itself automatically. Now it will try five times to connect to the WAGO module and if that fails it will issue an error but not self disable itself.
+
 ### 🔧 Fixed
 
 * [#189](https://github.com/sdss/jaeger/issues/189) Prevent FPS initialisation from failing if a positioner is reporting a collided status.
