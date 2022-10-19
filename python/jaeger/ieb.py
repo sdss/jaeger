@@ -100,15 +100,15 @@ class IEB(Drift):
         if self.disabled:
             raise DriftError("IEB is disabled.")
 
-        try:
-            await Drift.__aenter__(self)
-        except DriftError:
-            self._n_failures += 1
-            if self._n_failures >= self.MAX_RETRIES:
-                self.disabled = True
-                raise DriftError("Failed connecting to the IEB. Disabling it.")
-            else:
-                raise DriftError("Failed connecting to the IEB.")
+        n_retries = 0
+        while True:
+            try:
+                await Drift.__aenter__(self)
+                break
+            except DriftError:
+                n_retries += 1
+                if n_retries >= 5:
+                    raise DriftError("Failed connecting to the IEB.")
 
     async def __aexit__(self, *args):
 
