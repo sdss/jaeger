@@ -80,6 +80,9 @@ kaiju:
   path_delay: 1
   epsilon_factor: 2
   lattice_position: [10., 170.]
+  default_path_generator: greedy
+  greed: 0.7
+  phobia: 0.6
 
 configuration:
   default_focal_scale: 0.9985

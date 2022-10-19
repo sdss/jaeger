@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 import warnings
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 import numpy
 
@@ -232,7 +232,7 @@ def decollide(
 def get_path_pair(
     robot_grid: Optional[RobotGridCalib] = None,
     data: Optional[dict] = None,
-    path_generation_mode: str = "greedy",
+    path_generation_mode: str | None = None,
     ignore_did_fail: bool = False,
     explode_deg: float = 5,
     explode_positioner_id: int | None = None,
@@ -240,10 +240,12 @@ def get_path_pair(
     smooth_points=None,
     path_delay=None,
     collision_shrink=None,
+    greed: float | None = None,
+    phobia: float | None = None,
     stop_if_deadlock: bool = False,
     ignore_initial_collisions: bool = False,
 ) -> tuple:
-    """Runs ``pathGenGreedy`` and returns the to and from destination paths.
+    """Runs path generation and returns the to and from destination paths.
 
     Parameters
     ----------
@@ -255,7 +257,8 @@ def get_path_pair(
         run in an executor.
     path_generation_mode
         Defines the path generation algorithm to use.
-        Either ``greedy`` or ``explode`` or ``explode_one``.
+        Either ``greedy``, ``mdp``, ``explode`` or ``explode_one``. If
+        `None`, defaults to ``kaiju.default_path_generator``.
     ignore_did_fail
         Generate paths even if path generation failed (i.e., deadlocks).
     explode_deg
@@ -265,6 +268,9 @@ def get_path_pair(
     speed, smooth_points, path_delay, collision_shrink
         Kaiju parameters to pass to ``getPathPair``. Otherwise uses the default
         configuration values.
+    phobia, greed
+        Parameters for ``pathGenMDP``. If not set uses ``kaiju`` configuration
+        values.
     stop_if_deadlock
         If `True`, detects deadlocks early in the path and returns shorter
         trajectories (at the risk of some false positive deadlocks).
@@ -280,6 +286,9 @@ def get_path_pair(
 
     """
 
+    if path_generation_mode is None:
+        path_generation_mode = cast(str, config["kaiju"]["default_path_generator"])
+
     if robot_grid is not None and data is not None:
         raise JaegerError("robot_grid and data are mutually exclusive.")
 
@@ -289,24 +298,39 @@ def get_path_pair(
 
     assert robot_grid is not None
 
+    deadlocks = []
     if path_generation_mode == "explode":
         log.debug(f"Running pathGenExplode with explode_deg={explode_deg}.")
         robot_grid.pathGenExplode(explode_deg)
-        deadlocks = []
+
     elif path_generation_mode == "explode_one":
         log.debug(
             f"Running pathGenExplodeOne with explode_deg={explode_deg}, "
             f"explode_positioner_id={explode_positioner_id}."
         )
         robot_grid.pathGenExplodeOne(explode_deg, explode_positioner_id)
-        deadlocks = []
-    else:
+
+    elif path_generation_mode == "greedy":
         log.debug(f"Running pathGenGreedy with stopIfDeadlock={stop_if_deadlock}.")
         robot_grid.pathGenGreedy(
             stopIfDeadlock=stop_if_deadlock,
             ignoreInitialCollisions=ignore_initial_collisions,
         )
 
+    elif path_generation_mode == "mdp":
+        greed = greed or config["kaiju"]["greed"]
+        phobia = phobia or config["kaiju"]["phobia"]
+        log.debug(f"Running pathGenMDP with phobia={phobia}, greed={greed}.")
+        robot_grid.pathGenMDP2(
+            greed=greed,
+            phobia=phobia,
+            ignoreInitialCollisions=ignore_initial_collisions,
+        )
+
+    else:
+        raise ValueError(f"Invalid path_generation_mode={path_generation_mode!r}.")
+
+    if path_generation_mode in ["greedy", "mdp"]:
         # Check for deadlocks.
         deadlocks = robot_grid.deadlockedRobots()
         if robot_grid.didFail and ignore_did_fail is False:
@@ -390,6 +414,7 @@ async def unwind(
     (to_destination, _, did_fail, deadlocks) = await run_in_executor(
         get_path_pair,
         data=data,
+        path_generation_mode="greedy" if force is True else None,
         ignore_did_fail=force,
         stop_if_deadlock=force,
         executor="process",

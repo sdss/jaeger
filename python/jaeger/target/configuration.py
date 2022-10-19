@@ -319,6 +319,7 @@ class BaseConfiguration:
         simple_decollision: bool = False,
         resolve_deadlocks: bool = True,
         n_deadlock_retries: int = 5,
+        path_generation_mode: str | None = None,
         force: bool = False,
     ) -> dict:
         """Returns a trajectory dictionary from the folded position.
@@ -338,6 +339,11 @@ class BaseConfiguration:
             minimise what robots move.
         resolve_deadlocks
             Whether to solve for deadlocks after decollision.
+        n_deadlock_retries
+            How many times to try solving deadlocks.
+        path_generation_mode
+            The path generation mode, either ``'greedy'`` or ``'mdp'``. If not
+            defined, uses the default path generation mode.
         force
             If `False`, fails if the robot grid is deadlocked. Always fails if there
             are collisions.
@@ -413,7 +419,11 @@ class BaseConfiguration:
         # Fix deadlocks (this sets the trajectories in the instance).
         self.log("Generating path pair.")
         n_retries = n_deadlock_retries if resolve_deadlocks else -1
-        unlocked = await self._resolve_deadlocks(n_retries=n_retries, force=force)
+        unlocked = await self._resolve_deadlocks(
+            n_retries=n_retries,
+            path_generation_mode=path_generation_mode,
+            force=force,
+        )
 
         self._update_coordinates(unlocked)
 
@@ -428,6 +438,7 @@ class BaseConfiguration:
     async def _resolve_deadlocks(
         self,
         n_retries: int = 5,
+        path_generation_mode: str | None = None,
         force: bool = False,
     ) -> list[int]:
         """Iteratively fix deadlocks."""
@@ -439,7 +450,10 @@ class BaseConfiguration:
         decollided: list[int] = []
 
         while True:
-            result = await get_path_pair_in_executor(self.robot_grid)
+            result = await get_path_pair_in_executor(
+                self.robot_grid,
+                path_generation_mode=path_generation_mode,
+            )
             self.to_destination, self.from_destination, did_fail, deadlocks = result
 
             n_deadlocks = len(deadlocks)
@@ -1078,6 +1092,7 @@ class DitheredConfiguration(BaseConfiguration):
             *_,
         ) = await get_path_pair_in_executor(
             self.robot_grid,
+            path_generation_mode="greedy",
             ignore_did_fail=True,
             stop_if_deadlock=True,
             ignore_initial_collisions=True,

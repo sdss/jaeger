@@ -57,6 +57,7 @@ async def _load_design(
     epoch: float | None = None,
     epoch_delay: float = 0.0,
     get_paths: bool = True,
+    path_generation_mode: str | None = None,
 ):
     """Helper to load or preload a design."""
 
@@ -205,7 +206,10 @@ async def _load_design(
     if get_paths and configuration.is_cloned is False:
         command.info("Calculating trajectories.")
         configuration.set_command(command)
-        await configuration.get_paths(decollide=True)
+        await configuration.get_paths(
+            decollide=True,
+            path_generation_mode=path_generation_mode,
+        )
 
     return configuration
 
@@ -291,6 +295,11 @@ def configuration():
     help="If the new design has the same target set as the currently loaded one, "
     "does not clone the configuration and instead loads the new design.",
 )
+@click.option(
+    "--path-generation-mode",
+    type=click.Choice(["greedy", "mdp"], case_sensitive=False),
+    help="The path generation algorithm to use.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -310,6 +319,7 @@ async def load(
     scale: float | None = None,
     fudge_factor: float | None = None,
     no_clone: bool = False,
+    path_generation_mode: str | None = None,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -352,6 +362,7 @@ async def load(
             epoch=epoch,
             epoch_delay=epoch_delay,
             get_paths=False,
+            path_generation_mode=path_generation_mode,
         )
 
         if configuration is False:
@@ -378,7 +389,10 @@ async def load(
     ):
         try:
             command.info("Calculating trajectories.")
-            await fps.configuration.get_paths(decollide=not from_positions)
+            await fps.configuration.get_paths(
+                decollide=not from_positions,
+                path_generation_mode=path_generation_mode,
+            )
         except Exception as err:
             return command.fail(error=f"Failed generating paths: {err}")
 
@@ -862,6 +876,11 @@ async def slew(
     default=10,
     help="Home many retries to allow due to deadlocks.",
 )
+@click.option(
+    "--path-generation-mode",
+    type=click.Choice(["greedy", "mdp"], case_sensitive=False),
+    help="The path generation algorithm to use.",
+)
 async def random(
     command: Command[JaegerActor],
     fps: FPS,
@@ -871,6 +890,7 @@ async def random(
     collision_buffer: float | None = None,
     send_trajectory: bool = True,
     max_retries: int = 10,
+    path_generation_mode: str | None = None,
 ):
     """Executes a random, valid configuration."""
 
@@ -918,6 +938,7 @@ async def random(
         trajectory = await configuration.get_paths(
             decollide=False,
             collision_buffer=collision_buffer,
+            path_generation_mode=path_generation_mode,
         )
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
