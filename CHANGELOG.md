@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🚀 New
+
+* Support for MDP path generation mode. The default mode can be set in the configuration file under `kaiju.default_path_generator` and overridden in `jaeger configuration load` and `jaeger configuration random` with the `--path-generation-mode` flag.
+
 ### ✨ Improved
 
 * Add `FVCITER` keyword to the FVC process image header with the number of the FVC iteration.
@@ -9,10 +13,13 @@
 ### 🏷️ Changed
 
 * `IEB` never disables itself automatically. Now it will try five times to connect to the WAGO module and if that fails it will issue an error but not self disable itself.
+* Use 5 degrees as start angle during homing.
+* Update disabled/enabled positioners at APO and LCO.
 
 ### 🔧 Fixed
 
 * [#189](https://github.com/sdss/jaeger/issues/189) Prevent FPS initialisation from failing if a positioner is reporting a collided status.
+* Fix SJD calculation for LCO.
 
 
 ## 1.0.1 - September 11, 2022
