@@ -4,7 +4,7 @@
 
 ### 🚀 New
 
-* Support for MDP path generation mode. The default mode can be set in the configuration file under `kaiju.default_path_generator` and overridden in `jaeger configuration load` and `jaeger configuration random` with the `--path-generation-mode` flag.
+* [#191](https://github.com/sdss/jaeger/issues/191) Support for MDP path generation mode. The default mode can be set in the configuration file under `kaiju.default_path_generator` and overridden in `jaeger configuration load` and `jaeger configuration random` with the `--path-generation-mode` flag.
 
 ### ✨ Improved
 
