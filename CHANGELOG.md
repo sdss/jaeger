@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.1.0 - October 19, 2022
+## 1.1.1 - October 20, 2022
+
+### 🔧 Fixed
+
+* Require `kaiju>=1.3.0`, which is needed for MDP2 path planning.
+
+
+## 1.1.0 - October 19, 2022 (yanked due to missing dependency; all changes available in 1.1.1)
 
 ### 🚀 New
 
