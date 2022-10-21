@@ -2,6 +2,10 @@
 
 ## Next version
 
+### ✨ Improved
+
+* `jaeger fvc snapshot` now creates a snapshot based on the FVC-measured positions and alerts if a robots is more than 5 degrees off.
+
 ### 🔧 Fixed
 
 * Keep disabled positioners after a power cycle.

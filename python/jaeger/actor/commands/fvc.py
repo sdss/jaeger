@@ -151,7 +151,7 @@ async def loop(command: Command[JaegerActor], fps: FPS, **kwargs):
         **kwargs,
     )
 
-    if result is True:
+    if result is not False:
         return command.finish()
     else:
         return command.fail("The FVC loop failed.")
@@ -263,7 +263,45 @@ async def snapshot(command: JaegerCommandType, fps: FPS):
         no_write_summary=True,
     )
 
-    return command.finish() if result is True else command.fail()
+    if (
+        result is False
+        or result.fvc_transform is None
+        or result.fvc_transform.positionerTableMeas is None
+    ):
+        return command.fail("Failed getting FVC data.")
+
+    ptm = result.fvc_transform.positionerTableMeas
+    ptm = ptm.loc[:, ["positionerID", "alphaMeas", "betaMeas"]]
+    ptm.set_index("positionerID", inplace=True)
+
+    TOL = 5
+
+    positions = {}
+    highlight = []
+    for pid in ptm.index:
+        alpha = fps[pid].alpha
+        beta = fps[pid].beta
+        alpha_meas = ptm.loc[pid].alphaMeas
+        beta_meas = ptm.loc[pid].betaMeas
+        positions[pid] = {"alpha": alpha_meas, "beta": beta_meas}
+
+        if alpha is None or beta is None:
+            command.warning(f"Positioner {pid} position is unknown.")
+            highlight.append(pid)
+        elif abs(alpha_meas - alpha) > TOL or abs(beta_meas - beta) > TOL:
+            command.warning(
+                f"Positioner {pid} is off by more than {TOL} degrees! "
+                f"Measured position: ({alpha_meas:.2f}, {beta_meas:.2f})."
+            )
+            highlight.append(pid)
+
+    await fps.save_snapshot(
+        positions=positions,
+        highlight=highlight,
+        show_disabled=False,
+    )
+
+    return command.finish()
 
 
 async def take_fvc_loop(
@@ -446,6 +484,6 @@ async def take_fvc_loop(
         await command.send_command("jaeger", "ieb fbi led1 led2 0")
 
     if reached is True or apply is False:
-        return True
+        return fvc
     else:
         return False

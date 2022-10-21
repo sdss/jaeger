@@ -1354,7 +1354,9 @@ class FPS(BaseFPS["FPS"]):
         self,
         path: Optional[str | pathlib.Path] = None,
         collision_buffer: float | None = None,
-        highlight: int | None = None,
+        positions: dict | None = None,
+        highlight: int | list | None = None,
+        show_disabled: bool = True,
         write_to_actor: bool = True,
     ) -> str | Axes:
         """Creates a plot with the current arrangement of the FPS array.
@@ -1366,8 +1368,16 @@ class FPS(BaseFPS["FPS"]):
             ``/data/logs/jaeger/snapshots/MJD/fps_snapshot_<SEQ>.pdf``.
         collision_buffer
             The collision buffer.
+        positions
+            A dictionary of positioner_id to a mapping of ``"alpha"`` and
+            ``"beta"`` positions (``{124: {"alpha": 223.4, "beta": 98.1}, ...}``).
+            If not provided, the internal FPS positions will be used.
         highlight
             A robot ID to highlight.
+        show_disabled
+            If `True`, greys out disabled positioners.
+        write_to_actor
+            If `True`, writes the name of the snapshot to the actor users.
 
         """
 
@@ -1394,8 +1404,10 @@ class FPS(BaseFPS["FPS"]):
 
         result = await get_snapshot(
             path,
+            positions=positions,
             collision_buffer=collision_buffer,
             highlight=highlight,
+            show_disabled=show_disabled,
         )
 
         if result is True and write_to_actor is True and jaeger.actor_instance:

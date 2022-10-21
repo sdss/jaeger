@@ -523,9 +523,11 @@ def get_snapshot_async(
 async def get_snapshot(
     path: str,
     fps: FPS | None = None,
+    positions: dict | None = None,
     collision_buffer: float | None = None,
-    highlight: int | None = None,
+    highlight: int | list | None = None,
     title: str | None = None,
+    show_disabled: bool = True,
 ):
     """Plots a snapshot of the FPS and saves it to disk."""
 
@@ -535,20 +537,32 @@ async def get_snapshot(
     if fps.initialised is False:
         await fps.initialise()
 
-    await fps.update_position()
-
-    if len(fps.positioners) == 0:
-        raise ValueError("No positioners connected.")
-
     data = {"collision_buffer": collision_buffer, "grid": {}}
-    for pid in fps.positioners.keys():
-        data["grid"][int(pid)] = (
-            fps[pid].alpha,
-            fps[pid].beta,
-            0,
-            0,
-            fps[pid].disabled,
-        )
+
+    if positions is None:
+        await fps.update_position()
+
+        if len(fps.positioners) == 0:
+            raise ValueError("No positioners connected.")
+
+        for pid in fps.positioners.keys():
+            data["grid"][int(pid)] = (
+                fps[pid].alpha,
+                fps[pid].beta,
+                0,
+                0,
+                fps[pid].disabled if show_disabled else False,
+            )
+
+    else:
+        for pid in positions:
+            data["grid"][int(pid)] = (
+                positions[pid]["alpha"],
+                positions[pid]["beta"],
+                0,
+                0,
+                fps[pid].disabled if show_disabled else False,
+            )
 
     await run_in_executor(
         get_snapshot_async,
