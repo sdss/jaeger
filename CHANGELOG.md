@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🔧 Fixed
+
+* Keep disabled positioners after a power cycle.
+
+
 ## 1.1.1 - October 20, 2022
 
 ### 🔧 Fixed
