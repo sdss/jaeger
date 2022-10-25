@@ -75,12 +75,12 @@ kaiju:
   speed: 2
   ang_step: 0.1
   collision_buffer: 2.0
-  smooth_points: 13
+  smooth_points: 21
   collision_shrink: 0.08
   path_delay: 1
   epsilon_factor: 2
   lattice_position: [10., 170.]
-  default_path_generator: greedy
+  default_path_generator: mdp
   greed: 0.7
   phobia: 0.6
 

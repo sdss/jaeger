@@ -10,6 +10,10 @@
 
 * Keep disabled positioners after a power cycle.
 
+### 🏷️ Changed
+
+* Use MDP2 for LCO.
+
 
 ## 1.1.1 - October 20, 2022
 
