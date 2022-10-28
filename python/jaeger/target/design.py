@@ -149,14 +149,15 @@ class Design:
             fibre_type = group.iloc[0].fibre_type
 
             design_mode_rec = targetdb.DesignMode.get(label=design_mode)
-            boss_mag_lim = design_mode_rec.boss_bright_limit_targets_min
 
             if fibre_type == "APOGEE":
                 # Use 2MASS H magnitude for APOGEE
                 mag = group.h.values
+                mag_lim = design_mode_rec.apogee_bright_limit_targets_min
             else:
                 # Gaia G for BOSS.
                 mag = group.gaia_g.values
+                mag_lim = design_mode_rec.boss_bright_limit_targets_min
 
             if "bright" in design_mode:
                 lunation = "bright"
@@ -170,7 +171,7 @@ class Design:
 
             delta_ra, delta_dec, _ = object_offset(
                 mag,
-                boss_mag_lim,
+                mag_lim,
                 lunation,
                 fibre_type.capitalize(),
                 can_offset=group.can_offset.values,
