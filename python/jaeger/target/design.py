@@ -144,6 +144,7 @@ class Design:
         """Determines the target offsets."""
 
         def _offset(group: pandas.DataFrame):
+
             design_mode = group.iloc[0].design_mode
             fibre_type = group.iloc[0].fibre_type
 
@@ -164,6 +165,7 @@ class Design:
                 lunation = "dark"
                 skybrightness = 0.35
 
+            # Hardcoding this for now.
             offset_min_skybrightness = 0.5
 
             delta_ra, delta_dec, _ = object_offset(
@@ -181,9 +183,10 @@ class Design:
 
             return group
 
-        # Convert to data frame to group by fibre type and design mode.
+        # Convert to data frame to group by fibre type (no need to group by design
+        # mode since a design can only have one design mode).
         df = pandas.DataFrame.from_records(target_data)
-        df = df.groupby(["fibre_type", "design_mode"], group_keys=False).apply(_offset)
+        df = df.groupby(["fibre_type"], group_keys=False).apply(_offset)
 
         # Return as a list of dicts again.
         return [vv for vv in df.transpose().to_dict().values()]
