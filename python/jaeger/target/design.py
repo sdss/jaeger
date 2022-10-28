@@ -151,8 +151,10 @@ class Design:
             boss_mag_lim = design_mode_rec.boss_bright_limit_targets_min
 
             if fibre_type == "APOGEE":
+                # Use 2MASS H magnitude for APOGEE
                 mag = group.h.values
             else:
+                # Gaia G for BOSS.
                 mag = group.gaia_g.values
 
             if "bright" in design_mode:
