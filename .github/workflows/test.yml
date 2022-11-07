@@ -6,7 +6,7 @@ name: Test
 on:
   push:
     paths-ignore:
-      - 'docs/**'
+      - "docs/**"
 
 jobs:
   build:
@@ -15,37 +15,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ["3.8", "3.9", "3.10"]
 
     env:
-      WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanBase'
-      PYTHONPATH: '/home/runner/work/jaeger/jaeger/fps_calibrations'
-      OBSERVATORY: 'APO'
+      WOKCALIB_DIR: "/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanBase"
+      PYTHONPATH: "/home/runner/work/jaeger/jaeger/fps_calibrations"
+      OBSERVATORY: "APO"
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Cache Setup
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Create directories
         run: |
           mkdir -p $RUNNER_TEMP/logs/jaeger
 
       - name: Clone fps_calibrations
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
         with:
           repository: sdss/fps_calibrations
           ref: APO.2021.11.14
           path: fps_calibrations
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
