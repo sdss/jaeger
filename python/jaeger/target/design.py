@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pandas
 import peewee
 
 from coordio.defaults import calibration
+from coordio.utils import object_offset
 from sdssdb.peewee.sdss5db import targetdb
 
 from jaeger.utils.database import connect_database
@@ -105,6 +107,7 @@ class Design:
                 targetdb.CartonToTarget.lambda_eff,
                 targetdb.CartonToTarget.delta_ra,
                 targetdb.CartonToTarget.delta_dec,
+                targetdb.CartonToTarget.can_offset,
                 targetdb.Target,
                 targetdb.Magnitude,
                 targetdb.Hole.holeid,
@@ -113,6 +116,7 @@ class Design:
                 targetdb.Carton.carton,
                 targetdb.Category.label.alias("category"),
                 targetdb.Carton.program,
+                targetdb.Design.design_mode,
             )
             .join(targetdb.Assignment)
             .join(targetdb.CartonToTarget)
@@ -132,7 +136,61 @@ class Design:
             .dicts()
         )
 
-        return {data["holeid"]: data for data in target_data}
+        target_data = self.calculate_offsets(target_data)
+
+        return {data["holeid"]: data for data in list(target_data)}
+
+    def calculate_offsets(self, target_data: list[dict]):
+        """Determines the target offsets."""
+
+        def _offset(group: pandas.DataFrame):
+
+            design_mode = group.iloc[0].design_mode
+            fibre_type = group.iloc[0].fibre_type
+
+            design_mode_rec = targetdb.DesignMode.get(label=design_mode)
+
+            if fibre_type == "APOGEE":
+                # Use 2MASS H magnitude for APOGEE
+                mag = group.h.values
+                mag_lim = design_mode_rec.apogee_bright_limit_targets_min
+            else:
+                # Gaia G for BOSS.
+                mag = group.gaia_g.values
+                mag_lim = design_mode_rec.boss_bright_limit_targets_min
+
+            if "bright" in design_mode:
+                lunation = "bright"
+                skybrightness = 1.0
+            else:
+                lunation = "dark"
+                skybrightness = 0.35
+
+            # Hardcoding this for now.
+            offset_min_skybrightness = 0.5
+
+            delta_ra, delta_dec, _ = object_offset(
+                mag,
+                mag_lim,
+                lunation,
+                fibre_type.capitalize(),
+                can_offset=group.can_offset.values,
+                skybrightness=skybrightness,
+                offset_min_skybrightness=offset_min_skybrightness,
+            )
+
+            group.loc[:, "delta_ra"] = delta_ra
+            group.loc[:, "delta_dec"] = delta_dec
+
+            return group
+
+        # Convert to data frame to group by fibre type (no need to group by design
+        # mode since a design can only have one design mode).
+        df = pandas.DataFrame.from_records(target_data)
+        df = df.groupby(["fibre_type"], group_keys=False).apply(_offset)
+
+        # Return as a list of dicts again.
+        return [vv for vv in df.transpose().to_dict().values()]
 
     @classmethod
     def check_design(cls, design_id: int, site: str):

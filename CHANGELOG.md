@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🚀 New
+
+* [#193](https://github.com/sdss/jaeger/issues/193) Calculate `delta_ra` and `delta_dec` offsets using `coordio`'s `object_offset`.
+
 ### ✨ Improved
 
 * `jaeger fvc snapshot` now creates a snapshot based on the FVC-measured positions and alerts if a robots is more than 5 degrees off.
