@@ -1536,7 +1536,7 @@ dev = ["codecov (>=2.0.15)", "coverage[toml] (>=5.0)", "doc8 (>=0.8.0)", "flake8
 
 [[package]]
 name = "sdss-drift"
-version = "0.4.4"
+version = "0.4.5"
 description = "Modbus PLC control library"
 category = "main"
 optional = false
@@ -2175,7 +2175,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.11"
-content-hash = "01b2b1713dd63a0fb0e5405407e99c9b18f27a82880a6be5d60aecaa8c2d7fd3"
+content-hash = "c069a425684d3822eaa44ce7c888624864dbe53addb4eaced5baeabca217d880"
 
 [metadata.files]
 aio-pika = [
@@ -3496,8 +3496,8 @@ sdss-coordio = [
     {file = "sdss_coordio-1.5.0b1-cp39-cp39-manylinux_2_24_x86_64.whl", hash = "sha256:b6ec5dfc241361263c8473d1631a6e2dd5f28ef57610385567156cffa2944f97"},
 ]
 sdss-drift = [
-    {file = "sdss-drift-0.4.4.tar.gz", hash = "sha256:d572bed608913190c02cd87f6a8083cdca9bebc8f61a0067fc45a6e15fd1c5bb"},
-    {file = "sdss_drift-0.4.4-py3-none-any.whl", hash = "sha256:02d945ffaa68d2eb86bd09f8861013445b1796c4da562087327dd1d00e4b46cc"},
+    {file = "sdss_drift-0.4.5-py3-none-any.whl", hash = "sha256:adda618797a9cca2f50ec46cf246d62dda60b8fb0dec436e150607f7c8d10310"},
+    {file = "sdss_drift-0.4.5.tar.gz", hash = "sha256:a9bdddce0a6fd81a0a33f9dd060ab337014854f9fa393f86c3d3e80b10527106"},
 ]
 sdss-kaiju = [
     {file = "sdss-kaiju-1.3.0.tar.gz", hash = "sha256:b6f9568ba5be0e5e69c3c21b21f9f010b11af42a4137e41d0736e2741586c884"},
