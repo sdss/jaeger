@@ -58,6 +58,7 @@ async def _load_design(
     epoch_delay: float = 0.0,
     get_paths: bool = True,
     path_generation_mode: str | None = None,
+    safety_factor: float = 0.1,
 ):
     """Helper to load or preload a design."""
 
@@ -196,7 +197,12 @@ async def _load_design(
                 epoch = float(Time.now().jd)
             epoch += epoch_delay / 86400.0
 
-            design = await Design.create_async(design_id, epoch=epoch, scale=scale)
+            design = await Design.create_async(
+                design_id,
+                epoch=epoch,
+                scale=scale,
+                safety_factor=safety_factor,
+            )
         except Exception as err:
             command.error(error=f"Failed retrieving design: {err}")
             return False
@@ -300,6 +306,12 @@ def configuration():
     type=click.Choice(["greedy", "mdp"], case_sensitive=False),
     help="The path generation algorithm to use.",
 )
+@click.option(
+    "--safety-factor",
+    type=float,
+    default=0.1,
+    help="Safety factor to pass to the offset calculation function.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -320,6 +332,7 @@ async def load(
     fudge_factor: float | None = None,
     no_clone: bool = False,
     path_generation_mode: str | None = None,
+    safety_factor: float = 0.1,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -363,6 +376,7 @@ async def load(
             epoch_delay=epoch_delay,
             get_paths=False,
             path_generation_mode=path_generation_mode,
+            safety_factor=safety_factor,
         )
 
         if configuration is False:
@@ -553,6 +567,12 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     is_flag=True,
     help="Clears the preloaded configuration.",
 )
+@click.option(
+    "--safety-factor",
+    type=float,
+    default=0.1,
+    help="Safety factor to pass to the offset calculation function.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def preload(
     command: JaegerCommandType,
@@ -565,6 +585,7 @@ async def preload(
     no_clone: bool = False,
     make_active: bool = True,
     clear: bool = False,
+    safety_factor: float = 0.1,
 ):
     """Preloads a design.
 
@@ -590,6 +611,7 @@ async def preload(
         fudge_factor=fudge_factor,
         epoch=epoch,
         epoch_delay=epoch_delay,
+        safety_factor=safety_factor,
     )
 
     if configuration is False:

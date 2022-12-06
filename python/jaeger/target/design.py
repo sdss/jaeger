@@ -52,6 +52,8 @@ class Design:
         `None`, uses the current time.
     scale
         Focal plane scale factor to apply. Defaults to coordio's internal value.
+    safety_factor
+        For offset calculation. Factor to add to ``mag_limit``. See ``object_offset``.
 
     """
 
@@ -61,6 +63,7 @@ class Design:
         load_configuration: bool = True,
         epoch: float | None = None,
         scale: float | None = None,
+        safety_factor: float = 0.1,
     ):
 
         if calibration.wokCoords is None:
@@ -84,6 +87,8 @@ class Design:
             deccen=self.design.field.deccen,
             position_angle=self.design.field.position_angle,
         )
+
+        self.safety_factor = safety_factor
         self.target_data: dict[str, dict] = self.get_target_data()
 
         self.configuration: Configuration
@@ -177,6 +182,7 @@ class Design:
                 can_offset=group.can_offset.values,
                 skybrightness=skybrightness,
                 offset_min_skybrightness=offset_min_skybrightness,
+                safety_factor=self.safety_factor,
             )
 
             group.loc[:, "delta_ra"] = delta_ra
@@ -225,10 +231,11 @@ class Design:
         design_id: int,
         epoch: float | None = None,
         scale: float | None = None,
+        **kwargs,
     ):
         """Returns a design while creating the configuration in an executor."""
 
-        self = cls(design_id, load_configuration=False)
+        self = cls(design_id, load_configuration=False, **kwargs)
 
         configuration = await run_in_executor(
             Configuration,
