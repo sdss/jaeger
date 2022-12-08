@@ -287,7 +287,7 @@ def configuration():
 @click.option(
     "--scale",
     type=float,
-    help="Focal plane scale factor. If not passes, uses coordio default.",
+    help="Focal plane scale factor. If not passed, uses coordio default.",
 )
 @click.option(
     "--fudge-factor",
