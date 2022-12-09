@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🏷️ Changed
+
+* Call `cherno get-scale --max-age 3600`.
+
+
 ## 1.2.0b1 - November 7, 2022
 
 ### 🚀 New
