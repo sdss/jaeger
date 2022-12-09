@@ -86,7 +86,7 @@ kaiju:
 
 configuration:
   default_focal_scale: 1
-  scale_temperature_coeffs: [1.47051192e-05, 1.00003900e+00]
+  scale_temperature_coeffs: [1.01810522e-05, 9.99758691e-01]
   use_guider_scale: true
   guider_max_scale_age: 3600
   clip_scale: 500
