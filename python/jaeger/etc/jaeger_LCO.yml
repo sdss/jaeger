@@ -91,8 +91,8 @@ configuration:
   guider_max_scale_age: 3600
   clip_scale: 500
   scale_fudge_factor: 0.9987
-  max_cloned_time: 7200
-  max_designs_epoch: 8
+  max_cloned_time: 4500
+  max_designs_epoch: 4
 
 fvc:
   config: etc/fvc.yaml
