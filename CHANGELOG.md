@@ -6,6 +6,7 @@
 
 * Call `cherno get-scale --max-age 3600`.
 * Changed `max_cloned_time` to 4500 and `max_designs_epoch` to 4 at both APO and LCO.
+* Updated fudge factor at APO to 0.99988.
 
 
 ## 1.2.0b1 - November 7, 2022
