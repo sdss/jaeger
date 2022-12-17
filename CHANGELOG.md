@@ -2,6 +2,10 @@
 
 ## Next version
 
+### ✨ Improved
+
+* Output `preloaded_is_cloned` keyword indicating whether a preloaded design is cloned.
+
 ### 🏷️ Changed
 
 * Call `cherno get-scale --max-age 3600`.
