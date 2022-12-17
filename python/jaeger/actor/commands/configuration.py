@@ -625,7 +625,10 @@ async def preload(
     else:
         fps._preloaded_configuration = configuration
 
-    command.info(design_preloaded=configuration.design_id)
+    command.info(
+        design_preloaded=configuration.design_id,
+        preloaded_is_cloned=configuration.is_cloned,
+    )
 
     if make_active:
         load_cmd = await command.send_command(
