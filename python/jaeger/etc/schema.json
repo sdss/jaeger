@@ -212,6 +212,9 @@
     "design_preloaded": {
       "type": "integer"
     },
+    "preloaded_is_cloned": {
+      "type": "boolean"
+    },
     "fvc_filename": {
       "type": "string"
     },
