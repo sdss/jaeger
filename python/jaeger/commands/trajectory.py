@@ -26,7 +26,7 @@ from sdsstools import read_yaml_file
 
 from jaeger import config, log
 from jaeger.commands import Command, CommandID
-from jaeger.exceptions import FPSLockedError, JaegerUserWarning, TrajectoryError
+from jaeger.exceptions import JaegerUserWarning, TrajectoryError
 from jaeger.ieb import IEB
 from jaeger.maskbits import FPSStatus, ResponseCode
 from jaeger.utils import int_to_bytes
@@ -272,17 +272,6 @@ class Trajectory(object):
         self.fps = fps
         self.trajectories: TrajectoryDataType
 
-        if self.fps.locked:
-            raise FPSLockedError(
-                f"FPS is locked by {fps.locked_by}. Cannot send trajectories."
-            )
-
-        if self.fps.moving:
-            raise TrajectoryError(
-                "The FPS is moving. Cannot send new trajectory.",
-                self,
-            )
-
         if isinstance(trajectories, (str, pathlib.Path)):
             path = pathlib.Path(trajectories)
             if path.suffix == ".json":
@@ -390,17 +379,20 @@ class Trajectory(object):
     async def send(self):
         """Sends the trajectory but does not start it."""
 
+        if self.fps.locked:
+            raise TrajectoryError(f"FPS is locked by {self.fps.locked_by}.", self)
+
         self.move_time = 0.0
 
         await self.fps.stop_trajectory()
         await self.fps.stop_trajectory(clear_flags=True)
 
-        if not await self.fps.update_status(
-            positioner_ids=list(self.trajectories),
-            timeout=1.0,
-        ):
+        if not await self.fps.update_status(timeout=1.0):
             self.failed = True
             raise TrajectoryError("Some positioners did not respond.", self)
+
+        if self.fps.moving:
+            raise TrajectoryError("The FPS is moving. Cannot send trajectory.", self)
 
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:

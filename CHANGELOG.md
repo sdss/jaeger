@@ -5,6 +5,7 @@
 ### ✨ Improved
 
 * Output `preloaded_is_cloned` keyword indicating whether a preloaded design is cloned.
+* Move the check for whether the FPS is moving before sending a new trajectory to `Tracjectory.send()` and after an `FPS.update_status()` has been issued, which may help with cases in which the FPS is stuck as moving because the status has not been updated.
 
 ### 🏷️ Changed
 
