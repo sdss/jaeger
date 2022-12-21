@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 - December 21, 2022
+
+### 🔧 Fixed
+
+* Require `sdss-kaiju>=1.3.1` which solves a problem with a `shapely` dependency upgrade breaking some plotting.
+
+
 ## 1.2.0 - December 21, 2022
 
 ### ✨ Improved
