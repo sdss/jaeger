@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Trajectories now save the snapshot asynchronously, which should save a few seconds at the end of each trajectory.
+
+
 ## 1.2.0 - December 21, 2022
 
 ### ✨ Improved

@@ -684,8 +684,8 @@ class Trajectory(object):
 
         finally:
             # Not explicitely updating the positions here because save_snapshot()
-            # will do that and no need to waste extra time.
-            await self.fps.save_snapshot()
+            # will do that and no need to waste extra time. Do not wait for this.
+            asyncio.create_task(self.fps.save_snapshot())
 
             if self.dump_file:
                 self.dump_trajectory()
