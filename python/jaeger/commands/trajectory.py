@@ -161,11 +161,6 @@ async def send_trajectory(
             f"Something went wrong sending the trajectory: {err}",
             err.trajectory,
         )
-    finally:
-        if traj.dump_file:
-            traj.dump_trajectory()
-            if command:
-                command.debug(trajectory_dump_file=traj.dump_file)
 
     msg = f"Trajectory sent in {traj.data_send_time:.1f} seconds."
     log.debug(msg)
@@ -177,6 +172,11 @@ async def send_trajectory(
         command.info(move_time=round(traj.move_time, 2))
 
     if start_trajectory is False:
+        if traj.dump_file:
+            traj.dump_trajectory()
+            if command:
+                command.debug(trajectory_dump_file=traj.dump_file)
+
         return traj
 
     msg = "Starting trajectory ..."
