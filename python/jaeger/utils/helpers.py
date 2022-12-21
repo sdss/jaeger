@@ -291,7 +291,7 @@ class Poller(object):
 
     """
 
-    def __init__(self, name, callback, delay=1, loop=None):
+    def __init__(self, name, callback, delay=1.0, loop=None):
 
         self.name = name
         self.callback = callback
