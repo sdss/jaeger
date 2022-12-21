@@ -67,7 +67,7 @@ positioner:
   initialise_datums_timeout: 300
   disable_precise_moves: true
   uid_bits: 6
-  trajectory_data_n_points: 3
+  trajectory_data_n_points: 10
   firmware_messages_per_positioner: 8
   trajectory_dump_path: /data/logs/jaeger/trajectories/
 
