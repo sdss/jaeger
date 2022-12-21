@@ -137,6 +137,7 @@ class FVC:
         level: logging._Level = logging.INFO,
         to_log: bool = True,
         to_command: bool = True,
+        broadcast: bool = False,
     ):
         """Logs a message, including to the command if present."""
 
@@ -148,13 +149,13 @@ class FVC:
 
         if self.command and to_command:
             if level == logging.DEBUG:
-                self.command.debug(msg)
+                self.command.debug(msg, broadcast=broadcast)
             elif level == logging.INFO:
-                self.command.info(msg)
+                self.command.info(msg, broadcast=broadcast)
             elif level == logging.WARNING:
-                self.command.warning(msg)
+                self.command.warning(msg, broadcast=broadcast)
             elif level == logging.ERROR:
-                self.command.error(msg)
+                self.command.error(msg, broadcast=broadcast)
 
     async def expose(
         self,
@@ -658,6 +659,7 @@ class FVC:
     async def write_proc_image(
         self,
         new_filename: Optional[str | pathlib.Path] = None,
+        broadcast: bool = False,
     ) -> fits.HDUList:  # pragma: no cover
         """Writes the processed image along with additional table data.
 
@@ -741,7 +743,11 @@ class FVC:
             try:
                 proc_hdus[1].header.extend(self.fvc_transform.getMetadata())
             except Exception as err:
-                self.log(f"Cannot get FVCTransform metadata: {err}", logging.WARNING)
+                self.log(
+                    f"Cannot get FVCTransform metadata: {err}",
+                    logging.WARNING,
+                    broadcast=broadcast,
+                )
 
         posangles = None
         if self.fps:
@@ -797,7 +803,7 @@ class FVC:
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
 
-        self.log(f"Processed HDU written to {new_filename}")
+        self.log(f"Processed HDU written to {new_filename}", broadcast=broadcast)
         self.proc_image_path = os.path.abspath(new_filename)
 
         return proc_hdus
@@ -882,6 +888,7 @@ class FVC:
         path: str | pathlib.Path | None = None,
         plot: bool = True,
         extra_headers: dict = {},
+        broadcast: bool = False,
     ):
         """Updates data with the last measured positions and write confSummaryF."""
 
@@ -891,7 +898,7 @@ class FVC:
         if self.fibre_data is None:
             raise FVCError("No fibre data.")
 
-        self.log("Updating coordinates.", level=logging.DEBUG)
+        self.log("Updating coordinates.", level=logging.DEBUG, broadcast=True)
 
         fdata = (
             self.fibre_data.reset_index()
@@ -957,9 +964,10 @@ class FVC:
                     "Configuration does not have boresight set. "
                     "Cannot produce FVC plots.",
                     level=logging.WARNING,
+                    broadcast=True,
                 )
             else:
-                self.log("Creating FVC plots", level=logging.DEBUG)
+                self.log("Creating FVC plots", level=logging.DEBUG, broadcast=True)
 
                 outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
 

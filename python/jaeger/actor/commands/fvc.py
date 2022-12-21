@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from typing import TYPE_CHECKING, Optional, cast
 
 import click
@@ -448,8 +450,8 @@ async def take_fvc_loop(
 
             # 6. Save processed file.
             proc_path = filename.with_name("proc-" + filename.name)
-            command.debug(f"Saving processed image {proc_path}")
-            await fvc.write_proc_image(proc_path)
+            command.debug(f"Asynchronously saving processed image {proc_path}")
+            asyncio.create_task(fvc.write_proc_image(proc_path, broadcast=True))
             proc_image_saved = True
 
             if reached is True:
@@ -477,14 +479,14 @@ async def take_fvc_loop(
                 and no_write_summary is False
                 and failed is False
             ):
-                command.info("Saving confSummaryF file.")
-                await fvc.write_summary_F()
+                command.info("Asynchronously saving confSummaryF file.")
+                asyncio.create_task(fvc.write_summary_F(plot=False))
 
             if proc_image_saved is False:
                 if filename is not None and fvc.proc_hdu is not None:
                     proc_path = filename.with_name("proc-" + filename.name)
-                    command.debug(f"Saving processed image {proc_path}")
-                    await fvc.write_proc_image(proc_path)
+                    command.debug(f"Asynchronously saving processed image {proc_path}")
+                    asyncio.create_task(fvc.write_proc_image(proc_path, broadcast=True))
                 else:
                     command.warning("Cannot write processed image.")
         except Exception:
