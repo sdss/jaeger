@@ -13,7 +13,7 @@ import os
 import pathlib
 import warnings
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy
 import pandas
@@ -83,6 +83,8 @@ class FVC:
     centroid_method: str | None
     fitrms: float
     k: float
+
+    ieb_data: dict[str, Any] = {}
 
     def __init__(self, site: str, command: Optional[Command[JaegerActor]] = None):
 
@@ -735,6 +737,8 @@ class FVC:
                     self.log(f"Failed getting IEB information: {err}", logging.WARNING)
                     break
 
+        self.ieb_data = ieb_data
+
         for key, val in ieb_data.items():
             proc_hdus[1].header[key] = val
 
@@ -883,7 +887,7 @@ class FVC:
         self.correction_applied = True
         self.log("Correction applied.")
 
-    async def write_summary_F(
+    def write_summary_F(
         self,
         path: str | pathlib.Path | None = None,
         plot: bool = True,
@@ -898,7 +902,7 @@ class FVC:
         if self.fibre_data is None:
             raise FVCError("No fibre data.")
 
-        self.log("Updating coordinates.", level=logging.DEBUG, broadcast=True)
+        self.log("Updating coordinates.", level=logging.DEBUG, broadcast=broadcast)
 
         fdata = (
             self.fibre_data.reset_index()
@@ -947,10 +951,11 @@ class FVC:
             "fvc_90_perc": self.perc_90,
             "fvc_percent_reached": self.fvc_percent_reached,
             "fvc_image_path": self.proc_image_path if self.proc_image_path else "",
+            "temperature": self.ieb_data.get("TEMPT3", -999.0),
         }
         headers.update(extra_headers)
 
-        await configuration_copy.write_summary(
+        configuration_copy.write_summary(
             path=path,
             flavour="F",
             headers=headers,
@@ -964,10 +969,10 @@ class FVC:
                     "Configuration does not have boresight set. "
                     "Cannot produce FVC plots.",
                     level=logging.WARNING,
-                    broadcast=True,
+                    broadcast=broadcast,
                 )
             else:
-                self.log("Creating FVC plots", level=logging.DEBUG, broadcast=True)
+                self.log("Creating FVC plots", level=logging.DEBUG, broadcast=broadcast)
 
                 outpath = str(self.proc_image_path).replace(".fits", "_distances.pdf")
 

@@ -417,9 +417,13 @@ async def load(
         fps.configuration.configuration_id = -999
 
     if ingest and write_summary:
-        await fps.configuration.write_summary(
+        temperature = await fps.configuration.get_temperature()
+        fps.configuration.write_summary(
             overwrite=True,
-            headers={"cloned_from": fps.configuration.cloned_from or -999},
+            headers={
+                "cloned_from": fps.configuration.cloned_from or -999,
+                "temperature": temperature,
+            },
         )
 
         if fps.configuration.cloned_from and fps.configuration.configuration_id:
@@ -807,7 +811,7 @@ async def dither(
     await fps.configuration.get_paths()
 
     fps.configuration.write_to_database()
-    await fps.configuration.write_summary(overwrite=True)
+    fps.configuration.write_summary(overwrite=True)
 
     _output_configuration_loaded(command, fps)
 

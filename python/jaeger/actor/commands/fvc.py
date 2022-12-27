@@ -480,7 +480,7 @@ async def take_fvc_loop(
                 and failed is False
             ):
                 command.info("Asynchronously saving confSummaryF file.")
-                asyncio.create_task(fvc.write_summary_F(plot=False))
+                asyncio.create_task(run_in_executor(fvc.write_summary_F, plot=False))
 
             if proc_image_saved is False:
                 if filename is not None and fvc.proc_hdu is not None:

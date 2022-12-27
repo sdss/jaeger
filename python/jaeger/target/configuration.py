@@ -243,7 +243,10 @@ class BaseConfiguration:
             new.write_to_database()
 
         if write_to_database and write_summary:
-            await new.write_summary(headers={"cloned_from": new.cloned_from})
+            temperature = await self.get_temperature()
+            new.write_summary(
+                headers={"cloned_from": new.cloned_from, "temperature": temperature}
+            )
 
         if write_to_database and copy_summary_F:
             assert new.configuration_id is not None
@@ -290,6 +293,16 @@ class BaseConfiguration:
 
     def __repr__(self):
         return f"<Configuration (configuration_id={self.configuration_id}>"
+
+    async def get_temperature(self):
+        """Returns the T3 temperature."""
+
+        if self.fps and isinstance(self.fps.ieb, IEB):
+            temp: float = (await self.fps.ieb.read_device("T3"))[0]
+        else:
+            temp = -999.0
+
+        return round(temp, 1)
 
     def recompute_coordinates(self, jd: Optional[float] = None):
         """Recalculates the coordinates.
@@ -729,7 +742,7 @@ class BaseConfiguration:
 
         return path
 
-    async def write_summary(
+    def write_summary(
         self,
         flavour: str = "",
         path: str | pathlib.Path | None = None,
@@ -771,11 +784,6 @@ class BaseConfiguration:
 
         design = self.design
 
-        if self.fps and isinstance(self.fps.ieb, IEB):
-            temp: float = (await self.fps.ieb.read_device("T3"))[0]
-        else:
-            temp = -999.0
-
         header = {
             "configuration_id": self.configuration_id,
             "robostrategy_run": "NA",
@@ -791,7 +799,7 @@ class BaseConfiguration:
             "obstime": time.strftime("%a %b %d %H:%M:%S %Y"),
             "MJD": get_sjd(adata.observatory.upper()),
             "observatory": adata.observatory,
-            "temperature": round(temp, 1),
+            "temperature": -999.0,
             "raCen": -999.0,
             "decCen": -999.0,
             "pa": -999.0,
