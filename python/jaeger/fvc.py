@@ -8,10 +8,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import pathlib
 import warnings
+from copy import deepcopy
+from functools import partial
 
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -22,6 +25,7 @@ from astropy.table import Table
 
 from clu.command import Command
 from clu.legacy.tron import TronConnection
+from coordio import transforms
 from coordio.defaults import calibration
 
 from jaeger import config, log
@@ -46,6 +50,14 @@ __all__ = ["FVC"]
 
 
 FVC_CONFIG = config["fvc"]
+
+
+# Create a coroutine out of the original plotFVCResults.
+plotFVCResultsCo = asyncio.coroutine(deepcopy(transforms.plotFVCResults))
+
+
+def plotFVCResultsMP(loop: asyncio.AbstractEventLoop, *args, **kwargs):
+    loop.create_task(plotFVCResultsCo(*args, **kwargs))  # type: ignore
 
 
 def get_transform(observatory: str):
@@ -230,6 +242,7 @@ class FVC:
         use_new_invkin: bool = True,
         plot: bool | str = False,
         outdir: str | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
     ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame | None]:
         """Processes a raw FVC image.
 
@@ -262,6 +275,9 @@ class FVC:
             Whether to save additional debugging plots along with the processed image.
             If ``plot`` is a string, it will be used as the directory to which to
             save the plots.
+        loop
+            The running event loop. Used to schedule the plotting of the FVC
+            transform fit as a task.
 
         Returns
         -------
@@ -341,6 +357,11 @@ class FVC:
 
         FVCTransform = get_transform(self.fps.observatory)
         self.log(f"Using FVC transform class {FVCTransform.__name__!r}.")
+
+        if loop:
+            # Monkeypatch plotFVCResults to use a task and do plotting asynchronously.
+            # It's important to override it here, when a loop already exists.
+            transforms.plotFVCResults = partial(plotFVCResultsMP, loop)
 
         fvc_transform = FVCTransform(
             image_data,
