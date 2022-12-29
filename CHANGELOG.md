@@ -5,6 +5,9 @@
 ### ✨ Improved
 
 * Trajectories now save the snapshot asynchronously, which should save a few seconds at the end of each trajectory.
+* Avoids saving trajectory dump file multiple times.
+* FVC `proc-` image is saved asynchronously and the command doesn't wait for it to finish writing. The `confSummaryF` file is computed and saved asynchronously.
+* `plotFVCResults` in `coordio.transforms` is monkeypatched to run as a task.
 
 
 ## 1.2.1 - December 21, 2022
