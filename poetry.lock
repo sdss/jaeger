@@ -696,32 +696,33 @@ files = [
 
 [[package]]
 name = "doc8"
-version = "0.11.2"
+version = "1.1.1"
 description = "Style checker for Sphinx (or other) RST documentation"
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "doc8-0.11.2-py3-none-any.whl", hash = "sha256:9187da8c9f115254bbe34f74e2bbbdd3eaa1b9e92efd19ccac7461e347b5055c"},
-    {file = "doc8-0.11.2.tar.gz", hash = "sha256:c35a231f88f15c204659154ed3d499fa4d402d7e63d41cba7b54cf5e646123ab"},
+    {file = "doc8-1.1.1-py3-none-any.whl", hash = "sha256:e493aa3f36820197c49f407583521bb76a0fde4fffbcd0e092be946ff95931ac"},
+    {file = "doc8-1.1.1.tar.gz", hash = "sha256:d97a93e8f5a2efc4713a0804657dedad83745cca4cd1d88de9186f77f9776004"},
 ]
 
 [package.dependencies]
-docutils = "*"
+docutils = ">=0.19,<0.21"
 Pygments = "*"
 restructuredtext-lint = ">=0.7"
 stevedore = "*"
+tomli = {version = "*", markers = "python_version < \"3.11\""}
 
 [[package]]
 name = "docutils"
-version = "0.16"
+version = "0.19"
 description = "Docutils -- Python Documentation Utilities"
-category = "main"
+category = "dev"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
+python-versions = ">=3.7"
 files = [
-    {file = "docutils-0.16-py2.py3-none-any.whl", hash = "sha256:0c5b78adfbf7762415433f5515cd5c9e762339e23369dbe8000d84a4bf4ab3af"},
-    {file = "docutils-0.16.tar.gz", hash = "sha256:c2de3a60e9e7d07be26b7f2b00ca0309c207e06c100f9cc2a94931fc75a478fc"},
+    {file = "docutils-0.19-py3-none-any.whl", hash = "sha256:5e1de4d849fee02c63b040a4a3fd567f4ab104defd8a5511fbbc24a8a017efbc"},
+    {file = "docutils-0.19.tar.gz", hash = "sha256:33995a6753c30b7f577febfc2c50411fec6aac7f7ffeb7c4cfe5991072dcf9e6"},
 ]
 
 [[package]]
@@ -2046,23 +2047,22 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "progressbar2"
-version = "3.55.0"
+version = "4.2.0"
 description = "A Python Progressbar library to provide visual (yet text based) progress to long running operations."
-category = "main"
+category = "dev"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7.0"
 files = [
-    {file = "progressbar2-3.55.0-py2.py3-none-any.whl", hash = "sha256:e98fee031da31ab9138fd8dd838ac80eafba82764eb75a43d25e3ca622f47d14"},
-    {file = "progressbar2-3.55.0.tar.gz", hash = "sha256:86835d1f1a9317ab41aeb1da5e4184975e2306586839d66daf63067c102f8f04"},
+    {file = "progressbar2-4.2.0-py2.py3-none-any.whl", hash = "sha256:1a8e201211f99a85df55f720b3b6da7fb5c8cdef56792c4547205be2de5ea606"},
+    {file = "progressbar2-4.2.0.tar.gz", hash = "sha256:1393922fcb64598944ad457569fbeb4b3ac189ef50b5adb9cef3284e87e394ce"},
 ]
 
 [package.dependencies]
-python-utils = ">=2.3.0"
-six = "*"
+python-utils = ">=3.0.0"
 
 [package.extras]
-docs = ["sphinx (>=1.7.4)"]
-tests = ["flake8 (>=3.7.7)", "freezegun (>=0.3.11)", "pytest (>=4.6.9)", "pytest-cov (>=2.6.1)", "sphinx (>=1.8.5)"]
+docs = ["sphinx (>=1.8.5)"]
+tests = ["flake8 (>=3.7.7)", "freezegun (>=0.3.11)", "pytest (>=4.6.9)", "pytest-cov (>=2.6.1)", "pytest-mypy", "sphinx (>=1.8.5)"]
 
 [[package]]
 name = "prompt-toolkit"
@@ -2396,26 +2396,22 @@ plugins = ["importlib-metadata"]
 
 [[package]]
 name = "pymodbus"
-version = "2.5.3"
+version = "3.0.2"
 description = "A fully featured modbus protocol stack in python"
 category = "main"
 optional = false
-python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*"
+python-versions = ">=3.8.0"
 files = [
-    {file = "pymodbus-2.5.3-py2.py3-none-any.whl", hash = "sha256:6f91403294a73b5a1616a11309f93c0b782115c09379438ef7ebc5bdf86182e9"},
-    {file = "pymodbus-2.5.3.tar.gz", hash = "sha256:5ef68c1a109bdb467c830ef003ef2db6494349a5248e4af946fe21c9eefe7e74"},
+    {file = "pymodbus-3.0.2-py2.py3-none-any.whl", hash = "sha256:cf0fb7b5ca78df88ec364a5ffc7ce3d5d3f722b28d9190e465f7199de2194894"},
+    {file = "pymodbus-3.0.2.tar.gz", hash = "sha256:704cb7fb90631c45f9c3a70b89d0c990fe0e208ac56f14a5c449e21bebd1e201"},
 ]
 
-[package.dependencies]
-pyserial = ">=3.4"
-six = ">=1.15.0"
-
 [package.extras]
-documents = ["humanfriendly", "sphinx (>=1.1.3)", "sphinx-rtd-theme"]
-quality = ["coverage (>=3.5.3)", "mock (>=1.0.0)", "nose (>=1.2.1)", "pep8 (>=1.3.3)"]
-repl = ["aiohttp (>=3.7.3)", "click (>=7.0)", "click (>=7.0)", "prompt-toolkit (==2.0.4)", "prompt-toolkit (>=3.0.8)", "pygments (>=2.2.0)", "pygments (>=2.2.0)", "pyserial-asyncio (>=0.5)"]
-tornado = ["tornado (==4.5.3)"]
-twisted = ["Twisted[conch,serial] (>=20.3.0)", "Twisted[conch] (>=20.3.0)"]
+datastore = ["redis (>=2.10.6)", "sqlalchemy (>=1.1.15)"]
+development- = ["bandit (==1.7.4)", "black (==22.10.0)", "codespell (==2.2.2)", "coverage (==6.5)", "flake8 (==5.0.4)", "flake8-comprehensions (==3.10.0)", "flake8-docstrings (==1.6.0)", "flake8-noqa (==1.2.9)", "isort (==5.10.1)", "pep8 (==1.7.1)", "pycodestyle (==2.9.1)", "pydocstyle (==6.1.1)", "pyflakes (==2.5.0)", "pylint (==2.15.4)", "pytest (==7.1.3)", "pytest-asyncio (==0.19.0)", "pytest-cov (==4.0.0)", "pytest-timeout (==2.1.0)", "tox (==3.26.0)"]
+documentation = ["Sphinx", "humanfriendly", "m2r2", "recommonmark", "sphinx-rtd-theme"]
+repl = ["aiohttp (>=3.8.1)", "prompt-toolkit (==3.0.8)", "pygments (==2.12.0)", "typer[all] (>=0.6.1)"]
+serial = ["pyserial (>=3.5)", "pyserial-asyncio (==0.6)"]
 
 [[package]]
 name = "pyparsing"
@@ -2473,7 +2469,7 @@ files = [
 name = "pyserial"
 version = "3.5"
 description = "Python Serial Port Extension"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 files = [
@@ -2615,7 +2611,7 @@ six = ">=1.5"
 name = "python-utils"
 version = "3.4.5"
 description = "Python Utils is a module with some convenient utilities not included with the standard Python install"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">3.6.0"
 files = [
@@ -2962,18 +2958,18 @@ dev = ["codecov (>=2.0.15)", "coverage[toml] (>=5.0)", "doc8 (>=0.8.0)", "flake8
 
 [[package]]
 name = "sdss-drift"
-version = "0.4.5"
+version = "1.0.1"
 description = "Modbus PLC control library"
 category = "main"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = ">=3.8,<4.0"
 files = [
-    {file = "sdss_drift-0.4.5-py3-none-any.whl", hash = "sha256:adda618797a9cca2f50ec46cf246d62dda60b8fb0dec436e150607f7c8d10310"},
-    {file = "sdss_drift-0.4.5.tar.gz", hash = "sha256:a9bdddce0a6fd81a0a33f9dd060ab337014854f9fa393f86c3d3e80b10527106"},
+    {file = "sdss_drift-1.0.1-py3-none-any.whl", hash = "sha256:085119eabce60ae5a848d01c9b9180b29988f857c17f454a6ab04aed146fe95a"},
+    {file = "sdss_drift-1.0.1.tar.gz", hash = "sha256:90b093b80cb59041ff19875aa0f503efef5c068117d40d484dcb687ccb84e4e5"},
 ]
 
 [package.dependencies]
-pymodbus = ">=2.5.0,<3.0.0"
+pymodbus = ">=3.0.0,<4.0.0"
 sdsstools = ">=0.4.1"
 
 [[package]]
@@ -3002,14 +2998,14 @@ simplification = "0.5.22"
 
 [[package]]
 name = "sdssdb"
-version = "0.5.5"
+version = "0.6.0"
 description = "SDSS product for database management"
 category = "main"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sdssdb-0.5.5-py3-none-any.whl", hash = "sha256:8f8487bee461f704d9afdb62f9b32281c876c5139661ff557780880fbaede807"},
-    {file = "sdssdb-0.5.5.tar.gz", hash = "sha256:80eba2e6013bdf249a6ff7272bd03bbb1f7a6c5655b60b6f5b75bcad5eeba30d"},
+    {file = "sdssdb-0.6.0-py3-none-any.whl", hash = "sha256:74d3e980927ea561ecb31ad9202674e2e2976392c9bc7b72956c4fa06daebed1"},
+    {file = "sdssdb-0.6.0.tar.gz", hash = "sha256:8c6968c9bd25b8b123deb42c091dfe0c50725a4b3eebfaf02a0bad3d2a39bd3a"},
 ]
 
 [package.dependencies]
@@ -3030,25 +3026,22 @@ docs = ["Sphinx (>=3.0.0,<4.0.0)", "jinja2 (==3.0.0)", "sphinx-bootstrap-theme (
 
 [[package]]
 name = "sdsstools"
-version = "0.5.4"
+version = "1.0.2"
 description = "Small tools for SDSS products"
 category = "main"
 optional = false
-python-versions = ">=3.6.2,<3.12"
+python-versions = ">=3.8,<4.0"
 files = [
-    {file = "sdsstools-0.5.4-py3-none-any.whl", hash = "sha256:ed78ebabf0e039261f03d50260e57cc33b083e5f1c996e4ad2eb2daef30b8a37"},
-    {file = "sdsstools-0.5.4.tar.gz", hash = "sha256:59fa857f192a1a1c32633c9afc750873b5c9ee374f359887ca78ce57ac5d685e"},
+    {file = "sdsstools-1.0.2-py3-none-any.whl", hash = "sha256:e6f3ed62fa79e7de84bb496c13cdcadbfd1ecbdf6660bae7a5dad237dfd4c6e2"},
+    {file = "sdsstools-1.0.2.tar.gz", hash = "sha256:74a477430155993e6a1dd8f7c780cbab7cce907c83d87f17553c614c90aea44b"},
 ]
 
 [package.dependencies]
 daemonocle = ">=1.0.2,<2.0.0"
-docutils = ">=0.16,<0.17"
 invoke = ">=1.3.0,<2.0.0"
 packaging = ">=20.4"
 pygments = ">=2.5.2,<3.0.0"
 pyyaml = ">=4.0"
-semantic-version = ">=2.8.4,<3.0.0"
-six = ">=1.14.0,<2.0.0"
 
 [[package]]
 name = "seaborn"
@@ -3071,22 +3064,6 @@ pandas = ">=0.25"
 dev = ["flake8", "mypy", "pandas-stubs", "pre-commit", "pytest", "pytest-cov", "pytest-xdist"]
 docs = ["ipykernel", "nbconvert", "numpydoc", "pydata_sphinx_theme (==0.10.0rc2)", "pyyaml", "sphinx-copybutton", "sphinx-design", "sphinx-issues"]
 stats = ["scipy (>=1.3)", "statsmodels (>=0.10)"]
-
-[[package]]
-name = "semantic-version"
-version = "2.10.0"
-description = "A library implementing the 'SemVer' scheme."
-category = "main"
-optional = false
-python-versions = ">=2.7"
-files = [
-    {file = "semantic_version-2.10.0-py2.py3-none-any.whl", hash = "sha256:de78a3b8e0feda74cabc54aab2da702113e33ac9d9eb9d2389bcf1f58b7d9177"},
-    {file = "semantic_version-2.10.0.tar.gz", hash = "sha256:bdabb6d336998cbb378d4b9db3a4b56a1e3235701dc05ea2690d9a997ed5041c"},
-]
-
-[package.extras]
-dev = ["Django (>=1.11)", "check-manifest", "colorama (<=0.4.1)", "coverage", "flake8", "nose2", "readme-renderer (<25.0)", "tox", "wheel", "zest.releaser[recommended]"]
-doc = ["Sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "sep"
@@ -3995,4 +3972,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8,<3.11"
-content-hash = "6f40d123f9a948e5ca8a805c7a7458d42792db2e2de55c54db1346157eef7964"
+content-hash = "1513f0edb95596b996efa78d3792540d499f15858c6c6c8784f9321b897b4896"
