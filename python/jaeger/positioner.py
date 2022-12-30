@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from distutils.version import StrictVersion
 
 from typing import List, Optional, Tuple
+
+from packaging.version import Version
 
 import jaeger
 from jaeger import config, log, maskbits
@@ -323,7 +324,7 @@ class Positioner(StatusMixIn):
                 beta=config["positioner"]["motor_speed"],
             )
 
-            if StrictVersion(self.firmware) < StrictVersion("04.01.17"):
+            if self.firmware and Version(self.firmware) < Version("04.01.17"):
                 self._log("Disabling precise moves requires >=04.01.17", logging.DEBUG)
             else:
                 await self.set_precise_move(mode=not disable_precise_moves)
@@ -362,7 +363,7 @@ class Positioner(StatusMixIn):
         if self.is_bootloader():
             return maskbits.BootloaderStatus
 
-        if StrictVersion(self.firmware) < StrictVersion("04.01.00"):
+        if Version(self.firmware) < Version("04.01.00"):
             return maskbits.PositionerStatusV4_0
         else:
             return maskbits.PositionerStatus
@@ -606,7 +607,7 @@ class Positioner(StatusMixIn):
         if not self.firmware:
             return None
 
-        if StrictVersion(self.firmware) < StrictVersion("04.01.21"):
+        if Version(self.firmware) < Version("04.01.21"):
             return None
 
         assert self.fps

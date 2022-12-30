@@ -21,7 +21,7 @@ from pymodbus.datastore import (
     ModbusServerContext,
     ModbusSlaveContext,
 )
-from pymodbus.server.async_io import StartTcpServer
+from pymodbus.server import StartAsyncTcpServer
 
 import clu.testing
 from clu.testing import TestCommand
@@ -103,19 +103,20 @@ async def ieb_server(event_loop):
 
     context = ModbusServerContext(slaves=store, single=True)
 
-    server = await StartTcpServer(
-        context,
+    server = await StartAsyncTcpServer(
+        context=context,
         address=("127.0.0.1", 5020),
-        loop=event_loop,
         allow_reuse_address=True,
         allow_reuse_port=True,
+        defer_start=True,
     )
+    assert server
 
     task = event_loop.create_task(server.serve_forever())
 
     yield server
 
-    server.server_close()
+    await server.server_close()
 
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
@@ -138,8 +139,8 @@ async def vfps(ieb_server, monkeypatch):
     fps.pid_lock = True  # type: ignore  # Hack to prevent use of lock.
 
     assert isinstance(fps.ieb, IEB)
-    fps.ieb.client.host = "127.0.0.1"
-    fps.ieb.client.port = 5020
+    fps.ieb.address = "127.0.0.1"
+    fps.ieb.client.params.port = 5020
     await asyncio.sleep(0.01)  # Give time to the IEB server to serve.
 
     async with fps:
@@ -147,7 +148,7 @@ async def vfps(ieb_server, monkeypatch):
 
     assert isinstance(fps.can, JaegerCAN) and fps.can._command_queue_task
 
-    fps.ieb.client.stop()
+    await fps.ieb.client.close()
     fps.can._command_queue_task.cancel()
 
     with contextlib.suppress(asyncio.CancelledError):
