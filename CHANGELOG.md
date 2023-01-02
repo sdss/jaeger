@@ -1,6 +1,6 @@
 # Changelog
 
-## Next version
+## 1.3.0 - January 2, 2023
 
 ### ✨ Improved
 
@@ -8,6 +8,10 @@
 * Avoids saving trajectory dump file multiple times.
 * FVC `proc-` image is saved asynchronously and the command doesn't wait for it to finish writing. The `confSummaryF` file is computed and saved asynchronously.
 * `plotFVCResults` in `coordio.transforms` is monkeypatched to run as a task.
+
+### ⚙️ Engineering
+
+* Upgraded to `Drift` 1.0.0 which uses `pymodbus` 3.
 
 
 ## 1.2.1 - December 21, 2022
