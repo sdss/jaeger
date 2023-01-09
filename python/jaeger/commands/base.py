@@ -435,7 +435,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             self._log(
                 f"received a reply from {pid} but the command has already timed out.",
                 level=logging.ERROR,
-                logs=[log, can_log],
+                logs=[can_log],
             )
             return
         elif self.status == CommandStatus.CANCELLED:
@@ -536,6 +536,12 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             elif self.status.failed:
                 level = logging.ERROR if not silent else logging.DEBUG
                 self._log(f"command finished with status {self.status.name!r}", level)
+            elif self.status.timed_out and self._n_replies is not None:
+                # Report the command timed out, but only if this is not a broadcast
+                # and the number expected replies is not known. In those cases the
+                # command will always time out and that's expected.
+                level = logging.ERROR if not silent else logging.DEBUG
+                self._log("command timed out.", level)
 
             # For good measure we return all the UIDs
             if self.is_broadcast:
