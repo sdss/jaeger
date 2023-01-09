@@ -23,7 +23,7 @@ packages = [
 include = ["python/jaeger/etc/*"]
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.11"
+python = "^3.8,<3.12"
 sdss-drift = "^1.0.0"
 sdss-clu = "^1.9.1"
 sdsstools = "^1.0.0"
