@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* [#195](https://github.com/sdss/jaeger/issues/195) Prevent late replies to timed out commands to flood the log/actor window. The errors are now redirected only to the CAN log. Timed out commands are reported unless the command is a broadcast with the number of replies not defined.
+
+
 ## 1.3.0 - January 2, 2023
 
 ### ✨ Improved
