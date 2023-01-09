@@ -580,52 +580,7 @@ class Trajectory(object):
 
         self.start_time = time.time()
 
-        # min_trajectory_time = 5.0
-        # PS = PositionerStatus
-
         try:
-
-            # # The positioners take a bit to report that they are moving so if the
-            # # move time is too short, we don't try to check if the positioners started
-            # # moving (but we'll check later that they arrived to their positions.)
-            # if self.move_time >= min_trajectory_time:
-            #     await asyncio.sleep(min_trajectory_time)
-            #     await self.fps.update_status()
-
-            #     if self.fps.status & FPSStatus.IDLE:
-            #         raise TrajectoryError("Move failed to start.")
-
-            #     sbits = numpy.array([p.status for p in self.fps.values()])
-            #     not_moving = numpy.where(sbits & PS.DISPLACEMENT_COMPLETED)
-            #     if not_moving[0].any():
-            #         not_moving_pids = numpy.array(list(self.fps))[not_moving[0]]
-
-            #         # Before reporting that the positioner is not moving, check if
-            #         # it's already there.
-            #         await self.fps.update_position()
-            #         positions = self.fps.get_positions()
-
-            #         really_not_moving = []
-            #         for pid in not_moving_pids:
-            #             if pid not in self.trajectories:
-            #                 continue
-
-            #             current = positions[positions[:, 0] == pid][0, 1:]
-            #             alpha = self.trajectories[pid]["alpha"][-1][0]
-            #             beta = self.trajectories[pid]["beta"][-1][0]
-
-            #             if not numpy.allclose(current - [alpha, beta], 0, atol=0.1):
-            #                 really_not_moving.append(pid)
-
-            #         if len(really_not_moving) > 0:
-            #             not_moving_str = ", ".join(map(str, really_not_moving))
-            #             # Should this be an error?
-            #             warnings.warn(
-            #                 "Some positioners do not appear to be "
-            #                 f"moving: {not_moving_str}.",
-            #                 JaegerUserWarning,
-            #             )
-
             while True:
 
                 await asyncio.sleep(1)
