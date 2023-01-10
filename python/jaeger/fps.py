@@ -1011,7 +1011,7 @@ class FPS(BaseFPS["FPS"]):
     async def update_status(
         self,
         positioner_ids: Optional[int | List[int]] = None,
-        timeout: float = 1,
+        timeout: float = 2,
     ) -> bool:
         """Update statuses for all positioners.
 
@@ -1088,7 +1088,7 @@ class FPS(BaseFPS["FPS"]):
     async def update_position(
         self,
         positioner_ids: Optional[int | List[int]] = None,
-        timeout: float = 1,
+        timeout: float = 2,
     ) -> numpy.ndarray | bool:
         """Updates positions.
 
