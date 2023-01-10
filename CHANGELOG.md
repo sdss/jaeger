@@ -5,6 +5,8 @@
 ### ✨ Improved
 
 * [#195](https://github.com/sdss/jaeger/issues/195) Prevent late replies to timed out commands to flood the log/actor window. The errors are now redirected only to the CAN log. Timed out commands are reported unless the command is a broadcast with the number of replies not defined.
+* Increase timeout for `FPS.update_status()` and `FPS.update_position()` to 2 seconds.
+* Allow `FPS.update_position()`, `FPS.update_status()` and `FPS.update_firmware_version()` to retry once if they time out.
 
 
 ## 1.3.0 - January 2, 2023
