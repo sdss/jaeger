@@ -1200,7 +1200,7 @@ class FPS(BaseFPS["FPS"]):
             log.error("Failed retrieving firmware version.")
             return False
 
-        if get_fw_command.status.timed_out and not is_retry:
+        if get_fw_command.status.timed_out and n_positioners and not is_retry:
             log.warning("GET_FIRMWARE_VERSION timed out. Retrying.")
             return await self.update_firmware_version(positioner_ids, is_retry=True)
 

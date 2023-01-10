@@ -1,5 +1,10 @@
 # Changelog
 
+### 🔧 Fixed
+
+* Only retry `FPS.update_firmware_version()` if `n_positioners` is not `None`. Otherwise a time out is expected.
+
+
 ## 1.3.1 - January 10, 2023
 
 ### ✨ Improved
