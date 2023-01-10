@@ -1012,6 +1012,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 2,
+        is_retry: bool = False,
     ) -> bool:
         """Update statuses for all positioners.
 
@@ -1022,6 +1023,9 @@ class FPS(BaseFPS["FPS"]):
             positioners.
         timeout
             How long to wait before timing out the command.
+        is_retry
+            A flag to determine whether the function is being called
+            as a retry if the previous command timed out.
 
         """
 
@@ -1052,6 +1056,10 @@ class FPS(BaseFPS["FPS"]):
         if command.status.failed:
             log.warning(f"{CommandID.GET_STATUS.name!r} failed during update status.")
             return False
+
+        if command.status.timed_out and not is_retry:
+            log.warning("GET_STATUS timed out. Retrying.")
+            return await self.update_status(positioner_ids, is_retry=True)
 
         if len(command.replies) == 0:
             return True
@@ -1089,6 +1097,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 2,
+        is_retry: bool = False,
     ) -> numpy.ndarray | bool:
         """Updates positions.
 
@@ -1099,6 +1108,9 @@ class FPS(BaseFPS["FPS"]):
             initialised positioners.
         timeout
             How long to wait before timing out the command.
+        is_retry
+            A flag to determine whether the function is being called
+            as a retry if the previous command timed out.
 
         """
 
@@ -1124,6 +1136,10 @@ class FPS(BaseFPS["FPS"]):
             log.error(f"{command.name} failed during update position.")
             return False
 
+        if command.status.timed_out and not is_retry:
+            log.warning("GET_ACTUAL_POSITION timed out. Retrying.")
+            return await self.update_position(positioner_ids, is_retry=True)
+
         update_position_commands = []
         for pid, position in command.get_positions().items():  # type: ignore
             if pid not in self:
@@ -1139,6 +1155,7 @@ class FPS(BaseFPS["FPS"]):
         self,
         positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 2,
+        is_retry: bool = False,
     ) -> bool:
         """Updates the firmware version of connected positioners.
 
@@ -1149,6 +1166,9 @@ class FPS(BaseFPS["FPS"]):
             positioners.
         timeout
             How long to wait before timing out the command.
+        is_retry
+            A flag to determine whether the function is being called
+            as a retry if the previous command timed out.
 
         """
 
@@ -1179,6 +1199,10 @@ class FPS(BaseFPS["FPS"]):
         if get_fw_command.status.failed:
             log.error("Failed retrieving firmware version.")
             return False
+
+        if get_fw_command.status.timed_out and not is_retry:
+            log.warning("GET_FIRMWARE_VERSION timed out. Retrying.")
+            return await self.update_firmware_version(positioner_ids, is_retry=True)
 
         for reply in get_fw_command.replies:
             pid = reply.positioner_id
