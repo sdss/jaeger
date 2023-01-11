@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Add a delay after `STOP_TRAJECTORY` or `SEND_TRAJECTORY_ABORT`. Those commands are issued with `timeout=0` so they complete immediately. It seems that if one sends another command immediately after them the new command times out. It's unclear if that happens because the replies from both commands clog the CAN buffer or because of some issue at the firmware level. Adding a 0.5 second delay to allow positioners to reply seems to fix the issue.
+
+
 ## 1.3.2 - January 10, 2023
 
 ### 🔧 Fixed
