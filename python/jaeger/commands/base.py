@@ -588,7 +588,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         elif self.status.is_done and not self.done():
             self.finish_command(self.status)
 
-    def _generate_messages_internal(self, data: Optional[List[bytearray]] = None):
+    def _generate_messages_internal(self):
         """Generates the list of messages to send to the bus for this command.
 
         This method is called by `.get_messages` and can be overridden in
@@ -628,7 +628,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         if len(self.messages) > 0:
             raise CommandError("Messages have already been sent.")
 
-        messages = self._generate_messages_internal(data=data)
+        messages = self._generate_messages_internal()
 
         self.messages = messages
         self.message_uids = [message.uid for message in messages]
