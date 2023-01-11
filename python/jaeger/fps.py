@@ -1250,6 +1250,11 @@ class FPS(BaseFPS["FPS"]):
 
         self.can.refresh_running_commands()
 
+        # Wait 0.5 seconds since we are using timeout=0 and we aren't actually giving
+        # time for the robots to reply. Not waiting can cause issues if you emit
+        # another command immediately after the stop.
+        await asyncio.sleep(0.5)
+
     async def goto(
         self,
         new_positions: dict[int, tuple[float, float]],
