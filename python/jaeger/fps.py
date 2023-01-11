@@ -1153,17 +1153,13 @@ class FPS(BaseFPS["FPS"]):
 
     async def update_firmware_version(
         self,
-        positioner_ids: Optional[int | List[int]] = None,
         timeout: float = 2,
         is_retry: bool = False,
     ) -> bool:
-        """Updates the firmware version of connected positioners.
+        """Updates the firmware version of all connected positioners.
 
         Parameters
         ----------
-        positioner_ids
-            The list of positioners to update. If `None`, update all
-            positioners.
         timeout
             How long to wait before timing out the command.
         is_retry
@@ -1175,16 +1171,8 @@ class FPS(BaseFPS["FPS"]):
         if len(self.positioners) == 0:
             return True
 
-        if positioner_ids is None:
-            positioner_ids = [0]
-        elif not isinstance(positioner_ids, (list, tuple)):
-            positioner_ids = [positioner_ids]
-
-        if positioner_ids == [0]:
-            valid = [pid for pid in self if self[pid].offline is False]
-            n_positioners = len(valid) if len(valid) > 0 else None
-        else:
-            n_positioners = None
+        valid = [pid for pid in self if self[pid].offline is False]
+        n_positioners = len(valid) if len(valid) > 0 else None
 
         get_fw_command = self.send_command(
             CommandID.GET_FIRMWARE_VERSION,
@@ -1200,9 +1188,9 @@ class FPS(BaseFPS["FPS"]):
             log.error("Failed retrieving firmware version.")
             return False
 
-        if get_fw_command.status.timed_out and n_positioners and not is_retry:
+        if get_fw_command.status.timed_out and not is_retry:
             log.warning("GET_FIRMWARE_VERSION timed out. Retrying.")
-            return await self.update_firmware_version(positioner_ids, is_retry=True)
+            return await self.update_firmware_version(timeout=timeout, is_retry=True)
 
         for reply in get_fw_command.replies:
             pid = reply.positioner_id
