@@ -54,6 +54,8 @@ class Design:
         Focal plane scale factor to apply. Defaults to coordio's internal value.
     safety_factor
         For offset calculation. Factor to add to ``mag_limit``. See ``object_offset``.
+    offset_min_skybrightness
+        Minimum sky brightness for the offset. See ``object_offset``.
 
     """
 
@@ -64,8 +66,8 @@ class Design:
         epoch: float | None = None,
         scale: float | None = None,
         safety_factor: float = 0.1,
+        offset_min_skybrightness: float = 0.5,
     ):
-
         if calibration.wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
 
@@ -89,6 +91,7 @@ class Design:
         )
 
         self.safety_factor = safety_factor
+        self.offset_min_skybrightness = offset_min_skybrightness
         self.target_data: dict[str, dict] = self.get_target_data()
 
         self.configuration: Configuration
@@ -149,7 +152,6 @@ class Design:
         """Determines the target offsets."""
 
         def _offset(group: pandas.DataFrame):
-
             design_mode = group.iloc[0].design_mode
             fibre_type = group.iloc[0].fibre_type
 
@@ -171,9 +173,6 @@ class Design:
                 lunation = "dark"
                 skybrightness = 0.35
 
-            # Hardcoding this for now.
-            offset_min_skybrightness = 0.5
-
             delta_ra, delta_dec, _ = object_offset(
                 mag,
                 mag_lim,
@@ -181,8 +180,8 @@ class Design:
                 fibre_type.capitalize(),
                 can_offset=group.can_offset.values,
                 skybrightness=skybrightness,
-                offset_min_skybrightness=offset_min_skybrightness,
                 safety_factor=self.safety_factor,
+                offset_min_skybrightness=self.offset_min_skybrightness,
             )
 
             group.loc[:, "delta_ra"] = delta_ra

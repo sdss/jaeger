@@ -59,6 +59,7 @@ async def _load_design(
     get_paths: bool = True,
     path_generation_mode: str | None = None,
     safety_factor: float = 0.1,
+    offset_min_skybrightness: float = 0.5,
 ):
     """Helper to load or preload a design."""
 
@@ -112,7 +113,6 @@ async def _load_design(
         )
 
     else:
-
         default_scale = config["configuration"].get("default_focal_scale", 1.0)
         use_guider_scale = config["configuration"].get("use_guider_scale", True)
 
@@ -202,6 +202,7 @@ async def _load_design(
                 epoch=epoch,
                 scale=scale,
                 safety_factor=safety_factor,
+                offset_min_skybrightness=offset_min_skybrightness,
             )
         except Exception as err:
             command.error(error=f"Failed retrieving design: {err}")
@@ -312,6 +313,12 @@ def configuration():
     default=0.1,
     help="Safety factor to pass to the offset calculation function.",
 )
+@click.option(
+    "--offset-min-skybrightness",
+    type=float,
+    default=0.5,
+    help="Minimum sky brightness for the offset.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def load(
     command: Command[JaegerActor],
@@ -333,6 +340,7 @@ async def load(
     no_clone: bool = False,
     path_generation_mode: str | None = None,
     safety_factor: float = 0.1,
+    offset_min_skybrightness: float = 0.5,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -377,6 +385,7 @@ async def load(
             get_paths=False,
             path_generation_mode=path_generation_mode,
             safety_factor=safety_factor,
+            offset_min_skybrightness=offset_min_skybrightness,
         )
 
         if configuration is False:
@@ -577,6 +586,12 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     default=0.1,
     help="Safety factor to pass to the offset calculation function.",
 )
+@click.option(
+    "--offset-min-skybrightness",
+    type=float,
+    default=0.5,
+    help="Minimum sky brightness for the offset.",
+)
 @click.argument("DESIGNID", type=int, required=False)
 async def preload(
     command: JaegerCommandType,
@@ -590,6 +605,7 @@ async def preload(
     make_active: bool = True,
     clear: bool = False,
     safety_factor: float = 0.1,
+    offset_min_skybrightness: float = 0.5,
 ):
     """Preloads a design.
 
@@ -616,6 +632,7 @@ async def preload(
         epoch=epoch,
         epoch_delay=epoch_delay,
         safety_factor=safety_factor,
+        offset_min_skybrightness=offset_min_skybrightness,
     )
 
     if configuration is False:
