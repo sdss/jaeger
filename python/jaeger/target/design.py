@@ -17,6 +17,7 @@ from coordio.defaults import calibration
 from coordio.utils import object_offset
 from sdssdb.peewee.sdss5db import targetdb
 
+from jaeger import log
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -188,6 +189,9 @@ class Design:
             group.loc[:, "delta_dec"] = delta_dec
 
             return group
+
+        log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
+        log.debug(f"safety_factor={self.safety_factor}")
 
         # Convert to data frame to group by fibre type (no need to group by design
         # mode since a design can only have one design mode).
