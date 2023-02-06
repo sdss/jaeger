@@ -6,6 +6,10 @@
 
 * Add flag `--offset-min-skybrightness` to `jaeger configuration load/preload` to set the `coordio.utils.offset_definition` `offset_min_skybrightness` parameters. Defaults to 0.5.
 
+### 🏷️ Changed
+
+* Add a 2 minute timeout for `jaeger configuration preload` (normal configuration load does not time out).
+
 
 ## 1.3.3 - January 15, 2023
 

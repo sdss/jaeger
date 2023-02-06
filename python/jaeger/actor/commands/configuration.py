@@ -17,6 +17,7 @@ import numpy
 import peewee
 from astropy.time import Time
 
+from clu.parsers.click import timeout
 from sdssdb.peewee.sdss5db import opsdb
 
 from jaeger import config
@@ -593,6 +594,7 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="Minimum sky brightness for the offset.",
 )
 @click.argument("DESIGNID", type=int, required=False)
+@timeout(120)
 async def preload(
     command: JaegerCommandType,
     fps: FPS,
