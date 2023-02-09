@@ -594,7 +594,7 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="Minimum sky brightness for the offset.",
 )
 @click.argument("DESIGNID", type=int, required=False)
-@timeout(120)
+@timeout(180)
 async def preload(
     command: JaegerCommandType,
     fps: FPS,

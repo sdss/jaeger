@@ -8,7 +8,7 @@
 
 ### 🏷️ Changed
 
-* Add a 2 minute timeout for `jaeger configuration preload` (normal configuration load does not time out).
+* Add a 3 minute timeout for `jaeger configuration preload` (normal configuration load does not time out).
 
 
 ## 1.3.3 - January 15, 2023
