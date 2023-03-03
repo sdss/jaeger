@@ -12,7 +12,6 @@ from jaeger.fps import FPS
 
 
 async def main():
-
     fps = await FPS.create()
 
     assert 20 in fps and len(fps) == 1, "this test requires only positioner 20."

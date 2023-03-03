@@ -164,7 +164,6 @@ async def goto(
                 new_positions[int(positioner_id)] = (alpha, beta)
 
     else:
-
         assert alpha is not None and beta is not None
 
         if all:
@@ -415,7 +414,6 @@ async def trajectory(command, fps, path):
         raise click.BadParameter(f"path {path!s} does not exist.")
 
     try:
-
         trajectory = Trajectory(fps, path)
 
         command.debug(text="sending trajectory ...")

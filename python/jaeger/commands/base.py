@@ -70,7 +70,6 @@ class SuperMessage(Message):
         response_code: int = 0,
         extended_id: bool = True,
     ):
-
         self.command = command
         self.positioner_id = positioner_id
         self.uid = uid
@@ -110,7 +109,6 @@ class Reply(object):
     """
 
     def __init__(self, message: Message, command: Optional[Command] = None):
-
         assert isinstance(message, Message), "invalid message"
 
         #: The command for which this reply is intended.
@@ -238,7 +236,6 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         data: Union[None, data_co, Dict[int, data_co]] = None,
         ignore_unknown: bool = True,
     ):
-
         global COMMAND_UID
 
         assert self.broadcastable is not None, "broadcastable not set"
@@ -601,11 +598,9 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         messages: List[SuperMessage] = []
 
         for pid in self.data:
-
             pid_data = self.data[pid]
 
             for d in pid_data:
-
                 try:
                     uid = UID_POOL[cid][pid].pop()
                 except KeyError:

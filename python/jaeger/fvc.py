@@ -99,7 +99,6 @@ class FVC:
     ieb_data: dict[str, Any] = {}
 
     def __init__(self, site: str, command: Optional[Command[JaegerActor]] = None):
-
         if len(calibration.positionerTable) == 0:
             warnings.warn(
                 "FPS calibrations not loaded or the array is empty.",

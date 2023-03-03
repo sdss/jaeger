@@ -81,7 +81,6 @@ class FPSWrapper(object):
         enable_low_temperature=True,
         skip_fibre_assignments_check=False,
     ):
-
         self.profile = profile
         if self.profile in ["test", "virtual"]:
             self.profile = "virtual"
@@ -97,7 +96,6 @@ class FPSWrapper(object):
         self.fps = None
 
     async def __aenter__(self):
-
         global __FPS__
 
         # If profile is test we start a VirtualFPS first so that it can respond
@@ -404,7 +402,6 @@ async def upgrade_firmware(
         )
 
     async with fps_maker as fps:
-
         ps_devs = []
         if fps.ieb and no_cycle is False:
             for module in fps.ieb.modules.values():
@@ -544,7 +541,6 @@ async def goto(
     """Sends positioners to a given (alpha, beta) position."""
 
     with fps_maker as fps:
-
         if all:
             if not force:
                 raise JaegerError("Use --force to move all positioners at once.")
@@ -589,7 +585,6 @@ async def set_positions(fps_maker, positioner_id, alpha, beta):
         raise click.UsageError("beta must be in the range [0, 360)")
 
     async with fps_maker as fps:
-
         positioner = fps.positioners[positioner_id]
 
         result = await positioner.set_position(alpha, beta)
@@ -617,7 +612,6 @@ async def home(fps_maker: FPSWrapper, positioner_id: int, axis: str | None = Non
     beta: bool = axis == "beta" or axis is None
 
     async with fps_maker as fps:
-
         if positioner_id not in fps or fps[positioner_id].initialised is False:
             raise ValueError("Positioner is not connected.")
         if fps[positioner_id].disabled or fps[positioner_id].offline:
@@ -638,7 +632,6 @@ async def status(fps_maker: FPSWrapper, positioner_id: int):
     fps_maker.initialise = False
 
     async with fps_maker as fps:
-
         pos = Positioner(positioner_id, fps)
 
         try:
@@ -681,7 +674,6 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
     from jaeger.kaiju import unwind
 
     async with fps_maker as fps:
-
         if fps.locked:
             FPSLockedError("The FPS is locked.")
 
@@ -717,7 +709,6 @@ async def explode(
     from jaeger.kaiju import explode
 
     async with fps_maker as fps:
-
         if fps.locked:
             FPSLockedError("The FPS is locked.")
 
@@ -754,7 +745,6 @@ async def snapshot(
         path = str(path)
 
     async with fps_maker as fps:
-
         await fps.update_position()
         filename = await fps.save_snapshot(path, collision_buffer=collision_buffer)
 

@@ -25,7 +25,6 @@ import jaeger.utils
     ],
 )
 def test_get_dtype_str(dtype, byteorder, result):
-
     if result is None:
         with pytest.raises(ValueError):
             jaeger.utils.get_dtype_str(dtype, byteorder=byteorder)
@@ -42,7 +41,6 @@ def test_get_dtype_str(dtype, byteorder, result):
     ],
 )
 def test_int_to_bytes(value, dtype, byteorder, result):
-
     assert jaeger.utils.int_to_bytes(value, dtype=dtype, byteorder=byteorder) == result
 
 
@@ -55,7 +53,6 @@ def test_int_to_bytes(value, dtype, byteorder, result):
     ],
 )
 def test_bytes_to_int(bytes, dtype, byteorder, result):
-
     assert jaeger.utils.bytes_to_int(bytes, dtype=dtype, byteorder=byteorder) == result
 
 
@@ -63,7 +60,6 @@ def test_bytes_to_int(bytes, dtype, byteorder, result):
     "positioner_id, command_id, result", [(5, 17, 1328128), (450, 5, 117969920)]
 )
 def test_get_identifier(positioner_id, command_id, result):
-
     assert jaeger.utils.get_identifier(positioner_id, command_id) == result
 
 
@@ -71,7 +67,6 @@ def test_get_identifier(positioner_id, command_id, result):
     "identifier, result", [(1315072, (5, 4, 0)), (117969920, (450, 5, 0))]
 )
 def test_parse_identifier(identifier, result):
-
     positioner_id, command_id, uid, response_flag = jaeger.utils.parse_identifier(
         identifier
     )

@@ -113,7 +113,6 @@ async def load_firmware(
     n_bad = 0
 
     for positioner_id in fps.positioners:
-
         if positioners is not None and positioner_id not in positioners:
             continue
 
@@ -124,7 +123,6 @@ async def load_firmware(
             or BootloaderStatus.BOOTLOADER_INIT not in positioner.status
             or BootloaderStatus.UNKNOWN in positioner.status
         ):
-
             n_bad += 1
             continue
 
@@ -178,7 +176,6 @@ async def load_firmware(
     n_chunks = int(numpy.ceil(filesize / chunk_size))
 
     with contextlib.ExitStack() as stack:
-
         if show_progressbar and progressbar:
             bar = stack.enter_context(progressbar.ProgressBar(max_value=n_chunks))
         else:
@@ -242,7 +239,6 @@ async def load_firmware(
 
 
 class GetFirmwareVersion(Command):
-
     command_id = CommandID.GET_FIRMWARE_VERSION
     broadcastable = True
     safe = True
@@ -299,7 +295,6 @@ class GetFirmwareVersion(Command):
 
 
 class StartFirmwareUpgrade(Command):
-
     command_id = CommandID.START_FIRMWARE_UPGRADE
     broadcastable = False
     safe = True
@@ -307,7 +302,6 @@ class StartFirmwareUpgrade(Command):
 
 
 class SendFirmwareData(Command):
-
     command_id = CommandID.SEND_FIRMWARE_DATA
     broadcastable = False
     safe = True

@@ -33,7 +33,6 @@ class AlertsBot(BaseBot):
     """Monitors values and raises alerts."""
 
     def __init__(self, fps: FPS):
-
         super().__init__(fps)
 
         self.config: dict[str, Any] = config["alerts"]
@@ -136,7 +135,6 @@ class AlertsBot(BaseBot):
             coros.append(self._check_chiller)
 
         while True:
-
             for coro in coros:
                 try:
                     await coro()

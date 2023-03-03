@@ -170,7 +170,6 @@ async def info(command: Command[JaegerActor], fps: FPS, verbose=False):
                         command.info(text=f"        relay type: {dev.relay_type}")
 
     if len(categories) > 0 and command.actor and command.actor.model:
-
         command.info(text="")
         command.info(text="Keywords:")
 

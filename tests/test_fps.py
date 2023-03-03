@@ -27,12 +27,10 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_vfps(vfps):
-
     assert isinstance(vfps, VirtualFPS)
 
 
 async def test_get_id(vfps, vpositioners):
-
     command = await vfps.send_command(
         "GET_ID",
         positioner_ids=0,
@@ -42,7 +40,6 @@ async def test_get_id(vfps, vpositioners):
 
 
 async def test_initialise(vfps, vpositioners):
-
     await vfps.initialise()
 
     assert len(vfps) == len(vpositioners)
@@ -58,7 +55,6 @@ async def test_initialise(vfps, vpositioners):
 
 
 async def test_pollers(vfps):
-
     await vfps.initialise()
 
     assert vfps.pollers.status.name == "status"
@@ -72,7 +68,6 @@ async def test_pollers(vfps):
 
 
 async def test_stop_pollers(vfps):
-
     await vfps.initialise()
     await vfps.pollers.stop()
 
@@ -81,7 +76,6 @@ async def test_stop_pollers(vfps):
 
 
 async def test_pollers_delay(vfps, vpositioners):
-
     await vfps.initialise()
     await vfps.pollers.set_delay(0.01, immediate=True)
 
@@ -97,7 +91,6 @@ async def test_pollers_delay(vfps, vpositioners):
 
 
 async def test_ieb(vfps):
-
     sync = vfps.ieb.get_device("DO1.SYNC")
     assert isinstance(sync, Relay)
 
@@ -106,7 +99,6 @@ async def test_ieb(vfps):
 
 @pytest.mark.xfail()
 async def test_positioner_disabled_send_command_fails_broadcast(vfps):
-
     await vfps.initialise()
     vfps[2].disabled = True
 
@@ -117,7 +109,6 @@ async def test_positioner_disabled_send_command_fails_broadcast(vfps):
 
 
 async def test_positioner_disabled_send_command_fails(vfps):
-
     await vfps.initialise()
     vfps[2].disabled = True
 
@@ -128,7 +119,6 @@ async def test_positioner_disabled_send_command_fails(vfps):
 
 
 async def test_positioner_disabled_send_to_all(vfps):
-
     await vfps.initialise()
     vfps[2].disabled = True
 
@@ -137,7 +127,6 @@ async def test_positioner_disabled_send_to_all(vfps):
 
 
 async def test_vfps_add_positioner(vfps: VirtualFPS):
-
     vpos = jaeger.Positioner(100)
     vfps.add_positioner(vpos)
 
@@ -145,14 +134,12 @@ async def test_vfps_add_positioner(vfps: VirtualFPS):
 
 
 async def test_vfps_add_positioner_exists(vfps: VirtualFPS):
-
     vpos = jaeger.Positioner(1)
     with pytest.raises(JaegerError):
         vfps.add_positioner(vpos)
 
 
 async def test_fps_bad_ieb_file():
-
     vbus = JaegerCAN("virtual", ["virtual"])
 
     with pytest.warns(JaegerUserWarning):
@@ -161,7 +148,6 @@ async def test_fps_bad_ieb_file():
 
 
 async def test_fps_ieb_none():
-
     vbus = JaegerCAN("virtual", ["virtual"])
 
     fps = FPS(vbus, ieb=False)
@@ -169,7 +155,6 @@ async def test_fps_ieb_none():
 
 
 async def test_fps_ieb_bad_type():
-
     vbus = JaegerCAN("virtual", ["virtual"])
 
     with pytest.raises(ValueError):
@@ -177,7 +162,6 @@ async def test_fps_ieb_bad_type():
 
 
 async def test_fps_add_positioner():
-
     vbus = JaegerCAN("virtual", ["virtual"])
     fps = await FPS.create(vbus)
 
@@ -187,7 +171,6 @@ async def test_fps_add_positioner():
 
 @pytest.mark.xfail()
 async def test_disable_collision(vfps, vpositioners, monkeypatch):
-
     monkeypatch.setitem(
         jaeger.config["fps"],
         "disable_collision_detection_positioners",
@@ -202,7 +185,6 @@ async def test_disable_collision(vfps, vpositioners, monkeypatch):
 
 @pytest.mark.xfail()
 async def test_lock_unlock(vfps, vpositioners):
-
     assert vfps.locked is False
 
     await vfps.lock(by=[1])
@@ -217,7 +199,6 @@ async def test_lock_unlock(vfps, vpositioners):
 
 @pytest.mark.xfail()
 async def test_unlock_fails(vfps, vpositioners, mocker):
-
     mocker.patch.object(vfps, "update_status")
 
     await vfps.lock()
@@ -230,24 +211,20 @@ async def test_unlock_fails(vfps, vpositioners, mocker):
 @pytest.mark.xfail()
 @pytest.mark.parametrize("positioner_ids", [1, [1, 2, 3], None])
 async def test_goto(vfps, vpositioners, positioner_ids):
-
     await vfps.goto(positioner_ids, 10, 10, force=True)
 
 
 async def test_goto_fails(vfps, vpositioners, mocker):
-
     mocker.patch("jaeger.fps.goto", side_effect=JaegerError)
     with pytest.raises(JaegerError):
         await vfps.goto({1: (10, 10)})
 
 
 async def test_report_status(vfps, vpositioners):
-
     assert isinstance(await vfps.report_status(), dict)
 
 
 async def test_reinitialise_disabled(vfps, vpositioners):
-
     vfps[2].disabled = True
 
     await vfps.initialise(keep_disabled=True)
@@ -255,7 +232,6 @@ async def test_reinitialise_disabled(vfps, vpositioners):
 
 
 async def test_reinitialise_reenabled(vfps, vpositioners):
-
     vfps[2].disabled = True
     await vfps.initialise(keep_disabled=True)
 
@@ -267,7 +243,6 @@ async def test_reinitialise_reenabled(vfps, vpositioners):
 
 
 async def test_reinitialise_locked(vfps, vpositioners):
-
     vpositioners[1].status |= PositionerStatus.COLLISION_BETA
     await vfps.initialise()
 

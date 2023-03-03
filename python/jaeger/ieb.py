@@ -61,7 +61,6 @@ class IEB(Drift):
     MAX_RETRIES: int = 5
 
     def __init__(self, *args, **kwargs):
-
         self.disabled = False
 
         super().__init__(*args, **kwargs)
@@ -96,7 +95,6 @@ class IEB(Drift):
         return self._categories
 
     async def __aenter__(self):
-
         if self.disabled:
             raise DriftError("IEB is disabled.")
 
@@ -111,7 +109,6 @@ class IEB(Drift):
                     raise DriftError("Failed connecting to the IEB.")
 
     async def __aexit__(self, *args):
-
         await Drift.__aexit__(self, *args)
 
     def enable(self):

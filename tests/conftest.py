@@ -33,7 +33,6 @@ sys.modules["coordio.transforms"] = MagicMock()
 
 @pytest.fixture(scope="session")
 def setup_config():
-
     import jaeger
     from jaeger import config
 
@@ -93,7 +92,6 @@ def test_config(setup_config):
 
 @pytest.fixture()
 async def ieb_server(event_loop):
-
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0] * 100),
         co=ModbusSequentialDataBlock(512, [0] * 100),
@@ -169,7 +167,6 @@ async def vpositioners(test_config, vfps):
 
 @pytest.fixture
 async def actor(vfps):
-
     from jaeger.actor import JaegerActor
 
     await vfps.initialise()
@@ -193,6 +190,5 @@ async def actor(vfps):
 
 @pytest.fixture
 async def command(actor):
-
     command = TestCommand(commander_id=1, actor=actor)
     yield command

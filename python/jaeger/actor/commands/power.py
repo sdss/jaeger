@@ -53,7 +53,6 @@ async def switch(
         return command.fail(error="No devices specified.")
 
     for idev, device in enumerate(devices):
-
         if device.upper() in config["ieb"]["disabled_devices"] and on is True:
             if force is False:
                 command.warning(text=f"{device} is disabled. Skipping.")
@@ -148,7 +147,6 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
     disabled = config["ieb"]["disabled_devices"]
 
     for devname in seq:
-
         do_delay = False
         if isinstance(devname, str):
             if devname.upper() in config["ieb"]["disabled_devices"]:

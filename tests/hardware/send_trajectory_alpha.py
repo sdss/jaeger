@@ -19,7 +19,6 @@ log.sh.setLevel(20)
 
 
 async def main():
-
     fps = await FPS.create()
 
     assert len(fps) > 0, "No positioners connected."

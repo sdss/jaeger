@@ -45,7 +45,6 @@ def getTargetCoords(rg):
     offline = []
 
     for r in rg.robotDict.values():
-
         # append metrology fiber info
         positioner_id.append(r.id)
         hole_id.append(r.holeID)

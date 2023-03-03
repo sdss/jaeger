@@ -101,7 +101,6 @@ class JaegerCAN(Generic[Bus_co]):
     interface_args: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-
         if self.interface_type not in INTERFACES:
             raise ValueError(f"Invalid interface {self.interface_type}.")
 
@@ -125,7 +124,6 @@ class JaegerCAN(Generic[Bus_co]):
         self.notifier: Notifier | None = None
 
     async def start(self: T) -> T:
-
         self.stop()
 
         itype = self.interface_type
@@ -278,7 +276,6 @@ class JaegerCAN(Generic[Bus_co]):
         assert self.command_queue
 
         while True:
-
             cmd = await self.command_queue.get()
 
             log_header = LOG_HEADER.format(cmd=cmd)
@@ -311,7 +308,6 @@ class JaegerCAN(Generic[Bus_co]):
         positioner_id, command_id, reply_uid, __ = parse_identifier(msg.arbitration_id)
 
         if command_id == CommandID.COLLISION_DETECTED:
-
             # Sending stop trajectories causes many more robots to report a collision
             # so if the FPS has already been locked we ignore those.
             if not self.fps or self.fps.locked:
@@ -398,7 +394,6 @@ class JaegerCAN(Generic[Bus_co]):
         messages = cmd.get_messages()
 
         for message in messages:
-
             if cmd.status.failed:
                 can_log.debug(
                     f"{log_header} not sending more messages "
@@ -422,7 +417,6 @@ class JaegerCAN(Generic[Bus_co]):
                     interfaces = [cast(Bus_co, interface)]
 
             for iface in interfaces:
-
                 iface_idx = self.interfaces.index(iface)
                 data_hex = binascii.hexlify(message.data).decode()
                 can_log.debug(
@@ -595,7 +589,6 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
             device_status[interface_id]["version"] = version
 
         elif dev_error:
-
             if "errors" not in device_status[interface_id]:
                 device_status[interface_id]["errors"] = []
 

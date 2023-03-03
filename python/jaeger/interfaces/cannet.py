@@ -65,7 +65,6 @@ class CANNetBus(BusABC):
         timeout=5,
         **kwargs,
     ):
-
         if not channel:  # if None or empty
             raise TypeError("Must specify a TCP address.")
 
@@ -90,7 +89,6 @@ class CANNetBus(BusABC):
         super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
 
     def write(self, string):
-
         if not self.connected or not self.writer:
             raise ConnectionError(f"Interface {self.channel} is not connected.")
 
@@ -108,7 +106,6 @@ class CANNetBus(BusABC):
             self.write(string.format(bus=bus))
 
     async def _open_internal(self, timeout=None):
-
         timeout = timeout or self._timeout
 
         self.close()
@@ -141,7 +138,6 @@ class CANNetBus(BusABC):
         return True
 
     def close(self, buses=None):
-
         if self.writer and not self.writer.is_closing():
             self._write_to_buses("CAN {bus} STOP")
             self.writer.close()
@@ -150,7 +146,6 @@ class CANNetBus(BusABC):
         self.writer = self.reader = None
 
     async def get(self):
-
         canId = None
         remote = False
         extended = False
@@ -228,13 +223,11 @@ class CANNetBus(BusABC):
         return None
 
     def send(self, msg, bus=None):
-
         buses = bus or self.buses
         if not isinstance(buses, (list, tuple)):
             buses = [buses]
 
         for bus in buses:
-
             sendStr = f"M {bus} "
 
             if msg.is_extended_id:

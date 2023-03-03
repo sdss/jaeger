@@ -38,7 +38,6 @@ def test_data():
 
 @pytest.fixture(scope="module")
 def configuration(test_data):
-
     # Ugly hack to add fake positioners to the FPS and prevent get_robot_grid
     # from failing when it checks if all the positioners exist.
     fps = FPS.get_instance()
@@ -71,7 +70,6 @@ def configuration(test_data):
 
 
 def test_check_data(test_data):
-
     posangles, measured = test_data
 
     assert len(posangles) == 500
@@ -79,14 +77,12 @@ def test_check_data(test_data):
 
 
 def test_fvc():
-
     fvc = FVC("APO")
     assert fvc.command is None
 
 
 @pytest.mark.xfail()
 def test_configuration(configuration: ManualConfiguration):
-
     ftable = configuration.assignment_data.fibre_table
 
     assert len(ftable) == 1500
@@ -95,7 +91,6 @@ def test_configuration(configuration: ManualConfiguration):
 
 @pytest.mark.xfail()
 def test_process_image(configuration: ManualConfiguration, tmp_path: pathlib.Path):
-
     fvc = FVC("APO")
     fvc.fps.configuration = configuration
 
@@ -116,7 +111,6 @@ def test_process_image(configuration: ManualConfiguration, tmp_path: pathlib.Pat
 
 @pytest.mark.xfail()
 def test_calculate_offsets(configuration: ManualConfiguration, test_data):
-
     posangles, _ = test_data
 
     fvc = FVC("APO")

@@ -95,7 +95,6 @@ async def home(
                 return command.fail(f"Cannot home disabled positioner {positioner_id}.")
 
     if axis == "alpha":
-
         result = await check_positions(
             fps,
             beta_min=SAFE_BETA_MIN,
@@ -140,7 +139,6 @@ async def home(
             return command.fail(f"Trajectory failed with error {err}.")
 
     elif axis == "beta":
-
         if not (await fps.is_folded()):
             return command.fail("The FPS is not folded. Cannot home beta.")
 
@@ -187,7 +185,6 @@ async def home(
             phase_1_home_pids = []
 
         if len(phase_1_home_pids) > 0:
-
             _, from_destination_1, failed, _ = get_path_pair(
                 grid1,
                 path_generation_mode="greedy",
@@ -209,14 +206,12 @@ async def home(
                 return command.fail(f"Phase 1 homing failed with error: {err}")
 
         else:
-
             command.info("No selected positioners in phase 1. Skipping ")
 
         # Robots in phase 2 that will be homed.
         phase_2_home_pids = list(set(positioner_ids) & set(phase_2_pids))
 
         if len(phase_2_home_pids) > 0:
-
             try:
                 await _home_beta_phase(
                     command,
@@ -232,7 +227,6 @@ async def home(
                 return command.fail(f"Phase 2 homing failed with error: {err}")
 
         else:
-
             command.info("No selected positioners in phase 2. Skipping ")
 
     return command.finish("Homing complete.")
@@ -274,7 +268,6 @@ async def _home_beta_phase(
     dry_run: bool = False,
     extra_zero_positioner_ids: list[int] = [],
 ):
-
     command.info(f"Moving robots to phase {phase} initial position.")
     try:
         await fps.send_trajectory(from_destination, command=command)

@@ -94,7 +94,6 @@ class GotoAbsolutePosition(Command):
         beta: float | None = None,
         **kwargs,
     ):
-
         if alpha is not None and beta is not None:
             alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
@@ -164,9 +163,7 @@ class SetActualPosition(Command):
         beta: float | None = None,
         **kwargs,
     ):
-
         if alpha is not None and beta is not None:
-
             alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
             alpha_bytes = int_to_bytes(int(alpha_steps), dtype="i4")
@@ -194,7 +191,6 @@ class SetSpeed(Command):
         beta: float | None = None,
         **kwargs,
     ):
-
         if alpha is not None and beta is not None:
             assert alpha >= 0 and beta >= 0, "invalid speed."
 
@@ -227,7 +223,6 @@ class SetCurrent(Command):
         beta: float | None = None,
         **kwargs,
     ):
-
         if alpha is not None and beta is not None:
             assert alpha >= 0 and beta >= 0, "invalid current."
 
@@ -331,7 +326,6 @@ async def goto(
         data = {"collision_buffer": None, "grid": {}}
 
         for pid, (current_alpha, current_beta) in fps.get_positions_dict().items():
-
             if current_alpha is None or current_beta is None:
                 raise JaegerError(f"Positioner {pid} does not know its position.")
 

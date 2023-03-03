@@ -17,7 +17,6 @@ class TypesEnumMeta(enum.EnumMeta):
     """Metaclass to allow initialising an Enum from a string."""
 
     def __call__(cls: Type[enum.Enum], value: Union[str, int]):  # type: ignore
-
         if isinstance(value, str):
             for flag in cls:
                 if flag.name.lower() == value.lower():

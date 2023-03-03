@@ -43,7 +43,6 @@ class JaegerCANError(JaegerError):
     """Exception class for CAN-related errors."""
 
     def __init__(self, message=None, serial_reply=None):
-
         if message is None:
             message = ""
 
@@ -57,7 +56,6 @@ class PositionerError(JaegerError):
     """Exception class for positioner-related errors."""
 
     def __init__(self, message=None, positioner=None):
-
         if message is None:
             message = ""
 
@@ -81,7 +79,6 @@ class CommandError(JaegerError):
     """Exception class for command-related errors."""
 
     def __init__(self, message=None, command=None):
-
         if message is None:
             message = ""
 

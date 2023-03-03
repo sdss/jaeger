@@ -55,7 +55,6 @@ class JaegerActor(clu.LegacyActor):
     """The jaeger SDSS-style actor."""
 
     def __init__(self, fps: FPS, *args, observatory: str | None = None, **kwargs):
-
         jaeger.actor_instance = self
 
         self.fps = fps

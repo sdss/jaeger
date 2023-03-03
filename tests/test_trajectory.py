@@ -20,7 +20,6 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 @pytest.mark.xfail()
 async def test_send_trajectory(vfps):
-
     await vfps.initialise()
 
     # This fails for now because I don't have a way to change the position of the
@@ -39,7 +38,6 @@ async def test_send_trajectory(vfps):
 
 
 async def test_disabled_positioner_fails(vfps):
-
     await vfps.initialise()
     vfps[1].disabled = True
 
@@ -62,7 +60,6 @@ async def test_disabled_positioner_fails(vfps):
 
 @pytest.mark.xfail
 async def test_validate_out_of_limits(vfps):
-
     await vfps.initialise()
 
     with pytest.raises(JaegerError) as err:
@@ -81,7 +78,6 @@ async def test_validate_out_of_limits(vfps):
 
 @pytest.mark.parametrize("beta,safe_mode", [(150, True), (160, {"min_beta": 170})])
 async def test_validate_safe_mode(vfps, monkeypatch, beta, safe_mode):
-
     monkeypatch.setitem(config, "safe_mode", safe_mode)
 
     await vfps.initialise()

@@ -281,7 +281,6 @@ class SetOffsets(Command):
         beta=None,
         **kwargs,
     ):
-
         if alpha is not None and beta is not None:
             alpha_steps, beta_steps = motor_steps_to_angle(alpha, beta, inverse=True)
 
@@ -318,7 +317,6 @@ class SetHoldingCurrents(Command):
     move_command = False
 
     def __init__(self, positioner_ids, alpha=None, beta=None, **kwargs):
-
         if alpha is not None and beta is not None:
             data = int_to_bytes(int(alpha)) + int_to_bytes(int(beta))
             kwargs["data"] = data
@@ -403,7 +401,6 @@ class SetIncreaseCollisionMargin(Command):
     safe = False
 
     def __init__(self, positioner_ids, margin: int, **kwargs):
-
         data = int_to_bytes(int(margin), dtype="i4")
         kwargs["data"] = data
 
@@ -411,7 +408,6 @@ class SetIncreaseCollisionMargin(Command):
 
 
 class GetAlphaHallCalibration(Command):
-
     command_id = CommandID.GET_ALPHA_HALL_CALIB
     broadcastable = False
     move_command = False
@@ -432,7 +428,6 @@ class GetAlphaHallCalibration(Command):
 
 
 class GetBetaHallCalibration(Command):
-
     command_id = CommandID.GET_BETA_HALL_CALIB
     broadcastable = False
     move_command = False
@@ -453,7 +448,6 @@ class GetBetaHallCalibration(Command):
 
 
 class GetHallCalibrationError(Command):
-
     command_id = CommandID.GET_HALL_CALIB_ERROR
     broadcastable = False
     move_command = False

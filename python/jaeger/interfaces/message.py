@@ -50,7 +50,6 @@ class Message(object):
     )
 
     def __getattr__(self, key):
-
         if key not in self.__slots__:
             raise AttributeError
         try:

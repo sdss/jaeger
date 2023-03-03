@@ -104,7 +104,6 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
     initialised: bool
 
     def __new__(cls: Type[FPS_T], *args, **kwargs):
-
         if cls in cls._instance and kwargs == {}:
             raise JaegerError(
                 "An instance of FPS is already running. "
@@ -112,7 +111,6 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
             )
 
         if cls not in cls._instance or kwargs != {}:
-
             if cls not in cls._instance:
                 new_obj = super().__new__(cls)
                 cls._instance[cls] = new_obj
@@ -224,7 +222,6 @@ class FPS(BaseFPS["FPS"]):
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
-
         super().__init__()
 
         # Start file logger
@@ -365,7 +362,6 @@ class FPS(BaseFPS["FPS"]):
         interface: Optional[BusABC | int] = None,
         bus: Optional[int] = None,
     ) -> Positioner:
-
         positioner = super().add_positioner(positioner, centre=centre)
         positioner.fps = self
 
@@ -480,7 +476,6 @@ class FPS(BaseFPS["FPS"]):
         # positioner was not in the list, adds it.
         for reply in get_fw_command.replies:
             if reply.positioner_id not in self.positioners:
-
                 if hasattr(reply.message, "interface"):
                     interface = reply.message.interface
                     bus = reply.message.bus
@@ -654,7 +649,6 @@ class FPS(BaseFPS["FPS"]):
         # Ensure closed loop mode for remaining robots. This does not work if
         # any of the robots is collided.
         if not self.locked:
-
             closed_loop_positioners = list(
                 set([pid for pid in self.positioners if not self[pid].disabled])
                 - set(disable_collision)
@@ -1066,7 +1060,6 @@ class FPS(BaseFPS["FPS"]):
 
         update_status_coros = []
         for pid, status_int in command.get_positioner_status().items():  # type: ignore
-
             if pid not in self:
                 continue
 
@@ -1340,7 +1333,6 @@ class FPS(BaseFPS["FPS"]):
         status: Dict[str, Any] = {"positioners": {}}
 
         for positioner in self.positioners.values():
-
             pos_status = positioner.status
             pos_firmware = positioner.firmware
             pos_alpha = positioner.alpha
@@ -1469,7 +1461,6 @@ class FPS(BaseFPS["FPS"]):
         interval = config["low_temperature"]["interval"]
 
         while True:
-
             try:
                 assert isinstance(self.ieb, IEB) and self.ieb.disabled is False
                 device = self.ieb.get_device(sensor)

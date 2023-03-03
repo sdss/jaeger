@@ -20,7 +20,6 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_get_position(vfps, vpositioners):
-
     vpositioners[1].position = (90, 90)
 
     await vfps.initialise()
@@ -36,13 +35,11 @@ async def test_get_position(vfps, vpositioners):
 
 
 async def test_get_bus(vfps):
-
     pos = vfps[1]
     assert pos.get_bus() == (0, None)
 
 
 async def test_bus_multibus(vfps):
-
     vfps.can.multibus = True
     vfps.positioner_to_bus[1] = (vfps.can.interfaces[0], None)
 
@@ -51,7 +48,6 @@ async def test_bus_multibus(vfps):
 
 
 async def test_bus_no_fps(vfps):
-
     pos = vfps[1]
     pos.fps = None
 
@@ -60,13 +56,11 @@ async def test_bus_no_fps(vfps):
 
 
 async def test_home(vfps):
-
     pos = vfps[1]
     assert (await pos.home()) is None
 
 
 async def test_home_moving(vfps):
-
     pos = vfps[1]
     pos.status = PositionerStatus.ESTIMATED_POSITION  # Just not DISPLACEMENT_COMPLETED
 
@@ -75,7 +69,6 @@ async def test_home_moving(vfps):
 
 
 async def test_home_no_fps(vfps):
-
     pos = vfps[1]
     pos.fps = None
 
@@ -87,7 +80,6 @@ async def test_home_no_fps(vfps):
 @pytest.mark.parametrize("loop", ["open", "closed"])
 @pytest.mark.parametrize("collisions", [True, False])
 async def test_set_loop(vfps, motor, loop, collisions):
-
     pos = vfps[1]
     assert (await pos.set_loop(motor=motor, loop=loop, collisions=collisions)) is True
 
@@ -96,7 +88,6 @@ async def test_set_loop(vfps, motor, loop, collisions):
 @pytest.mark.parametrize("alpha", [True, False])
 @pytest.mark.parametrize("beta", [True, False])
 async def test_set_precise_move(vfps, mode, alpha, beta):
-
     pos = vfps[1]
 
     if alpha or beta:
@@ -107,7 +98,6 @@ async def test_set_precise_move(vfps, mode, alpha, beta):
 
 
 async def test_get_number_trajectories(vfps):
-
     pos = vfps[1]
     pos.firmware = "04.01.21"
 
@@ -116,7 +106,6 @@ async def test_get_number_trajectories(vfps):
 
 @pytest.mark.parametrize("fw", [None, "04.01.20"])
 async def test_get_number_trajectories_bad_firmware(vfps, fw):
-
     pos = vfps[1]
     pos.firmware = fw
 

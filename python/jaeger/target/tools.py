@@ -189,7 +189,6 @@ async def create_random_configuration(
 
     # We use Kaiju for convenience in the non-safe mode.
     for robot in robot_grid.robotDict.values():
-
         if robot.isOffline:
             continue
 
@@ -268,7 +267,6 @@ async def create_random_configuration(
             )
 
             for robot in robot_grid.robotDict.values():
-
                 if robot.isOffline:
                     continue
 

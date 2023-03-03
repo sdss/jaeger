@@ -19,7 +19,6 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 @pytest.fixture()
 def mock_rtd2(request, mocker, vfps):
-
     temperature = request.node.get_closest_marker("rtd2").args[0]
 
     rtd2 = vfps.ieb.get_device("RTD2")
@@ -28,7 +27,6 @@ def mock_rtd2(request, mocker, vfps):
 
 
 async def test_status(actor):
-
     command = await actor.invoke_mock_command("status")
 
     assert command.status.did_succeed
@@ -36,7 +34,6 @@ async def test_status(actor):
 
 
 async def test_info(actor):
-
     command = await actor.invoke_mock_command("debug info")
     assert command.status.did_succeed
 
@@ -49,7 +46,6 @@ async def test_info(actor):
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
 @pytest.mark.rtd2(-5)
 async def test_low_temperature_cold(mock_rtd2, actor):
-
     await asyncio.sleep(0.1)  # Wait for the first handle_temperature to complete
     assert actor.fps.status & FPSStatus.TEMPERATURE_COLD
 
@@ -57,6 +53,5 @@ async def test_low_temperature_cold(mock_rtd2, actor):
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Test fails in PY37")
 @pytest.mark.rtd2(-15)
 async def test_low_temperature_very_cold(mock_rtd2, actor):
-
     await asyncio.sleep(0.1)
     assert actor.fps.status & FPSStatus.TEMPERATURE_VERY_COLD

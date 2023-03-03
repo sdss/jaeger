@@ -51,7 +51,6 @@ class Positioner(StatusMixIn):
         fps: jaeger.FPS | None = None,
         centre: Tuple[Optional[float], Optional[float]] = (None, None),
     ):
-
         self.fps = fps
 
         self.positioner_id = positioner_id
@@ -175,7 +174,6 @@ class Positioner(StatusMixIn):
         """Updates the position of the alpha and beta arms."""
 
         if position is None:
-
             command = await self.send_command(
                 CommandID.GET_ACTUAL_POSITION,
                 timeout=timeout,
@@ -208,7 +206,6 @@ class Positioner(StatusMixIn):
             await self.update_firmware_version()
 
         if not status:
-
             command = await self.send_command(
                 CommandID.GET_STATUS,
                 timeout=timeout,
@@ -271,7 +268,6 @@ class Positioner(StatusMixIn):
             status = [status]
 
         async def status_waiter(wait_for_status):
-
             while True:
                 await self.update_status()
                 # Check all statuses in the list
@@ -571,7 +567,6 @@ class Positioner(StatusMixIn):
             motors = [motor]
 
         for motor in motors:
-
             command_name = motor.upper() + "_" + loop.upper() + "_LOOP"
             if collisions:
                 command_name += "_COLLISION_DETECTION"
@@ -590,7 +585,6 @@ class Positioner(StatusMixIn):
         return True
 
     def __repr__(self):
-
         return (
             f"<Positioner (id={self.positioner_id}, "
             f"status={self.status!s}, initialised={self.initialised})>"

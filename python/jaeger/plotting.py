@@ -22,10 +22,8 @@ __all__ = ["plot_fvc_distances"]
 
 
 def _plot_wok_distance(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = False):
-
     colours = ["g", "r", "b"]
     for ii, fibre in enumerate(["Metrology", "APOGEE", "BOSS"]):
-
         data_fibre = data_F.loc[pandas.IndexSlice[:, fibre], :].copy()
 
         if fibre != "Metrology" and is_dither is False:
@@ -71,7 +69,6 @@ def _plot_sky_distance(
     plot_metrology: bool = True,
     title: str = "Sky distance",
 ):
-
     colours = ["g", "r", "b"]
     for ii, fibre in enumerate(["Metrology", "APOGEE", "BOSS"]):
         if fibre == "Metrology" and not plot_metrology:
@@ -115,10 +112,8 @@ def _plot_sky_distance(
 
 
 def _plot_sky_quiver(data_F: pandas.DataFrame, ax: plt.Axes, is_dither: bool = False):
-
     colours = ["r", "b"]
     for ii, fibre in enumerate(["APOGEE", "BOSS"]):
-
         data_fibre = data_F.loc[pandas.IndexSlice[:, fibre], :].copy()
 
         if is_dither is False:
@@ -204,7 +199,6 @@ def plot_fvc_distances(
         )
 
     with plt.ioff():  # type: ignore
-
         seaborn.set_theme()
 
         fig, axes = plt.subplots(1, 3, figsize=(30, 10))

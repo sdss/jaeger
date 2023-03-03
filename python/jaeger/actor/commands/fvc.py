@@ -384,7 +384,6 @@ async def take_fvc_loop(
     failed: bool = False
 
     try:
-
         n = 1
         while True:
             command.info(f"FVC iteration {n}")

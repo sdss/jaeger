@@ -24,7 +24,6 @@ class VirtualBus(BusABC):
     """A class implementing a virtual CAN bus that listens to messages on a channel."""
 
     def __init__(self, channel: str):
-
         self.channel = channel
 
         self.queue: asyncio.Queue[Message] = asyncio.Queue()

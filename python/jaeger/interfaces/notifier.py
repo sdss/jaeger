@@ -29,7 +29,6 @@ class Notifier:
     """Notifier class to report bus messages to multiple listeners."""
 
     def __init__(self, listeners: List[Listener_co] = [], buses: List[Bus_co] = []):
-
         self.loop = asyncio.get_running_loop()
 
         self.listeners = listeners

@@ -183,7 +183,6 @@ class SwitchLEDOff(Command):
 
 
 class GetNumberTrajectories(Command):
-
     command_id = CommandID.GET_NUMBER_TRAJECTORIES
     broadcastable = False
     safe = True
@@ -213,7 +212,6 @@ class GetNumberTrajectories(Command):
 
 
 class SetNumberTrajectories(Command):
-
     command_id = CommandID.SET_NUMBER_TRAJECTORIES
     broadcastable = False
     safe = False
@@ -224,7 +222,6 @@ class SetNumberTrajectories(Command):
         moves: int | Dict[int, int],
         **kwargs,
     ):
-
         if isinstance(moves, int):
             data = int_to_bytes(moves)
         elif isinstance(moves, dict):

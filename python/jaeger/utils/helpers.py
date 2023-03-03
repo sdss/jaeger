@@ -100,7 +100,6 @@ class StatusMixIn(Generic[Status_co]):
         callback_func: Optional[Callable] = None,
         call_now: bool = False,
     ):
-
         self._flags = maskbit_flags
         self.callbacks = []
         self._status: Optional[Status_co] = initial_status
@@ -187,7 +186,6 @@ class PollerList(list):
     """A list of `.Poller` to be managed jointly."""
 
     def __init__(self, pollers=[]):
-
         names = [poller.name for poller in pollers]
         assert len(names) == len(set(names)), "repeated names in poller list."
 
@@ -292,7 +290,6 @@ class Poller(object):
     """
 
     def __init__(self, name, callback, delay=1.0, loop=None):
-
         self.name = name
         self.callback = callback
 
@@ -314,7 +311,6 @@ class Poller(object):
             raise RuntimeError("Task is not running.")
 
         while True:
-
             try:
                 if asyncio.iscoroutinefunction(self.callback):
                     await self.callback()
@@ -493,7 +489,6 @@ class BaseBot:
     """A class that monitors a subsystem."""
 
     def __init__(self, fps: FPS):
-
         self.fps = fps
         self.ieb = fps.ieb
 

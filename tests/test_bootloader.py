@@ -18,7 +18,6 @@ pytestmark = [pytest.mark.usefixtures("vpositioners"), pytest.mark.asyncio]
 
 
 async def test_bootloader(vfps, vpositioners):
-
     await vfps.initialise()
 
     for vpositioner in vpositioners.values():
@@ -32,7 +31,6 @@ async def test_bootloader(vfps, vpositioners):
 
 
 async def test_load_firmware(vfps, vpositioners):
-
     for vpositioner in vpositioners.values():
         vpositioner.set_bootloader()
 

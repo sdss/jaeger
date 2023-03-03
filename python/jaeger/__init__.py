@@ -48,7 +48,6 @@ warnings.simplefilter("always", category=JaegerUserWarning)
 
 
 def start_file_loggers(start_log=True, start_can=True):
-
     if "files" in config and "log_dir" in config["files"]:
         log_dir = config["files"]["log_dir"]
     else:

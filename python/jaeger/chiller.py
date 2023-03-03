@@ -29,7 +29,6 @@ class ChillerBot(BaseBot):
     """Manages the FPS chiller."""
 
     def __init__(self, fps: FPS):
-
         self.chiller_config = config.get("chiller", {})
         self.temperature: bool | float = self.chiller_config.get("temperature", False)
         self.flow: bool | float = self.chiller_config.get("flow", False)
@@ -43,7 +42,6 @@ class ChillerBot(BaseBot):
         assert chiller is not None
 
         while True:
-
             await self._set_temperature(chiller)
             await self._set_flow(chiller)
 

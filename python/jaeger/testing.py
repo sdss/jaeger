@@ -34,7 +34,6 @@ class VirtualFPS(jaeger.FPS):
     """
 
     def __post_init__(self):
-
         self.can = "virtual"
         self.ieb = True
         self.observatory = "APO"
@@ -47,16 +46,13 @@ class VirtualFPS(jaeger.FPS):
         asyncio.create_task(self.process_messages())
 
     def add_virtual_positioner(self, pid: int):
-
         self._vpositioners[pid] = VirtualPositioner(pid, bus=self._vpositioner_bus)
 
     def _check_fibre_assignments(self, *args, **kwargs):
         pass
 
     async def process_messages(self):
-
         while True:
-
             msg = await self._vpositioner_bus.get()
 
             if msg is None:
@@ -129,7 +125,6 @@ class VirtualPositioner(StatusMixIn):
         speed: Optional[tuple] = None,
         firmware: str = "10.11.12",
     ):
-
         self.positioner_id = positioner_id
         self.centre = centre or (None, None)
 
@@ -236,7 +231,6 @@ class VirtualPositioner(StatusMixIn):
             self.reply(command_id, uid)
 
     def reply(self, command_id, uid, response_code=None, data=None):
-
         response_code = response_code or ResponseCode.COMMAND_ACCEPTED
 
         if isinstance(data, (bytearray, bytes)):

@@ -187,7 +187,6 @@ async def send_trajectory(
     try:
         await traj.start(use_sync_line=use_sync_line)
     except TrajectoryError as err:
-
         if traj.start_time is not None and traj.end_time is not None:
             elapsed = traj.end_time - traj.start_time
             elapsed_msg = f" Trajectory failed {elapsed:.2f} seconds after start."
@@ -268,7 +267,6 @@ class Trajectory(object):
         dump: bool | str = True,
         extra_dump_data: dict[str, Any] = {},
     ):
-
         self.fps = fps
         self.trajectories: TrajectoryDataType
 
@@ -396,7 +394,6 @@ class Trajectory(object):
 
         # Check that all positioners are ready to receive a new trajectory.
         for pos_id in self.trajectories:
-
             positioner = self.fps.positioners[pos_id]
             status = positioner.status
 
@@ -466,14 +463,11 @@ class Trajectory(object):
         # Send chunks of size n_chunk to all the positioners in parallel.
         # Do alpha first, then beta.
         for arm in ["alpha", "beta"]:
-
             for jj in range(0, max_points[arm], n_chunk):
-
                 data = {}
                 send_trajectory_pids = []
 
                 for pos_id in self.trajectories:
-
                     arm_chunk = self.trajectories[pos_id][arm][jj : jj + n_chunk]
                     if len(arm_chunk) == 0:
                         continue
@@ -541,7 +535,6 @@ class Trajectory(object):
         self.use_sync_line = use_sync_line
 
         if use_sync_line:
-
             if not isinstance(self.fps.ieb, IEB) or self.fps.ieb.disabled:
                 raise TrajectoryError(
                     "IEB is not connected. Cannot use SYNC line.",
@@ -560,7 +553,6 @@ class Trajectory(object):
             asyncio.get_event_loop().call_later(0.5, asyncio.create_task, sync.open())
 
         else:
-
             # Start trajectories
             command = await self.fps.send_command(
                 "START_TRAJECTORY",
@@ -582,7 +574,6 @@ class Trajectory(object):
 
         try:
             while True:
-
                 await asyncio.sleep(1)
 
                 if self.fps.locked:
@@ -693,7 +684,6 @@ class SendNewTrajectory(Command):
     move_command = True
 
     def __init__(self, positioner_ids, n_alpha=None, n_beta=None, **kwargs):
-
         if n_alpha is not None and n_beta is not None:
             kwargs["data"] = self.get_data(n_alpha, n_beta)
         else:
@@ -737,7 +727,6 @@ class SendTrajectoryData(Command):
     move_command = True
 
     def __init__(self, positioner_ids, positions=None, **kwargs):
-
         if positions is not None:
             kwargs["data"] = self.calculate_positions(positions)
         else:

@@ -145,7 +145,6 @@ class BaseConfiguration:
     epoch: float | None
 
     def __init__(self, scale: float | None = None):
-
         if len(calibration.positionerTable) == 0:
             raise ValueError("FPS calibrations not loaded or the array is empty.")
 
@@ -629,9 +628,7 @@ class BaseConfiguration:
         epoch = self.assignment_data.site.time.jd
 
         if self.configuration_id is None:
-
             with opsdb.database.atomic():
-
                 if self.design is None:
                     if (
                         targetdb.Design()
@@ -658,7 +655,6 @@ class BaseConfiguration:
             self.configuration_id = configuration.configuration_id
 
         else:
-
             if self.configuration_id is None:
                 raise JaegerError("Must have a configuration_id to replace.")
 
@@ -689,7 +685,6 @@ class BaseConfiguration:
 
         focals = []
         for index, data in a_data.iterrows():
-
             index = cast(tuple, index)
             pid = index[0]
             hole_id = data.hole_id
@@ -724,7 +719,6 @@ class BaseConfiguration:
 
     @staticmethod
     def _get_summary_file_path(configuration_id: int, observatory: str, flavour: str):
-
         if configuration_id is None:
             raise JaegerError("Configuration ID not set.")
 
@@ -827,7 +821,6 @@ class BaseConfiguration:
 
         i = 0
         for index, row_data in fdata.iterrows():
-
             index = cast(tuple, index)
 
             pid, fibre_type = index
@@ -949,7 +942,6 @@ class Configuration(BaseConfiguration):
         epoch: float | None = None,
         scale: float | None = None,
     ):
-
         super().__init__(scale=scale)
 
         self.design = design
@@ -977,7 +969,6 @@ class DitheredConfiguration(BaseConfiguration):
         radius: float,
         epoch: float | None = None,
     ):
-
         assert parent_configuration.design
 
         super().__init__(scale=parent_configuration.scale)
@@ -1020,7 +1011,6 @@ class DitheredConfiguration(BaseConfiguration):
         }
 
     def compute_coordinates(self, new_positions: dict):
-
         assert self.design
 
         ftable = self.assignment_data.fibre_table
@@ -1161,7 +1151,6 @@ class ManualConfiguration(BaseConfiguration):
         position_angle: float = 0.0,
         scale: float | None = None,
     ):
-
         super().__init__(scale=scale)
 
         self.design = None
@@ -1262,7 +1251,6 @@ class BaseAssignmentData:
         observatory: Optional[str] = None,
         scale: float | None = None,
     ):
-
         self.configuration = configuration
 
         self.design = configuration.design
@@ -1360,13 +1348,11 @@ class BaseAssignmentData:
 
         data = {}
         for pid in self.wok_data.index:
-
             positioner_data = self.wok_data.loc[pid]
             hole_id = positioner_data.holeID
 
             target_fibre_type: str | None = None
             if hole_id in self.target_data:
-
                 # First do the assigned fibre.
                 ftype = self.target_data[hole_id]["fibre_type"].upper()
                 target_fibre_type = ftype
@@ -1384,7 +1370,6 @@ class BaseAssignmentData:
                 data[(pid, ftype)] = positioner_data
 
             else:
-
                 # If a positioner does not have an assigned target, leave it folded.
                 target_fibre_type = None
                 positioner_data = {"alpha": alpha0, "beta": beta0}
@@ -1416,7 +1401,6 @@ class BaseAssignmentData:
 
         # Calculate positioner coordinates for each wok coordinate.
         for hole_id, data in self.target_data.items():
-
             xwok = data["xwok"]
             ywok = data["ywok"]
             zwok = data.get("zwok", POSITIONER_HEIGHT)
@@ -1465,14 +1449,12 @@ class BaseAssignmentData:
 
         data = {}
         for pid in self.wok_data.index:
-
             hole_id = self.wok_data.at[pid, "holeID"]
             alpha = self.target_data[hole_id]["alpha"]
             beta = self.target_data[hole_id]["beta"]
 
             # Now calculate some coordinates for the other two non-assigned fibres.
             for ftype in ["APOGEE", "BOSS", "Metrology"]:
-
                 assigned = self.target_data[hole_id]["fibre_type"] == ftype
 
                 # If boresight has been set, go all the way from positioner to ICRS.
@@ -1491,7 +1473,6 @@ class BaseAssignmentData:
                     data[(pid, ftype)] = icrs_data
 
                 else:
-
                     wok, tangent = positioner_to_wok(
                         hole_id,
                         self.site.name,
@@ -1728,7 +1709,6 @@ class AssignmentData(BaseAssignmentData):
         compute_coordinates: bool = True,
         scale: float | None = None,
     ):
-
         super().__init__(configuration, scale=scale)
 
         if compute_coordinates:
@@ -1803,7 +1783,6 @@ class ManualAssignmentData(BaseAssignmentData):
         position_angle: float = 0.0,
         scale: float | None = None,
     ):
-
         super().__init__(configuration, observatory=observatory, scale=scale)
 
         self.target_data = target_data
