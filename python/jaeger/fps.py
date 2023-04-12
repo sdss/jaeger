@@ -926,6 +926,9 @@ class FPS(BaseFPS["FPS"]):
 
         axes = "?"
 
+        alpha = -999.0
+        beta = -999.0
+
         if by and len(by) > 0:
             self.locked_by += by
 
@@ -938,6 +941,9 @@ class FPS(BaseFPS["FPS"]):
                 else:
                     axes = "beta"
 
+            alpha = self.positioners[by[0]].alpha
+            beta = self.positioners[by[0]].beta
+
         if jaeger.actor_instance:
             jaeger.actor_instance.write(
                 "e",
@@ -945,6 +951,8 @@ class FPS(BaseFPS["FPS"]):
                     "locked": True,
                     "locked_by": self.locked_by,
                     "locked_axes": axes,
+                    "locked_alpha": alpha,
+                    "locked_beta": beta,
                 },
             )
 

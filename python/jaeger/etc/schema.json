@@ -155,6 +155,8 @@
       }
     },
     "locked_axes": { "enum": ["alpha", "beta", "both", "?"] },
+    "locked_alpha": { "type": "number" },
+    "locked_beta": { "type": "number" },
     "folded": { "type": "boolean" },
     "n_positioners": { "type": "integer" },
     "positioner_status": {

@@ -9,6 +9,7 @@
 ### 🏷️ Changed
 
 * Add a 3 minute timeout for `jaeger configuration preload` (normal configuration load does not time out).
+* [COS-103](https://jira.sdss.org/browse/COS-103) Add `locked_alpha` and `locked_beta` keywords when a collision happens.
 
 
 ## 1.3.3 - January 15, 2023
