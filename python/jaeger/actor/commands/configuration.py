@@ -59,7 +59,7 @@ async def _load_design(
     epoch_delay: float = 0.0,
     get_paths: bool = True,
     path_generation_mode: str | None = None,
-    safety_factor: float = 0.1,
+    safety_factor: float = 1,
     offset_min_skybrightness: float = 0.5,
 ):
     """Helper to load or preload a design."""
@@ -311,7 +311,7 @@ def configuration():
 @click.option(
     "--safety-factor",
     type=float,
-    default=0.1,
+    default=1,
     help="Safety factor to pass to the offset calculation function.",
 )
 @click.option(
@@ -340,7 +340,7 @@ async def load(
     fudge_factor: float | None = None,
     no_clone: bool = False,
     path_generation_mode: str | None = None,
-    safety_factor: float = 0.1,
+    safety_factor: float = 1,
     offset_min_skybrightness: float = 0.5,
 ):
     """Creates and ingests a configuration from a design in the database."""
@@ -584,7 +584,7 @@ async def clone(command: Command[JaegerActor], fps: FPS):
 @click.option(
     "--safety-factor",
     type=float,
-    default=0.1,
+    default=1,
     help="Safety factor to pass to the offset calculation function.",
 )
 @click.option(
@@ -606,7 +606,7 @@ async def preload(
     no_clone: bool = False,
     make_active: bool = True,
     clear: bool = False,
-    safety_factor: float = 0.1,
+    safety_factor: float = 1,
     offset_min_skybrightness: float = 0.5,
 ):
     """Preloads a design.

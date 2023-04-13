@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🏷️ Changed
+
+* Changed the default value of the safety factor for the offset function to 1.
+
+
 ## 1.3.4 - April 12, 2023
 
 ### 🚀 New
