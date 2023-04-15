@@ -1,80 +1,80 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-# name: Test
+name: Test
 
-# on:
-#   push:
-#     paths-ignore:
-#       - 'docs/**'
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-#     strategy:
-#       fail-fast: false
-#       matrix:
-#         python-version: ['3.8', '3.9', '3.10']
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.8', '3.9', '3.10']
 
-#     env:
-#       WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanBase'
-#       PYTHONPATH: '/home/runner/work/jaeger/jaeger/fps_calibrations'
-#       OBSERVATORY: 'APO'
+    env:
+      WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanBase'
+      PYTHONPATH: '/home/runner/work/jaeger/jaeger/fps_calibrations'
+      OBSERVATORY: 'APO'
 
-#     steps:
-#       - uses: actions/checkout@v3
+    steps:
+      - uses: actions/checkout@v3
 
-#       - name: Cache Setup
-#         uses: actions/cache@v3
-#         with:
-#           path: ~/.cache/pip
-#           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Cache Setup
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
 
-#       - name: Create directories
-#         run: |
-#           mkdir -p $RUNNER_TEMP/logs/jaeger
+      - name: Create directories
+        run: |
+          mkdir -p $RUNNER_TEMP/logs/jaeger
 
-#       - name: Clone fps_calibrations
-#         uses: actions/checkout@v3
-#         with:
-#           repository: sdss/fps_calibrations
-#           ref: APO.2021.11.14
-#           path: fps_calibrations
+      - name: Clone fps_calibrations
+        uses: actions/checkout@v3
+        with:
+          repository: sdss/fps_calibrations
+          ref: APO.2021.11.14
+          path: fps_calibrations
 
-#       - name: Set up Python
-#         uses: actions/setup-python@v4
-#         with:
-#           python-version: ${{ matrix.python-version }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-#       - name: Install dependencies
-#         run: |
-#           python -m pip install --upgrade pip wheel setuptools
-#           python -m pip install --use-pep517 .
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install --use-pep517 .
 
-#       - name: Lint with flake8
-#         run: |
-#           # stop the build if there are Python syntax errors or undefined names
-#           python -m pip install flake8
-#           flake8 . --count --show-source --statistics
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          python -m pip install flake8
+          flake8 . --count --show-source --statistics
 
-#       - name: Lint with isort
-#         run: |
-#           python -m pip install isort
-#           isort -c python/
+      - name: Lint with isort
+        run: |
+          python -m pip install isort
+          isort -c python/
 
-#       - name: Lint with black
-#         run: |
-#           python -m pip install black
-#           black --check python/
-#           black --check tests/
+      - name: Lint with black
+        run: |
+          python -m pip install black
+          black --check python/
+          black --check tests/
 
-#       - name: Test with pytest
-#         run: |
-#           python -m pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
-#           pytest
+      # - name: Test with pytest
+      #   run: |
+      #     python -m pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
+      #     pytest
 
-#       - name: Upload coverage to Codecov
-#         uses: codecov/codecov-action@v3
-#         with:
-#           file: ./coverage.xml
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     file: ./coverage.xml
