@@ -34,7 +34,12 @@ from coordio import (
     Wok,
 )
 from coordio import __version__ as coordio_version
-from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
+from coordio.defaults import (
+    INST_TO_WAVE,
+    POSITIONER_HEIGHT,
+    VALID_WAVELENGTHS,
+    calibration,
+)
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 from sdsstools.time import get_sjd
@@ -42,7 +47,7 @@ from sdsstools.time import get_sjd
 from jaeger import FPS
 from jaeger import __version__ as jaeger_version
 from jaeger import config, log
-from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 from jaeger.ieb import IEB
 from jaeger.kaiju import (
     decollide_in_executor,
@@ -1358,6 +1363,14 @@ class BaseAssignmentData:
                 base["hole_id"][i] = self.wok_data.loc[pid].holeID
                 base["wavelength"][i] = self._get_wavelength(ft)
                 i += 1
+
+        valid_wavelengths = numpy.array(list(VALID_WAVELENGTHS))
+        if not numpy.all(numpy.in1d(base["wavelength"], valid_wavelengths)):
+            warnings.warn(
+                "Using non-default wavelengths. "
+                "Focal plane transformation may be sub-optimal.",
+                JaegerUserWarning,
+            )
 
         fibre_table = pandas.DataFrame(base)
 
