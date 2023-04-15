@@ -50,7 +50,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install .
+          python -m pip install --use-pep517 .
 
       - name: Lint with flake8
         run: |
