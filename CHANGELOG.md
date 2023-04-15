@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🚀 New
+
+* Allow to specify the wavelength to use for BOSS and APOGEE fibres when creating a configuration. Using `jaeger configuration load --boss-wavelength` or `--apogee-wavelength` will specify the wavelength to use for atmospheric refraction and affect the positioning of the fibre. The closest valid focal plane model is used in this case. Only assigned fibre of the specified fibre type are affected.
+
 ### 🏷️ Changed
 
 * Changed the default value of the safety factor for the offset function to 1.
