@@ -34,7 +34,12 @@ from coordio import (
     Wok,
 )
 from coordio import __version__ as coordio_version
-from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, calibration
+from coordio.defaults import (
+    INST_TO_WAVE,
+    POSITIONER_HEIGHT,
+    VALID_WAVELENGTHS,
+    calibration,
+)
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 from sdsstools.time import get_sjd
@@ -42,7 +47,7 @@ from sdsstools.time import get_sjd
 from jaeger import FPS
 from jaeger import __version__ as jaeger_version
 from jaeger import config, log
-from jaeger.exceptions import JaegerError, TrajectoryError
+from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 from jaeger.ieb import IEB
 from jaeger.kaiju import (
     decollide_in_executor,
@@ -103,6 +108,7 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
         ("parallax", numpy.float32, -999.0),
         ("ra", numpy.float64, -999.0),
         ("dec", numpy.float64, -999.0),
+        ("lambda_design", numpy.float32, -999.0),
         ("lambda_eff", numpy.float32, -999.0),
         ("coord_epoch", numpy.float32, -999.0),
         ("spectrographId", numpy.int16, -999),
@@ -856,6 +862,7 @@ class BaseConfiguration:
                     "dec": row_data.dec_epoch,
                     "spectrographId": spec_id,
                     "fiberId": row_data.fiberId,
+                    "lambda_eff": row_data.wavelength,
                 }
             )
 
@@ -870,7 +877,7 @@ class BaseConfiguration:
                         "pmdec": target["pmdec"] or -999.0,
                         "parallax": target["parallax"] or -999.0,
                         "coord_epoch": target["epoch"] or -999.0,
-                        "lambda_eff": target["lambda_eff"] or -999.0,
+                        "lambda_design": target["lambda_eff"] or -999.0,
                         "catalogid": target["catalogid"] or -999.0,
                         "carton_to_target_pk": target["carton_to_target_pk"] or -999.0,
                         "cadence": target["cadence"] or "",
@@ -941,12 +948,20 @@ class Configuration(BaseConfiguration):
         design: Design,
         epoch: float | None = None,
         scale: float | None = None,
+        boss_wavelength: float | None = None,
+        apogee_wavelength: float | None = None,
     ):
         super().__init__(scale=scale)
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment_data = AssignmentData(self, epoch=epoch, scale=scale)
+        self.assignment_data = AssignmentData(
+            self,
+            epoch=epoch,
+            scale=scale,
+            boss_wavelength=boss_wavelength,
+            apogee_wavelength=apogee_wavelength,
+        )
 
         assert self.assignment_data.site.time
 
@@ -1250,11 +1265,16 @@ class BaseAssignmentData:
         configuration: Configuration | ManualConfiguration | DitheredConfiguration,
         observatory: Optional[str] = None,
         scale: float | None = None,
+        boss_wavelength: float | None = None,
+        apogee_wavelength: float | None = None,
     ):
         self.configuration = configuration
 
         self.design = configuration.design
         self.design_id = self.configuration.design_id
+
+        self.boss_wavelength = boss_wavelength or INST_TO_WAVE["Boss"]
+        self.apogee_wavelength = apogee_wavelength or INST_TO_WAVE["Apogee"]
 
         self.observatory: str
         if observatory is None:
@@ -1309,6 +1329,18 @@ class BaseAssignmentData:
 
         raise NotImplementedError("Must be overridden by subclasses.")
 
+    def _get_wavelength(self, fibre_type: str):
+        """Returns the wavelength for a given fibre type."""
+
+        if fibre_type == "APOGEE":
+            return self.apogee_wavelength
+        elif fibre_type == "BOSS":
+            return self.boss_wavelength
+        elif fibre_type == "Metrology":
+            return INST_TO_WAVE["GFA"]
+
+        raise ValueError(f"Invalid fibre type {fibre_type!r}.")
+
     def _create_fibre_table(self):
         """Creates an empty fibre table."""
 
@@ -1329,7 +1361,16 @@ class BaseAssignmentData:
                 base["positioner_id"][i] = pid
                 base["fibre_type"][i] = ft
                 base["hole_id"][i] = self.wok_data.loc[pid].holeID
+                base["wavelength"][i] = self._get_wavelength(ft)
                 i += 1
+
+        valid_wavelengths = numpy.array(list(VALID_WAVELENGTHS))
+        if not numpy.all(numpy.in1d(base["wavelength"], valid_wavelengths)):
+            warnings.warn(
+                "Using non-default wavelengths. "
+                "Focal plane transformation may be sub-optimal.",
+                JaegerUserWarning,
+            )
 
         fibre_table = pandas.DataFrame(base)
 
@@ -1532,7 +1573,7 @@ class BaseAssignmentData:
         """Converts from ICRS coordinates."""
 
         hole_id = self.wok_data.loc[positioner_id].holeID
-        wavelength = INST_TO_WAVE.get(fibre_type.capitalize(), INST_TO_WAVE["GFA"])
+        wavelength = self._get_wavelength(fibre_type)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -1570,6 +1611,7 @@ class BaseAssignmentData:
                 wavelength=wavelength,
                 site=self.site,
                 fpScale=self.scale,
+                use_closest_wavelength=True,
             )
             wok = Wok(focal, site=self.site, obsAngle=position_angle)
 
@@ -1590,7 +1632,6 @@ class BaseAssignmentData:
         row.update(
             {
                 "hole_id": hole_id,
-                "wavelength": INST_TO_WAVE[fibre_type.capitalize()],
                 "ra_icrs": icrs[0, 0],
                 "dec_icrs": icrs[0, 1],
                 "ra_epoch": icrs_epoch[0, 0],
@@ -1607,6 +1648,7 @@ class BaseAssignmentData:
                 "ztangent": tangent[2],
                 "alpha": positioner[0],
                 "beta": positioner[1],
+                "wavelength": wavelength,
             }
         )
         row.update(kwargs)
@@ -1630,7 +1672,11 @@ class BaseAssignmentData:
     ):
         """Converts from positioner to ICRS coordinates."""
 
-        wavelength = INST_TO_WAVE.get(fibre_type.capitalize(), INST_TO_WAVE["GFA"])
+        ft_row = self.fibre_table.loc[(positioner_id, fibre_type), :]
+        if ft_row.assigned:
+            wavelength = self._get_wavelength(fibre_type)
+        else:
+            wavelength = INST_TO_WAVE.get(fibre_type.capitalize(), INST_TO_WAVE["GFA"])
 
         assert self.site.time
 
@@ -1655,6 +1701,7 @@ class BaseAssignmentData:
                 wavelength=wavelength,
                 site=self.site,
                 fpScale=self.scale,
+                use_closest_wavelength=True,
             )
 
             if self.boresight is not None:
@@ -1708,8 +1755,15 @@ class AssignmentData(BaseAssignmentData):
         epoch: float | None = None,
         compute_coordinates: bool = True,
         scale: float | None = None,
+        boss_wavelength: float | None = None,
+        apogee_wavelength: float | None = None,
     ):
-        super().__init__(configuration, scale=scale)
+        super().__init__(
+            configuration,
+            scale=scale,
+            boss_wavelength=boss_wavelength,
+            apogee_wavelength=apogee_wavelength,
+        )
 
         if compute_coordinates:
             self.compute_coordinates(epoch)

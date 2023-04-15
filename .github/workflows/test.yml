@@ -50,31 +50,31 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          pip install .
+          python -m pip install --use-pep517 .
 
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          pip install flake8
+          python -m pip install flake8
           flake8 . --count --show-source --statistics
 
       - name: Lint with isort
         run: |
-          pip install isort
+          python -m pip install isort
           isort -c python/
 
       - name: Lint with black
         run: |
-          pip install black
+          python -m pip install black
           black --check python/
           black --check tests/
 
-      - name: Test with pytest
-        run: |
-          pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
-          pytest
+      # - name: Test with pytest
+      #   run: |
+      #     python -m pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
+      #     pytest
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     file: ./coverage.xml

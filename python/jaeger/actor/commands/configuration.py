@@ -57,6 +57,8 @@ async def _load_design(
     fudge_factor: float | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
+    boss_wavelength: float | None = None,
+    apogee_wavelength: float | None = None,
     get_paths: bool = True,
     path_generation_mode: str | None = None,
     safety_factor: float = 1,
@@ -204,6 +206,8 @@ async def _load_design(
                 scale=scale,
                 safety_factor=safety_factor,
                 offset_min_skybrightness=offset_min_skybrightness,
+                boss_wavelength=boss_wavelength,
+                apogee_wavelength=apogee_wavelength,
             )
         except Exception as err:
             command.error(error=f"Failed retrieving design: {err}")
@@ -254,6 +258,16 @@ def configuration():
     type=float,
     default=0.0,
     help="A delay in seconds for the epoch for which the configuration is calculated.",
+)
+@click.option(
+    "--boss-wavelength",
+    type=click.FloatRange(3000, 10000),
+    help="Optimise positioning of BOSS fibres to this wavelength.",
+)
+@click.option(
+    "--apogee-wavelength",
+    type=click.FloatRange(16000, 17000),
+    help="Optimise positioning of APOGEE fibres to this wavelength.",
 )
 @click.option(
     "--from-positions",
@@ -332,6 +346,8 @@ async def load(
     generate_paths: bool = False,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
+    apogee_wavelength: float | None = None,
+    boss_wavelength: float | None = None,
     ingest: bool = False,
     write_summary: bool = False,
     execute: bool = False,
@@ -383,6 +399,8 @@ async def load(
             scale=scale,
             epoch=epoch,
             epoch_delay=epoch_delay,
+            boss_wavelength=boss_wavelength,
+            apogee_wavelength=apogee_wavelength,
             get_paths=False,
             path_generation_mode=path_generation_mode,
             safety_factor=safety_factor,
@@ -555,6 +573,16 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="A delay in seconds for the epoch for which the configuration is calculated.",
 )
 @click.option(
+    "--boss-wavelength",
+    type=click.FloatRange(3000, 10000),
+    help="Optimise positioning of BOSS fibres to this wavelength.",
+)
+@click.option(
+    "--apogee-wavelength",
+    type=click.FloatRange(16000, 17000),
+    help="Optimise positioning of APOGEE fibres to this wavelength.",
+)
+@click.option(
     "--scale",
     type=float,
     help="Focal plane scale factor. If not passes, uses coordio default.",
@@ -601,6 +629,8 @@ async def preload(
     designid: int | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
+    apogee_wavelength: float | None = None,
+    boss_wavelength: float | None = None,
     scale: float | None = None,
     fudge_factor: float | None = None,
     no_clone: bool = False,
@@ -633,6 +663,8 @@ async def preload(
         fudge_factor=fudge_factor,
         epoch=epoch,
         epoch_delay=epoch_delay,
+        boss_wavelength=boss_wavelength,
+        apogee_wavelength=apogee_wavelength,
         safety_factor=safety_factor,
         offset_min_skybrightness=offset_min_skybrightness,
     )

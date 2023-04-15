@@ -234,6 +234,8 @@ class Design:
         design_id: int,
         epoch: float | None = None,
         scale: float | None = None,
+        boss_wavelength: float | None = None,
+        apogee_wavelength: float | None = None,
         **kwargs,
     ):
         """Returns a design while creating the configuration in an executor."""
@@ -245,6 +247,8 @@ class Design:
             self,
             epoch=epoch,
             scale=scale,
+            boss_wavelength=boss_wavelength,
+            apogee_wavelength=apogee_wavelength,
         )
         self.configuration = configuration
 
