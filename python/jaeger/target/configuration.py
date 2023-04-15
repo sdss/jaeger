@@ -1573,7 +1573,7 @@ class BaseAssignmentData:
         """Converts from ICRS coordinates."""
 
         hole_id = self.wok_data.loc[positioner_id].holeID
-        wavelength = target_data["wavelength"]
+        wavelength = self._get_wavelength(fibre_type)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -1648,6 +1648,7 @@ class BaseAssignmentData:
                 "ztangent": tangent[2],
                 "alpha": positioner[0],
                 "beta": positioner[1],
+                "wavelength": wavelength,
             }
         )
         row.update(kwargs)
@@ -1678,7 +1679,7 @@ class BaseAssignmentData:
             wavelength = INST_TO_WAVE.get(fibre_type.capitalize(), INST_TO_WAVE["GFA"])
 
         assert self.site.time
-]
+
         if position_angle is None:
             position_angle = self.design.field.position_angle if self.design else 0.0
 
@@ -1700,6 +1701,7 @@ class BaseAssignmentData:
                 wavelength=wavelength,
                 site=self.site,
                 fpScale=self.scale,
+                use_closest_wavelength=True,
             )
 
             if self.boresight is not None:
