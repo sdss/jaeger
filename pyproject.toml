@@ -47,7 +47,6 @@ progressbar2 = ">=3.39.3"
 pytest-asyncio = ">=0.10.0"
 pytest-cov = ">=2.8.1"
 pytest-sugar = ">=0.9.2"
-codecov = ">=2.0.15"
 isort = ">=5.0.0"
 coverage = {version = ">=5.0", extras = ["toml"]}
 Sphinx = {version = ">=3.0"}
