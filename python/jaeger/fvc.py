@@ -967,8 +967,8 @@ class FVC:
                 configuration_copy.assignment_data.positioner_to_icrs(
                     pid,
                     ftype,
-                    alpha,
-                    beta,
+                    float(alpha),
+                    float(beta),
                     update=True,
                 )
 
