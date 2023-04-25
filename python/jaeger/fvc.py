@@ -336,7 +336,19 @@ class FVC:
         if self.fps.observatory == "APO":
             hdus[1].data = hdus[1].data[:, ::-1]
 
-        image_data = hdus[1].data
+        image_data = hdus[1].data.astype(numpy.float32)
+
+        # If we are using a dark frame, subtract it now.
+        dark_image: str | bool = config["fvc"].get("dark_image", False)
+        if dark_image:
+            if not os.path.exists(dark_image):
+                self.log(
+                    f"Dark frame {dark_image} not found. Skipping dark correction.",
+                    level=logging.WARNING,
+                )
+            else:
+                dark_data = fits.getdata(dark_image).astype(numpy.float32)
+                image_data -= dark_data
 
         self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.INFO)
 
@@ -451,6 +463,7 @@ class FVC:
             self.fvc_percent_reached,
             "Targets that have reached their goal [%]",
         )
+        hdus[1].header["DARKFILE"] = (dark_image or "", "Dark frame image")
 
         fdata.reset_index(inplace=True)
         fdata.set_index(["hole_id", "fibre_type"], inplace=True)
