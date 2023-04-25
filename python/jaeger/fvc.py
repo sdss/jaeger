@@ -1103,7 +1103,7 @@ async def reprocess_configuration(
     if use_suffix:
         path = path.replace(".par", f"_{fvc.centroid_method}.par")
 
-    await fvc.write_summary_F(
+    fvc.write_summary_F(
         path=path,
         plot=False,
         extra_headers={
