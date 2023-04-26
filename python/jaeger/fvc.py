@@ -330,13 +330,13 @@ class FVC:
 
         self.image_path = path
         self.raw_hdu = hdus[1].copy()
-        self.proc_hdu = hdus[1]
 
         # Invert columns at APO.
         if self.fps.observatory == "APO":
             hdus[1].data = hdus[1].data[:, ::-1]
 
         image_data = hdus[1].data.astype(numpy.float32)
+        header = hdus[1].header
 
         # If we are using a dark frame, subtract it now.
         dark_image: str | bool = config["fvc"].get("dark_image", False)
@@ -456,20 +456,22 @@ class FVC:
         # robots. This is different from FVC_RMS reported by
         # FVCTransformAPO.getMetadata() that is measured - reported for all
         # positioners.
-        hdus[1].header["FVCITER"] = (self.iteration, "FVC iteration")
-        hdus[1].header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
-        hdus[1].header["PERC90"] = (self.perc_90 * 1000, "90% percentile [um]")
-        hdus[1].header["FVCREACH"] = (
+        header["FVCITER"] = (self.iteration, "FVC iteration")
+        header["FITRMS"] = (self.fitrms * 1000, "RMS full fit [um]")
+        header["PERC90"] = (self.perc_90 * 1000, "90% percentile [um]")
+        header["FVCREACH"] = (
             self.fvc_percent_reached,
             "Targets that have reached their goal [%]",
         )
-        hdus[1].header["DARKFILE"] = (dark_image or "", "Dark frame image")
+        header["DARKFILE"] = (dark_image or "", "Dark frame image")
 
         fdata.reset_index(inplace=True)
         fdata.set_index(["hole_id", "fibre_type"], inplace=True)
 
         self.fibre_data = fdata
         self.fvc_transform = fvc_transform
+
+        self.proc_hdu = fits.CompImageHDU(data=image_data, header=header)
 
         self.log(f"Finished processing {path}", level=logging.DEBUG)
 
