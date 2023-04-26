@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* [#199](https://github.com/sdss/jaeger/pull/199) Subtract FVC dark frame during FVC image processing.
+
+
 ## 1.4.0 - April 15, 2023
 
 ### 🚀 New
