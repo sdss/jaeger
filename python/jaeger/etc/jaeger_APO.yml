@@ -98,7 +98,7 @@ fvc:
   config: etc/fvc.yaml
   exposure_time: 5.
   fbi_level: 6.
-  dark_image: /data/fcam/60061/fimg-fvc1n-0001.fits
+  dark_image: /data/fcam/60062/fimg-fvc1n-0011.fits
   target_90_percentile: 30.0
   target_distance: 5
   max_fvc_iterations: 2
