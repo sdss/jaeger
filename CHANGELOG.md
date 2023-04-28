@@ -4,7 +4,7 @@
 
 ### 🚀 New
 
-* Save copy of `confSummary` files to `$SDSSCORE_TEST_DIR`, if present. For testing purposes only, for now.
+* [#200](https://github.com/sdss/jaeger/issues/200) Save copy of `confSummary` files to `$SDSSCORE_TEST_DIR`, if present. For testing purposes only, for now.
 
 ### ✨ Improved
 
