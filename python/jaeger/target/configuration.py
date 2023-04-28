@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import pathlib
+import shutil
 import warnings
 from copy import deepcopy
 from time import time
@@ -724,7 +725,14 @@ class BaseConfiguration:
             opsdb.AssignmentToFocal.insert_many(focals).execute(opsdb.database)
 
     @staticmethod
-    def _get_summary_file_path(configuration_id: int, observatory: str, flavour: str):
+    def _get_summary_file_path(
+        configuration_id: int,
+        observatory: str,
+        flavour: str,
+        test: bool = False,
+    ):
+        """Returns the path for a configuration file in ``SDSSCORE_DIR``."""
+
         if configuration_id is None:
             raise JaegerError("Configuration ID not set.")
 
@@ -732,10 +740,12 @@ class BaseConfiguration:
             raise JaegerError("$SDSSCORE_DIR is not set. Cannot write summary file.")
 
         sdsscore_dir = os.environ["SDSSCORE_DIR"]
+        sdsscore_test_dir = os.environ.get("SDSSCORE_TEST_DIR", "")
         path = os.path.join(
-            sdsscore_dir,
+            sdsscore_dir if test is False else sdsscore_test_dir,
             observatory.lower(),
             "summary_files",
+            f"{int(configuration_id / 1000):03d}XXX" if test else "",
             f"{int(configuration_id / 100):04d}XX",
             f"confSummary{flavour}-{configuration_id}.par",
         )
@@ -934,6 +944,18 @@ class BaseConfiguration:
         )
 
         self._summary_file = str(path)
+
+        # This is a test for now, but eventually we'll change to this format of
+        # SDSSCORE directories.
+        if "SDSSCORE_TEST_DIR" in os.environ:
+            test_path = self._get_summary_file_path(
+                self.configuration_id,
+                self.assignment_data.observatory,
+                flavour,
+                test=True,
+            )
+            os.makedirs(os.path.dirname(test_path), exist_ok=True)
+            shutil.copyfile(path, test_path)
 
         return path
 

@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🚀 New
+
+* Save copy of `confSummary` files to `$SDSSCORE_TEST_DIR`, if present. For testing purposes only, for now.
+
 ### ✨ Improved
 
 * [#199](https://github.com/sdss/jaeger/pull/199) Subtract FVC dark frame during FVC image processing.
