@@ -944,6 +944,8 @@ class BaseConfiguration:
 
         self._summary_file = str(path)
 
+        # This is a test for now, but eventually we'll change to this format of
+        # SDSSCORE directories.
         if "SDSSCORE_TEST_DIR" in os.environ:
             test_path = self._get_summary_file_path(
                 self.configuration_id,
