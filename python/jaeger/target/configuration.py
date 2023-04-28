@@ -740,8 +740,9 @@ class BaseConfiguration:
             raise JaegerError("$SDSSCORE_DIR is not set. Cannot write summary file.")
 
         sdsscore_dir = os.environ["SDSSCORE_DIR"]
+        sdsscore_test_dir = os.environ.get("SDSSCORE_TEST_DIR", "")
         path = os.path.join(
-            sdsscore_dir,
+            sdsscore_dir if test is False else sdsscore_test_dir,
             observatory.lower(),
             "summary_files",
             f"{int(configuration_id / 1000):03d}XXX" if test else "",
