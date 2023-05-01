@@ -9,6 +9,7 @@
 ### ✨ Improved
 
 * [#199](https://github.com/sdss/jaeger/pull/199) Subtract FVC dark frame during FVC image processing.
+* [#200](https://github.com/sdss/jaeger/pull/200) Initial test to update files in `sdsscore_test`.
 
 
 ## 1.4.0 - April 15, 2023
