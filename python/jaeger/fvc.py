@@ -331,10 +331,6 @@ class FVC:
         self.image_path = path
         self.raw_hdu = hdus[1].copy()
 
-        # Invert columns at APO.
-        if self.fps.observatory == "APO":
-            hdus[1].data = hdus[1].data[:, ::-1]
-
         image_data = hdus[1].data.astype(numpy.float32)
         header = hdus[1].header
 
@@ -349,6 +345,10 @@ class FVC:
             else:
                 dark_data = fits.getdata(dark_image).astype(numpy.float32)
                 image_data -= dark_data
+
+        # Invert columns at APO.
+        if self.fps.observatory == "APO":
+            image_data = image_data[:, ::-1]
 
         self.log(f"Max counts in image: {numpy.max(image_data)}", level=logging.INFO)
 
