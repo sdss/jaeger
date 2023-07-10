@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy
 import pandas
 import peewee
 
@@ -17,7 +18,7 @@ from coordio.defaults import calibration
 from coordio.utils import object_offset
 from sdssdb.peewee.sdss5db import targetdb
 
-from jaeger import log
+from jaeger import config, log
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -158,13 +159,25 @@ class Design:
 
             design_mode_rec = targetdb.DesignMode.get(label=design_mode)
 
+            mag = numpy.array(
+                [
+                    group.gaia_g.values,
+                    group.r.values,
+                    group.i.values,
+                    group.z.values,
+                    group.bp.values,
+                    group.gaia_g.values,
+                    group.rp.values,
+                    group.j.values,
+                    group.h.values,
+                    group.k.values,
+                ]
+            )
+            mag = mag.astype("f8").T
+
             if fibre_type == "APOGEE":
-                # Use 2MASS H magnitude for APOGEE
-                mag = group.h.values
                 mag_lim = design_mode_rec.apogee_bright_limit_targets_min
             else:
-                # Gaia G for BOSS.
-                mag = group.gaia_g.values
                 mag_lim = design_mode_rec.boss_bright_limit_targets_min
 
             if "bright" in design_mode:
@@ -179,6 +192,7 @@ class Design:
                 mag_lim,
                 lunation,
                 fibre_type.capitalize(),
+                config["observatory"].upper(),
                 can_offset=group.can_offset.values,
                 skybrightness=skybrightness,
                 safety_factor=self.safety_factor,
