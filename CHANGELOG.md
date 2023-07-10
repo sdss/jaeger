@@ -12,6 +12,7 @@
 * [#199](https://github.com/sdss/jaeger/pull/199) Subtract FVC dark frame during FVC image processing.
 * [#200](https://github.com/sdss/jaeger/pull/200) Initial test to update files in `sdsscore_test`.
 * [#201](https://github.com/sdss/jaeger/issues/201) Move FVC dark frames to calibration folder where they won't be deleted in the future.
+* Updated call to coordio's `object_offset()`.
 
 
 ## 1.4.0 - April 15, 2023
