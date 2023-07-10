@@ -143,6 +143,11 @@ async def expose(
     help="Use new inverse kinnematics.",
 )
 @click.option(
+    "--polids",
+    type=str,
+    help="Comma-separated ZB orders to use for the FVC transformation.",
+)
+@click.option(
     "--no-write-summary",
     is_flag=True,
     help="Does not try to write a confSummaryF file.",
@@ -333,6 +338,7 @@ async def take_fvc_loop(
     use_invkin: bool = True,
     no_write_summary: bool = False,
     configuration: BaseConfiguration | None = None,
+    polids: list[int] | None = None,
 ):
     """Helper to take an FVC loop that can be called externally."""
 
@@ -406,6 +412,7 @@ async def take_fvc_loop(
                 positioner_coords,
                 configuration=configuration,
                 plot=plot,
+                polids=polids,
                 centroid_method=centroid_method,
                 use_new_invkin=use_invkin,
                 loop=asyncio.get_running_loop(),

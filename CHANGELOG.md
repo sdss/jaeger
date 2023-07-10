@@ -5,6 +5,7 @@
 ### 🚀 New
 
 * [#200](https://github.com/sdss/jaeger/issues/200) Save copy of `confSummary` files to `$SDSSCORE_TEST_DIR`, if present. For testing purposes only, for now.
+* Modify default ZB orders passed to the FVC transformation and add flag `--polids` to `jaeger fvc loop` to manually set the orders.
 
 ### ✨ Improved
 

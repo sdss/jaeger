@@ -239,6 +239,7 @@ class FVC:
         fibre_type: str = "Metrology",
         centroid_method: str | None = None,
         use_new_invkin: bool = True,
+        polids: list[int] | None = None,
         plot: bool | str = False,
         outdir: str | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
@@ -270,6 +271,9 @@ class FVC:
             or ``"simple"``. Defaults to ``"nudge"``.
         use_new_invkin
             Use new inverse kinnematic to calculate alpha/beta.
+        polids
+            The list of ZB polynomial orders to use. If `None` defaults to
+            the coordio ``FVCTransform`` orders.
         plot
             Whether to save additional debugging plots along with the processed image.
             If ``plot`` is a string, it will be used as the directory to which to
@@ -374,10 +378,18 @@ class FVC:
             # It's important to override it here, when a loop already exists.
             transforms.plotFVCResults = partial(plotFVCResultsMP, loop)
 
+        # ZB polynomial orders to use.
+        polids = config["fvc"].get("polids", None)
+        if polids is None:
+            self.log("Using coordio default ZB polynomial orders.")
+        else:
+            self.log(f"Using ZB polynomial orders: {polids}")
+
         fvc_transform = FVCTransform(
             image_data,
             positioner_df,
             rotpos,
+            polids=polids,
             plotPathPrefix=plot_path_root,
         )
 
