@@ -187,17 +187,26 @@ class Design:
                 lunation = "dark"
                 skybrightness = 0.35
 
-            delta_ra, delta_dec, _ = object_offset(
-                mag,
-                mag_lim,
-                lunation,
-                fibre_type.capitalize(),
-                config["observatory"].upper(),
-                can_offset=group.can_offset.values,
-                skybrightness=skybrightness,
-                safety_factor=self.safety_factor,
-                offset_min_skybrightness=self.offset_min_skybrightness,
-            )
+            can_offset = numpy.array(group.can_offset.values)
+
+            if numpy.any(can_offset):
+                # TODO: this should not be necessary but right now there's a bug in
+                # object_offset that will return delta_ra=-1 when the design_mode
+                # doesn't have any magnitude limits defined.
+
+                delta_ra, delta_dec, _ = object_offset(
+                    mag,
+                    mag_lim,
+                    lunation,
+                    fibre_type.capitalize(),
+                    config["observatory"].upper(),
+                    can_offset=can_offset,
+                    skybrightness=skybrightness,
+                    safety_factor=self.safety_factor,
+                    offset_min_skybrightness=self.offset_min_skybrightness,
+                )
+            else:
+                delta_ra = delta_dec = 0.0
 
             group.loc[:, "delta_ra"] = delta_ra
             group.loc[:, "delta_dec"] = delta_dec
