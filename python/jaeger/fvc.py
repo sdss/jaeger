@@ -645,6 +645,13 @@ class FVC:
         alpha_offset = offsets["alpha_expected"] - offsets["alpha_measured"]
         beta_offset = offsets["beta_expected"] - offsets["beta_measured"]
 
+        # if alpha measured and alpha reported lie on either side of the
+        # wrap, adjust the offset accordingly
+        wrap1 = alpha_offset > 340
+        alpha_offset[wrap1] = alpha_offset[wrap1] - 360
+        wrap2 = alpha_offset < -340
+        alpha_offset[wrap2] = alpha_offset[wrap2] + 360
+
         offsets["alpha_offset"] = alpha_offset
         offsets["beta_offset"] = beta_offset
 
