@@ -508,7 +508,6 @@ class FVC:
 
         self.ieb_data = ieb_data
 
-
     def calculate_offsets(
         self,
         reported_positions: numpy.ndarray,
