@@ -97,7 +97,7 @@ configuration:
 fvc:
   config: etc/fvc.yaml
   exposure_time: 5.
-  fbi_level: 6.
+  fbi_level: 4.
   dark_image: /data/fcam/calib/60062/fimg-fvc1n-0011.fits
   polids: null
   target_90_percentile: 30.0
