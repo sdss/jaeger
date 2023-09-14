@@ -227,8 +227,8 @@ class FPS(BaseFPS["FPS"]):
         # Start file logger
         start_file_loggers(start_log=True, start_can=False)
 
-        if config.CONFIG_FILE:
-            log.debug(f"Using configuration from {config.CONFIG_FILE}")
+        if config._CONFIG_FILE:
+            log.debug(f"Using configuration from {config._CONFIG_FILE}")
         else:
             warnings.warn("Unknown configuration file.", JaegerUserWarning)
 

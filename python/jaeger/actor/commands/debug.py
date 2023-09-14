@@ -28,7 +28,7 @@ def info_(command, fps):
     command.info(
         {
             "version": __version__,
-            "config_file": config.CONFIG_FILE or "internal",
+            "config_file": config._CONFIG_FILE or "internal",
         },
         concatenate=False,
     )
