@@ -465,6 +465,7 @@ async def take_fvc_loop(
             # 6. Save processed file.
             proc_path = filename.with_name("proc-" + filename.name)
             command.debug(f"Asynchronously saving processed image {proc_path}")
+            await fvc.update_ieb_info()
             asyncio.create_task(fvc.write_proc_image(proc_path, broadcast=True))
             proc_image_saved = True
 

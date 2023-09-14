@@ -489,6 +489,26 @@ class FVC:
 
         return (self.proc_hdu, self.fibre_data, self.centroids)
 
+    async def update_ieb_info(self):
+        """Update the IEB data dictionary."""
+
+        # Add IEB information
+        ieb_keys = config["fvc"]["ieb_keys"]
+        ieb_data = {key: -999.0 for key in ieb_keys}
+
+        for key in ieb_keys:
+            device_name = ieb_keys[key]
+            if self.fps and isinstance(self.fps.ieb, IEB):
+                try:
+                    device = self.fps.ieb.get_device(device_name)
+                    ieb_data[key] = (await device.read())[0]
+                except Exception as err:
+                    self.log(f"Failed getting IEB information: {err}", logging.WARNING)
+                    break
+
+        self.ieb_data = ieb_data
+
+
     def calculate_offsets(
         self,
         reported_positions: numpy.ndarray,
@@ -777,23 +797,7 @@ class FVC:
         fibre_data_rec = Table.from_pandas(fibre_data).as_array()
         proc_hdus.append(fits.BinTableHDU(fibre_data_rec, name="FIBERDATA"))
 
-        # Add IEB information
-        ieb_keys = config["fvc"]["ieb_keys"]
-        ieb_data = {key: -999.0 for key in ieb_keys}
-
-        for key in ieb_keys:
-            device_name = ieb_keys[key]
-            if self.fps and isinstance(self.fps.ieb, IEB):
-                try:
-                    device = self.fps.ieb.get_device(device_name)
-                    ieb_data[key] = (await device.read())[0]
-                except Exception as err:
-                    self.log(f"Failed getting IEB information: {err}", logging.WARNING)
-                    break
-
-        self.ieb_data = ieb_data
-
-        for key, val in ieb_data.items():
+        for key, val in self.ieb_data.items():
             proc_hdus[1].header[key] = val
 
         # Add header keywords from coordio.FVCTransfromAPO.
