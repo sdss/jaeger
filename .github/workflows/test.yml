@@ -64,12 +64,12 @@ jobs:
           black --check python/
           black --check tests/
 
-      # - name: Test with pytest
-      #   run: |
-      #     python -m pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
-      #     pytest
+      - name: Test with pytest
+        run: |
+          python -m pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
+          pytest
 
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     file: ./coverage.xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml

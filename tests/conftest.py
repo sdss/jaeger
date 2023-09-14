@@ -21,7 +21,7 @@ from pymodbus.datastore import (
     ModbusServerContext,
     ModbusSlaveContext,
 )
-from pymodbus.server import StartAsyncTcpServer
+from pymodbus.server import ServerAsyncStop, StartAsyncTcpServer
 
 import clu.testing
 from clu.testing import TestCommand
@@ -31,15 +31,16 @@ from sdsstools import read_yaml_file
 sys.modules["coordio.transforms"] = MagicMock()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(autouse=True)
 def setup_config():
     import jaeger
     from jaeger import config
 
     TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/virtual_fps.yaml")
+    IEB_TEST_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "data/ieb_test.yaml")
 
     config["safe_mode"] = False
-    config["ieb"]["config"] = "etc/ieb_APO.yaml"
+    config["ieb"]["config"] = IEB_TEST_CONFIG_FILE
     config["fps"]["start_pollers"] = True
 
     config["fps"]["snapshot_path"] = "/var/tmp/logs/jaeger/snapshots"
@@ -83,7 +84,7 @@ def download_data():
         urllib.request.urlretrieve(url, outpath)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def test_config(setup_config):
     """Yield the test configuration as a dictionary."""
 
@@ -91,7 +92,7 @@ def test_config(setup_config):
 
 
 @pytest.fixture()
-async def ieb_server(event_loop):
+async def ieb_server():
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0] * 100),
         co=ModbusSequentialDataBlock(512, [0] * 100),
@@ -101,20 +102,11 @@ async def ieb_server(event_loop):
 
     context = ModbusServerContext(slaves=store, single=True)
 
-    server = await StartAsyncTcpServer(
-        context=context,
-        address=("127.0.0.1", 5020),
-        allow_reuse_address=True,
-        allow_reuse_port=True,
-        defer_start=True,
-    )
-    assert server
+    task = asyncio.create_task(StartAsyncTcpServer(context, address=("0.0.0.0", 5020)))
 
-    task = event_loop.create_task(server.serve_forever())
+    yield
 
-    yield server
-
-    await server.server_close()
+    await ServerAsyncStop()
 
     task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
@@ -127,7 +119,6 @@ async def vfps(ieb_server, monkeypatch):
 
     import jaeger
     from jaeger.can import JaegerCAN
-    from jaeger.ieb import IEB
     from jaeger.testing import VirtualFPS
 
     # Make initialisation faster.
@@ -136,21 +127,20 @@ async def vfps(ieb_server, monkeypatch):
     fps = await VirtualFPS.create(initialise=False)
     fps.pid_lock = True  # type: ignore  # Hack to prevent use of lock.
 
-    assert isinstance(fps.ieb, IEB)
-    fps.ieb.address = "127.0.0.1"
-    fps.ieb.client.params.port = 5020
-    await asyncio.sleep(0.01)  # Give time to the IEB server to serve.
+    await fps.initialise()
 
-    async with fps:
-        yield fps
+    yield fps
 
     assert isinstance(fps.can, JaegerCAN) and fps.can._command_queue_task
 
-    await fps.ieb.client.close()
     fps.can._command_queue_task.cancel()
 
     with contextlib.suppress(asyncio.CancelledError):
         await fps.can._command_queue_task
+
+    tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
+    list(map(lambda task: task.cancel(), tasks))
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 @pytest.fixture()
