@@ -210,6 +210,7 @@ async def _load_design(
                 apogee_wavelength=apogee_wavelength,
             )
         except Exception as err:
+            raise
             command.error(error=f"Failed retrieving design: {err}")
             return False
 

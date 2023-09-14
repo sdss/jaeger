@@ -9,7 +9,6 @@
 import pathlib
 
 import pytest
-
 from jaeger import maskbits
 from jaeger.commands.bootloader import load_firmware
 

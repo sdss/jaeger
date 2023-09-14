@@ -6,10 +6,9 @@
 # @Filename: test_utils.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+import jaeger.utils
 import numpy
 import pytest
-
-import jaeger.utils
 
 
 @pytest.mark.parametrize(

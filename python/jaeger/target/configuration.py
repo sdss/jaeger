@@ -45,9 +45,8 @@ from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 from sdsstools.time import get_sjd
 
-from jaeger import FPS
+from jaeger import FPS, config, log
 from jaeger import __version__ as jaeger_version
-from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
 from jaeger.ieb import IEB
 from jaeger.kaiju import (

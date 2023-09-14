@@ -13,13 +13,12 @@ from typing import cast
 import numpy
 import pandas
 import pytest
-
-from coordio import calibration
-
 from jaeger import FPS
 from jaeger.fvc import FVC
 from jaeger.positioner import Positioner
 from jaeger.target import ManualConfiguration
+
+from coordio import calibration
 
 
 class FakePositioner(Positioner):
