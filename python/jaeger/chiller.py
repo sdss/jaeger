@@ -53,11 +53,12 @@ class ChillerBot(BaseBot):
         dev_name = "TEMPERATURE_USER_SETPOINT"
         dev = chiller.get_device(dev_name)
 
-        if not isinstance(self.ieb, IEB) or self.ieb.disabled is True:
-            return
-
         if self.temperature is False or self.temperature is None:
             return
+
+        if self.temperature == "auto":
+            if not isinstance(self.ieb, IEB) or self.ieb.disabled is True:
+                return
 
         failed: bool = False
 
@@ -66,12 +67,6 @@ class ChillerBot(BaseBot):
             failed = False
 
             try:
-                ambient_temp = (await self.ieb.read_device("T3"))[0]
-                rh = (await self.ieb.read_device("RH3"))[0]
-
-                # Dewpoint temperature.
-                t_d = ambient_temp - (100 - rh) / 5.0
-
                 current_setpoint = (await dev.read())[0]
 
                 # If we are maintaining a fixed temperature, check if we
@@ -84,6 +79,14 @@ class ChillerBot(BaseBot):
                             logging.DEBUG,
                         )
                     break
+
+                assert isinstance(self.ieb, IEB) and self.ieb.disabled is False
+
+                ambient_temp = (await self.ieb.read_device("T3"))[0]
+                rh = (await self.ieb.read_device("RH3"))[0]
+
+                # Dewpoint temperature.
+                t_d = ambient_temp - (100 - rh) / 5.0
 
                 # What follows is if we are setting the set point
                 # based on the ambient temperature.
@@ -121,9 +124,6 @@ class ChillerBot(BaseBot):
 
         dev_name = "FLOW_USER_SETPOINT"
         dev = chiller.get_device(dev_name)
-
-        if not isinstance(self.ieb, IEB) or self.ieb.disabled is True:
-            return
 
         if self.flow is True or self.flow == "auto":
             self.flow = self.chiller_config.get("flow", False)
