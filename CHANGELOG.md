@@ -6,6 +6,7 @@
 
 * [#200](https://github.com/sdss/jaeger/issues/200) Save copy of `confSummary` files to `$SDSSCORE_TEST_DIR`, if present. For testing purposes only, for now.
 * Modify default ZB orders passed to the FVC transformation and add flag `--polids` to `jaeger fvc loop` to manually set the orders.
+* Increased timeout for `jaeger configuration preload`.
 
 ### ✨ Improved
 
@@ -13,6 +14,16 @@
 * [#200](https://github.com/sdss/jaeger/pull/200) Initial test to update files in `sdsscore_test`.
 * [#201](https://github.com/sdss/jaeger/issues/201) Move FVC dark frames to calibration folder where they won't be deleted in the future.
 * Updated call to coordio's `object_offset()`.
+* Chiller: do not depend on IEB when setting absolute values.
+
+### 🔧 Fixed
+
+* If measured alpha vs reported alpha are on either side of the wrap at 360 deg, then adjust the offset for the FVC loop.
+* Update IEB info before calling `write_proc_image()`.
+
+### ⚙️ Engineering
+
+* Lint using `ruff`.
 
 
 ## 1.4.0 - April 15, 2023
