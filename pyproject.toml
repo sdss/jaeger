@@ -87,7 +87,7 @@ exclude = ["typings/"]
 "__init__.py" = ["F401", "F403", "E402"]
 
 [tool.ruff.isort]
-known-first-party = ["araviscam"]
+known-first-party = ["jaeger"]
 lines-after-imports = 2
 section-order = ["future", "standard-library", "typing", "third-party", "sdss", "first-party", "local-folder"]
 

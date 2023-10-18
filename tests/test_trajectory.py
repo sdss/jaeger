@@ -7,6 +7,7 @@
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
 import pytest
+
 from jaeger import config
 from jaeger.commands.trajectory import Trajectory, send_trajectory
 from jaeger.exceptions import JaegerError, TrajectoryError

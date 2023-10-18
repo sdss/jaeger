@@ -8,5 +8,4 @@
 
 from jaeger import __main__
 
-
 __main__.jaeger()

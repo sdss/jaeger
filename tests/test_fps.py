@@ -9,15 +9,16 @@
 import asyncio
 import pathlib
 
-import jaeger
 import pytest
+
+from drift import Relay
+
+import jaeger
 from jaeger.can import JaegerCAN
 from jaeger.exceptions import JaegerError, JaegerUserWarning
 from jaeger.fps import FPS
 from jaeger.maskbits import PositionerStatus
 from jaeger.testing import VirtualFPS
-
-from drift import Relay
 
 
 # Need to mark all tests with positioners to make sure they are created,

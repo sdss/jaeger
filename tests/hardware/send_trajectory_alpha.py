@@ -10,6 +10,7 @@ import asyncio
 import sys
 
 import numpy
+
 from jaeger import log
 from jaeger.fps import FPS
 

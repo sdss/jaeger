@@ -8,11 +8,9 @@ import time
 import click
 import numpy
 import pandas as pd
-
 from kaiju import utils
 from kaiju.robotGrid import RobotGridCalib
 from sdsstools.daemonizer import cli_coro
-
 
 # hardcoded defaults
 MET_LED = 6  # leds 1 and 2

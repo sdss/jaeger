@@ -10,6 +10,7 @@ import asyncio
 import sys
 
 import pytest
+
 from jaeger.maskbits import FPSStatus
 
 
