@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pandas
-from pydl.pydlutils.sdss import yanny
 
 from coordio.conv import (
     positionerToTangent,
@@ -25,6 +24,7 @@ from coordio.conv import (
     wokToTangent,
 )
 from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
+from sdsstools import yanny
 
 import jaeger.target
 from jaeger import config, log

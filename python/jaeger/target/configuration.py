@@ -22,7 +22,6 @@ import numpy
 import pandas
 from astropy.table import Table
 from astropy.time import Time
-from pydl.pydlutils.yanny import write_ndarray_to_yanny
 
 from coordio import (
     ICRS,
@@ -43,6 +42,7 @@ from coordio.defaults import (
 )
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
+from sdsstools._vendor.yanny import write_ndarray_to_yanny
 from sdsstools.time import get_sjd
 
 from jaeger import FPS, config, log
