@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
     env:
       WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanBase'
@@ -23,29 +23,13 @@ jobs:
       OBSERVATORY: 'APO'
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Cache Setup
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-
-      - name: Create directories
-        run: |
-          mkdir -p $RUNNER_TEMP/logs/jaeger
-
-      - name: Clone fps_calibrations
-        uses: actions/checkout@v3
-        with:
-          repository: sdss/fps_calibrations
-          ref: APO.2021.11.14
-          path: fps_calibrations
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -72,4 +56,5 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
