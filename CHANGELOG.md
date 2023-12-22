@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.1 - December 22, 2023
+
+### 🏷️ Changed
+
+* Deprecate Python 3.8. Support 3.12.
+* Use `sdsstools` version of `yanny`.
+
+### 🔧 Fixed
+
+* Ensure that `fvc_image_path`` is populated.
+
+
 ## 1.5.0 - September 29, 2023
 
 ### 🚀 New
