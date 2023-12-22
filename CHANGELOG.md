@@ -1,10 +1,13 @@
 # Changelog
 
-## 1.5.1 - December 22, 2023
+## 1.6.0 - December 22, 2023
+
+### 🔥 Breaking changes
+
+* Deprecate Python 3.8.
 
 ### 🏷️ Changed
 
-* Deprecate Python 3.8.
 * Use `sdsstools` version of `yanny`.
 
 ### 🔧 Fixed
