@@ -4,7 +4,7 @@
 
 ### 🏷️ Changed
 
-* Deprecate Python 3.8. Support 3.12.
+* Deprecate Python 3.8.
 * Use `sdsstools` version of `yanny`.
 
 ### 🔧 Fixed

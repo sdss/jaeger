@@ -1,6 +1,6 @@
 # jaeger
 
-![Versions](https://img.shields.io/badge/python->3.8-blue)
+![Versions](https://img.shields.io/badge/python-3.9-3.10-3.11-blue)
 [![Documentation Status](https://readthedocs.org/projects/jaeger/badge/?version=latest)](https://sdss-jaeger.readthedocs.io/en/latest/?badge=latest)
 [![Tests Status](https://github.com/sdss/jaeger/workflows/Test/badge.svg)](https://github.com/sdss/jaeger/actions)
 [![codecov](https://codecov.io/gh/sdss/jaeger/branch/main/graph/badge.svg)](https://codecov.io/gh/sdss/jaeger)
