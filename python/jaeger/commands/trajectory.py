@@ -554,12 +554,14 @@ class Trajectory(object):
 
         else:
             # Start trajectories
+            n_expected = len([pos for pos in self.fps.values() if not pos.offline])
             command = await self.fps.send_command(
                 "START_TRAJECTORY",
                 positioner_ids=0,
                 timeout=1,
-                # All positioners reply, including those not in the trajectory.
-                n_positioners=len(self.fps.positioners),
+                # All positioners reply, including those not in the trajectory but not
+                # offline ones.
+                n_positioners=n_expected,
             )
 
             if command.status.failed:

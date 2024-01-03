@@ -1124,10 +1124,18 @@ class FPS(BaseFPS["FPS"]):
             positioner_ids = [
                 pos.positioner_id
                 for pos in self.values()
-                if pos.initialised and not pos.is_bootloader() and not pos.disabled
+                if pos.initialised and not pos.is_bootloader()
             ]
             if positioner_ids == []:
                 return numpy.array([])
+        elif isinstance(positioner_ids, int):
+            positioner_ids = [positioner_ids]
+
+        positioner_ids = [
+            pid
+            for pid in positioner_ids
+            if pid in self and (not self[pid].disabled and not self[pid].offline)
+        ]
 
         command = await self.send_command(
             CommandID.GET_ACTUAL_POSITION,
