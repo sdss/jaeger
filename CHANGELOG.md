@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🔧 Fixed
+
+* Fix some warnings and retries during broadcasts when a robot has been marked offline.
+
+
 ## 1.6.0 - December 22, 2023
 
 ### 🔥 Breaking changes

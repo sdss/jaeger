@@ -515,9 +515,10 @@ class FPS(BaseFPS["FPS"]):
         # Mark as initialised here although we have some more work to do.
         self.initialised = True
 
-        pids = sorted(list(self.keys()))
-        if len(pids) > 0:
-            log.info(f"Found {len(pids)} connected positioners: {pids!r}.")
+        positioners = self.positioners.values()
+        c_pids = sorted([pp.positioner_id for pp in positioners if not pp.offline])
+        if len(c_pids) > 0:
+            log.info(f"Found {len(c_pids)} connected positioners: {c_pids!r}.")
         else:
             warnings.warn("No positioners found.", JaegerUserWarning)
             return self
@@ -1059,7 +1060,7 @@ class FPS(BaseFPS["FPS"]):
             log.warning(f"{CommandID.GET_STATUS.name!r} failed during update status.")
             return False
 
-        if command.status.timed_out and not is_retry:
+        if command.status.timed_out and not is_retry and n_positioners is not None:
             log.warning("GET_STATUS timed out. Retrying.")
             return await self.update_status(positioner_ids, is_retry=True)
 
@@ -1115,7 +1116,8 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
-        if len(self.positioners) == 0:
+        valid = [pid for pid in self if self[pid].offline is False]
+        if len(self.positioners) == 0 or len(valid) == 0:
             return True
 
         if positioner_ids is None:
@@ -1189,7 +1191,11 @@ class FPS(BaseFPS["FPS"]):
             log.error("Failed retrieving firmware version.")
             return False
 
-        if get_fw_command.status.timed_out and not is_retry:
+        if (
+            get_fw_command.status.timed_out
+            and not is_retry
+            and n_positioners is not None
+        ):
             log.warning("GET_FIRMWARE_VERSION timed out. Retrying.")
             return await self.update_firmware_version(timeout=timeout, is_retry=True)
 
