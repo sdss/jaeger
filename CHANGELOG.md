@@ -5,6 +5,7 @@
 ### 🔧 Fixed
 
 * Fix some warnings and retries during broadcasts when a robot has been marked offline.
+* Fix future deprecation in Pandas by downcasting columns in the assignment fibre data.
 
 
 ## 1.6.0 - December 22, 2023

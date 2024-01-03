@@ -779,13 +779,9 @@ class BaseConfiguration:
             right_index=True,
         ).set_index("positionerID_x")
 
-        fdata.loc[
-            (fass.index, "APOGEE"), "fiberId"
-        ] = fass.APOGEEFiber.tolist()  # type:ignore
-
-        fdata.loc[
-            (fass.index, "BOSS"), "fiberId"
-        ] = fass.BOSSFiber.tolist()  # type:ignore
+        fidx = fass.index
+        fdata.loc[(fidx, "APOGEE"), "fiberId"] = fass.APOGEEFiber.astype(numpy.int32)
+        fdata.loc[(fidx, "BOSS"), "fiberId"] = fass.BOSSFiber.astype(numpy.int32)
 
         fdata.fillna(-999, inplace=True)
 
@@ -1563,6 +1559,10 @@ class BaseAssignmentData:
 
         # Now do a single update of the whole fibre table.
         new_data = pandas.DataFrame.from_dict(data, orient="index")
+        for column, dtype, _ in self._columns:
+            if column in new_data:
+                new_data[column] = new_data[column].astype(dtype)
+
         self.fibre_table.loc[new_data.index, new_data.columns] = new_data
         self.fibre_table.index.set_names(("positioner_id", "fibre_type"), inplace=True)
 
