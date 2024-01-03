@@ -779,9 +779,8 @@ class BaseConfiguration:
             right_index=True,
         ).set_index("positionerID_x")
 
-        fidx = fass.index
-        fdata.loc[(fidx, "APOGEE"), "fiberId"] = fass.APOGEEFiber.astype(numpy.int32)
-        fdata.loc[(fidx, "BOSS"), "fiberId"] = fass.BOSSFiber.astype(numpy.int32)
+        fdata.loc[(fass.index, "APOGEE"), "fiberId"] = fass.APOGEEFiber.tolist()
+        fdata.loc[(fass.index, "BOSS"), "fiberId"] = fass.BOSSFiber.tolist()
 
         fdata.fillna(-999, inplace=True)
 
