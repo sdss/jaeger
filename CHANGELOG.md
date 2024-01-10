@@ -2,6 +2,10 @@
 
 ## Next version
 
+### ✨ Improved
+
+* Reset cherno offsets when a design gets loaded.
+
 ### 🔧 Fixed
 
 * Fix some warnings and retries during broadcasts when a robot has been marked offline.

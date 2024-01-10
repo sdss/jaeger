@@ -462,6 +462,10 @@ async def load(
                 "F",
             )
 
+    # Reset cherno offsets
+    command.debug("Resetting cherno offsets.")
+    await command.send_command("cherno", "offset")
+
     _output_configuration_loaded(command, fps)
 
     snapshot = await fps.configuration.save_snapshot()
