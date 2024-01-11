@@ -5,6 +5,7 @@
 ### ✨ Improved
 
 * Reset cherno offsets when a design gets loaded.
+* Use `coordio` 1.9.1b1 with `sdss-sep`.
 
 ### 🔧 Fixed
 
