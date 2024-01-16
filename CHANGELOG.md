@@ -5,12 +5,13 @@
 ### ✨ Improved
 
 * Reset cherno offsets when a design gets loaded.
-* Use `coordio` 1.9.1b1 with `sdss-sep`.
+* Use `coordio` 1.9.2 with `sdss-sep`.
 
 ### 🔧 Fixed
 
 * Fix some warnings and retries during broadcasts when a robot has been marked offline.
 * Fix future deprecation in Pandas by downcasting columns in the assignment fibre data.
+* Fix docs builds.
 
 
 ## 1.6.0 - December 22, 2023
