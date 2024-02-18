@@ -110,3 +110,5 @@ setup.py
 tests/data/*.fits
 
 pyrightconfig.json
+
+.ruff_cache
