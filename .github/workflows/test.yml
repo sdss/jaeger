@@ -62,6 +62,7 @@ jobs:
       - name: Populate database
         run: |
           cd tests/targetdb
+          psql sdss5db_jaeger < targetdb.sql
           psql sdss5db_jaeger < restore_sample_files.sql
         env:
           PGSERVICE: ${{ steps.postgres.outputs.service-name }}
