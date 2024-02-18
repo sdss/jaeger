@@ -1,0 +1,15 @@
+\COPY targetdb.cadence FROM 'sample_files/cadence.csv' WITH CSV HEADER;
+\COPY targetdb.carton FROM 'sample_files/carton.csv' WITH CSV HEADER;
+\COPY targetdb.design_mode FROM 'sample_files/design_mode.csv' WITH CSV HEADER;
+\COPY targetdb.hole FROM 'sample_files/hole.csv' WITH CSV HEADER;
+\COPY targetdb.obsmode FROM 'sample_files/obsmode.csv' WITH CSV HEADER;
+\COPY targetdb.positioner_status FROM 'sample_files/positioner_status.csv' WITH CSV HEADER;
+\COPY targetdb.version FROM 'sample_files/version.csv' WITH CSV HEADER;
+\COPY temp_assignment FROM 'sample_files/assignment.csv' WITH CSV HEADER;
+\COPY temp_assignment_status FROM 'sample_files/assignment_status.csv' WITH CSV HEADER;
+\COPY temp_carton_to_target FROM 'sample_files/carton_to_target.csv' WITH CSV HEADER;
+\COPY temp_target FROM 'sample_files/target.csv' WITH CSV HEADER;
+\COPY temp_design FROM 'sample_files/design.csv' WITH CSV HEADER;
+\COPY temp_design_to_field FROM 'sample_files/design_to_field.csv' WITH CSV HEADER;
+\COPY temp_field FROM 'sample_files/field.csv' WITH CSV HEADER;
+\COPY temp_magnitude FROM 'sample_files/magnitude.csv' WITH CSV HEADER;

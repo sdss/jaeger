@@ -1,0 +1,6 @@
+label,min_moon_sep,min_deltav_ks91,min_twilight_ang,max_airmass_apo,max_airmass_lco
+dark_plane,35,-1.5,15,1.6,1.6
+dark_monit,35,-1.5,15,1.4,1.4
+dark_rm,35,-1.5,15,1.4,1.4
+dark_faint,35,-0.5,15,1.4,1.4
+bright_time,15,-3,8,2,1.7
