@@ -18,9 +18,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 packages = [
-    { include = "jaeger", from = "python" }
+    { include = "jaeger", from = "src" }
 ]
-include = ["python/jaeger/etc/*"]
+include = ["src/jaeger/etc/*"]
 
 [tool.poetry.dependencies]
 python = "^3.9,<3.11"
@@ -107,7 +107,7 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-include = ["python/jaeger/*"]
+include = ["src/jaeger/*"]
 omit = [
     "*/__main__.py",
     "*/__init__.py",
