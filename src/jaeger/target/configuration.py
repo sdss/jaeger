@@ -1674,9 +1674,9 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[
-                (positioner_id, fibre_type), row.keys()
-            ] = row  # type:ignore
+            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = (
+                row
+            )  # type:ignore
 
         return row
 
@@ -1757,9 +1757,9 @@ class BaseAssignmentData:
         row.update(kwargs)
 
         if update:
-            self.fibre_table.loc[
-                (positioner_id, fibre_type), row.keys()
-            ] = row  # type:ignore
+            self.fibre_table.loc[(positioner_id, fibre_type), row.keys()] = (
+                row
+            )  # type:ignore
 
         return row
 
