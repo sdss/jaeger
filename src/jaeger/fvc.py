@@ -13,7 +13,6 @@ import logging
 import os
 import pathlib
 import warnings
-from copy import deepcopy
 from functools import partial
 
 from typing import TYPE_CHECKING, Any, Optional
@@ -53,7 +52,8 @@ FVC_CONFIG = config["fvc"]
 
 
 # Create a coroutine out of the original plotFVCResults.
-plotFVCResultsCo = asyncio.coroutine(deepcopy(transforms.plotFVCResults))
+async def plotFVCResultsCo(*args, **kwargs):
+    transforms.plotFVCResults(*args, **kwargs)
 
 
 def plotFVCResultsMP(loop: asyncio.AbstractEventLoop, *args, **kwargs):
