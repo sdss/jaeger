@@ -194,9 +194,9 @@ def decollide(
     # Sort collided robots by priority order.
     collided = sorted(
         collided,
-        key=lambda x: len(priority_order) - priority_order.index(x)
-        if x in priority_order
-        else -1,
+        key=lambda x: (
+            len(priority_order) - priority_order.index(x) if x in priority_order else -1
+        ),
     )
 
     decollided = []

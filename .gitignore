@@ -67,7 +67,7 @@ docs/sphinx/_build/
 
 # PyBuilder
 target/
-!python/jaeger/target
+!src/jaeger/target
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -110,3 +110,5 @@ setup.py
 tests/data/*.fits
 
 pyrightconfig.json
+
+.ruff_cache
