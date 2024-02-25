@@ -89,7 +89,7 @@ configuration:
   scale_temperature_coeffs: null
   use_guider_scale: true
   guider_max_scale_age: 3600
-  clip_scale: 500
+  clip_scale: 3000
   scale_fudge_factor: 0.9987
   max_cloned_time: 4500
   max_designs_epoch: 4
