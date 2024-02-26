@@ -85,7 +85,7 @@ kaiju:
   phobia: 0.6
 
 configuration:
-  default_focal_scale: 0.9985
+  default_focal_scale: 1.0003
   scale_temperature_coeffs: null
   use_guider_scale: true
   guider_max_scale_age: 3600
