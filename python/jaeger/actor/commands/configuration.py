@@ -57,6 +57,7 @@ async def _load_design(
     fudge_factor: float | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
+    extra_epoch_delay: float = 0.0,
     boss_wavelength: float | None = None,
     apogee_wavelength: float | None = None,
     get_paths: bool = True,
@@ -72,7 +73,9 @@ async def _load_design(
             epoch_delay=True,
         )
         if epoch_delay == 0.0 and _epoch_delay is not None:
-            epoch_delay = _epoch_delay
+            epoch_delay = _epoch_delay + extra_epoch_delay
+        else:
+            epoch_delay += extra_epoch_delay
 
     if design_id is None:
         command.error("Failed getting a new design from the queue.")
@@ -263,6 +266,13 @@ def configuration():
     help="A delay in seconds for the epoch for which the configuration is calculated.",
 )
 @click.option(
+    "--extra-epoch-delay",
+    type=float,
+    default=0.0,
+    help="A delay in seconds to be added on top of the --epoch-delay. This is "
+    "mainly used by HAL when it preloads a design ahead of time..",
+)
+@click.option(
     "--boss-wavelength",
     type=click.FloatRange(3000, 10000),
     help="Optimise positioning of BOSS fibres to this wavelength.",
@@ -349,6 +359,7 @@ async def load(
     generate_paths: bool = False,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
+    extra_epoch_delay: float = 0.0,
     apogee_wavelength: float | None = None,
     boss_wavelength: float | None = None,
     ingest: bool = False,
@@ -402,6 +413,7 @@ async def load(
             scale=scale,
             epoch=epoch,
             epoch_delay=epoch_delay,
+            extra_epoch_delay=extra_epoch_delay,
             boss_wavelength=boss_wavelength,
             apogee_wavelength=apogee_wavelength,
             get_paths=False,
@@ -580,6 +592,13 @@ async def clone(command: Command[JaegerActor], fps: FPS):
     help="A delay in seconds for the epoch for which the configuration is calculated.",
 )
 @click.option(
+    "--extra-epoch-delay",
+    type=float,
+    default=0.0,
+    help="A delay in seconds to be added on top of the --epoch-delay. This is "
+    "mainly used by HAL when it preloads a design ahead of time..",
+)
+@click.option(
     "--boss-wavelength",
     type=click.FloatRange(3000, 10000),
     help="Optimise positioning of BOSS fibres to this wavelength.",
@@ -636,6 +655,7 @@ async def preload(
     designid: int | None = None,
     epoch: float | None = None,
     epoch_delay: float = 0.0,
+    extra_epoch_delay: float = 0.0,
     apogee_wavelength: float | None = None,
     boss_wavelength: float | None = None,
     scale: float | None = None,
@@ -670,6 +690,7 @@ async def preload(
         fudge_factor=fudge_factor,
         epoch=epoch,
         epoch_delay=epoch_delay,
+        extra_epoch_delay=extra_epoch_delay,
         boss_wavelength=boss_wavelength,
         apogee_wavelength=apogee_wavelength,
         safety_factor=safety_factor,
