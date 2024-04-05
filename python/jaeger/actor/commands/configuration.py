@@ -170,9 +170,10 @@ async def _load_design(
                         raise ValueError("Invalid ambient temperature")
 
                     guider_scale = float(numpy.polyval(temp_coeffs, temperature))
-                    # HACK: we should redo this relation, but for now just use the
-                    # measured change in guider scale after moving the IMB.
-                    guider_scale *= 1.0018904537
+                    if command.actor.observatory == "LCO":
+                        # HACK: we should redo this relation, but for now just use the
+                        # measured change in guider scale after moving the IMB.
+                        guider_scale *= 1.0018904537
 
                     command.debug(
                         "Using focal scale factor derived from ambient "
