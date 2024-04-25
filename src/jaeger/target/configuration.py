@@ -175,7 +175,7 @@ class BaseConfiguration:
 
         self.extra_summary_data = {}
 
-        self.fps = FPS.get_instance()
+        self.fps: FPS | None = None
 
         self.robot_grid = self._initialise_grid()
 
@@ -292,7 +292,9 @@ class BaseConfiguration:
     def _initialise_grid(self, collision_buffer: float | None = None):
         """Create a robot grid."""
 
-        self.robot_grid = get_robot_grid(self.fps, collision_buffer=collision_buffer)
+        fps = self.fps or FPS.get_instance()
+
+        self.robot_grid = get_robot_grid(fps, collision_buffer=collision_buffer)
 
         return self.robot_grid
 
@@ -302,8 +304,10 @@ class BaseConfiguration:
     async def get_temperature(self):
         """Returns the T3 temperature."""
 
-        if self.fps and isinstance(self.fps.ieb, IEB):
-            temp: float = (await self.fps.ieb.read_device("T3"))[0]
+        fps = self.fps or FPS.get_instance()
+
+        if fps and isinstance(fps.ieb, IEB):
+            temp: float = (await fps.ieb.read_device("T3"))[0]
         else:
             temp = -999.0
 
@@ -1104,8 +1108,10 @@ class DitheredConfiguration(BaseConfiguration):
 
         self.robot_grid = self._initialise_grid(collision_buffer=collision_buffer)
 
-        await self.fps.update_position()
-        positions = self.fps.get_positions_dict()
+        fps = self.fps or FPS.get_instance()
+
+        await fps.update_position()
+        positions = fps.get_positions_dict()
 
         for robot in self.robot_grid.robotDict.values():
             if robot.isOffline:
