@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.3 - April 1, 2024
+
+### ✨ Improved
+
+* Add `--extra-epoch-delay` to `jaeger configuration load` and `preload`. This parameter adds an extra delay to the configuration epoch. It is mainly used by HAL when it preloads a design ahead of time
+
+
+## 1.6.2 - February 27, 2024
+
+### 🏷️ Changed
+
+* Change LCO expected scale factors after IMB modifications.
+
+
 ## 1.6.1 - January 15, 2024
 
 ### ✨ Improved
