@@ -19,7 +19,7 @@ from drift import DriftError, Relay
 from jaeger import config
 from jaeger.exceptions import FVCError
 from jaeger.fvc import FVC
-from jaeger.ieb import FVC as FVC_IEB
+from jaeger.ieb import FVC_IEB
 from jaeger.target.configuration import ManualConfiguration
 from jaeger.utils import run_in_executor
 

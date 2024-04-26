@@ -66,6 +66,7 @@ actor_instance: JaegerActor | None = None
 from .can import *
 from .exceptions import *
 from .fps import *
+from .fvc import *
 from .ieb import *
 from .maskbits import *
 from .positioner import *

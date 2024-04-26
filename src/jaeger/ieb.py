@@ -18,7 +18,7 @@ from jaeger import config
 from jaeger.exceptions import JaegerUserWarning
 
 
-__all__ = ["IEB", "FVC", "_get_category_data"]
+__all__ = ["IEB", "FVC_IEB", "_get_category_data"]
 
 
 async def _get_category_data(command, category) -> list:
@@ -133,7 +133,7 @@ class IEB(Drift):
         return status
 
 
-class FVC(IEB):
+class FVC_IEB(IEB):
     """Connects to the FVC IEB."""
 
     @classmethod
