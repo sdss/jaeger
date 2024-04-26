@@ -36,6 +36,11 @@ jobs:
           repository: sdss/fps_calibrations
           path: fps_calibrations
 
+      - run: |
+          pwd
+          ls
+          ls */*
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
