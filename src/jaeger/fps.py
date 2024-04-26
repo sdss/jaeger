@@ -842,6 +842,9 @@ class FPS(BaseFPS):
             positioner_ids = [p for p in self if not self[p].disabled]
 
         if not isinstance(command, Command):
+            if isinstance(command, str):
+                command = CommandID[command]
+
             command_flag = CommandID(command)
             assert isinstance(command_flag, CommandID)
             CommandClass = command_flag.get_command_class()

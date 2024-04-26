@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import enum
+from curses import meta
 
 from typing import Dict, Type, Union
 
@@ -16,13 +17,14 @@ from typing import Dict, Type, Union
 class TypesEnumMeta(enum.EnumMeta):
     """Metaclass to allow initialising an Enum from a string."""
 
-    def __call__(cls: Type[enum.Enum], value: Union[str, int]):  # type: ignore
+    def __call__(cls: Type[enum.Enum], value: Union[str, int]):
         if isinstance(value, str):
             for flag in cls:
                 if flag.name.lower() == value.lower():
-                    return cls(flag.value)
+                    return enum.EnumMeta.__call__(cls, flag.value)
+            raise ValueError(f"Invalid {cls.__name__} value: {value}")
 
-        return super().__call__(value)
+        return enum.EnumMeta.__call__(cls, value)
 
 
 class CommandID(enum.IntEnum, metaclass=TypesEnumMeta):
