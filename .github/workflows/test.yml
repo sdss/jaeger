@@ -65,7 +65,7 @@ jobs:
           psql sdss5db_jaeger < targetdb.sql
           psql sdss5db_jaeger < restore_sample_files.sql
           cd ../opsdb_apo
-          psql sdss5db_jaeger < opsdb_apo
+          psql sdss5db_jaeger < opsdb_apo.sql
         env:
           PGSERVICE: ${{ steps.postgres.outputs.service-name }}
 
