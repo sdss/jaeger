@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import enum
-from curses import meta
 
 from typing import Dict, Type, Union
 

@@ -27,6 +27,8 @@ import clu.testing
 from clu.testing import TestCommand
 from sdsstools import read_yaml_file
 
+from jaeger.fps import _FPS_INSTANCES
+
 
 sys.modules["coordio.transforms"] = MagicMock()
 
@@ -182,3 +184,10 @@ async def actor(vfps):
 async def command(actor):
     command = TestCommand(commander_id=1, actor=actor)
     yield command
+
+
+@pytest.fixture(autouse=True)
+def clear_fps_instances():
+    yield
+
+    _FPS_INSTANCES.clear()
