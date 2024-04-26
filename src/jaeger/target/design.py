@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy
-import pandas
 import peewee
+import polars
 
 from coordio.defaults import calibration
 from coordio.utils import object_offset
@@ -153,24 +153,24 @@ class Design:
     def calculate_offsets(self, target_data: list[dict]):
         """Determines the target offsets."""
 
-        def _offset(group: pandas.DataFrame):
-            design_mode = group.iloc[0].design_mode
-            fibre_type = group.iloc[0].fibre_type
+        def _offset(group: polars.DataFrame):
+            design_mode = group[0, "design_mode"]
+            fibre_type = group[0, "fibre_type"]
 
             design_mode_rec = targetdb.DesignMode.get(label=design_mode)
 
             mag = numpy.array(
                 [
-                    group.gaia_g.values,
-                    group.r.values,
-                    group.i.values,
-                    group.z.values,
-                    group.bp.values,
-                    group.gaia_g.values,
-                    group.rp.values,
-                    group.j.values,
-                    group.h.values,
-                    group.k.values,
+                    group["gaia_g"].to_numpy(),
+                    group["r"].to_numpy(),
+                    group["i"].to_numpy(),
+                    group["z"].to_numpy(),
+                    group["bp"].to_numpy(),
+                    group["gaia_g"].to_numpy(),
+                    group["rp"].to_numpy(),
+                    group["j"].to_numpy(),
+                    group["h"].to_numpy(),
+                    group["k"].to_numpy(),
                 ]
             )
             mag = mag.astype("f8").T
@@ -187,9 +187,9 @@ class Design:
                 lunation = "dark"
                 skybrightness = 0.35
 
-            can_offset = numpy.array(group.can_offset.values)
+            can_offset = group["can_offset"].to_numpy()
 
-            if numpy.any(can_offset):
+            if can_offset.any():
                 # TODO: this should not be necessary but right now there's a bug in
                 # object_offset that will return delta_ra=-1 when the design_mode
                 # doesn't have any magnitude limits defined.
@@ -208,21 +208,24 @@ class Design:
             else:
                 delta_ra = delta_dec = 0.0
 
-            group.loc[:, "delta_ra"] = delta_ra
-            group.loc[:, "delta_dec"] = delta_dec
+            assert isinstance(delta_ra, numpy.ndarray)
+            assert isinstance(delta_dec, numpy.ndarray)
 
-            return group
+            return group.with_columns(
+                delta_ra=polars.Series(values=delta_ra, dtype=polars.Float32),
+                delta_dec=polars.Series(values=delta_dec, dtype=polars.Float32),
+            )
 
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
         log.debug(f"safety_factor={self.safety_factor}")
 
         # Convert to data frame to group by fibre type (no need to group by design
         # mode since a design can only have one design mode).
-        df = pandas.DataFrame.from_records(target_data)
-        df = df.groupby(["fibre_type"], group_keys=False).apply(_offset)
+        df = polars.DataFrame(list(target_data))
+        df = df.groupby("fibre_type").apply(_offset)
 
         # Return as a list of dicts again.
-        return [vv for vv in df.transpose().to_dict().values()]
+        return df.rows(named=True)
 
     @classmethod
     def check_design(cls, design_id: int, site: str):
