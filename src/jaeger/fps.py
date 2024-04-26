@@ -66,6 +66,11 @@ try:
 except ImportError:
     calibration = None
 
+try:
+    IPYTHON = get_ipython()  # type: ignore
+except NameError:
+    IPYTHON = None
+
 
 __all__ = ["BaseFPS", "FPS"]
 
@@ -223,8 +228,9 @@ class FPS(BaseFPS):
         else:
             warnings.warn("Unknown configuration file.", JaegerUserWarning)
 
-        self.loop = asyncio.get_event_loop()
-        self.loop.set_exception_handler(log.asyncio_exception_handler)
+        if not IPYTHON:
+            loop = asyncio.get_event_loop()
+            loop.set_exception_handler(log.asyncio_exception_handler)
 
         # The mapping between positioners and buses.
         self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
@@ -237,6 +243,10 @@ class FPS(BaseFPS):
         self.observatory = config["observatory"]
 
         self.disabled: set[int] = set([])
+
+        if IPYTHON:
+            log.warning("IEB cannot run inside IPython.")
+            self.ieb = False
 
         if self.ieb is None or self.ieb is True:
             self.ieb = config["ieb"]["config"]
