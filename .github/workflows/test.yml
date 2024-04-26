@@ -30,6 +30,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install fps_calibrations
+        uses: actions/checkout@v4
+        with:
+          repository: sdss/fps_calibrations
+          path: jaeger/fps_calibrations
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
