@@ -23,7 +23,7 @@ jobs:
         python-version: ['3.9', '3.10', '3.11', '3.12']
 
     env:
-      WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanBase'
+      WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanFlatCMM '
       PYTHONPATH: '/home/runner/work/jaeger/jaeger/fps_calibrations'
       OBSERVATORY: 'APO'
 
@@ -35,11 +35,6 @@ jobs:
         with:
           repository: sdss/fps_calibrations
           path: fps_calibrations
-
-      - run: |
-          pwd
-          ls
-          ls */*
 
       - name: Set up Python
         uses: actions/setup-python@v5
