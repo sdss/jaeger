@@ -5,6 +5,8 @@
 \COPY targetdb.obsmode TO 'sample_files/obsmode.csv' WITH CSV HEADER;
 \COPY targetdb.positioner_status TO 'sample_files/positioner_status.csv' WITH CSV HEADER;
 \COPY targetdb.version TO 'sample_files/version.csv' WITH CSV HEADER;
+\COPY targetdb.category TO 'sample_files/category.csv' WITH CSV HEADER;
+\COPY targetdb.positioner_status TO 'sample_files/positioner_status.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_assignment AS (
     SELECT a.* from targetdb.assignment a
@@ -13,17 +15,17 @@ CREATE TEMP TABLE temp_assignment AS (
 \COPY temp_assignment TO 'sample_files/assignment.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_assignment_status AS (
-    SELECT ast.* from targetdb.assignment_status ast
+    SELECT DISTINCT ON (ast.pk) ast.* from targetdb.assignment_status ast
        JOIN temp_assignment ta ON ast.assignment_pk = ta.pk);
 \COPY temp_assignment_status TO 'sample_files/assignment_status.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_carton_to_target AS (
-    SELECT c.* from targetdb.carton_to_target c
+    SELECT DISTINCT ON (pk) c.* from targetdb.carton_to_target c
        JOIN temp_assignment ta ON ta.carton_to_target_pk = c.pk);
 \COPY temp_carton_to_target TO 'sample_files/carton_to_target.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_target AS (
-    SELECT t.* from targetdb.target t
+    SELECT DISTINCT ON (t.pk) t.* from targetdb.target t
        JOIN temp_carton_to_target ctt ON t.pk = ctt.target_pk);
 \COPY temp_target TO 'sample_files/target.csv' WITH CSV HEADER;
 
@@ -38,11 +40,11 @@ CREATE TEMP TABLE temp_design_to_field AS (
 \COPY temp_design_to_field TO 'sample_files/design_to_field.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_field AS (
-    SELECT f.* from targetdb.field f
+    SELECT DISTINCT ON (field_id) f.* from targetdb.field f
        JOIN temp_design_to_field d ON f.pk = d.field_pk);
 \COPY temp_field TO 'sample_files/field.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_magnitude AS (
-    SELECT m.* from targetdb.magnitude m
+    SELECT DISTINCT ON (pk) m.* from targetdb.magnitude m
        JOIN temp_carton_to_target tctt ON tctt.pk = m.carton_to_target_pk);
 \COPY temp_magnitude TO 'sample_files/magnitude.csv' WITH CSV HEADER;

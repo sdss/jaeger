@@ -1,6 +1,17 @@
+/*
+
+targetDB schema version v0.5.0
+
+Created Jan 2018 - J. Sánchez-Gallego
+Updated Feb 2020 - J. Sánchez-Gallego
+Updated Feb 2021 - J. Donor
+Updated Oct 2021 - J. Sánchez-Gallego (updated positioner table).
+
+*/
+
 CREATE SCHEMA targetdb;
 
-SET search_path TO targetdb,public;
+SET search_path TO targetdb;
 
 CREATE TABLE targetdb.target (
     pk BIGSERIAL PRIMARY KEY NOT NULL,
@@ -21,18 +32,19 @@ CREATE TABLE targetdb.version (
 
 CREATE TABLE targetdb.magnitude (
     pk SERIAL PRIMARY KEY NOT NULL,
-    optical_prov TEXT,
     g REAL,
     r REAL,
     i REAL,
-    j REAL,
-    k REAL,
-    z REAL,
     h REAL,
     bp REAL,
-    gaia_g REAL,
     rp REAL,
-    carton_to_target_pk BIGINT);
+    carton_to_target_pk BIGINT,
+    z REAL,
+    j REAL,
+    k REAL,
+    gaia_g REAL,
+    optical_prov TEXT
+);
 
 CREATE TABLE targetdb.carton (
     pk SERIAL PRIMARY KEY NOT NULL,
@@ -54,34 +66,38 @@ CREATE TABLE targetdb.category (
 CREATE TABLE targetdb.carton_to_target (
     pk BIGSERIAL PRIMARY KEY NOT NULL,
     lambda_eff REAL,
-    instrument_pk INTEGER,
-    delta_ra DOUBLE PRECISION,
-    delta_dec DOUBLE PRECISION,
-    can_offset BOOLEAN DEFAULT false,
-    inertial BOOLEAN,
-    value REAL,
     carton_pk INTEGER,
     target_pk BIGINT,
     cadence_pk INTEGER,
-    priority INTEGER);
+    priority INTEGER,
+    value REAL,
+    instrument_pk INTEGER,
+    delta_ra DOUBLE PRECISION,
+    delta_dec DOUBLE PRECISION,
+    inertial BOOLEAN,
+    can_offset BOOLEAN DEFAULT false
+    );
 
-CREATE TABLE targetdb.cadence(
-    label TEXT NOT NULL,
-    nepochs INTEGER,
-    delta DOUBLE PRECISION[],
-    skybrightness REAL[],
-    delta_max REAL[],
-    delta_min REAL[],
-    nexp INTEGER[],
-    max_length REAL[],
-    pk SERIAL PRIMARY KEY,
-    obsmode_pk TEXT[],
-    label_root TEXT,
-    label_version TEXT DEFAULT ''
+-- We use "pk serial" instead of the usual catalogdb "pk bigserial"
+-- for consistency with the rest of targetdb.
+create table targetdb.cadence(
+    label text not null,
+    nepochs integer,
+    delta double precision[],
+    skybrightness real[],  -- TODO remove skybrightness later
+    delta_max real[],
+    delta_min real[],
+    nexp integer[],  -- old name was nexposures
+    max_length real[],
+    pk serial primary key,
+    obsmode_pk text[],
+    label_root text,
+    label_version text default ''
 );
 
-CREATE UNIQUE INDEX cadence_label_idx1 ON targetdb.cadence(label);
-ALTER TABLE targetdb.cadence ADD CONSTRAINT label_constraint CHECK (label = label_root || label_version);
+create unique index cadence_label_idx1 on targetdb.cadence(label);
+
+alter table targetdb.cadence add constraint label_constraint check (label = label_root || label_version);
 
 CREATE TABLE targetdb.instrument (
     pk SERIAL PRIMARY KEY NOT NULL,
@@ -110,22 +126,27 @@ CREATE TABLE targetdb.assignment (
 
 CREATE TABLE targetdb.design (
     design_id SERIAL PRIMARY KEY NOT NULL,
+    -- exposure BIGINT,
+    -- field_pk INTEGER,
     design_mode_label TEXT,
     mugatu_version TEXT,
     run_on DATE,
     assignment_hash UUID,
     design_version_pk INTEGER);
+    -- field_exposure BIGINT);
 
 CREATE TABLE targetdb.field (
     pk SERIAL PRIMARY KEY NOT NULL,
-    field_id INTEGER,
     racen DOUBLE PRECISION NOT NULL,
     deccen DOUBLE PRECISION NOT NULL,
-    position_angle REAL,
-    slots_exposures INTEGER[][],
     version_pk INTEGER,
     cadence_pk INTEGER,
-    observatory_pk INTEGER);
+    observatory_pk INTEGER,
+    position_angle REAL,
+    -- slots_exposures is 2x24, for dark/bright x LST
+    -- needs INTEGER b/c RM I think?
+    slots_exposures INTEGER[][],
+    field_id INTEGER);
 
 CREATE TABLE targetdb.design_to_field (
     pk SERIAL PRIMARY KEY NOT NULL,
@@ -140,39 +161,84 @@ CREATE TABLE targetdb.obsmode(
     min_moon_sep REAL,
     min_deltaV_KS91 REAL,
     min_twilight_ang REAL,
-    max_airmass REAL);
+    max_airmass_apo REAL,
+    max_airmass_lco REAL);
 
-CREATE TABLE targetdb.design_mode(
-    label TEXT PRIMARY KEY NOT NULL,
-    boss_skies_min INTEGER,
-    boss_skies_fov DOUBLE PRECISION[],
-    apogee_skies_min INTEGER,
-    apogee_skies_fov DOUBLE PRECISION[],
-    boss_stds_min INTEGER,
-    boss_stds_mags_min DOUBLE PRECISION[],
-    boss_stds_mags_max DOUBLE PRECISION[],
-    boss_stds_fov DOUBLE PRECISION[],
-    apogee_stds_min INTEGER,
-    apogee_stds_mags_min DOUBLE PRECISION[],
-    apogee_stds_mags_max DOUBLE PRECISION[],
-    apogee_stds_fov DOUBLE PRECISION[],
-    boss_bright_limit_targets_min DOUBLE PRECISION[],
-    boss_bright_limit_targets_max DOUBLE PRECISION[],
-    boss_trace_diff_targets DOUBLE PRECISION,
-    boss_sky_neighbors_targets DOUBLE PRECISION[],
-    apogee_bright_limit_targets_min DOUBLE PRECISION[],
-    apogee_bright_limit_targets_max DOUBLE PRECISION[],
-    apogee_trace_diff_targets DOUBLE PRECISION,
-    apogee_sky_neighbors_targets DOUBLE PRECISION[]);
+create table targetdb.design_mode(
+    label text primary key not null,
+    boss_skies_min integer,
+    boss_skies_fov double precision[],
+    apogee_skies_min integer,
+    apogee_skies_fov double precision[],
+    boss_stds_min integer,
+    boss_stds_mags_min double precision[],
+    boss_stds_mags_max double precision[],
+    boss_stds_fov double precision[],
+    apogee_stds_min integer,
+    apogee_stds_mags_min double precision[],
+    apogee_stds_mags_max double precision[],
+    apogee_stds_fov double precision[],
+    boss_bright_limit_targets_min double precision[],
+    boss_bright_limit_targets_max double precision[],
+    boss_trace_diff_targets double precision,
+    boss_sky_neighbors_targets double precision[],
+    apogee_bright_limit_targets_min double precision[],
+    apogee_bright_limit_targets_max double precision[],
+    apogee_trace_diff_targets double precision,
+    apogee_sky_neighbors_targets double precision[]);
 
+create table targetdb.field_reservation (
+    field_id integer primary key not null);
+
+-- The below query can be used to initially populate field_reservation
+-- insert into targetdb.field_reservation (field_id)
+-- select distinct field_id from targetdb.field order by field_id;
+
+create table targetdb.design_mode_check_results (
+    pk SERIAL PRIMARY KEY NOT NULL,
+    design_id INTEGER,
+    design_pass BOOLEAN NOT NULL,
+    design_status INTEGER,
+    boss_skies_min_pass BOOLEAN,
+    boss_skies_min_value INTEGER,
+    boss_skies_fov_pass BOOLEAN,
+    boss_skies_fov_value DOUBLE PRECISION,
+    apogee_skies_min_pass BOOLEAN,
+    apogee_skies_min_value INTEGER,
+    apogee_skies_fov_pass BOOLEAN,
+    apogee_skies_fov_value DOUBLE PRECISION,
+    boss_stds_min_pass BOOLEAN,
+    boss_stds_min_value INTEGER,
+    boss_stds_fov_pass BOOLEAN,
+    boss_stds_fov_value DOUBLE PRECISION,
+    apogee_stds_min_pass BOOLEAN,
+    apogee_stds_min_value INTEGER,
+    apogee_stds_fov_pass BOOLEAN,
+    apogee_stds_fov_value DOUBLE PRECISION,
+    boss_stds_mags_pass BOOLEAN,
+    apogee_stds_mags_pass BOOLEAN,
+    boss_bright_limit_targets_pass BOOLEAN,
+    apogee_bright_limit_targets_pass BOOLEAN,
+    boss_sky_neighbors_targets_pass BOOLEAN,
+    apogee_sky_neighbors_targets_pass BOOLEAN,
+    apogee_trace_diff_targets_pass BOOLEAN);
+
+CREATE TABLE targetdb.assignment_status (
+    pk integer,
+    assignment_pk integer REFERENCES targetdb.assignment(pk) UNIQUE,
+    status integer,
+    mjd real
+);
+
+
+CREATE TABLE targetdb.positioner_status (
+    pk SERIAL PRIMARY KEY,
+    label text
+);
 
 -- Table data
 
 INSERT INTO targetdb.instrument VALUES (0, 'BOSS'), (1, 'APOGEE');
-
-INSERT INTO targetdb.category VALUES
-    (0, 'science'), (1, 'standard_apogee'), (2, 'standard_boss'),
-    (3, 'guide'), (4, 'sky_apogee'), (5, 'sky_boss');
 
 INSERT INTO targetdb.mapper VALUES (0, 'MWM'), (1, 'BHM');
 
@@ -180,6 +246,10 @@ INSERT INTO targetdb.observatory VALUES (0, 'APO'), (1, 'LCO');
 
 
 -- Foreign keys
+
+-- ALTER TABLE ONLY targetdb.target
+--     ADD CONSTRAINT catalogid_fk
+--     FOREIGN KEY (catalogid) REFERENCES catalogdb.catalog(catalogid);
 
 ALTER TABLE ONLY targetdb.carton
     ADD CONSTRAINT mapper_fk
@@ -234,6 +304,11 @@ ALTER TABLE ONLY targetdb.assignment
     FOREIGN KEY (design_id) REFERENCES targetdb.design(design_id)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
+-- ALTER TABLE ONLY targetdb.design
+--     ADD CONSTRAINT field_fk
+--     FOREIGN KEY (field_pk) REFERENCES targetdb.field(pk)
+--     ON UPDATE CASCADE ON DELETE CASCADE;
+
 ALTER TABLE ONLY targetdb.field
     ADD CONSTRAINT cadence_fk
     FOREIGN KEY (cadence_pk) REFERENCES targetdb.cadence(pk);
@@ -262,6 +337,10 @@ ALTER TABLE ONLY targetdb.design
     FOREIGN KEY (design_version_pk) REFERENCES targetdb.version(pk)
     ON UPDATE CASCADE ON DELETE CASCADE;
 
+ALTER TABLE ONLY targetdb.design_mode_check_results
+    ADD CONSTRAINT design_id_fk
+    FOREIGN KEY (design_id) REFERENCES targetdb.design(design_id);
+
 ALTER TABLE ONLY targetdb.design_to_field
     ADD CONSTRAINT field_fk
     FOREIGN KEY (field_pk) REFERENCES targetdb.field(pk);
@@ -280,8 +359,7 @@ CREATE INDEX CONCURRENTLY catalogid_idx
     ON targetdb.target
     USING BTREE(catalogid);
 
--- This doesn't seem to be loaded unless it's run manually inside a PSQL console.
-CREATE INDEX ON targetdb.target (q3c_ang2ipix(ra, dec));
+CREATE INDEX ON targetdb.target (public.q3c_ang2ipix(ra, dec));
 CLUSTER target_q3c_ang2ipix_idx on targetdb.target;
 ANALYZE targetdb.target;
 
