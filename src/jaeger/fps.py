@@ -20,17 +20,16 @@ from typing import (
     Any,
     ClassVar,
     Dict,
-    Generic,
     List,
     Optional,
     Tuple,
     Type,
-    TypeVar,
     Union,
 )
 
 import numpy
 from astropy.time import Time
+from typing_extensions import Self
 from zc.lockfile import LockFile
 
 import jaeger
@@ -74,11 +73,10 @@ __all__ = ["BaseFPS", "FPS"]
 MIN_BETA = 160
 LOCK_FILE = "/var/tmp/sdss/jaeger.lock"
 
-FPS_CO = Union["BaseFPS", "FPS"]
-FPS_T = TypeVar("FPS_T", bound="BaseFPS")
+_FPS_INSTANCES: dict[Type[BaseFPS], BaseFPS] = {}
 
 
-class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
+class BaseFPS(Dict[int, Positioner]):
     """A class describing the Focal Plane System.
 
     This class includes methods to read the layout and construct positioner
@@ -99,39 +97,38 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
     """
 
     positioner_class: ClassVar[Type[Positioner]] = Positioner
-    _instance: dict[Type[BaseFPS], FPS_T] = {}
 
     initialised: bool
 
-    def __new__(cls: Type[FPS_T], *args, **kwargs):
-        if cls in cls._instance and kwargs == {}:
+    def __new__(cls, *args, **kwargs):
+        if cls in _FPS_INSTANCES:
             raise JaegerError(
                 "An instance of FPS is already running. "
                 "Use get_instance() to retrieve it."
             )
 
-        if cls not in cls._instance or kwargs != {}:
-            if cls not in cls._instance:
-                new_obj = super().__new__(cls)
-                cls._instance[cls] = new_obj
-            else:
-                new_obj = cls._instance[cls]
+        new_obj = super().__new__(cls, *args, **kwargs)
+        _FPS_INSTANCES[cls] = new_obj
 
-            dict.__init__(new_obj, {})
-            new_obj.initialised = False
+        dict.__init__(new_obj, {})
+        new_obj.initialised = False
 
-            return new_obj
-
-        raise RuntimeError("Returning None in BaseFPS.__new__. This should not happen.")
+        return new_obj
 
     @classmethod
-    def get_instance(cls: Type[FPS_T], *args, **kwargs) -> FPS_T:
+    def get_instance(cls, *args, **kwargs) -> Self:
         """Returns the running instance."""
 
-        if cls not in cls._instance or kwargs:
+        if cls not in _FPS_INSTANCES:
             return cls(*args, **kwargs)
 
-        return cls._instance[cls]
+        if args or kwargs:
+            log.warning(
+                "Ignoring arguments passed to get_instance() "
+                "and returning cached instance."
+            )
+
+        return _FPS_INSTANCES[cls]
 
     @property
     def positioners(self):
@@ -171,11 +168,8 @@ class BaseFPS(Dict[int, Positioner], Generic[FPS_T]):
         return positioner
 
 
-T = TypeVar("T", bound="FPS")
-
-
 @dataclass
-class FPS(BaseFPS["FPS"]):
+class FPS(BaseFPS):
     """A class describing the Focal Plane System.
 
     The recommended way to instantiate a new `.FPS` object is to use the `.create`
@@ -215,14 +209,11 @@ class FPS(BaseFPS["FPS"]):
 
     """
 
-    # __instance: ClassVar[dict[Type[FPS], FPS]] = {}
-
     can: JaegerCAN | str | None = None
     ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
-        super().__init__()
 
         # Start file logger
         start_file_loggers(start_log=True, start_can=False)
@@ -287,13 +278,11 @@ class FPS(BaseFPS["FPS"]):
                     "status",
                     self.update_status,
                     delay=config["fps"]["status_poller_delay"],
-                    loop=self.loop,
                 ),
                 Poller(
                     "position",
                     self.update_position,
                     delay=config["fps"]["position_poller_delay"],
-                    loop=self.loop,
                 ),
             ]
         )
@@ -307,7 +296,10 @@ class FPS(BaseFPS["FPS"]):
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
     ) -> "FPS":
-        """Starts the CAN bus and .
+        """Starts the CAN bus and initialises it.
+
+        Note that ``FPS.create()`` always returns a new instance. If you want to
+        retrieve the currently running instance use `~.BaseFPS.get_instance`.
 
         Parameters
         ----------
@@ -320,7 +312,11 @@ class FPS(BaseFPS["FPS"]):
 
         """
 
-        instance = cls(can=can, ieb=ieb)
+        # FPS.create() always returns a new instance.
+        if cls in _FPS_INSTANCES:
+            del _FPS_INSTANCES[cls]
+
+        instance = cls.get_instance(can=can, ieb=ieb)
         await instance.start_can()
 
         if initialise:
@@ -395,12 +391,12 @@ class FPS(BaseFPS["FPS"]):
         self._configuration = new
 
     async def initialise(
-        self: T,
+        self: Self,
         start_pollers: bool | None = None,
         enable_low_temperature: bool = True,
         keep_disabled: bool = True,
         skip_fibre_assignments_check: bool = False,
-    ) -> T:
+    ) -> Self:
         """Initialises all positioners with status and firmware version.
 
         Parameters
@@ -1544,18 +1540,20 @@ class FPS(BaseFPS["FPS"]):
 
         log.debug("Cancelling all pending tasks and shutting down.")
 
+        loop = asyncio.get_running_loop()
+
         tasks = [
             task
-            for task in asyncio.all_tasks(loop=self.loop)
-            if task is not asyncio.current_task(loop=self.loop)
+            for task in asyncio.all_tasks(loop=loop)
+            if task is not asyncio.current_task(loop=loop)
         ]
         list(map(lambda task: task.cancel(), tasks))
 
         await asyncio.gather(*tasks, return_exceptions=True)
 
-        self.loop.stop()
+        loop.stop()
 
-        del self.__class__._instance[self.__class__]
+        del _FPS_INSTANCES[self.__class__]
 
     async def __aenter__(self):
         await self.initialise()

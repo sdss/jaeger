@@ -284,19 +284,15 @@ class Poller(object):
         A function or coroutine to call periodically.
     delay : float
         Initial delay between calls to the callback.
-    loop : event loop
-        The event loop to which to attach the task.
 
     """
 
-    def __init__(self, name, callback, delay=1.0, loop=None):
+    def __init__(self, name, callback, delay=1.0):
         self.name = name
         self.callback = callback
 
         self._orig_delay = delay
         self.delay = delay
-
-        self.loop: asyncio.AbstractEventLoop = loop or asyncio.get_event_loop()
 
         # Create two tasks, one for the sleep timer and another for the poller
         # itself. We do this because we want to be able to cancell the sleep
@@ -320,11 +316,11 @@ class Poller(object):
                 if ee.__class__ == asyncio.CancelledError:
                     raise
                 if not self._task.cancelled:
-                    self.loop.call_exception_handler(
+                    asyncio.get_running_loop().call_exception_handler(
                         {"message": "failed running callback", "exception": ee}
                     )
 
-            self._sleep_task = self.loop.create_task(asyncio.sleep(self.delay))
+            self._sleep_task = asyncio.create_task(asyncio.sleep(self.delay))
 
             await self._sleep_task
 
@@ -371,7 +367,7 @@ class Poller(object):
         if self.running:
             return
 
-        self._task = self.loop.create_task(self.poller())
+        self._task = asyncio.create_task(self.poller())
 
         return self
 
@@ -397,7 +393,7 @@ class Poller(object):
             restart = True
 
         if asyncio.iscoroutinefunction(self.callback):
-            await self.loop.create_task(self.callback())
+            await asyncio.create_task(self.callback())
         else:
             self.callback()
 
