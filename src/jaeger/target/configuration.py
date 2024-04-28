@@ -432,6 +432,12 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         self.update_coordinates_from_robot_grid(positioner_ids=invalid)
 
+        # The invalid coordinates should now be valid but off target. We mark them as
+        # reassigned to keep track of targets that have been moved not because they
+        # were collided or for other reason.
+        invalid_idx = self.fibre_data["positioner_id"].is_in(invalid).arg_true()
+        self.fibre_data[invalid_idx, "reassigned"] = True
+
         decollided: list[int] = []
         if decollide:
             priority_order = valid["positioner_id"].to_list()
@@ -465,7 +471,8 @@ class BaseConfiguration(Generic[AssignmentType]):
             force=force,
         )
 
-        self.update_coordinates_from_robot_grid(positioner_ids=unlocked)
+        if len(unlocked) > 0:
+            self.update_coordinates_from_robot_grid(positioner_ids=unlocked)
 
         # Mark decollided (and unlocked) positioner_ids. First we get the
         # indices of those rows.
@@ -474,6 +481,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         # Now modify the frame in place.
         self.fibre_data[idx, "decollided"] = True
+        self.fibre_data[idx, "reassigned"] = True  # All decollided have been reassigned
 
         if self.from_destination is None:
             raise TrajectoryError("Cannot find valid trajectory.")

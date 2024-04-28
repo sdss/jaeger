@@ -54,6 +54,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "fibre_id": polars.Int32,
     "site": polars.String,
     "assigned": polars.Boolean,
+    "reassigned": polars.Boolean,
     "valid": polars.Boolean,
     "on_target": polars.Boolean,
     "disabled": polars.Boolean,
