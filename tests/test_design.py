@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 async def test_create_design():
     check_database()
 
-    design = Design(21636, epoch=2460427)
+    design = Design(21637)
 
     assert design.configuration.fibre_data.height == 1500
 
@@ -40,7 +40,7 @@ async def test_create_design():
 async def test_configuration_write(tmp_path: pathlib.Path):
     check_database()
 
-    design = Design(21636, epoch=2460427)
+    design = Design(21637)
 
     assert opsdb.Configuration.select().count() == 0
     assert opsdb.AssignmentToFocal.select().count() == 0
@@ -49,7 +49,7 @@ async def test_configuration_write(tmp_path: pathlib.Path):
 
     assert (
         opsdb.Configuration.select()
-        .where(opsdb.Configuration.design_id == 21636)
+        .where(opsdb.Configuration.design_id == 21637)
         .exists()
     )
 
@@ -64,9 +64,9 @@ async def test_configuration_write(tmp_path: pathlib.Path):
 async def test_configuration_get_paths(mock_fps: MockFPS):
     check_database()
 
-    design = Design(21636, fps=mock_fps, epoch=2460427)
+    design = Design(21637, fps=mock_fps)
 
-    assert design.design_id == 21636
+    assert design.design_id == 21637
 
     from_destination = await design.configuration.get_paths()
     assert isinstance(from_destination, dict)
