@@ -23,7 +23,10 @@ __all__ = ["talk"]
 async def talk(command, fps, command_id, positioner_id, params):
     """Send a direct command to the CAN network and show the replies."""
 
-    CommandClass = CommandID(command_id).get_command_class()
+    command_id = CommandID(command_id)
+    assert isinstance(command_id, CommandID)
+
+    CommandClass = command_id.get_command_class()
     assert CommandClass
 
     can_command = CommandClass(positioner_id, *params)

@@ -17,7 +17,7 @@ import numpy
 
 from jaeger import config
 from jaeger.exceptions import JaegerError, TrajectoryError
-from jaeger.kaiju import get_path_pair, get_robot_grid
+from jaeger.kaiju import TrajectoryType, get_path_pair, get_robot_grid
 
 from . import jaeger_parser
 
@@ -264,7 +264,7 @@ async def _home_beta_phase(
     home_positioner_ids: list[int],
     phase: int,
     start_angle: float,
-    from_destination: dict,
+    from_destination: TrajectoryType,
     dry_run: bool = False,
     extra_zero_positioner_ids: list[int] = [],
 ):

@@ -161,6 +161,8 @@ class VirtualPositioner(StatusMixIn):
         """Processes incoming commands from the bus."""
 
         command_id = CommandID(command_id)
+        assert isinstance(command_id, CommandID)
+
         command = command_id.get_command_class()
 
         if positioner_id == 0 and not command.broadcastable:
@@ -301,7 +303,10 @@ class VirtualPositioner(StatusMixIn):
         """Process an absolute or relative goto command."""
 
         __, command_id, uid, __ = utils.parse_identifier(message.arbitration_id)
+
         command_id = CommandID(command_id)
+        assert isinstance(command_id, CommandID)
+
         command = command_id.get_command_class()
 
         data = message.data
