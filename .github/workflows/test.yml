@@ -26,6 +26,7 @@ jobs:
       WOKCALIB_DIR: '/home/runner/work/jaeger/jaeger/fps_calibrations/apo/wok_calibs/sloanFlatCMM'
       PYTHONPATH: '/home/runner/work/jaeger/jaeger/fps_calibrations'
       OBSERVATORY: 'APO'
+      RS_VERSION: 'eta-6'
 
     steps:
       - uses: actions/checkout@v4
