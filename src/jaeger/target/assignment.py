@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from .configuration import Configuration, DitheredConfiguration, ManualConfiguration
 
 
-__all__ = ["AssignmentData", "BaseAssignmentData", "ManualAssignmentData"]
+__all__ = ["Assignment", "BaseAssignment", "ManualAssignment"]
 
 
 NewPositionsType = Mapping[int, Mapping[Literal["alpha", "beta"], float | None]]
@@ -98,7 +98,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
 }
 
 
-class BaseAssignmentData:
+class BaseAssignment:
     """Information about the target assignment along with coordinate transformation."""
 
     def __init__(
@@ -357,7 +357,7 @@ class BaseAssignmentData:
         )
 
 
-class AssignmentData(BaseAssignmentData):
+class Assignment(BaseAssignment):
     """Assignment data from a valid design with associated target information."""
 
     def __init__(
@@ -487,7 +487,7 @@ class AssignmentData(BaseAssignmentData):
         self.validate()
 
 
-class ManualAssignmentData(BaseAssignmentData):
+class ManualAssignment(BaseAssignment):
     """Assignment data from a manual configuration.
 
     Parameters

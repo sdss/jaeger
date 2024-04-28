@@ -55,7 +55,7 @@ from jaeger.kaiju import (
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
-from .assignment import AssignmentData, BaseAssignmentData, ManualAssignmentData
+from .assignment import Assignment, BaseAssignment, ManualAssignment
 from .tools import copy_summary_file, get_wok_data
 
 
@@ -78,7 +78,7 @@ __all__ = [
 PositionerType = Union[PositionerApogee, PositionerBoss]
 AssignmentType = TypeVar(
     "AssignmentType",
-    bound=BaseAssignmentData,
+    bound=BaseAssignment,
     covariant=True,
 )
 
@@ -147,7 +147,7 @@ def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
 class BaseConfiguration(Generic[AssignmentType]):
     """A base configuration class."""
 
-    assignment_data: AssignmentType
+    assignment: AssignmentType
     epoch: float | None
 
     def __init__(self, scale: float | None = None):
@@ -202,13 +202,13 @@ class BaseConfiguration(Generic[AssignmentType]):
     def fibre_data(self):
         """Returns the fibre data from the assignment data object."""
 
-        return self.assignment_data.fibre_data
+        return self.assignment.fibre_data
 
     @fibre_data.setter
     def fibre_data(self, value: polars.DataFrame):
         """Sets the fibre data in the assignment data object."""
 
-        self.assignment_data.fibre_data = value
+        self.assignment.fibre_data = value
 
     async def clone(
         self,
@@ -340,10 +340,10 @@ class BaseConfiguration(Generic[AssignmentType]):
                 "ID has been set."
             )
 
-        self.assignment_data.compute_coordinates(epoch=epoch)
+        self.assignment.compute_coordinates(epoch=epoch)
 
-        assert self.assignment_data.site.time
-        self.epoch = self.assignment_data.site.time.jd
+        assert self.assignment.site.time
+        self.epoch = self.assignment.site.time.jd
 
     async def get_paths(
         self,
@@ -616,7 +616,7 @@ class BaseConfiguration(Generic[AssignmentType]):
             if robot.id in positioner_ids:
                 new_alpha_beta[robot.id] = {"alpha": robot.alpha, "beta": robot.beta}
 
-        self.assignment_data.update_positioner_coordinates(new_alpha_beta)
+        self.assignment.update_positioner_coordinates(new_alpha_beta)
 
         if mark_off_target:
             idx = self.fibre_data["positioner_id"].is_in(positioner_ids).arg_true()
@@ -625,8 +625,8 @@ class BaseConfiguration(Generic[AssignmentType]):
     async def save_snapshot(self, highlight=None):
         """Saves a snapshot of the current robot grid."""
 
-        if self.assignment_data and self.assignment_data.observatory:
-            observatory = self.assignment_data.observatory.upper()
+        if self.assignment and self.assignment.observatory:
+            observatory = self.assignment.observatory.upper()
         else:
             observatory = None
 
@@ -678,8 +678,8 @@ class BaseConfiguration(Generic[AssignmentType]):
         if "admin" in targetdb.database._config:
             targetdb.database.become_admin()
 
-        assert self.assignment_data.site.time
-        epoch = self.assignment_data.site.time.jd
+        assert self.assignment.site.time
+        epoch = self.assignment.site.time.jd
 
         if self.configuration_id is None:
             with opsdb.database.atomic():
@@ -812,7 +812,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         if self.configuration_id is None:
             raise JaegerError("Configuration needs to be set and loaded to the DB.")
 
-        adata = self.assignment_data
+        adata = self.assignment
 
         fdata = fibre_data if fibre_data is not None else self.fibre_data.clone()
         fdata = fdata.with_columns(cs.numeric().fill_null(-999).fill_nan(-999))
@@ -947,7 +947,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         if path is None:
             path = self._get_summary_file_path(
                 self.configuration_id,
-                self.assignment_data.observatory,
+                self.assignment.observatory,
                 flavour,
             )
 
@@ -975,7 +975,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         if "SDSSCORE_TEST_DIR" in os.environ:
             test_path = self._get_summary_file_path(
                 self.configuration_id,
-                self.assignment_data.observatory,
+                self.assignment.observatory,
                 flavour,
                 test=True,
             )
@@ -985,7 +985,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         return path
 
 
-class Configuration(BaseConfiguration[AssignmentData]):
+class Configuration(BaseConfiguration[Assignment]):
     """A configuration based on a target design."""
 
     def __init__(
@@ -1000,7 +1000,7 @@ class Configuration(BaseConfiguration[AssignmentData]):
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment_data = AssignmentData(
+        self.assignment = Assignment(
             self,
             epoch=epoch,
             scale=scale,
@@ -1008,9 +1008,9 @@ class Configuration(BaseConfiguration[AssignmentData]):
             apogee_wavelength=apogee_wavelength,
         )
 
-        assert self.assignment_data.site.time
+        assert self.assignment.site.time
 
-        self.epoch = self.assignment_data.site.time.jd
+        self.epoch = self.assignment.site.time.jd
         self.scale = scale
 
     def __repr__(self):
@@ -1020,7 +1020,7 @@ class Configuration(BaseConfiguration[AssignmentData]):
         )
 
 
-class DitheredConfiguration(BaseConfiguration[AssignmentData]):
+class DitheredConfiguration(BaseConfiguration[Assignment]):
     """A positioner configuration dithered from a parent configuration."""
 
     def __init__(
@@ -1042,20 +1042,20 @@ class DitheredConfiguration(BaseConfiguration[AssignmentData]):
         self.design = self.parent_configuration.design
         self.design_id = self.design.design_id
 
-        self.assignment_data = AssignmentData(
+        self.assignment = Assignment(
             self,
             epoch=epoch or self.parent_configuration.epoch,
             compute_coordinates=False,
             scale=self.scale,
         )
 
-        self.assignment_data.fibre_data = parent.assignment_data.fibre_data.clone()
-        self.assignment_data.site.set_time(parent.epoch)
+        self.assignment.fibre_data = parent.assignment.fibre_data.clone()
+        self.assignment.site.set_time(parent.epoch)
 
         icrs_bore = ICRS([[self.design.field.racen, self.design.field.deccen]])
-        self.assignment_data.boresight = Observed(
+        self.assignment.boresight = Observed(
             icrs_bore,
-            site=self.assignment_data.site,
+            site=self.assignment.site,
             wavelength=INST_TO_WAVE["GFA"],
         )
 
@@ -1113,7 +1113,7 @@ class DitheredConfiguration(BaseConfiguration[AssignmentData]):
             new_positions[positioner_id] = {"alpha": alpha, "beta": beta}
 
         # Recompute coordinates for the new positions.
-        self.assignment_data.update_positioner_coordinates(
+        self.assignment.update_positioner_coordinates(
             new_positions,
             validate=False,
         )
@@ -1133,7 +1133,7 @@ class DitheredConfiguration(BaseConfiguration[AssignmentData]):
         return self.to_destination
 
 
-class ManualConfiguration(BaseConfiguration[ManualAssignmentData]):
+class ManualConfiguration(BaseConfiguration[ManualAssignment]):
     """A configuration create manually.
 
     Parameters
@@ -1153,7 +1153,7 @@ class ManualConfiguration(BaseConfiguration[ManualAssignmentData]):
 
     """
 
-    assignment_data: ManualAssignmentData
+    assignment: ManualAssignment
 
     def __init__(
         self,
@@ -1171,7 +1171,7 @@ class ManualConfiguration(BaseConfiguration[ManualAssignmentData]):
         self.epoch = None
 
         self.positions = positions
-        self.assignment_data = ManualAssignmentData(
+        self.assignment = ManualAssignment(
             self,
             positions,
             observatory,
