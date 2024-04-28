@@ -13,8 +13,8 @@ from glob import glob
 
 from typing import TYPE_CHECKING
 
-import pandas
 import peewee
+import polars
 from astropy import table
 from astropy.io import fits
 
@@ -211,7 +211,7 @@ def load_fields(
         robostrategy=True,
     )
 
-    hole_ids = pandas.DataFrame(
+    hole_ids = polars.DataFrame(
         list(
             targetdb.Hole.select(
                 targetdb.Hole.pk,
@@ -222,8 +222,8 @@ def load_fields(
             .where(targetdb.Hole.holeid.is_null(False))
             .tuples()
         ),
-        columns=["pk", "holeid", "observatory"],
-    ).set_index("holeid")
+        schema=["pk", "holeid", "observatory"],
+    ).sort("holeid")
 
     for file_ in files:
         hdul = fits.open(file_)
@@ -293,17 +293,18 @@ def load_fields(
                 exp_data = assign_data[assign_data["holeID"][:, n] != " "]
                 holeIDs = exp_data["holeID"][:, n].tolist()
 
-            obs_holes = hole_ids.loc[hole_ids.observatory == observatory]
-            holeid_pk_exp = obs_holes.loc[holeIDs].pk.tolist()
+            ft2 = exp_data["fiberType_2"]
+
+            obs_holes = hole_ids.filter(polars.col.observation == observatory)
+            holes_filter = obs_holes.filter(polars.col.holeid.is_in(holeIDs))
+            holeid_pk_exp = holes_filter["pk"].to_list()
 
             insert_data += [
                 {
                     "design_id": design.design_id,
                     "hole_pk": holeid_pk_exp[i],
                     "carton_to_target_pk": exp_data["carton_to_target_pk"][i],
-                    "instrument_pk": targetdb.Instrument.get(
-                        label=exp_data["fiberType_2"][i]
-                    ).pk,
+                    "instrument_pk": targetdb.Instrument.get(label=ft2[i]).pk,
                 }
                 for i in range(len(exp_data))
             ]

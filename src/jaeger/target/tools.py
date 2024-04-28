@@ -16,7 +16,6 @@ from functools import cache
 from typing import TYPE_CHECKING
 
 import numpy
-import pandas
 import polars
 
 from coordio.defaults import calibration
@@ -297,7 +296,10 @@ def copy_summary_file(
         f.write(summary_data)
 
 
-def read_confSummary(input: str | pathlib.Path | int, flavour: str = "") -> tuple:
+def read_confSummary(
+    input: str | pathlib.Path | int,
+    flavour: str = "",
+) -> tuple[dict, polars.DataFrame]:
     """Reads a configuration summary file and returns the header and data frame."""
 
     if isinstance(input, (str, pathlib.Path)):
@@ -317,10 +319,8 @@ def read_confSummary(input: str | pathlib.Path | int, flavour: str = "") -> tupl
     fibermap = header.pop("FIBERMAP")
     fibermap = fibermap[[col for col in fibermap.dtype.names if col != "mag"]]
 
-    df = pandas.DataFrame(fibermap)
-
-    for col in df.select_dtypes("object").columns:
-        df[col] = df[col].str.decode("utf-8")
+    df = polars.DataFrame(fibermap)
+    df = df.with_columns(polars.selectors.binary().cast(polars.String()))
 
     for key, value in header.items():
         try:
@@ -331,4 +331,4 @@ def read_confSummary(input: str | pathlib.Path | int, flavour: str = "") -> tupl
             except ValueError:
                 pass
 
-    return header, df.set_index(["positionerId", "fiberType"])
+    return header, df.sort(["positionerId", "fiberType"])

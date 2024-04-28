@@ -34,7 +34,6 @@ sdss-kaiju =  [
 ]
 sdss-coordio = "^1.9.2"
 click_default_group = ">=1.2.2"
-pandas = "^2.0.0"
 "zc.lockfile" = "^2.0"
 polars = "^0.20.9"
 adbc-driver-postgresql = ">=0.9.0"
@@ -69,7 +68,6 @@ nox = ">=2021.6.12"
 sphinx-autobuild = ">=2021.3.14"
 sphinx-copybutton = ">=0.3.3"
 matplotlib = ">=3.4.3"
-pandas-stubs = ">=1.2.0"
 ruff = ">=0.1.0"
 
 [tool.poetry.scripts]

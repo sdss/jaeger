@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import sys
 
-import pandas
+import polars
 import yaml
 
 
@@ -38,26 +38,26 @@ NAME_CONV = {
 def generate_chiller_yaml(variables_files: str):
     """Generates a YAML file for Drift with all the chiller variables from the CSV."""
 
-    variables = pandas.read_csv(variables_files)
+    variables = polars.read_csv(variables_files)
 
     data = yaml.load(BASE, yaml.SafeLoader)
     devices = {}
 
-    for _, row in variables.iterrows():
-        address = row.Address - 1
+    for row in variables.iter_rows(named=True):
+        address = row["Address"] - 1
 
-        name = row.Name.upper()
+        name = row["Name"].upper()
         if name in NAME_CONV:
             name = NAME_CONV[name]
 
         devices[name] = {
             "address": address,
-            "units": row.Unit if isinstance(row.Unit, str) else "",
+            "units": row["Unit"] if isinstance(row["Unit"], str) else "",
             "category": "chiller",
-            "description": row.Description,
+            "description": row["Description"],
         }
 
-        if row.Scale != 1:
+        if row["Scale"] != 1:
             devices[name].update(
                 {
                     "adaptor": "proportional",
