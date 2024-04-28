@@ -6,7 +6,7 @@
 # @Filename: conftest.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# noqa: E402
+from __future__ import annotations
 
 import asyncio
 import contextlib
@@ -14,6 +14,8 @@ import os
 import sys
 import urllib.request
 from unittest.mock import MagicMock
+
+from typing import TYPE_CHECKING
 
 import numpy
 import pytest
@@ -30,6 +32,10 @@ from sdsstools import read_yaml_file
 
 from jaeger.fps import _FPS_INSTANCES
 from jaeger.testing import MockFPS
+
+
+if TYPE_CHECKING:
+    from sdssdb.connection import PeeweeDatabaseConnection
 
 
 sys.modules["coordio.transforms"] = MagicMock()
@@ -189,10 +195,16 @@ async def command(actor):
 
 
 @pytest.fixture(autouse=True)
-def clear_fps_instances():
+def cleanup(database: PeeweeDatabaseConnection):
     yield
 
+    # Clear FPS instances
     _FPS_INSTANCES.clear()
+
+    # Truncate the opsdb tables.
+    if database.connected and database.dbname == "sdss5db_jaeger_test":
+        with database.atomic():
+            database.execute_sql("TRUNCATE TABLE opsdb_apo.configuration CASCADE;")
 
 
 @pytest.fixture(autouse=True, scope="session")

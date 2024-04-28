@@ -261,7 +261,10 @@ class BaseConfiguration(Generic[AssignmentType]):
         if write_to_database and write_summary:
             temperature = await self.get_temperature()
             new.write_summary(
-                headers={"cloned_from": new.cloned_from, "temperature": temperature}
+                headers={
+                    "cloned_from": new.cloned_from,
+                    "temperature": temperature,
+                }
             )
 
         if write_to_database and copy_summary_F:
@@ -744,12 +747,13 @@ class BaseConfiguration(Generic[AssignmentType]):
                 return self.write_to_database(replace=False)
 
         a_data = self.fibre_data.clone()
-        a_data = a_data.with_columns(cs.ends_with("focal").fill_null(None))
+        a_data = a_data.with_columns(cs.ends_with("focal").fill_nan(None))
 
         focals = []
         for row in a_data.iter_rows(named=True):
             pid = row["positioner_id"]
             hole_id = row["hole_id"]
+            assigned = row["assigned"]
 
             if row["valid"]:
                 xfocal = row["xfocal"]
@@ -757,7 +761,7 @@ class BaseConfiguration(Generic[AssignmentType]):
             else:
                 xfocal = yfocal = None
 
-            if self.design and hole_id in self.design.target_data:
+            if self.design and hole_id in self.design.target_data and assigned:
                 assignment_pk = self.design.target_data[hole_id]["assignment_pk"]
             else:
                 assignment_pk = None
@@ -768,7 +772,10 @@ class BaseConfiguration(Generic[AssignmentType]):
                     xfocal=xfocal,
                     yfocal=yfocal,
                     positioner_id=pid,
+                    fiber_type=row["fibre_type"].lower(),
                     configuration_id=self.configuration_id,
+                    catalogid=row["catalogid"],
+                    assigned=assigned,
                 )
             )
 
@@ -805,11 +812,12 @@ class BaseConfiguration(Generic[AssignmentType]):
 
     def write_summary(
         self,
-        flavour: str = "",
         path: str | pathlib.Path | None = None,
+        flavour: str = "",
         overwrite: bool = False,
         headers: dict = {},
         fibre_data: polars.DataFrame | None = None,
+        write_confSummary_test: bool = True,
     ):
         """Writes the confSummary file."""
 
@@ -958,6 +966,10 @@ class BaseConfiguration(Generic[AssignmentType]):
                 self.assignment.observatory,
                 flavour,
             )
+        else:
+            write_confSummary_test = False  # Do not write test file if path is custom.
+
+        path = os.path.expandvars(os.path.expanduser(str(path)))
 
         if os.path.exists(path):
             if overwrite:
@@ -980,7 +992,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         # This is a test for now, but eventually we'll change to this format of
         # SDSSCORE directories.
-        if "SDSSCORE_TEST_DIR" in os.environ:
+        if write_confSummary_test and "SDSSCORE_TEST_DIR" in os.environ:
             test_path = self._get_summary_file_path(
                 self.configuration_id,
                 self.assignment.observatory,

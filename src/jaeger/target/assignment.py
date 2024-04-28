@@ -64,6 +64,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "dubious": polars.Boolean,
     "wavelength": polars.Float32,
     "fiberId": polars.Float32,
+    "catalogid": polars.Float64,
     "ra_icrs": polars.Float64,
     "dec_icrs": polars.Float64,
     "pmra": polars.Float32,
@@ -206,6 +207,7 @@ class BaseAssignment:
                     "fibre_id": fibre_id,
                     "site": self.observatory,
                     "wavelength": self.get_wavelength(fibre_type),
+                    "catalogid": None,
                     "ra_icrs": None,
                     "dec_icrs": None,
                     "pmra": None,
@@ -219,6 +221,7 @@ class BaseAssignment:
                 if hole_id in tdata and tdata[hole_id]["fibre_type"] == fibre_type:
                     hole_data.update(
                         {
+                            "catalogid": tdata[hole_id]["catalogid"],
                             "ra_icrs": tdata[hole_id]["ra"],
                             "dec_icrs": tdata[hole_id]["dec"],
                             "pmra": tdata[hole_id]["pmra"],

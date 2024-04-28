@@ -17,7 +17,9 @@ CREATE TABLE opsdb_apo.assignment_to_focal (
     xfocal REAL,
     yfocal REAL,
     positioner_id SMALLINT,
+    fiber_type TEXT,
     catalogid BIGINT,
+    assigned BOOLEAN,
     collided BOOLEAN,
     replaced BOOLEAN);
 
@@ -365,4 +367,3 @@ BEGIN
     VALUES (design, pos, _mjd_next);
 END;
 $$ LANGUAGE plpgsql;
-
