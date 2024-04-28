@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Mapping
 import nptyping as npt
 import numpy
 import polars
+from astropy.time import Time
 
 from coordio import ICRS, Field, FocalPlane, Observed, Site, Wok
 from coordio.conv import (
@@ -149,7 +150,7 @@ def positioner_from_icrs_dataframe(
         pmra=data["pmra"].to_numpy(),
         pmdec=data["pmdec"].to_numpy(),
         parallax=data["parallax"].to_numpy(),
-        epoch=site.time.jd,
+        epoch=Time(data["epoch"].to_numpy(), format="jyear").jd,
     )
 
     icrs_epoch = icrs.to_epoch(site.time.jd, site=site)
