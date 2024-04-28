@@ -1566,7 +1566,12 @@ class FPS(BaseFPS):
 
         loop.stop()
 
-        del _FPS_INSTANCES[self.__class__]
+        self.discard()
+
+    def discard(self):
+        """Discards this singleton instance of the FPS."""
+
+        _FPS_INSTANCES.pop(self.__class__, None)
 
     async def __aenter__(self):
         await self.initialise()
