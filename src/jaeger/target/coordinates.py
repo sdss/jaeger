@@ -138,7 +138,7 @@ def positioner_from_icrs_dataframe(
     # Create the Boresight object.
     if not isinstance(boresight, Observed):
         boresight = Observed(
-            ICRS(numpy.array([boresight]), epoch=site.time.jd),
+            ICRS(numpy.array([boresight])),
             site=site,
             wavelength=INST_TO_WAVE["GFA"],
         )
@@ -292,7 +292,7 @@ def icrs_from_positioner_dataframe(
     # Create the Boresight object.
     if not isinstance(boresight, Observed):
         boresight = Observed(
-            ICRS(numpy.array([boresight]), epoch=site.time.jd),
+            ICRS(numpy.array([boresight])),
             site=site,
             wavelength=INST_TO_WAVE["GFA"],
         )
