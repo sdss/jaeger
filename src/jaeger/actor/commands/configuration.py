@@ -401,7 +401,8 @@ async def load(
     elif from_positions is True:
         await fps.update_position()
         positions = fps.get_positions_dict()
-        fps.configuration = ManualConfiguration.create_from_positions(positions)
+        obs = command.actor.observatory
+        fps.configuration = ManualConfiguration.create_from_positions(obs, positions)
 
     else:
         configuration = await _load_design(
@@ -544,9 +545,9 @@ def _output_configuration_loaded(command: Command[JaegerActor], fps: FPS):
 
     assert fps.configuration
 
-    command.debug(text=f"Focal plane scale: {fps.configuration.assignment_data.scale}.")
+    command.debug(text=f"Focal plane scale: {fps.configuration.assignment.scale}.")
 
-    boresight = fps.configuration.assignment_data.boresight
+    boresight = fps.configuration.assignment.boresight
     configuration = fps.configuration
 
     command.debug(

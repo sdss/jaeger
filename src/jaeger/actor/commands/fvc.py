@@ -270,7 +270,10 @@ async def snapshot(command: JaegerCommandType, fps: FPS):
 
     # Create a configuration from positions but don't make it active in the FPS.
     positions = fps.get_positions_dict()
-    configuration = ManualConfiguration.create_from_positions(positions)
+    configuration = ManualConfiguration.create_from_positions(
+        command.actor.observatory,
+        positions,
+    )
 
     result = await take_fvc_loop(
         command,
@@ -287,6 +290,7 @@ async def snapshot(command: JaegerCommandType, fps: FPS):
     ):
         return command.fail("Failed getting FVC data.")
 
+    # Pandas dataframe.
     ptm = result.fvc_transform.positionerTableMeas
     ptm = ptm.loc[:, ["positionerID", "alphaMeas", "betaMeas"]]
     ptm.set_index("positionerID", inplace=True)

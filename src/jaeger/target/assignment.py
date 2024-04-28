@@ -276,9 +276,8 @@ class BaseAssignment:
         Parameters
         ----------
         new_positions
-            A mapping of positioner IR to a dictionary containing the new alpha and beta
-            positions. The dictionary must have keys ``alpha`` and ``beta`` with the
-            new values.
+            A mapping of positioner ID to a dictionary containing the new alpha
+            and beta positions.
         validate
             Whether to validate the fibre data after updating the positions.
 
@@ -520,7 +519,7 @@ class ManualAssignment(BaseAssignment):
     def __init__(
         self,
         configuration: ManualConfiguration,
-        positions: dict,
+        positions: dict[int, tuple[float | None, float | None]],
         observatory: str,
         field_centre: tuple[float, float] | numpy.ndarray | None = None,
         position_angle: float = 0.0,
@@ -576,8 +575,8 @@ class ManualAssignment(BaseAssignment):
         alphas: list[float] = []
         betas: list[float] = []
         for row in fdata.iter_rows(named=True):
-            hole_id = row["hole_id"]
-            if hole_id not in self.positions:
+            positioner_id = row["positioner_id"]
+            if positioner_id not in self.positions:
                 alpha = alpha0
                 beta = beta0
 

@@ -1191,7 +1191,7 @@ class ManualConfiguration(BaseConfiguration[ManualAssignment]):
 
     def __init__(
         self,
-        positions: dict[str, dict],
+        positions: dict[int, tuple[float | None, float | None]],
         observatory,
         fps: FPS | None = None,
         field_centre: tuple[float, float] | numpy.ndarray | None = None,
@@ -1205,7 +1205,6 @@ class ManualConfiguration(BaseConfiguration[ManualAssignment]):
         self.design_id = design_id
         self.epoch = None
 
-        self.positions = positions
         self.assignment = ManualAssignment(
             self,
             positions,
@@ -1219,7 +1218,7 @@ class ManualConfiguration(BaseConfiguration[ManualAssignment]):
     def create_from_positions(
         cls,
         observatory: str,
-        positions: dict[str, tuple[float, float]],
+        positions: dict[int, tuple[float | None, float | None]],
         **kwargs,
     ):
         """Create a manual configuration from robot positions.
