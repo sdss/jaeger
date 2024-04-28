@@ -445,12 +445,12 @@ class BaseConfiguration(Generic[AssignmentType]):
             if len(decollided) > 0:
                 self.log(
                     f"{len(decollided)} positioners were collided and "
-                    f"were reassigned: {decollided}.",
+                    f"have been reassigned: {decollided}.",
                     level=logging.WARNING,
                     to_command=False,
                 )
 
-            self.update_coordinates_from_robot_grid(positioner_ids=decollided)
+                self.update_coordinates_from_robot_grid(positioner_ids=decollided)
 
             # Final check for collisions.
             if len(self.robot_grid.getCollidedRobotList()) > 0:
@@ -1129,6 +1129,8 @@ class DitheredConfiguration(BaseConfiguration[Assignment]):
             valid=True,
             **wok_ax,
         )
+
+        self.assignment.validate()
 
         return self.to_destination
 

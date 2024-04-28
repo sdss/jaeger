@@ -315,7 +315,7 @@ class BaseAssignment:
         )
 
         # Get the subframe with new coordinates.
-        fdata_new = fdata.filter(polars.col.positioner_id.is_in(new_positions))
+        fdata_new = fdata.filter(polars.col.positioner_id.is_in(list(new_positions)))
 
         # Get updated upstream coordinates.
         fdata_new_icrs = icrs_from_positioner_dataframe(
@@ -348,9 +348,7 @@ class BaseAssignment:
         over_180 = polars.col.beta > 180
 
         self.fibre_data = self.fibre_data.with_columns(
-            valid=polars.when(polars.col.valid.not_() | na | over_180)
-            .then(False)
-            .otherwise(True),
+            valid=polars.when(na | over_180).then(False).otherwise(True),
             on_target=polars.when(polars.col.on_target.not_() | na | over_180)
             .then(False)
             .otherwise(True),
