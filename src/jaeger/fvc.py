@@ -33,9 +33,7 @@ from jaeger.fps import FPS
 from jaeger.ieb import IEB
 from jaeger.kaiju import get_path_pair_in_executor, get_robot_grid
 from jaeger.plotting import plot_fvc_distances
-from jaeger.target import Configuration, Design
-from jaeger.target.coordinates import wok_to_positioner
-from jaeger.target.tools import read_confSummary
+from jaeger.target import Configuration, Design, read_confSummary, wok_to_positioner
 from jaeger.utils import run_in_executor
 
 

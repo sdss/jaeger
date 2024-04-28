@@ -8,5 +8,6 @@
 
 from .assignment import *
 from .configuration import *
+from .coordinates import *
 from .design import *
 from .tools import *
