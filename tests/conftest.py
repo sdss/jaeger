@@ -15,6 +15,7 @@ import sys
 import urllib.request
 from unittest.mock import MagicMock
 
+import numpy
 import pytest
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
@@ -28,6 +29,7 @@ from clu.testing import TestCommand
 from sdsstools import read_yaml_file
 
 from jaeger.fps import _FPS_INSTANCES
+from jaeger.testing import MockFPS
 
 
 sys.modules["coordio.transforms"] = MagicMock()
@@ -200,3 +202,16 @@ def database():
     database.connect("sdss5db_jaeger_test")
 
     yield database
+
+
+@pytest.fixture()
+def mock_fps():
+    """Returns a mock FPS instance with a random configuration."""
+
+    numpy.random.seed(42)
+
+    mock = MockFPS("APO", random=True)
+
+    yield mock
+
+    mock.discard()
