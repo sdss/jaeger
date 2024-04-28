@@ -351,7 +351,7 @@ def icrs_from_positioner_dataframe(
     if boresight is not None:
         field = Field(focal, field_center=boresight)
         obs = Observed(field, site=site, wavelength=wavelength)
-        icrs = ICRS(obs, epoch=site.time.jd)
+        icrs = ICRS(obs)
     else:
         field = obs = icrs = None
 
@@ -364,8 +364,8 @@ def icrs_from_positioner_dataframe(
     # The field, observed, ICRS coordinates depend on whether there is a boresight.
     if icrs is not None and obs is not None and field is not None:
         data = data.with_columns(
-            ra_icrs=polars.Series(icrs[:, 0], dtype=polars.Float64),
-            dec_icrs=polars.Series(icrs[:, 1], dtype=polars.Float64),
+            ra_epoch=polars.Series(icrs[:, 0], dtype=polars.Float64),
+            dec_epoch=polars.Series(icrs[:, 1], dtype=polars.Float64),
             ra_observed=polars.Series(obs.ra, dtype=polars.Float64),
             dec_observed=polars.Series(obs.dec, dtype=polars.Float64),
             alt_observed=polars.Series(obs[:, 0], dtype=polars.Float64),
@@ -373,8 +373,8 @@ def icrs_from_positioner_dataframe(
         )
     else:
         data = data.with_columns(
-            ra_icrs=polars.lit(None, dtype=polars.Float64),
-            dec_icrs=polars.lit(None, dtype=polars.Float64),
+            ra_epoch=polars.lit(None, dtype=polars.Float64),
+            dec_epoch=polars.lit(None, dtype=polars.Float64),
             ra_observed=polars.Series(None, dtype=polars.Float64),
             dec_observed=polars.Series(None, dtype=polars.Float64),
             alt_observed=polars.lit(None, dtype=polars.Float64),
