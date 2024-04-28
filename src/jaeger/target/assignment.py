@@ -64,7 +64,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "dubious": polars.Boolean,
     "wavelength": polars.Float32,
     "fiberId": polars.Float32,
-    "catalogid": polars.Float64,
+    "catalogid": polars.Int64,
     "ra_icrs": polars.Float64,
     "dec_icrs": polars.Float64,
     "pmra": polars.Float32,
