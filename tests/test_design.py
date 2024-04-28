@@ -12,9 +12,11 @@ import pathlib
 
 from typing import TYPE_CHECKING
 
+import numpy
 import polars
 
 from sdssdb.peewee.sdss5db import opsdb
+from sdsstools import yanny
 
 from jaeger.target.design import Design
 from jaeger.testing import MockFPS
@@ -59,6 +61,36 @@ async def test_configuration_write(tmp_path: pathlib.Path):
     design.configuration.write_summary(confSummary_path)
 
     assert confSummary_path.exists()
+
+
+async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
+    check_database()
+
+    design = Design(21636, epoch=2460427)
+
+    design.configuration.write_to_database()
+    confSummary_path = tmp_path / "confSummary.par"
+    design.configuration.write_summary(confSummary_path)
+
+    yanny_new = yanny(str(confSummary_path))
+    yanny_test = yanny(str(pathlib.Path(__file__).parent / "data/confSummary-test.par"))
+
+    assert yanny_new["epoch"] == yanny_test["epoch"]
+
+    fmap_new = yanny_new["FIBERMAP"]
+    fmap_test = yanny_test["FIBERMAP"]
+
+    numpy.testing.assert_allclose(fmap_new["alpha"], fmap_test["alpha"], atol=1e-4)
+    numpy.testing.assert_allclose(fmap_new["beta"], fmap_test["beta"], atol=1e-4)
+
+    numpy.testing.assert_allclose(fmap_new["ra"], fmap_test["ra"], atol=1e-4)
+    numpy.testing.assert_allclose(fmap_new["dec"], fmap_test["dec"], atol=1e-4)
+
+    numpy.testing.assert_allclose(fmap_new["racat"], fmap_test["racat"], atol=1e-4)
+    numpy.testing.assert_allclose(fmap_new["deccat"], fmap_test["deccat"], atol=1e-4)
+
+    numpy.testing.assert_allclose(fmap_new["xFocal"], fmap_test["xFocal"], atol=1e-4)
+    numpy.testing.assert_allclose(fmap_new["yFocal"], fmap_test["yFocal"], atol=1e-4)
 
 
 async def test_configuration_get_paths(mock_fps: MockFPS):
