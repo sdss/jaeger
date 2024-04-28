@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from functools import cache
 
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 
 import nptyping as npt
 import numpy
@@ -28,9 +28,10 @@ from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, getHoleOrient
 from jaeger.target.tools import get_wok_data
 
 
-BoresightType = (
-    npt.NDArray[npt.Shape["2"], npt.Float64] | tuple[float, float] | Observed
-)
+if TYPE_CHECKING:
+    BoresightType = (
+        npt.NDArray[npt.Shape["2"], npt.Float64] | tuple[float, float] | Observed
+    )
 
 
 __all__ = [
