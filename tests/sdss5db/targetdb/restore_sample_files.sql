@@ -14,3 +14,8 @@
 \COPY targetdb.field FROM 'sample_files/field.csv' WITH DELIMITER ',' CSV HEADER;
 \COPY targetdb.design_to_field FROM 'sample_files/design_to_field.csv' WITH DELIMITER ',' CSV HEADER;
 \COPY targetdb.magnitude FROM 'sample_files/magnitude.csv' WITH DELIMITER ',' CSV HEADER;
+
+-- Delete one assignment from design 21636 to test cases when not all 500 robots are
+-- assigned a target.
+DELETE FROM targetdb.assignment_status WHERE assignment_pk = 9736993;
+DELETE FROM targetdb.assignment WHERE pk = 9736993;
