@@ -216,7 +216,7 @@ def plot_fvc_distances(
         fig, axes = plt.subplots(1, 3, figsize=(30, 10))
 
         if not is_dither:
-            data_F = data_F.group_by("positioner_id").apply(
+            data_F = data_F.group_by("positioner_id").map_groups(
                 lambda g: g.filter(
                     polars.col.assigned.any(),
                     polars.col.on_target.any(),

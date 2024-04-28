@@ -15,10 +15,10 @@ import pathlib
 import warnings
 from functools import partial
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Mapping, Optional
 
 import numpy
-import pandas
+import polars
 from astropy.io import fits
 from astropy.table import Table
 
@@ -34,13 +34,17 @@ from jaeger.ieb import IEB
 from jaeger.kaiju import get_path_pair_in_executor, get_robot_grid
 from jaeger.plotting import plot_fvc_distances
 from jaeger.target import Configuration, Design, read_confSummary, wok_to_positioner
+from jaeger.target.tools import get_wok_data
 from jaeger.utils import run_in_executor
 
 
 if TYPE_CHECKING:
+    import pandas
+
     from coordio.transforms import FVCTransformAPO, FVCTransformLCO
 
     from jaeger.actor import JaegerActor
+    from jaeger.target.assignment import NewPositionsType
     from jaeger.target.configuration import BaseConfiguration
 
 
@@ -80,10 +84,10 @@ class FVC:
     """Focal View Camera class."""
 
     configuration: Optional[BaseConfiguration]
-    fibre_data: Optional[pandas.DataFrame]
-    measurements: Optional[pandas.DataFrame]
-    centroids: Optional[pandas.DataFrame]
-    offsets: Optional[pandas.DataFrame]
+    fibre_data: Optional[polars.DataFrame]
+    measurements: Optional[polars.DataFrame]
+    centroids: Optional[polars.DataFrame]
+    offsets: Optional[polars.DataFrame]
     fvc_transform: Optional[FVCTransformAPO | FVCTransformLCO]
 
     image_path: Optional[str]
@@ -232,9 +236,9 @@ class FVC:
     def process_fvc_image(
         self,
         path: pathlib.Path | str,
-        positioner_coords: dict,
+        positioner_coords: Mapping[int, tuple[float, float]],
         configuration: Optional[BaseConfiguration] = None,
-        fibre_data: Optional[pandas.DataFrame] = None,
+        fibre_data: Optional[polars.DataFrame] = None,
         fibre_type: str = "Metrology",
         centroid_method: str | None = None,
         use_new_invkin: bool = True,
@@ -242,7 +246,7 @@ class FVC:
         plot: bool | str = False,
         outdir: str | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-    ) -> tuple[fits.ImageHDU, pandas.DataFrame, pandas.DataFrame | None]:
+    ) -> tuple[fits.ImageHDU, polars.DataFrame, polars.DataFrame | None]:
         """Processes a raw FVC image.
 
         Parameters
@@ -256,7 +260,7 @@ class FVC:
             A configuration object to use for processing. If `None`, defaults to the
             current `.FPS` loaded configuration.
         fibre_data
-            A Pandas data frame with the expected coordinates of the targets. It
+            A Polars data frame with the expected coordinates of the targets. It
             is expected the data frame will have columns ``positioner_id``,
             ``hole_id``, ``fibre_type``, ``xwok``, and ``ywok``. This frame is
             appended to the processed image. Normally this parameters is left
@@ -305,13 +309,12 @@ class FVC:
         if fibre_data is None:
             if configuration is None:
                 raise FVCError("No fibre data and no configuration has been loaded.")
-            fibre_data = configuration.assignment_data.fibre_table
+            fibre_data = configuration.fibre_data
 
-        fdata = fibre_data.copy().reset_index().set_index("positioner_id")
+        fdata = fibre_data.clone().sort("positioner_id")
 
         # Set fibre_data initially so that if FVCTransform fails we have something.
-        self.fibre_data = fdata.copy().reset_index()
-        self.fibre_data.set_index(["hole_id", "fibre_type"], inplace=True)
+        self.fibre_data = fdata.sort(["hole_id", "fibre_type"])
 
         self.log(f"Processing raw image {path}")
 
@@ -362,12 +365,14 @@ class FVC:
             raise FVCError("IPA keyword not found in the header.")
         rotpos = float(rotpos) % 360.0
 
-        positioner_df = pandas.DataFrame.from_dict(
-            positioner_coords,
-            columns=["alphaReport", "betaReport"],
-            orient="index",
-        )
-        positioner_df.index.set_names(["positionerID"], inplace=True)
+        positioner_df = polars.DataFrame(
+            [(kk, *vv) for kk, vv in positioner_coords.items()],
+            schema={
+                "positioner_id": polars.Int32,
+                "alpha": polars.Float64,
+                "beta": polars.Float64,
+            },
+        ).sort("positioner_id")
 
         FVCTransform = get_transform(self.fps.observatory)
         self.log(f"Using FVC transform class {FVCTransform.__name__!r}.")
@@ -386,13 +391,13 @@ class FVC:
 
         fvc_transform = FVCTransform(
             image_data,
-            positioner_df,
+            positioner_df.to_pandas(),
             rotpos,
             polids=polids,
             plotPathPrefix=plot_path_root,
         )
 
-        self.centroids = fvc_transform.extractCentroids()
+        self.centroids = polars.from_pandas(fvc_transform.extractCentroids())
         fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
         self.centroid_method = fvc_transform.centType
 
@@ -403,65 +408,64 @@ class FVC:
 
         assert fvc_transform.positionerTableMeas is not None
 
-        measured = fvc_transform.positionerTableMeas.copy().set_index("positionerID")
+        measured = polars.from_pandas(fvc_transform.positionerTableMeas.copy())
+        measured = measured.sort("positionerID")
 
-        n_dubious = measured.wokErrWarn.sum()
+        n_dubious = measured["wokErrWarn"].sum()
         if n_dubious > 0:
             self.log(
                 f"Found {n_dubious} positioners with dubious centroid matches.",
                 level=logging.WARNING,
             )
 
-        metrology_data = fdata.copy().reset_index()
-        metrology_data = metrology_data.loc[metrology_data.fibre_type == fibre_type]
-
         # Create a column to mark positioners with dubious matches.
-        fdata.loc[:, "dubious"] = 0
-        dubious_pid = measured.loc[measured.wokErrWarn].index.values
-        fdata.loc[dubious_pid, "dubious"] = 1
+        dubious_pid = measured.filter(polars.col.wokErrWarn)["positionerID"]
+        fdata = fdata.with_columns(
+            dubious=polars.when(polars.col.positioner_id.is_in(dubious_pid))
+            .then(True)
+            .otherwise(False)
+        )
 
-        wok_measured = measured.loc[
-            metrology_data.positioner_id, ["xWokMeasMetrology", "yWokMeasMetrology"]
-        ]
-        fdata.loc[
-            fdata.fibre_type == fibre_type, ["xwok_measured", "ywok_measured"]
-        ] = wok_measured.values
+        metrology_data = fdata.clone()  # Sorted by positioner_id, same as "measured"
+        metrology_data = metrology_data.filter(polars.col.fibre_type == fibre_type)
 
-        fdata = fdata.reset_index().set_index("fibre_type")
+        wok_measured = measured[["xWokMeasMetrology", "yWokMeasMetrology"]]
+
+        fvc_fibre_idx = (fdata["fibre_type"] == fibre_type).arg_true()
+        fdata[fvc_fibre_idx, "xwok_measured"] = wok_measured["xWokMeasMetrology"]
+        fdata[fvc_fibre_idx, "ywok_measured"] = wok_measured["yWokMeasMetrology"]
 
         # Only use online, assigned robots for final RMS. First get groups of fibres
         # with an assigned robot, that are not offline or dubious.
-        if fdata.assigned.sum() > 0:
-            assigned = fdata.groupby("positioner_id").filter(
-                lambda g: g.assigned.any()
-                & (g.offline == 0).all()
-                & (g.dubious == 0).all()
-                # & (g.on_target == 1).any()
+        if fdata["assigned"].sum() > 0:
+            assigned = fdata.filter(
+                polars.col.assigned.any().over("positioner_id"),
+                polars.col.offline.not_().all(),
+                polars.col.dubious.not_().all(),
             )
         else:
             self.log("No assigned fibres found. Using all matched fibres.")
-            assigned = fdata.groupby("positioner_id").filter(
-                lambda g: (g.offline == 0).all()
-                & (g.dubious == 0).all()
-                # & (g.on_target == 1).any()
+            assigned = fdata.filter(
+                polars.col.offline.not_().all(),
+                polars.col.dubious.not_().all(),
             )
 
         # Now get the metrology fibre from those groups.
-        assigned = assigned.loc[fibre_type]
+        assigned_met = assigned.filter(polars.col.fibre_type == fibre_type)
 
         # Calculate RMS from assigned fibres.
-        dx = assigned.xwok - assigned.xwok_measured
-        dy = assigned.ywok - assigned.ywok_measured
-        self.fitrms = numpy.round(numpy.sqrt(numpy.mean(dx**2 + dy**2)), 5)
+        dx = (assigned_met["xwok"] - assigned_met["xwok_measured"]).to_numpy()
+        dy = (assigned_met["ywok"] - assigned_met["ywok_measured"]).to_numpy()
+        self.fitrms = float(numpy.round(numpy.sqrt(numpy.mean(dx**2 + dy**2)), 5))
         self.log(f"RMS full fit {self.fitrms * 1000:.3f} um.")
 
         # Also calculate 90% percentile and percentage of targets below threshold.
         distance = numpy.sqrt(dx**2 + dy**2)
 
-        self.perc_90 = numpy.round(numpy.percentile(distance, 90), 4)
+        self.perc_90 = float(numpy.round(numpy.percentile(distance, 90), 4))
 
         n_reached = numpy.sum(distance <= (config["fvc"]["target_distance"] / 1000))
-        self.fvc_percent_reached = numpy.round(n_reached / len(dx) * 100, 1)
+        self.fvc_percent_reached = float(numpy.round(n_reached / len(dx) * 100, 1))
 
         # FITSRMS is the RMS of measured - expected for assigned, non-disabled
         # robots. This is different from FVC_RMS reported by
@@ -476,8 +480,7 @@ class FVC:
         )
         header["DARKFILE"] = (dark_image or "", "Dark frame image")
 
-        fdata.reset_index(inplace=True)
-        fdata.set_index(["hole_id", "fibre_type"], inplace=True)
+        fdata = fdata.sort(["hole_id", "fibre_type"])
 
         self.fibre_data = fdata
         self.fvc_transform = fvc_transform
@@ -510,10 +513,10 @@ class FVC:
     def calculate_offsets(
         self,
         reported_positions: numpy.ndarray,
-        fibre_data: Optional[pandas.DataFrame] = None,
+        fibre_data: Optional[polars.DataFrame] = None,
         k: Optional[float] = None,
         max_correction: Optional[float] = None,
-    ) -> pandas.DataFrame:
+    ) -> polars.DataFrame:
         """Determines the offset to apply to the currently reported positions.
 
         Measured wok positions from the fibre data are converted to positioner
@@ -541,7 +544,7 @@ class FVC:
         Returns
         -------
         new_positions
-            The new alpha and beta positions as a Pandas dataframe indexed by
+            The new alpha and beta positions as a Polars dataframe indexed by
             positions ID. If `None`, uses the value ``fvc.k`` from the configuration.
 
         """
@@ -560,28 +563,29 @@ class FVC:
             fibre_data = self.fibre_data
             assert fibre_data is not None
 
-        fibre_data = fibre_data.copy().reset_index()
-        met: pandas.DataFrame = fibre_data.loc[fibre_data.fibre_type == "Metrology"]
+        fibre_data = fibre_data.clone()
+        met = fibre_data.filter(polars.col.fibre_type == "Metrology")
 
         # TODO: deal with missing data
-        if (met.loc[:, ["xwok_measured", "ywok_measured"]] == -999.0).any().any():
+        invalid = (met["xwok_measured"] == -999.0) | (met["ywok_measured"] == -999.0)
+        if invalid.any():
             raise FVCError("Some metrology fibres have not been measured.")
 
         # Calculate alpha/beta from measured wok coordinates.
         _measured = []
         first = True
-        for _, row in met.iterrows():
+        for row in met.iter_rows(named=True):
             (alpha_measured, beta_measured), _ = wok_to_positioner(
-                row.hole_id,
+                row["hole_id"],
                 site,
                 "Metrology",
-                row.xwok_measured,
-                row.ywok_measured,
+                row["xwok_measured"],
+                row["ywok_measured"],
             )
 
             if "alpha" in row:
-                alpha_expected = row.alpha
-                beta_expected = row.beta
+                alpha_expected = row["alpha"]
+                beta_expected = row["beta"]
             else:
                 if first:
                     self.log(
@@ -589,7 +593,8 @@ class FVC:
                         "positions. Using reported alpha/beta.",
                         logging.WARNING,
                     )
-                prow = reported_positions[reported_positions[:, 0] == row.positioner_id]
+                reported_pid = reported_positions[:, 0]
+                prow = reported_positions[reported_pid == row["positioner_id"]]
                 alpha_expected = prow[0][1]
                 beta_expected = prow[0][2]
 
@@ -599,13 +604,13 @@ class FVC:
                 alpha_measured = numpy.nan
                 beta_measured = numpy.nan
 
-            xwok_distance = row.xwok_measured - row.xwok
-            ywok_distance = row.ywok_measured - row.ywok
+            xwok_distance = row["xwok_measured"] - row["xwok"]
+            ywok_distance = row["ywok_measured"] - row["ywok"]
 
             _measured.append(
                 (
-                    row.hole_id,
-                    row.positioner_id,
+                    row["hole_id"],
+                    row["positioner_id"],
                     xwok_distance,
                     ywok_distance,
                     alpha_expected,
@@ -617,9 +622,9 @@ class FVC:
 
             first = False
 
-        measured = pandas.DataFrame(
+        measured = polars.DataFrame(
             _measured,
-            columns=[
+            schema=[
                 "hole_id",
                 "positioner_id",
                 "xwok_distance",
@@ -629,23 +634,25 @@ class FVC:
                 "alpha_measured",
                 "beta_measured",
             ],
-        )
-        measured.set_index("positioner_id", inplace=True)
+        ).sort("positioner_id")
 
         # Merge the reported positions.
-        reported = pandas.DataFrame(
-            reported_positions,
-            columns=["positioner_id", "alpha_reported", "beta_reported"],
-        )
-        reported.positioner_id = reported.positioner_id.astype("int32")
-        reported.set_index("positioner_id", inplace=True)
+        reported = polars.DataFrame(
+            reported_positions.tolist(),
+            schema={
+                "positioner_id": polars.Int32,
+                "alpha_reported": polars.Float64,
+                "beta_reported": polars.Float64,
+            },
+        ).sort("positioner_id")
 
-        offsets = pandas.concat([measured, reported], axis=1)
+        offsets = reported.join(measured, on="positioner_id", how="left")
 
         # If there are measured alpha/beta that are NaN, replace those with the
         # previous value.
-        offsets["transformation_valid"] = 1
-        pos_na = offsets["alpha_measured"].isna()
+        offsets = offsets.with_columns(transformation_valid=True)
+        test_col = "alpha_measured"
+        pos_na = offsets[test_col].is_null() | offsets[test_col].is_nan()
         if pos_na.sum() > 0:
             self.log(
                 "Failed to calculate corrected positioner coordinates for "
@@ -655,9 +662,11 @@ class FVC:
 
             # For now set these values to the expected because we'll use them to
             # calculate the offset (which will be zero for invalid conversions).
-            expected = offsets.loc[pos_na, ["alpha_expected", "beta_expected"]]
-            offsets.loc[pos_na, ["alpha_measured", "beta_measured"]] = expected
-            offsets.loc[pos_na, "transformation_valid"] = 0
+            idx = pos_na.arg_true()
+            expected = offsets[idx, ["alpha_expected", "beta_expected"]]
+            offsets[idx, "alpha_measured"] = expected["alpha_measured"]
+            offsets[idx, "beta_measured"] = expected["beta_measured"]
+            offsets[idx, "transformation_valid"] = False
 
         # Calculate offset between expected and measured.
         alpha_offset = offsets["alpha_expected"] - offsets["alpha_measured"]
@@ -665,20 +674,22 @@ class FVC:
 
         # if alpha measured and alpha reported lie on either side of the
         # wrap, adjust the offset accordingly
-        wrap1 = alpha_offset > 340
+        wrap1 = (alpha_offset > 360).arg_true()
         alpha_offset[wrap1] = alpha_offset[wrap1] - 360
-        wrap2 = alpha_offset < -340
+        wrap2 = (alpha_offset < -360).arg_true()
         alpha_offset[wrap2] = alpha_offset[wrap2] + 360
-
-        offsets["alpha_offset"] = alpha_offset
-        offsets["beta_offset"] = beta_offset
 
         # Clip very large offsets and apply a proportional term.
         alpha_offset_c = numpy.clip(self.k * alpha_offset, -max_offset, max_offset)
         beta_offset_c = numpy.clip(self.k * beta_offset, -max_offset, max_offset)
 
-        offsets["alpha_offset_corrected"] = alpha_offset_c
-        offsets["beta_offset_corrected"] = beta_offset_c
+        # Add new columns to DF.
+        offsets = offsets.with_columns(
+            alpha_offset=alpha_offset,
+            beta_offset=beta_offset,
+            alpha_offset_corrected=polars.Series(alpha_offset_c, dtype=polars.Float64),
+            beta_offset_corrected=polars.Series(beta_offset_c, dtype=polars.Float64),
+        )
 
         # Calculate new alpha and beta by applying the offset to the reported
         # positions (i.e., the ones the positioners believe they are at).
@@ -686,43 +697,46 @@ class FVC:
         beta_new = offsets["beta_reported"] + offsets["beta_offset_corrected"]
 
         # Get new positions that are out of range and clip them.
-        alpha_oor = (alpha_new < 0.0) | (alpha_new > 360.0)
-        beta_oor = (beta_new < 0.0) | (beta_new > 180.0)
+        alpha_oor = ((alpha_new < 0.0) | (alpha_new > 360.0)).arg_true()
+        beta_oor = ((beta_new < 0.0) | (beta_new > 180.0)).arg_true()
 
-        alpha_new.loc[alpha_oor] = numpy.clip(alpha_new.loc[alpha_oor], 0, 360)
-        beta_new.loc[beta_oor] = numpy.clip(beta_new.loc[beta_oor], 0, 180)
+        alpha_new[alpha_oor] = numpy.clip(alpha_new[alpha_oor], 0, 360)
+        beta_new[beta_oor] = numpy.clip(beta_new[beta_oor], 0, 180)
 
         # For the values out of range, recompute the corrected offsets.
-        alpha_corr = alpha_new.loc[alpha_oor] - offsets.loc[alpha_oor, "alpha_reported"]
-        offsets.loc[alpha_oor, "alpha_offset_corrected"] = alpha_corr
-        beta_corr = beta_new.loc[beta_oor] - offsets.loc[beta_oor, "beta_reported"]
-        offsets.loc[beta_oor, "beta_offset_corrected"] = beta_corr
+        alpha_corr = alpha_new[alpha_oor] - offsets[alpha_oor, "alpha_reported"]
+        offsets[alpha_oor, "alpha_offset_corrected"] = alpha_corr
+        beta_corr = beta_new[beta_oor] - offsets[beta_oor, "beta_reported"]
+        offsets[beta_oor, "beta_offset_corrected"] = beta_corr
 
         # Final check. If alpha/beta_new are NaNs, replace with reported values.
-        alpha_new[numpy.isnan(alpha_new)] = offsets.loc[
-            numpy.isnan(alpha_new), "alpha_reported"
-        ]
-        beta_new[numpy.isnan(beta_new)] = offsets.loc[
-            numpy.isnan(beta_new), "beta_reported"
-        ]
+        alpha_new_nan = alpha_new.is_nan().arg_true()
+        alpha_new[alpha_new_nan] = offsets[alpha_new_nan, "alpha_reported"]
+        beta_new_nan = beta_new.is_nan().arg_true()
+        beta_new[beta_new_nan] = offsets[beta_new_nan, "beta_reported"]
 
         # Save new positions.
-        offsets["alpha_new"] = alpha_new
-        offsets["beta_new"] = beta_new
+        offsets = offsets.with_columns(
+            alpha_new=alpha_new,
+            beta_new=beta_new,
+        )
 
         # Set the invalid alpha/beta_measured back to NaN.
-        invalid = offsets["transformation_valid"] == 0
-        offsets.loc[
-            invalid,
-            [
+        conds = [
+            polars.when(polars.col.transformation_valid.not_())
+            .then(float("nan"))
+            .otherwise(polars.col(column))
+            .alias(column)
+            for column in [
                 "alpha_measured",
                 "beta_measured",
                 "alpha_offset",
                 "beta_offset",
                 "alpha_offset_corrected",
                 "beta_offset_corrected",
-            ],
-        ] = numpy.nan
+            ]
+        ]
+        offsets = offsets.with_columns(*conds)
 
         self.offsets = offsets
 
@@ -764,16 +778,18 @@ class FVC:
 
         proc_hdus[1].header["CAPPLIED"] = self.correction_applied
 
+        # These are Pandas dataframes. We leave them be for convenience.
         positionerTable = calibration.positionerTable
         wokCoords = calibration.wokCoords
         fiducialCoords = calibration.fiducialCoords
 
-        dfs = [
+        dfs: list[tuple[str, pandas.DataFrame]] = [
             ("POSITIONERTABLE", positionerTable.reset_index()),
             ("WOKCOORDS", wokCoords.reset_index()),
             ("FIDUCIALCOORDS", fiducialCoords.reset_index()),
         ]
 
+        # The FVCTransform tables are also Pandas.
         if self.fvc_transform is not None:
             if self.fvc_transform.positionerTableMeas is not None:
                 pos_table_meas = self.fvc_transform.positionerTableMeas
@@ -789,10 +805,9 @@ class FVC:
             table = fits.BinTableHDU(rec, name=name)
             proc_hdus.append(table)
 
-        fibre_data = self.fibre_data.copy()
-        fibre_data.reset_index(inplace=True)
-        fibre_data.sort_values("positioner_id", inplace=True)
-        fibre_data_rec = Table.from_pandas(fibre_data).as_array()
+        # fibre_data is Polars.
+        fibre_data = self.fibre_data.clone().sort("positioner_id")
+        fibre_data_rec = Table.from_pandas(fibre_data.to_pandas()).as_array()
         proc_hdus.append(fits.BinTableHDU(fibre_data_rec, name="FIBERDATA"))
 
         for key, val in self.ieb_data.items():
@@ -813,7 +828,7 @@ class FVC:
         if self.fps:
             await self.fps.update_position()
             positions = self.fps.get_positions()
-            current_positions = pandas.DataFrame(
+            current_positions = polars.DataFrame(
                 {
                     "positionerID": positions[:, 0].astype(int),
                     "alphaReport": positions[:, 1],
@@ -821,10 +836,12 @@ class FVC:
                 }
             )
 
-            current_positions["cmdAlpha"] = numpy.nan
-            current_positions["cmdBeta"] = numpy.nan
-            current_positions["startAlpha"] = numpy.nan
-            current_positions["startBeta"] = numpy.nan
+            current_positions = current_positions.with_columns(
+                cmdAlpha=polars.lit(numpy.nan, dtype=polars.Float64),
+                cmdBeta=polars.lit(numpy.nan, dtype=polars.Float64),
+                startAlpha=polars.lit(numpy.nan, dtype=polars.Float64),
+                startBeta=polars.lit(numpy.nan, dtype=polars.Float64),
+            )
 
             if self.configuration:
                 robot_grid = self.configuration.robot_grid
@@ -835,30 +852,32 @@ class FVC:
                 _start_beta = []
 
                 if len(list(robot_grid.robotDict.values())[0].alphaPath) > 0:
-                    for pid in current_positions.positionerID:
+                    for pid in current_positions["positionerID"]:
                         robot = robot_grid.robotDict[pid]
                         _cmd_alpha.append(robot.alphaPath[0][1])
                         _cmd_beta.append(robot.betaPath[0][1])
                         _start_alpha.append(robot.alphaPath[-1][1])
                         _start_beta.append(robot.betaPath[-1][1])
 
-                    current_positions["cmdAlpha"] = _cmd_alpha
-                    current_positions["cmdBeta"] = _cmd_beta
-                    current_positions["startAlpha"] = _start_alpha
-                    current_positions["startBeta"] = _start_beta
+                    current_positions = current_positions.with_columns(
+                        cmdAlpha=polars.lit(_cmd_alpha, dtype=polars.Float64),
+                        cmdBeta=polars.lit(_cmd_beta, dtype=polars.Float64),
+                        startAlpha=polars.lit(_start_alpha, dtype=polars.Float64),
+                        startBeta=polars.lit(_start_beta, dtype=polars.Float64),
+                    )
 
-            posangles = Table.from_pandas(current_positions).as_array()
+            posangles = Table.from_pandas(current_positions.to_pandas()).as_array()
         proc_hdus.append(fits.BinTableHDU(posangles, name="POSANGLES"))
 
         if self.centroids is not None:
-            rec = Table.from_pandas(self.centroids).as_array()
+            rec = Table.from_pandas(self.centroids.to_pandas()).as_array()
         else:
             rec = None
         proc_hdus.append(fits.BinTableHDU(rec, name="CENTROIDS"))
 
         offsets = None
         if self.offsets is not None:
-            offsets = Table.from_pandas(self.offsets.reset_index()).as_array()
+            offsets = Table.from_pandas(self.offsets.to_pandas()).as_array()
         proc_hdus.append(fits.BinTableHDU(offsets, name="OFFSETS"))
 
         await run_in_executor(proc_hdus.writeto, new_filename, checksum=True)
@@ -868,10 +887,7 @@ class FVC:
 
         return proc_hdus
 
-    async def apply_correction(
-        self,
-        offsets: Optional[pandas.DataFrame] = None,
-    ):  # pragma: no cover
+    async def apply_correction(self, offsets: Optional[polars.DataFrame] = None):
         """Applies the offsets. Fails if the trajectory is collided or deadlock."""
 
         if self.fps.locked:
@@ -900,14 +916,22 @@ class FVC:
             robot.setAlphaBeta(positioner.alpha, positioner.beta)
             robot.setDestinationAlphaBeta(positioner.alpha, positioner.beta)
 
-            if offsets.loc[robot.id].transformation_valid == 0:
+            offset_data = offsets.filter(polars.col.positioner_id == robot.id)
+
+            if len(offset_data) == 0 or len(offset_data) > 1:
+                raise ValueError(f"Invalid offset data for positioner {robot.id}.")
+
+            if offset_data[0, "transformation_valid"]:
                 continue
 
-            new = offsets.loc[robot.id, ["alpha_new", "beta_new"]]
-            dist = offsets.loc[robot.id, ["xwok_distance", "ywok_distance"]] * 1000.0
-            if numpy.hypot(dist.xwok_distance, dist.ywok_distance) > target_distance:
-                robot.setDestinationAlphaBeta(new.alpha_new, new.beta_new)
+            new = offset_data[["alpha_new", "beta_new"]]
+            dist = offset_data[["xwok_distance", "ywok_distance"]] * 1000.0
+
+            meas_distance = numpy.hypot(dist["xwok_distance"], dist["ywok_distance"])[0]
+            if meas_distance > target_distance:
+                robot.setDestinationAlphaBeta(new[0, "alpha_new"], new[0, "beta_new"])
             else:
+                # Mark robot offline to indicate that we won't move it.
                 robot.isOffline = True
 
         # Check for collisions. If robots are collided just leave them there.
@@ -960,40 +984,35 @@ class FVC:
 
         self.log("Updating coordinates.", level=logging.DEBUG, broadcast=broadcast)
 
-        fdata = (
-            self.fibre_data.reset_index()
-            .set_index(["positioner_id", "fibre_type"])
-            .copy()
+        fdata = self.fibre_data.clone().sort(["positioner_id", "fibre_type"])
+
+        measured = (
+            fdata.filter(polars.col.fibre_type == "Metrology")
+            .select(polars.col(["hole_id", "xwok_measured", "ywok_measured"]))
+            .fill_nan(None)
+            .drop_nulls()
         )
 
-        idx = pandas.IndexSlice
-        cols = ["hole_id", "xwok_measured", "ywok_measured"]
-        measured = fdata.loc[idx[:, "Metrology"], cols].dropna()
+        new_alpha_beta: NewPositionsType = {}
 
-        for (pid, ftype), row in measured.iterrows():
+        wok_data = get_wok_data(self.fps.observatory)
+        for row in measured.iter_rows(named=True):
             (alpha, beta), _ = wok_to_positioner(
-                row.hole_id,
+                row["hole_id"],
                 self.fps.observatory,
                 "Metrology",
-                row.xwok_measured,
-                row.ywok_measured,
+                row["xwok_measured"],
+                row["ywok_measured"],
+                wok_data=wok_data,
             )
             if not numpy.isnan(alpha):
-                fdata.loc[idx[pid, :], ["alpha", "beta"]] = (alpha, beta)
+                new_alpha_beta[row["positioner_id"]] = {"alpha": alpha, "beta": beta}
 
         configuration_copy = self.configuration.copy()
-        configuration_copy.assignment_data.fibre_table = fdata.copy()
+        configuration_copy.assignment.fibre_table = fdata.clone()
 
-        for pid in measured.index.get_level_values(0).tolist():
-            alpha, beta = fdata.loc[(pid, "Metrology"), ["alpha", "beta"]]
-            for ftype in ["APOGEE", "BOSS", "Metrology"]:
-                configuration_copy.assignment_data.positioner_to_icrs(
-                    pid,
-                    ftype,
-                    float(alpha),
-                    float(beta),
-                    update=True,
-                )
+        # Update alpha/beta and upstream coordinates.
+        configuration_copy.assignment.update_positions(new_alpha_beta)
 
         if self.proc_hdu and "IPA" in self.proc_hdu.header:
             rotator_angle = round(self.proc_hdu.header["IPA"], 2)
@@ -1020,7 +1039,7 @@ class FVC:
 
         # Plot analysis of FVC loop.
         if plot and self.proc_image_path:
-            if self.configuration.assignment_data.boresight is None:
+            if self.configuration.assignment.boresight is None:
                 self.log(
                     "Configuration does not have boresight set. "
                     "Cannot produce FVC plots.",
@@ -1034,7 +1053,7 @@ class FVC:
 
                 plot_fvc_distances(
                     self.configuration,
-                    configuration_copy.assignment_data.fibre_table,
+                    configuration_copy.fibre_data,
                     path=outpath,
                 )
 
@@ -1103,7 +1122,7 @@ async def reprocess_configuration(
     fimg = proc_fimg.replace("proc-", "")
 
     posangles = fits.getdata(proc_fimg, "POSANGLES")
-    fiber_data = pandas.DataFrame(fits.getdata(proc_fimg, "FIBERDATA"))
+    fiber_data = polars.DataFrame(fits.getdata(proc_fimg, "FIBERDATA"))
 
     positioner_coords = {}
     for row in posangles:
