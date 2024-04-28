@@ -216,6 +216,7 @@ class BaseAssignment:
                     "epoch": None,
                     "delta_ra": None,
                     "delta_dec": None,
+                    "assigned": False,
                 }
 
                 if hole_id in tdata and tdata[hole_id]["fibre_type"] == fibre_type:
@@ -230,6 +231,7 @@ class BaseAssignment:
                             "epoch": tdata[hole_id]["epoch"],
                             "delta_ra": tdata[hole_id]["delta_ra"],
                             "delta_dec": tdata[hole_id]["delta_dec"],
+                            "assigned": True,
                         }
                     )
 
