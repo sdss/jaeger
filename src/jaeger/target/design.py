@@ -19,6 +19,7 @@ from coordio.utils import object_offset
 from sdssdb.peewee.sdss5db import targetdb
 
 from jaeger import config, log
+from jaeger.fps import FPS
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -47,6 +48,10 @@ class Design:
     ----------
     design_id
         The ID of the design to load.
+    fps
+        An instance of the `FPS` class. If not povided, uses `~.BaseFPS.get_instance`.
+        In general a custom FPS instance should not be passed, and this argument is
+        meant mostly for testing.
     create_configuration
         Create a `.Configuration` attached to this design.
     epoch
@@ -64,6 +69,7 @@ class Design:
     def __init__(
         self,
         design_id: int,
+        fps: FPS | None = None,
         create_configuration: bool = True,
         epoch: float | None = None,
         scale: float | None = None,
@@ -73,6 +79,7 @@ class Design:
         if calibration.wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
 
+        self.fps = fps or FPS.get_instance()
         self.design_id = design_id
 
         if connect_database(targetdb.database) is False:
@@ -98,7 +105,7 @@ class Design:
 
         self.configuration: Configuration
         if create_configuration:
-            self.configuration = Configuration(self, epoch=epoch, scale=scale)
+            self.configuration = Configuration(self, fps=fps, epoch=epoch, scale=scale)
 
     def get_target_data(self) -> dict[str, dict]:
         """Retrieves target data as a dictionary."""
@@ -258,6 +265,7 @@ class Design:
     async def create_async(
         cls,
         design_id: int,
+        fps: FPS | None = None,
         epoch: float | None = None,
         scale: float | None = None,
         boss_wavelength: float | None = None,
@@ -266,11 +274,12 @@ class Design:
     ):
         """Returns a design while creating the configuration in an executor."""
 
-        self = cls(design_id, create_configuration=False, **kwargs)
+        self = cls(design_id, fps=fps, create_configuration=False, **kwargs)
 
         configuration = await run_in_executor(
             Configuration,
             self,
+            fps=fps,
             epoch=epoch,
             scale=scale,
             boss_wavelength=boss_wavelength,

@@ -150,7 +150,7 @@ class BaseConfiguration(Generic[AssignmentType]):
     assignment: AssignmentType
     epoch: float | None
 
-    def __init__(self, scale: float | None = None):
+    def __init__(self, fps: FPS | None = None, scale: float | None = None):
         if len(calibration.positionerTable) == 0:
             raise ValueError("FPS calibrations not loaded or the array is empty.")
 
@@ -175,7 +175,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         self.extra_summary_data = {}
 
-        self.fps: FPS | None = None
+        self.fps = fps
         self.robot_grid = self._initialise_grid()
 
         self.command: Command[JaegerActor] | None = None
@@ -991,12 +991,13 @@ class Configuration(BaseConfiguration[Assignment]):
     def __init__(
         self,
         design: Design,
+        fps: FPS | None = None,
         epoch: float | None = None,
         scale: float | None = None,
         boss_wavelength: float | None = None,
         apogee_wavelength: float | None = None,
     ):
-        super().__init__(scale=scale)
+        super().__init__(fps=fps, scale=scale)
 
         self.design = design
         self.design_id = design.design_id
@@ -1027,11 +1028,12 @@ class DitheredConfiguration(BaseConfiguration[Assignment]):
         self,
         parent: BaseConfiguration,
         radius: float,
+        fps: FPS | None = None,
         epoch: float | None = None,
     ):
         assert parent.design
 
-        super().__init__(scale=parent.scale)
+        super().__init__(fps=fps, scale=parent.scale)
 
         # This needs to be set after the __init__ beccause __init__ sets parent=None.
         self.parent_configuration = parent
@@ -1143,13 +1145,15 @@ class ManualConfiguration(BaseConfiguration[ManualAssignment]):
     positions
         A dictionary containing the targeting information. It must be a
         mapping of hole ID to a tuple of ``alpha`` and ``beta`` positions.
+    observatory
+        The observatory name. If `None`, uses the value from the configuration.
+    fps
+        The FPS instance to use. If `None`, uses the currently running instance.
     field_centre
         A tuple or array with the boresight coordinates as current epoch
         RA/Dec. If `None`, target coordinates must be positioner or wok.
     design_id
         A design identifier for this configuration.
-    observatory
-        The observatory name. If `None`, uses the value from the configuration.
     position_angle
         The position angle of the field.
 
@@ -1161,12 +1165,13 @@ class ManualConfiguration(BaseConfiguration[ManualAssignment]):
         self,
         positions: dict[str, dict],
         observatory,
+        fps: FPS | None = None,
         field_centre: tuple[float, float] | numpy.ndarray | None = None,
         design_id: int = -999,
         position_angle: float = 0.0,
         scale: float | None = None,
     ):
-        super().__init__(scale=scale)
+        super().__init__(fps=fps, scale=scale)
 
         self.design = None
         self.design_id = design_id
