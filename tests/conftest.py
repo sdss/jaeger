@@ -199,7 +199,15 @@ def clear_fps_instances():
 def database():
     from sdssdb.peewee.sdss5db import database
 
-    database.connect("sdss5db_jaeger_test")
+    if os.environ.get("CI", False):
+        database.connect(
+            "sdss5db_jaeger_test",
+            host="localhost",
+            user="sdss",
+            port=5432,
+        )
+    else:
+        database.connect("sdss5db_jaeger_test")
 
     yield database
 
