@@ -200,12 +200,7 @@ def database():
     from sdssdb.peewee.sdss5db import database
 
     if os.environ.get("CI", False):
-        database.connect(
-            "sdss5db_jaeger_test",
-            host="localhost",
-            user="sdss",
-            port=5432,
-        )
+        database.connect("sdss5db_jaeger_test", host=None, user=None, port=5432)
     else:
         database.connect("sdss5db_jaeger_test")
 
