@@ -36,6 +36,7 @@ jobs:
         with:
           repository: sdss/fps_calibrations
           path: fps_calibrations
+          ref: '2023.01.21'
 
       - name: Set up Python
         uses: actions/setup-python@v5
