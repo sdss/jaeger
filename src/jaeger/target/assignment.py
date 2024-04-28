@@ -424,6 +424,7 @@ class Assignment(BaseAssignment):
             self.site,
             epoch=epoch,
             position_angle=self.design.field.position_angle,
+            focal_plane_scale=self.scale,
         )
 
         # A couple sanity checks.
@@ -472,6 +473,7 @@ class Assignment(BaseAssignment):
             boresight=self.boresight,
             epoch=epoch,
             position_angle=self.design.field.position_angle,
+            focal_plane_scale=self.scale,
         )
         icrs_unassigned = icrs_unassigned.with_columns(assigned=False, on_target=False)
 
