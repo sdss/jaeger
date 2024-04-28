@@ -36,6 +36,6 @@ def test_check_data(test_data):
     assert len(measured) == 500
 
 
-def test_fvc():
+async def test_fvc():
     fvc = FVC("APO")
     assert fvc.command is None
