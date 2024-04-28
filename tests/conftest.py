@@ -191,3 +191,12 @@ def clear_fps_instances():
     yield
 
     _FPS_INSTANCES.clear()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def database():
+    from sdssdb.peewee.sdss5db import database
+
+    database.connect("sdss5db_jaeger_test")
+
+    yield database

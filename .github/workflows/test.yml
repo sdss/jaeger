@@ -44,6 +44,8 @@ jobs:
 
       - name: Install Postgresql
         uses: ikalnytskyi/action-setup-postgres@v5
+        with:
+          username: sdss
         id: postgres
 
       - name: Install Q3C
@@ -60,18 +62,18 @@ jobs:
 
       - name: Create database
         run: |
-          createdb sdss5db_jaeger
-          psql -c "CREATE EXTENSION q3c;" -d sdss5db_jaeger
+          createdb sdss5db_jaeger_test
+          psql -c "CREATE EXTENSION q3c;" -d sdss5db_jaeger_test
         env:
           PGSERVICE: ${{ steps.postgres.outputs.service-name }}
 
       - name: Populate database
         run: |
           cd tests/sdss5db/targetdb
-          psql sdss5db_jaeger < targetdb.sql
-          psql sdss5db_jaeger < restore_sample_files.sql
+          psql sdss5db_jaeger_test < targetdb.sql
+          psql sdss5db_jaeger_test < restore_sample_files.sql
           cd ../opsdb_apo
-          psql sdss5db_jaeger < opsdb_apo.sql
+          psql sdss5db_jaeger_test < opsdb_apo.sql
         env:
           PGSERVICE: ${{ steps.postgres.outputs.service-name }}
 
