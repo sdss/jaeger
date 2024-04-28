@@ -47,7 +47,7 @@ class Design:
     ----------
     design_id
         The ID of the design to load.
-    load_configuration
+    create_configuration
         Create a `.Configuration` attached to this design.
     epoch
         The JD epoch for which to calculate the configuration coordinates. If
@@ -64,7 +64,7 @@ class Design:
     def __init__(
         self,
         design_id: int,
-        load_configuration: bool = True,
+        create_configuration: bool = True,
         epoch: float | None = None,
         scale: float | None = None,
         safety_factor: float = 0.1,
@@ -97,7 +97,7 @@ class Design:
         self.target_data: dict[str, dict] = self.get_target_data()
 
         self.configuration: Configuration
-        if load_configuration:
+        if create_configuration:
             self.configuration = Configuration(self, epoch=epoch, scale=scale)
 
     def get_target_data(self) -> dict[str, dict]:
@@ -266,7 +266,7 @@ class Design:
     ):
         """Returns a design while creating the configuration in an executor."""
 
-        self = cls(design_id, load_configuration=False, **kwargs)
+        self = cls(design_id, create_configuration=False, **kwargs)
 
         configuration = await run_in_executor(
             Configuration,

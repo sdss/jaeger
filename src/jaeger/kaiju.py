@@ -11,9 +11,10 @@ from __future__ import annotations
 import time
 import warnings
 
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, Sequence, cast
 
 import numpy
+from matplotlib.figure import Figure
 
 from jaeger import config, log
 from jaeger.exceptions import JaegerError, JaegerUserWarning, TrajectoryError
@@ -38,6 +39,11 @@ __all__ = [
     "decollide_in_executor",
     "check_trajectory",
 ]
+
+
+ArmTrajectoryType = Sequence[tuple[float, float]]
+TrajectoryType = dict[int, dict[Literal["alpha", "beta"], ArmTrajectoryType]] | None
+PathPairReturnType = tuple[TrajectoryType, TrajectoryType, bool, list[int]]
 
 
 def warn(message):
@@ -244,7 +250,7 @@ def get_path_pair(
     phobia: float | None = None,
     stop_if_deadlock: bool = False,
     ignore_initial_collisions: bool = False,
-) -> tuple:
+) -> PathPairReturnType:
     """Runs path generation and returns the to and from destination paths.
 
     Parameters
@@ -361,7 +367,10 @@ def get_path_pair(
     )
 
 
-async def get_path_pair_in_executor(robot_grid: RobotGridCalib, **kwargs):
+async def get_path_pair_in_executor(
+    robot_grid: RobotGridCalib,
+    **kwargs,
+) -> PathPairReturnType:
     """Calls `.get_path_pair` with a process executor."""
 
     data = dump_robot_grid(robot_grid)
@@ -515,7 +524,10 @@ def get_snapshot_async(
 
     plt.tight_layout()
 
-    ax.figure.savefig(path)
+    figure = ax.figure
+    assert isinstance(figure, Figure)
+
+    figure.savefig(path)
 
     plt.close("all")
 

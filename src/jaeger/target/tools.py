@@ -11,19 +11,15 @@ from __future__ import annotations
 import os
 import pathlib
 import re
+from functools import cache
 
 from typing import TYPE_CHECKING
 
 import numpy
 import pandas
+import polars
 
-from coordio.conv import (
-    positionerToTangent,
-    tangentToPositioner,
-    tangentToWok,
-    wokToTangent,
-)
-from coordio.defaults import POSITIONER_HEIGHT, calibration, getHoleOrient
+from coordio.defaults import calibration
 from sdsstools import yanny
 
 import jaeger.target
@@ -40,127 +36,49 @@ if TYPE_CHECKING:
     from jaeger import FPS
 
 
-__all__ = [
-    "wok_to_positioner",
-    "positioner_to_wok",
-    "copy_summary_file",
-    "read_confSummary",
-]
+__all__ = ["get_wok_data", "copy_summary_file", "read_confSummary"]
 
 
-def wok_to_positioner(
-    hole_id: str,
-    site: str,
-    fibre_type: str,
-    xwok: float,
-    ywok: float,
-    zwok: float = POSITIONER_HEIGHT,
-) -> tuple[numpy.ndarray, numpy.ndarray]:
-    """Converts from wok to positioner coordinates.
+@cache
+def get_wok_data(observatory: str):
+    """Returns a Polars frame with wok calibration data.
 
-    Returns arrays with the positioner and tangent coordinates.
+    Parameters
+    ----------
+    observatory
+        The observatory for which to return the wok data.
+
+    Returns
+    -------
+    wok_data
+        A Polars data frame with the combined positioner table,
+        wok coordinates, and fibre assignments.
 
     """
 
-    positioner_data = calibration.positionerTable.loc[(site, hole_id)]
+    positionerTable = polars.from_pandas(calibration.positionerTable.reset_index())
+    wokCoords = polars.from_pandas(calibration.wokCoords.reset_index())
+    fibre_ass = polars.from_pandas(calibration.fiberAssignments.reset_index())
 
-    hole_orient = getHoleOrient(site, hole_id)
+    if positionerTable is None or wokCoords is None or fibre_ass is None:
+        raise ValueError("FPS calibrations not loaded.")
 
-    if fibre_type == "APOGEE":
-        xBeta = positioner_data.apX
-        yBeta = positioner_data.apY
-    elif fibre_type == "BOSS":
-        xBeta = positioner_data.bossX
-        yBeta = positioner_data.bossY
-    elif fibre_type == "Metrology":
-        xBeta = positioner_data.metX
-        yBeta = positioner_data.metY
-    else:
-        raise ValueError(f"Invalid fibre type {fibre_type}.")
-
-    tangent = wokToTangent(
-        xwok,
-        ywok,
-        zwok,
-        *hole_orient,
-        dx=positioner_data.dx,
-        dy=positioner_data.dy,
+    # Consolidate both tables. Reject duplicate (_right) columns.
+    wok_data = (
+        positionerTable.join(
+            wokCoords,
+            on=["site", "holeID"],
+            how="inner",
+        )
+        .join(
+            fibre_ass,
+            on=["site", "holeID"],
+            how="inner",
+        )
+        .select(~polars.selectors.ends_with("_right"))
     )
 
-    alpha, beta, _ = tangentToPositioner(
-        tangent[0][0],
-        tangent[1][0],
-        xBeta,
-        yBeta,
-        la=positioner_data.alphaArmLen,
-        alphaOffDeg=positioner_data.alphaOffset,
-        betaOffDeg=positioner_data.betaOffset,
-    )
-
-    return (
-        numpy.array([alpha, beta]),
-        numpy.array([tangent[0][0], tangent[1][0], tangent[2][0]]),
-    )
-
-
-def positioner_to_wok(
-    hole_id: str,
-    site: str,
-    fibre_type: str,
-    alpha: float,
-    beta: float,
-):
-    """Convert from positioner to wok coordinates.
-
-    Returns xyz wok and tangent coordinates as a tuple of arrays.
-
-    """
-
-    positioner_data = calibration.positionerTable.loc[(site, hole_id)]
-    wok_data = calibration.wokCoords.loc[(site, hole_id)]
-
-    b = wok_data[["xWok", "yWok", "zWok"]]
-    iHat = wok_data[["ix", "iy", "iz"]]
-    jHat = wok_data[["jx", "jy", "jz"]]
-    kHat = wok_data[["kx", "ky", "kz"]]
-
-    if fibre_type == "APOGEE":
-        xBeta = positioner_data.apX
-        yBeta = positioner_data.apY
-    elif fibre_type == "BOSS":
-        xBeta = positioner_data.bossX
-        yBeta = positioner_data.bossY
-    elif fibre_type == "Metrology":
-        xBeta = positioner_data.metX
-        yBeta = positioner_data.metY
-    else:
-        raise ValueError(f"Invlid fibre type {fibre_type}.")
-
-    tangent = positionerToTangent(
-        alpha,
-        beta,
-        xBeta,
-        yBeta,
-        la=positioner_data.alphaArmLen,
-        alphaOffDeg=positioner_data.alphaOffset,
-        betaOffDeg=positioner_data.betaOffset,
-    )
-
-    wok = tangentToWok(
-        tangent[0],
-        tangent[1],
-        0,
-        b,
-        iHat,
-        jHat,
-        kHat,
-        dx=positioner_data.dx,
-        dy=positioner_data.dy,
-    )
-
-    wok_coords = numpy.array(wok)
-
-    return wok_coords, numpy.array([tangent[0], tangent[1], 0])
+    return wok_data.filter(polars.col("site") == observatory).sort("holeID")
 
 
 async def create_random_configuration(
