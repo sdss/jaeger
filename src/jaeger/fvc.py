@@ -439,17 +439,12 @@ class FVC:
         # Only use online, assigned robots for final RMS. First get groups of fibres
         # with an assigned robot, that are not offline or dubious.
         if fdata["assigned"].sum() > 0:
-            assigned = fdata.group_by("positioner_id").map_groups(
-                lambda g: g.filter(
+            assigned = fdata.filter(
+                (
                     polars.col.assigned.any()
-                    & (~polars.col.offline).all()
-                    & (~polars.col.dubious).all()
-                )
-                # (
-                #     polars.col.assigned.any()
-                #     & polars.col.offline.not_().all()
-                #     & polars.col.dubious.not_().all()
-                # ).over("positioner_id")
+                    & polars.col.offline.not_().all()
+                    & polars.col.dubious.not_().all()
+                ).over("positioner_id")
             )
         else:
             self.log("No assigned fibres found. Using all matched fibres.")
@@ -632,16 +627,16 @@ class FVC:
 
         measured = polars.DataFrame(
             _measured,
-            schema=[
-                "hole_id",
-                "positioner_id",
-                "xwok_distance",
-                "ywok_distance",
-                "alpha_expected",
-                "beta_expected",
-                "alpha_measured",
-                "beta_measured",
-            ],
+            schema={
+                "hole_id": polars.String,
+                "positioner_id": polars.Int32,
+                "xwok_distance": polars.Float64,
+                "ywok_distance": polars.Float64,
+                "alpha_expected": polars.Float64,
+                "beta_expected": polars.Float64,
+                "alpha_measured": polars.Float64,
+                "beta_measured": polars.Float64,
+            },
         ).sort("positioner_id")
 
         # Merge the reported positions.
@@ -672,8 +667,8 @@ class FVC:
             # calculate the offset (which will be zero for invalid conversions).
             idx = pos_na.arg_true()
             expected = offsets[idx, ["alpha_expected", "beta_expected"]]
-            offsets[idx, "alpha_measured"] = expected["alpha_measured"]
-            offsets[idx, "beta_measured"] = expected["beta_measured"]
+            offsets[idx, "alpha_measured"] = expected["alpha_expected"]
+            offsets[idx, "beta_measured"] = expected["beta_expected"]
             offsets[idx, "transformation_valid"] = False
 
         # Calculate offset between expected and measured.
