@@ -20,6 +20,8 @@ import jaeger
 from jaeger.fvc import FVC
 from jaeger.target.schemas import FIBRE_DATA_SCHEMA
 
+from . import check_fps_calibrations_version
+
 
 def get_data_from_proc_fimg(path: pathlib.Path):
     """Returns the fibre data dataframe from a FVC file and the positioner angles."""
@@ -74,6 +76,8 @@ async def test_fvc_process_image(
     get_fimg_paths: Sequence[pathlib.Path],
     monkeypatch: pytest.MonkeyPatch,
 ):
+    check_fps_calibrations_version()
+
     fimf_path, proc_fimg_path, calib_fimg_path = get_fimg_paths
 
     monkeypatch.setitem(jaeger.config["fvc"], "dark_image", calib_fimg_path)

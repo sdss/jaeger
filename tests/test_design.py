@@ -23,7 +23,7 @@ from jaeger.target.design import Design
 from jaeger.target.tools import configuration_to_dataframe
 from jaeger.testing import MockFPS
 
-from . import check_database
+from . import check_database, check_fps_calibrations_version
 
 
 if TYPE_CHECKING:
@@ -67,6 +67,7 @@ async def test_configuration_write(tmp_path: pathlib.Path):
 
 async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
     check_database()
+    check_fps_calibrations_version()
 
     design = Design(21636, epoch=2460427)
 

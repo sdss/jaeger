@@ -8,7 +8,11 @@
 
 import pytest
 
+from fps_calibrations import __version__ as fps_calibrations_version
 from sdssdb.peewee.sdss5db import database
+
+
+FPS_CALIBRATIONS_VERSION = "2024.04.01"
 
 
 def check_database():
@@ -19,3 +23,12 @@ def check_database():
 
     if database.dbname != "sdss5db_jaeger_test":
         pytest.skip("Not connected to the test database.")
+
+
+def check_fps_calibrations_version():
+    if fps_calibrations_version != FPS_CALIBRATIONS_VERSION:
+        raise ValueError(
+            "fps_calibrations version does not match the expected "
+            "version for testing. The required version "
+            f"is {FPS_CALIBRATIONS_VERSION!r}."
+        )
