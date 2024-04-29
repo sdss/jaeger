@@ -458,6 +458,12 @@ class MockFPS(FPS):
 
             self[positioner_id] = positioner
 
+    def rearrange(self, new_positions: Mapping[int, Mapping[str, float | bool]]):
+        """Reset the positioner to a new configuration."""
+
+        self.clear()
+        self.__init__(self.observatory, new_positions)
+
     def randomise(self):
         """Randomises all the positioners."""
 
