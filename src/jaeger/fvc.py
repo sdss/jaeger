@@ -1012,7 +1012,7 @@ class FVC:
         configuration_copy.assignment.fibre_table = fdata.clone()
 
         # Update alpha/beta and upstream coordinates.
-        configuration_copy.assignment.update_positions(new_alpha_beta)
+        configuration_copy.assignment.update_positioner_coordinates(new_alpha_beta)
 
         if self.proc_hdu and "IPA" in self.proc_hdu.header:
             rotator_angle = round(self.proc_hdu.header["IPA"], 2)
