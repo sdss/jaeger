@@ -1,6 +1,6 @@
 # Changelog
 
-## Next version
+## 1.7.0 - April 29, 2024
 
 This is marked as a minor version although it should not have any visible changes, but the codebase has significantly changed and there's potential for regression issues that are better tracked as a clearly different version.
 
