@@ -432,6 +432,8 @@ class MockFPS(FPS):
 
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
+        self.observatory = observatory
+
         self._positioner_data = positioner_data
         self.wok_data = get_wok_data(observatory)
 
@@ -457,6 +459,8 @@ class MockFPS(FPS):
                     positioner.offline = bool(data["offline"])
 
             self[positioner_id] = positioner
+
+        self._locked = False
 
     def rearrange(self, new_positions: Mapping[int, Mapping[str, float | bool]]):
         """Reset the positioner to a new configuration."""
