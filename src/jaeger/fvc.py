@@ -368,7 +368,7 @@ class FVC:
         positioner_df = polars.DataFrame(
             [(kk, *vv) for kk, vv in positioner_coords.items()],
             schema={
-                "positioner_id": polars.Int32,
+                "positionerID": polars.Int32,
                 "alpha": polars.Float64,
                 "beta": polars.Float64,
             },
