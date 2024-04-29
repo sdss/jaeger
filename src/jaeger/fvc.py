@@ -552,7 +552,7 @@ class FVC:
 
         """
 
-        self.log("Calculating offset from FVC image and model fit.")
+        self.log("Calculating offsets from FVC image and model fit.")
 
         site = config["observatory"]
 
@@ -574,6 +574,8 @@ class FVC:
         if invalid.any():
             raise FVCError("Some metrology fibres have not been measured.")
 
+        wok_data = get_wok_data(self.site)
+
         # Calculate alpha/beta from measured wok coordinates.
         _measured = []
         first = True
@@ -584,6 +586,7 @@ class FVC:
                 "Metrology",
                 row["xwok_measured"],
                 row["ywok_measured"],
+                wok_data=wok_data,
             )
 
             if "alpha" in row:
