@@ -426,7 +426,7 @@ async def take_fvc_loop(
                 polids=polids,
                 centroid_method=centroid_method,
                 use_new_invkin=use_invkin,
-                loop=asyncio.get_running_loop(),
+                # loop=asyncio.get_running_loop(),  # Disable for now
             )
 
             # 3. Set current RMS and delta.
