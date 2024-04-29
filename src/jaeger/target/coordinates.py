@@ -136,7 +136,7 @@ def positioner_from_icrs_dataframe(
     )
 
     # Create the Boresight object.
-    if not isinstance(boresight, Observed):
+    if boresight is not None and not isinstance(boresight, Observed):
         boresight = Observed(
             ICRS(numpy.array([boresight])),
             site=site,
@@ -290,7 +290,7 @@ def icrs_from_positioner_dataframe(
         raise ValueError("Site epoch must be set.")
 
     # Create the Boresight object.
-    if not isinstance(boresight, Observed):
+    if boresight is not None and not isinstance(boresight, Observed):
         boresight = Observed(
             ICRS(numpy.array([boresight])),
             site=site,
@@ -375,8 +375,8 @@ def icrs_from_positioner_dataframe(
         data = data.with_columns(
             ra_epoch=polars.lit(None, dtype=polars.Float64),
             dec_epoch=polars.lit(None, dtype=polars.Float64),
-            ra_observed=polars.Series(None, dtype=polars.Float64),
-            dec_observed=polars.Series(None, dtype=polars.Float64),
+            ra_observed=polars.lit(None, dtype=polars.Float64),
+            dec_observed=polars.lit(None, dtype=polars.Float64),
             alt_observed=polars.lit(None, dtype=polars.Float64),
             az_observed=polars.lit(None, dtype=polars.Float64),
         )

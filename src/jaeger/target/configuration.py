@@ -1234,15 +1234,10 @@ class ManualConfiguration(BaseConfiguration[ManualAssignment]):
 
         wok_data = get_wok_data(observatory)
 
-        data = {}
         for row in wok_data.iter_rows(named=True):
-            hole_id = row["holeID"]
             positioner_id = row["positionerID"]
 
             if positioner_id not in positions:
                 raise ValueError(f"Values for positioner {positioner_id} not provided.")
 
-            alpha, beta = positions[positioner_id]
-            data[hole_id] = {"alpha": alpha, "beta": beta}
-
-        return cls(data, observatory, **kwargs)
+        return cls(positions, observatory, **kwargs)

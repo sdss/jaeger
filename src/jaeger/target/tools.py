@@ -225,19 +225,12 @@ async def create_random_configuration(
                     path_generation_mode=path_generation_mode,
                 )
 
-    pT = calibration.positionerTable.copy().reset_index()
-
     # Build an assignment dictionary.
     data = {}
     for pid in grid_data:
-        holeID = pT.loc[pT.positionerID == pid].holeID.values[0]
-        data[holeID] = {
-            "alpha": grid_data[pid][0],
-            "beta": grid_data[pid][1],
-            "fibre_type": "Metrology",
-        }
+        data[pid] = (grid_data[pid][0], grid_data[pid][1])
 
-    return ManualConfiguration(data, **kwargs)
+    return ManualConfiguration(data, fps.observatory, **kwargs)
 
 
 def copy_summary_file(

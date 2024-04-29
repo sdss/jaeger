@@ -253,7 +253,7 @@ class BaseAssignment:
             .cast(FIBRE_DATA_SCHEMA)
             .with_columns(polars.selectors.boolean().fill_null(False))
             .sort("hole_id", "fibre_type")
-            .with_columns(index=polars.arange(fibre_data.height))
+            .with_columns(index=polars.arange(fibre_data.height, dtype=polars.Int32))
         )
 
         # Check if we have non-standard wavelengths.
@@ -579,13 +579,20 @@ class ManualAssignment(BaseAssignment):
             if positioner_id not in self.positions:
                 alpha = alpha0
                 beta = beta0
+            elif None in self.positions[positioner_id]:
+                alpha = alpha0
+                beta = beta0
+            else:
+                alpha, beta = self.positions[positioner_id]
 
+            assert alpha is not None and beta is not None
             alphas.append(alpha)
             betas.append(beta)
 
         fdata = fdata.with_columns(
             alpha=polars.Series(alphas),
             beta=polars.Series(betas),
+            valid=True,
         )
 
         fdata = (
@@ -599,6 +606,15 @@ class ManualAssignment(BaseAssignment):
             .sort("index")
             .cast(FIBRE_DATA_SCHEMA)
         )
+
+        # Mark the metrology fibre as assigned. A hack so that get_paths() works.
+        fdata = fdata.with_columns(
+            assigned=polars.when(polars.col.fibre_type == "Metrology")
+            .then(True)
+            .otherwise(False)
+        )
+
+        self.fibre_data = fdata
 
         # Final validation.
         self.validate()
