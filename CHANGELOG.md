@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.4 - April 29, 2024
+
+### 🔧 Fixed
+
+* Change LCO expected scale factors after IMB modifications: apply only to LCO.
+
+
 ## 1.6.3 - April 1, 2024
 
 ### ✨ Improved
