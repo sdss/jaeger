@@ -15,7 +15,7 @@ import polars
 import polars.type_aliases
 
 
-__all__ = ["CONFSUMMARY_FIBER_MAP_SCHEMA", "FIBRE_DATA_SCHEMA"]
+__all__ = ["CONFSUMMARY_FIBER_MAP_SCHEMA", "FIBRE_DATA_SCHEMA", "CONFIGURATION_SCHEMA"]
 
 
 CONFSUMMARY_FIBER_MAP_SCHEMA = [
@@ -69,7 +69,7 @@ CONFSUMMARY_FIBER_MAP_SCHEMA = [
 
 SchemaType = Mapping[
     polars.type_aliases.ColumnNameOrSelector | polars.type_aliases.PolarsDataType,
-    polars.type_aliases.PolarsDataType,
+    polars.type_aliases.PolarsType,
 ]
 
 FIBRE_DATA_SCHEMA: SchemaType = {
@@ -96,7 +96,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "pmra": polars.Float32,
     "pmdec": polars.Float32,
     "parallax": polars.Float32,
-    "epoch": polars.Float32,
+    "coord_epoch": polars.Float32,
     "delta_ra": polars.Float32,
     "delta_dec": polars.Float32,
     "ra_offset": polars.Float64,
@@ -124,3 +124,47 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "alpha": polars.Float64,
     "beta": polars.Float64,
 }
+
+
+CONFIGURATION_SCHEMA: SchemaType = FIBRE_DATA_SCHEMA.copy()
+CONFIGURATION_SCHEMA.update(
+    {
+        "configuration_id": polars.Int32,
+        "robostrategy_run": polars.String,
+        "fps_calibrations_version": polars.String,
+        "jaeger_version": polars.String,
+        "coordio_version": polars.String,
+        "kaiju_version": polars.String,
+        "design_id": polars.Int32,
+        "field_id": polars.Int32,
+        "focal_scale": polars.Float32,
+        "instruments": polars.List(polars.String),
+        "configuration_epoch": polars.Float32,
+        "obstime": polars.Float32,
+        "MJD": polars.Int32,
+        "observatory": polars.String,
+        "temperature": polars.Float32,
+        "ra_cen": polars.Float64,
+        "dec_cen": polars.Float64,
+        "pa": polars.Float32,
+        "is_dithered": polars.Boolean,
+        "parent_configuration": polars.Int32,
+        "dither_radius": polars.Float32,
+        "cloned_from": polars.Int32,
+        "lambda_design": polars.Float32,
+        "carton_to_target_pk": polars.Int64,
+        "cadence": polars.String,
+        "firstcarton": polars.String,
+        "program": polars.String,
+        "category": polars.String,
+        "sloan_g_mag": polars.Float32,
+        "sloan_r_mag": polars.Float32,
+        "sloan_i_mag": polars.Float32,
+        "sloan_z_mag": polars.Float32,
+        "optical_prov": polars.String,
+        "gaia_bp_mag": polars.Float32,
+        "gaia_rp_mag": polars.Float32,
+        "gaia_g_mag": polars.Float32,
+        "tmass_h_mag": polars.Float32,
+    }
+)

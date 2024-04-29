@@ -14,11 +14,13 @@ from typing import TYPE_CHECKING
 
 import numpy
 import polars
+import pytest
 
 from sdssdb.peewee.sdss5db import opsdb
 from sdsstools import yanny
 
 from jaeger.target.design import Design
+from jaeger.target.tools import configuration_to_dataframe
 from jaeger.testing import MockFPS
 
 from . import check_database
@@ -91,6 +93,33 @@ async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
 
     numpy.testing.assert_allclose(fmap_new["xFocal"], fmap_test["xFocal"], atol=1e-4)
     numpy.testing.assert_allclose(fmap_new["yFocal"], fmap_test["yFocal"], atol=1e-4)
+
+
+async def test_configuration_to_dataframe(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+):
+    check_database()
+
+    design = Design(21637)
+    design.configuration.write_to_database()
+
+    configuration_id = design.configuration.configuration_id
+
+    monkeypatch.setenv("SDSSCORE_TEST_DIR", str(tmp_path))
+
+    df = configuration_to_dataframe(design.configuration, write=True)
+
+    assert isinstance(df, polars.DataFrame)
+    assert df.height == 1500
+
+    file_path = (
+        tmp_path
+        / "apo"
+        / "summary_files/000XXX/0000XX"
+        / f"configuration-{configuration_id}.parquet"
+    )
+    assert file_path.exists()
 
 
 async def test_configuration_get_paths(mock_fps: MockFPS):

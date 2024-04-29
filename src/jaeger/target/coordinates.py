@@ -59,7 +59,7 @@ def positioner_from_icrs_dataframe(
         data frame. The data frame must contain columns ``positioner_id``,
         ``hole_id``, ``fibre_type``, ``wavelength``, ``ra_icrs``, and ``dec_icrs``.
         Additional columns that will be used if available are ``pmra``, ``pmdec``,
-        ``parallax``, ``epoch``, ``delta_ra`` and  ``delta_dec``.
+        ``parallax``, ``coord_epoch``, ``delta_ra`` and  ``delta_dec``.
     boresight
         The RA/Dec coordinates of the field boresight, or an ``Observed``
         instance.
@@ -117,7 +117,7 @@ def positioner_from_icrs_dataframe(
         "pmra": polars.lit(0.0, dtype=polars.Float32),
         "pmdec": polars.lit(0.0, dtype=polars.Float32),
         "parallax": polars.lit(0.0, dtype=polars.Float32),
-        "epoch": polars.lit(None, dtype=polars.Float32),
+        "coord_epoch": polars.lit(None, dtype=polars.Float32),
         "delta_ra": polars.lit(0.0, dtype=polars.Float32),
         "delta_dec": polars.lit(0.0, dtype=polars.Float32),
     }
@@ -150,7 +150,7 @@ def positioner_from_icrs_dataframe(
         pmra=data["pmra"].to_numpy(),
         pmdec=data["pmdec"].to_numpy(),
         parallax=data["parallax"].to_numpy(),
-        epoch=Time(data["epoch"].to_numpy(), format="jyear").jd,
+        epoch=Time(data["coord_epoch"].to_numpy(), format="jyear").jd,
     )
 
     icrs_epoch = icrs.to_epoch(site.time.jd, site=site)
