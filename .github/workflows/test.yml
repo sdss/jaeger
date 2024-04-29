@@ -38,6 +38,13 @@ jobs:
           path: fps_calibrations
           ref: '2023.01.21'
 
+      - name: Restore large test files files
+        id: cache-fcam
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/work/jaeger/jaeger/tests/data/fcam
+          key: ${{ runner.os }}-tests-fcam
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
