@@ -6,15 +6,16 @@
 # @Filename: conftest.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
-# noqa: E402
+from __future__ import annotations
 
 import asyncio
 import contextlib
 import os
-import sys
 import urllib.request
-from unittest.mock import MagicMock
 
+from typing import TYPE_CHECKING
+
+import numpy
 import pytest
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
@@ -27,8 +28,12 @@ import clu.testing
 from clu.testing import TestCommand
 from sdsstools import read_yaml_file
 
+from jaeger.fps import _FPS_INSTANCES
+from jaeger.testing import MockFPS
 
-sys.modules["coordio.transforms"] = MagicMock()
+
+if TYPE_CHECKING:
+    from sdssdb.connection import PeeweeDatabaseConnection
 
 
 @pytest.fixture(autouse=True)
@@ -70,17 +75,24 @@ def setup_config():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def download_data():
-    """Download large files needed for testing."""
+def download_fcam_data():
+    """Download large fcam files needed for testing."""
 
-    FILES = {"fimg-fvcn-0059.fits": "s/utedos4d6sjlvek/fimg-fvcn-0059.fits?dl=0"}
+    BASE_URL = "https://data.sdss5.org/resources/target/mocks/samples/"
+    FILES = [
+        "fcam/60428/fimg-fvc1n-0027.fits",
+        "fcam/60428/proc-fimg-fvc1n-0027.fits",
+        "fcam/calib/medComb.fits",
+    ]
 
     for fname in FILES:
         outpath = os.path.join(os.path.dirname(__file__), "data", fname)
         if os.path.exists(outpath):
             continue
 
-        url = os.path.join("https://dl.dropboxusercontent.com", FILES[fname])
+        os.makedirs(os.path.dirname(outpath), exist_ok=True)
+
+        url = f"{BASE_URL}/{fname}"
         urllib.request.urlretrieve(url, outpath)
 
 
@@ -182,3 +194,41 @@ async def actor(vfps):
 async def command(actor):
     command = TestCommand(commander_id=1, actor=actor)
     yield command
+
+
+@pytest.fixture(autouse=True)
+def cleanup(database: PeeweeDatabaseConnection):
+    yield
+
+    # Clear FPS instances
+    _FPS_INSTANCES.clear()
+
+    # Truncate the opsdb tables.
+    if database.connected and database.dbname == "sdss5db_jaeger_test":
+        with database.atomic():
+            database.execute_sql("TRUNCATE TABLE opsdb_apo.configuration CASCADE;")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def database():
+    from sdssdb.peewee.sdss5db import database
+
+    if os.environ.get("CI", False):
+        database.connect("sdss5db_jaeger_test", host=None, user=None, port=5432)
+    else:
+        database.connect("sdss5db_jaeger_test")
+
+    yield database
+
+
+@pytest.fixture()
+def mock_fps():
+    """Returns a mock FPS instance with a random configuration."""
+
+    numpy.random.seed(42)
+
+    mock = MockFPS("APO", random=True)
+
+    yield mock
+
+    mock.discard()

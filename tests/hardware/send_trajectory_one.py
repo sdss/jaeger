@@ -17,7 +17,7 @@ async def main():
     assert 20 in fps and len(fps) == 1, "this test requires only positioner 20."
 
     print("Going to start position.")
-    await fps[20].goto(90, 180)
+    await fps[20]._goto_position(90, 180)
 
     print("Sending trajectory.")
     await fps.send_trajectory(

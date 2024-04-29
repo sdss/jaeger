@@ -67,7 +67,7 @@ docs/sphinx/_build/
 
 # PyBuilder
 target/
-!python/jaeger/target
+!src/jaeger/target
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -107,6 +107,8 @@ setup.py
 .nox/
 
 # Large data files
-tests/data/*.fits
+tests/data/fcam/**/*.fits
 
 pyrightconfig.json
+
+.ruff_cache

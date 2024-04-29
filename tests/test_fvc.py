@@ -6,127 +6,179 @@
 # @Filename: test_fvc.py
 # @License: BSD 3-clause (http://www.opensource.org/licenses/BSD-3-Clause)
 
+
 import pathlib
 
-from typing import cast
+from typing import Sequence
 
 import numpy
-import pandas
+import polars
 import pytest
+import pytest_mock
+from astropy.io import fits
 
-from coordio import calibration
-
-from jaeger import FPS
+import jaeger
 from jaeger.fvc import FVC
-from jaeger.positioner import Positioner
-from jaeger.target import ManualConfiguration
+from jaeger.target import Design
+from jaeger.target.schemas import FIBRE_DATA_SCHEMA
+from jaeger.testing import MockFPS
+
+from . import check_database, check_fps_calibrations_version
 
 
-class FakePositioner(Positioner):
-    def __ini__(self, pid: int):
-        self.positioner_id = pid
-        self.disabled = False
+def get_data_from_proc_fimg(path: pathlib.Path):
+    """Returns the fibre data from a FVC file and offsets."""
+
+    hdul = fits.open(str(path))
+
+    fd_fits = hdul["FIBERDATA"].data
+    fd = polars.DataFrame({col: fd_fits[col].tolist() for col in fd_fits.names})
+
+    schema = {}
+    for col in fd.columns:
+        if col in FIBRE_DATA_SCHEMA:
+            schema[col] = FIBRE_DATA_SCHEMA[col]
+        else:
+            schema[col] = fd[col].dtype
+
+    fd = fd.cast(schema).fill_nan(None).sort(["positioner_id", "fibre_type"])
+
+    off_fits = hdul["OFFSETS"].data
+    off = polars.DataFrame({col: off_fits[col].tolist() for col in off_fits.names})
+
+    return fd, off.sort("positioner_id")
 
 
-@pytest.fixture(scope="module")
-def test_data():
-    FILE = pathlib.Path(__file__).parent / "data" / "proc-fimg-fvcn-0059.h5"
-    hstore = pandas.HDFStore(FILE.as_posix(), mode="r")
-    yield hstore.get("posangles"), hstore.get("measured")
-    hstore.close()
+@pytest.fixture()
+def get_fimg_paths():
+    """Returns the paths of the fimg, proc-fimg file and calibration fimg."""
 
+    fcam_dir = pathlib.Path(__file__).parent / "data" / "fcam"
 
-@pytest.fixture(scope="module")
-def configuration(test_data):
-    # Ugly hack to add fake positioners to the FPS and prevent get_robot_grid
-    # from failing when it checks if all the positioners exist.
-    fps = FPS.get_instance()
-    fps.clear()
-    for pid in calibration.positionerTable.positionerID:
-        fps[pid] = FakePositioner(pid)
-
-    posangles, measured = test_data
-    pid, alpha, beta = (
-        posangles.loc[:, ["positionerID", "cmdAlpha", "cmdBeta"]].to_numpy().T
+    return (
+        fcam_dir / "60428/fimg-fvc1n-0027.fits",
+        fcam_dir / "60428/proc-fimg-fvc1n-0027.fits",
+        fcam_dir / "calib/medComb.fits",
     )
 
-    pT = calibration.positionerTable.loc["APO"].reset_index().set_index("positionerID")
-    hids = pT.loc[pid, "holeID"].tolist()
 
-    data = {
-        hids[i]: {"alpha": alpha[i], "beta": beta[i], "fibre_type": "Metrology"}
-        for i in range(len(hids))
-    }
-
-    mc = ManualConfiguration(data, observatory="APO")
-
-    for offline_pid in measured.loc[measured.offline, "robotID"].tolist():
-        mc.assignment_data.fibre_table.loc[offline_pid, "offline"] = 1
-
-    yield mc
-
-    del fps
-    FPS._instance = {}
-
-
-def test_check_data(test_data):
-    posangles, measured = test_data
-
-    assert len(posangles) == 500
-    assert len(measured) == 500
-
-
-def test_fvc():
+async def test_fvc():
     fvc = FVC("APO")
     assert fvc.command is None
 
 
-@pytest.mark.xfail()
-def test_configuration(configuration: ManualConfiguration):
-    ftable = configuration.assignment_data.fibre_table
+async def test_get_fibre_data_fcam(get_fimg_paths: Sequence[pathlib.Path]):
+    _, proc_fimg_path, _ = get_fimg_paths
 
-    assert len(ftable) == 1500
-    assert len(ftable[ftable.assigned == 1]) == 500
+    fibre_data, *_ = get_data_from_proc_fimg(proc_fimg_path)
+    assert fibre_data.height == 1500
+    assert fibre_data["assigned"].dtype == polars.Boolean
 
 
-@pytest.mark.xfail()
-def test_process_image(configuration: ManualConfiguration, tmp_path: pathlib.Path):
+async def test_fvc_processing(
+    get_fimg_paths: Sequence[pathlib.Path],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    mock_fps: MockFPS,
+    mocker: pytest_mock.MockFixture,
+):
+    check_fps_calibrations_version()
+    check_database()
+
+    fimf_path, proc_fimg_path, calib_fimg_path = get_fimg_paths
+
+    monkeypatch.setitem(jaeger.config["fvc"], "dark_image", calib_fimg_path)
+
     fvc = FVC("APO")
-    fvc.fps.configuration = configuration
 
-    image = pathlib.Path(__file__).parent / "data/fimg-fvcn-0059.fits"
+    fibre_data, offsets = get_data_from_proc_fimg(proc_fimg_path)
 
-    proc_hdu, measured, centroids = fvc.process_fvc_image(
-        image.as_posix(),
-        plot=tmp_path.as_posix(),
+    measured = (
+        fibre_data.filter(polars.col.fibre_type == "Metrology")
+        .select(
+            polars.col.positioner_id,
+            polars.col.fibre_type,
+            polars.selectors.ends_with("_measured"),
+        )
+        .sort("positioner_id")
     )
 
-    assert isinstance(measured, pandas.DataFrame)
+    # Nullify the wok measured columns since that's how the FVC would see it.
+    fibre_data = fibre_data.with_columns(
+        xwok_measured=polars.lit(None, dtype=polars.Float64),
+        ywok_measured=polars.lit(None, dtype=polars.Float64),
+        zwok_measured=polars.lit(None, dtype=polars.Float64),
+    )
 
-    rms = cast(float, proc_hdu.header["FITRMS"])
-    numpy.allclose(rms, 25.03, atol=0.01)
+    # Get the positioner alpha/beta reported as a dict and array.
+    positioner_coords = {}
+    reported_positions = numpy.zeros((500, 3), dtype=numpy.float64)
+    for irow, row in enumerate(offsets.rows(named=True)):
+        pid = row["positioner_id"]
+        positioner_coords[pid] = [row["alpha_reported"], row["beta_reported"]]
+        reported_positions[irow, :] = (pid, row["alpha_reported"], row["beta_reported"])
 
-    assert len(list(tmp_path.glob("*.pdf"))) > 0
+    fvc.process_fvc_image(
+        fimf_path,
+        positioner_coords,
+        fibre_data=fibre_data,
+        centroid_method="nudge",
+    )
 
+    assert fvc.fitrms is not None and fvc.fitrms > 0.05 and fvc.fitrms < 0.06
 
-@pytest.mark.xfail()
-def test_calculate_offsets(configuration: ManualConfiguration, test_data):
-    posangles, _ = test_data
+    assert fvc.fibre_data is not None
 
-    fvc = FVC("APO")
-    fvc.fps.configuration = configuration
+    fvc_met_fdata = (
+        fvc.fibre_data.filter(polars.col.fibre_type == "Metrology")
+        .select(["positioner_id", "xwok_measured", "ywok_measured"])
+        .sort("positioner_id")
+    )
 
-    image = pathlib.Path(__file__).parent / "data/fimg-fvcn-0059.fits"
-    _, measured, _ = fvc.process_fvc_image(image.as_posix(), plot=False)
+    numpy.testing.assert_allclose(
+        fvc_met_fdata["xwok_measured"].to_numpy(),
+        measured["xwok_measured"].to_numpy(),
+        atol=1e-5,
+    )
 
-    # Need to remove cases where beta > 180 since the test data used a random
-    # configuration with some of those cases.
-    measured = measured.loc[measured.beta < 180]
+    # Run calculate_offsets()
+    fvc.calculate_offsets(reported_positions)
 
-    # Make a mock of the output of FVC.get_positions()
-    positions = posangles[["positionerID", "alphaReport", "betaReport"]].to_numpy()
-    positions = positions[positions[:, 2] < 180.0]
+    assert fvc.offsets is not None
 
-    new = fvc.calculate_offsets(positions, measured, k=1)
+    offsets_proc = offsets.sort("positioner_id")
+    offsets_fvc = fvc.offsets.clone().sort("positioner_id")
 
-    assert len(new) > 0
+    numpy.testing.assert_allclose(
+        offsets_proc["alpha_offset_corrected"].to_numpy(),
+        offsets_fvc["alpha_offset_corrected"].to_numpy(),
+        atol=1e-5,
+    )
+
+    # Write confSummaryF
+    # We set a configuration because it's needed, but which one should not matter.
+    design = Design(21637)
+    design.configuration.write_to_database()
+
+    fvc.configuration = design.configuration
+
+    confSummaryF_path = tmp_path / "confSummaryF.par"
+    fvc.write_summary_F(str(confSummaryF_path))
+    assert confSummaryF_path.exists()
+
+    # Write proc- file.
+    # Set a mock FPS with the current FPS positions.
+    positioner_coords_dict = {
+        positioner_id: {"alpha": alpha_beta_tuple[0], "beta": alpha_beta_tuple[1]}
+        for positioner_id, alpha_beta_tuple in positioner_coords.items()
+    }
+    mock_fps.rearrange(positioner_coords_dict)
+    fvc.fps = mock_fps
+
+    proc_gimg_path = tmp_path / "proc_gimg.fits"
+    await fvc.write_proc_image(new_filename=str(proc_gimg_path))
+    assert proc_gimg_path.exists()
+
+    # Send trajectory
+    mocker.patch.object(fvc.fps, "send_trajectory")
+    await fvc.apply_correction()

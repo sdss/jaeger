@@ -33,7 +33,7 @@ async def main():
     beta = list(zip(beta_points, t_points))
 
     log.info("Going to start position.")
-    await asyncio.gather(*[fps[pid].goto(0, 180) for pid in fps])
+    await asyncio.gather(*[fps[pid]._goto_position(0, 180) for pid in fps])
 
     log.info("Sending trajectory.")
     await fps.send_trajectory(
