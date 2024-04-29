@@ -106,6 +106,7 @@ async def test_configuration_to_dataframe(
 
     configuration_id = design.configuration.configuration_id
 
+    monkeypatch.setenv("SDSSCORE_DIR", str(tmp_path))
     monkeypatch.setenv("SDSSCORE_TEST_DIR", str(tmp_path))
 
     df = configuration_to_dataframe(design.configuration, write=True)
