@@ -412,19 +412,19 @@ def configuration_to_dataframe(
 
     # Add scalar values.
     data = data.with_columns(
-        configuration_id=polars.lit(configuration_id),
+        configuration_id=configuration_id,
         fps_calibrations_version=polars.lit(calibration.fps_calibs_version),
         jaeger_version=polars.lit(jaeger_version),
         coordio_version=polars.lit(coordio_version),
         kaiju_version=polars.lit(kaiju_version),
-        design_id=polars.lit(configuration.design_id),
-        focal_scale=polars.lit(configuration.assignment.scale or 0.999882),
+        design_id=configuration.design_id,
+        focal_scale=configuration.assignment.scale or 0.999882,
         instruments=polars.lit(["BOSS", "APOGEE"], dtype=polars.List(polars.String)),
         configuration_epoch=polars.lit(epoch, dtype=polars.Float32),
-        obstime=polars.lit(now.jd),
-        MJD=polars.lit(MJD),
+        obstime=now.jd,
+        MJD=MJD,
         observatory=polars.lit(observatory),
-        is_dithered=polars.lit(False),
+        is_dithered=False,
     )
 
     # Design related fields.
@@ -432,10 +432,10 @@ def configuration_to_dataframe(
         design = configuration.design
         data = data.with_columns(
             robostategy_run=polars.lit(design.field.rs_run),
-            field_if=polars.lit(design.field.field_id),
-            ra_cen=polars.lit(design.field.racen),
-            dec_cen=polars.lit(design.field.deccen),
-            pa=polars.lit(design.field.position_angle),
+            field_if=design.field.field_id,
+            ra_cen=design.field.racen,
+            dec_cen=design.field.deccen,
+            pa=design.field.position_angle,
         )
 
     # Additional target information.
