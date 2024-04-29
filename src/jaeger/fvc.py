@@ -369,10 +369,10 @@ class FVC:
             [(kk, *vv) for kk, vv in positioner_coords.items()],
             schema={
                 "positionerID": polars.Int32,
-                "alpha": polars.Float64,
-                "beta": polars.Float64,
+                "alphaReport": polars.Float64,
+                "betaReport": polars.Float64,
             },
-        ).sort("positioner_id")
+        ).sort("positionerID")
 
         FVCTransform = get_transform(self.fps.observatory)
         self.log(f"Using FVC transform class {FVCTransform.__name__!r}.")
@@ -407,8 +407,9 @@ class FVC:
             self.command.info(fvc_centroid_method=self.centroid_method)
 
         assert fvc_transform.positionerTableMeas is not None
+        positionerTableMeas = fvc_transform.positionerTableMeas.copy()
 
-        measured = polars.from_pandas(fvc_transform.positionerTableMeas.copy())
+        measured = polars.from_pandas(positionerTableMeas.drop("index", axis=1))
         measured = measured.sort("positionerID")
 
         n_dubious = measured["wokErrWarn"].sum()
@@ -438,10 +439,17 @@ class FVC:
         # Only use online, assigned robots for final RMS. First get groups of fibres
         # with an assigned robot, that are not offline or dubious.
         if fdata["assigned"].sum() > 0:
-            assigned = fdata.filter(
-                polars.col.assigned.any().over("positioner_id"),
-                polars.col.offline.not_().all(),
-                polars.col.dubious.not_().all(),
+            assigned = fdata.group_by("positioner_id").map_groups(
+                lambda g: g.filter(
+                    polars.col.assigned.any()
+                    & (~polars.col.offline).all()
+                    & (~polars.col.dubious).all()
+                )
+                # (
+                #     polars.col.assigned.any()
+                #     & polars.col.offline.not_().all()
+                #     & polars.col.dubious.not_().all()
+                # ).over("positioner_id")
             )
         else:
             self.log("No assigned fibres found. Using all matched fibres.")
@@ -478,7 +486,7 @@ class FVC:
             self.fvc_percent_reached,
             "Targets that have reached their goal [%]",
         )
-        header["DARKFILE"] = (dark_image or "", "Dark frame image")
+        header["DARKFILE"] = (str(dark_image) or "", "Dark frame image")
 
         fdata = fdata.sort(["hole_id", "fibre_type"])
 

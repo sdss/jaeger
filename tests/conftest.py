@@ -11,9 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
-import sys
 import urllib.request
-from unittest.mock import MagicMock
 
 from typing import TYPE_CHECKING
 
@@ -36,9 +34,6 @@ from jaeger.testing import MockFPS
 
 if TYPE_CHECKING:
     from sdssdb.connection import PeeweeDatabaseConnection
-
-
-sys.modules["coordio.transforms"] = MagicMock()
 
 
 @pytest.fixture(autouse=True)
@@ -85,8 +80,9 @@ def download_fcam_data():
 
     BASE_URL = "https://data.sdss5.org/resources/target/mocks/samples/"
     FILES = [
+        "fcam/60428/fimg-fvc1n-0027.fits",
         "fcam/60428/proc-fimg-fvc1n-0027.fits",
-        "fcam/calib/fimg-fvc1n-0011.fits",
+        "fcam/calib/medComb.fits",
     ]
 
     for fname in FILES:
