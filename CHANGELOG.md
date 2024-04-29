@@ -18,6 +18,7 @@
   - Added a test database for CI testing.
   - Added a `configuration_to_dataframe` function that generates a `confSummary`-like dataframe that could be saved to `sdsscore` as Parquet (currently not doing that).
   - Added `ra/dec/alt/az_observed` to `confSummary`.
+  - Moved all codebase from `python/` to `src/`.
 
 
 ## 1.6.4 - April 29, 2024
