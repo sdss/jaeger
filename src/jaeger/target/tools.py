@@ -12,7 +12,7 @@ import pathlib
 import re
 from functools import cache
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 import numpy
 import polars
@@ -360,6 +360,7 @@ def configuration_to_dataframe(
     configuration: BaseConfiguration,
     write: bool = False,
     write_path: pathlib.Path | os.PathLike | None = None,
+    other: Mapping[str, Any] = {},
 ):
     """Creates a dataframe using the configuration fibre data and targeting info.
 
@@ -377,6 +378,8 @@ def configuration_to_dataframe(
         with filename ``configuration-<CONFIGURATION_ID>.parquet``.
     write_path
         The path where to write the dataframe.
+    other
+        A column-to-value mapping that will override the computed values.
 
     Returns
     -------
@@ -465,6 +468,12 @@ def configuration_to_dataframe(
             data[irow, "gaia_g_mag"] = target["gaia_g"]
             data[irow, "tmass_h_mag"] = target["h"]
             data[irow, "optical_prov"] = target["optical_prov"]
+
+    # Add other values.
+    for col, value in other.items():
+        if col not in data.columns:
+            continue
+        data = data.with_columns(polars.lit(value).alias(col))
 
     # Nullify NaNs.
     data = data.fill_nan(None)

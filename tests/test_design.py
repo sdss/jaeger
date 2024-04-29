@@ -109,10 +109,15 @@ async def test_configuration_to_dataframe(
     monkeypatch.setenv("SDSSCORE_DIR", str(tmp_path))
     monkeypatch.setenv("SDSSCORE_TEST_DIR", str(tmp_path))
 
-    df = configuration_to_dataframe(design.configuration, write=True)
+    df = configuration_to_dataframe(
+        design.configuration,
+        write=True,
+        other={"temperature": 10.0, "bad_col": 0.0},
+    )
 
     assert isinstance(df, polars.DataFrame)
     assert df.height == 1500
+    assert df[0, "temperature"] == 10
 
     file_path = (
         tmp_path
