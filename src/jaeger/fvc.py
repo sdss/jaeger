@@ -992,9 +992,10 @@ class FVC:
 
         fdata = self.fibre_data.clone().sort(["positioner_id", "fibre_type"])
 
+        keep_cols = ["positioner_id", "hole_id", "xwok_measured", "ywok_measured"]
         measured = (
             fdata.filter(polars.col.fibre_type == "Metrology")
-            .select(polars.col(["hole_id", "xwok_measured", "ywok_measured"]))
+            .select(polars.col(keep_cols))
             .fill_nan(None)
             .drop_nulls()
         )
@@ -1011,7 +1012,7 @@ class FVC:
                 row["ywok_measured"],
                 wok_data=wok_data,
             )
-            if not numpy.isnan(alpha):
+            if not numpy.isnan(alpha) and alpha is not None:
                 new_alpha_beta[row["positioner_id"]] = {"alpha": alpha, "beta": beta}
 
         configuration_copy = self.configuration.copy()
