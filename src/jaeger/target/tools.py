@@ -29,6 +29,7 @@ from jaeger.kaiju import (
     get_path_pair_in_executor,
     get_robot_grid,
 )
+from jaeger.target.schemas import CONFSUMMARY_FIBER_MAP_SCHEMA
 
 
 if TYPE_CHECKING:
@@ -335,56 +336,7 @@ def read_confSummary(
 def get_fibermap_table(length: int) -> tuple[numpy.ndarray, dict]:
     """Returns a stub for the FIBERMAP table and a default entry,"""
 
-    fiber_map_data = [
-        ("positionerId", numpy.int16, -999),
-        ("holeId", "U7", ""),
-        ("fiberType", "U10", ""),
-        ("assigned", numpy.int16, 0),
-        ("on_target", numpy.int16, 0),
-        ("valid", numpy.int16, 0),
-        ("decollided", numpy.int16, 0),
-        ("xwok", numpy.float64, -999.0),
-        ("ywok", numpy.float64, -999.0),
-        ("zwok", numpy.float64, -999.0),
-        ("xFocal", numpy.float64, -999.0),
-        ("yFocal", numpy.float64, -999.0),
-        ("alpha", numpy.float32, -999.0),
-        ("beta", numpy.float32, -999.0),
-        ("racat", numpy.float64, -999.0),
-        ("deccat", numpy.float64, -999.0),
-        ("pmra", numpy.float32, -999.0),
-        ("pmdec", numpy.float32, -999.0),
-        ("parallax", numpy.float32, -999.0),
-        ("ra", numpy.float64, -999.0),
-        ("dec", numpy.float64, -999.0),
-        ("ra_observed", numpy.float64, -999.0),
-        ("dec_observed", numpy.float64, -999.0),
-        ("alt_observed", numpy.float64, -999.0),
-        ("az_observed", numpy.float64, -999.0),
-        ("lambda_design", numpy.float32, -999.0),
-        ("lambda_eff", numpy.float32, -999.0),
-        ("coord_epoch", numpy.float32, -999.0),
-        ("spectrographId", numpy.int16, -999),
-        ("fiberId", numpy.int16, -999),
-        ("mag", numpy.dtype(("<f4", (5,))), [-999.0] * 5),
-        ("optical_prov", "U30", ""),
-        ("bp_mag", numpy.float32, -999.0),
-        ("gaia_g_mag", numpy.float32, -999.0),
-        ("rp_mag", numpy.float32, -999.0),
-        ("h_mag", numpy.float32, -999.0),
-        ("catalogid", numpy.int64, -999),
-        ("carton_to_target_pk", numpy.int64, -999),
-        ("cadence", "U100", ""),
-        ("firstcarton", "U100", ""),
-        ("program", "U100", ""),
-        ("category", "U100", ""),
-        ("sdssv_boss_target0", numpy.int64, 0),
-        ("sdssv_apogee_target0", numpy.int64, 0),
-        ("delta_ra", numpy.float64, 0.0),
-        ("delta_dec", numpy.float64, 0.0),
-    ]
-
-    names, formats, defaults = zip(*fiber_map_data)
+    names, formats, defaults = zip(*CONFSUMMARY_FIBER_MAP_SCHEMA)
 
     fibermap = numpy.empty((length,), dtype={"names": names, "formats": formats})
 

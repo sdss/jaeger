@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional
 
 import numpy
 import polars
-import polars.type_aliases as pta
 
 from coordio import (
     ICRS,
@@ -31,6 +30,7 @@ from jaeger.target.coordinates import (
     icrs_from_positioner_dataframe,
     positioner_from_icrs_dataframe,
 )
+from jaeger.target.schemas import FIBRE_DATA_SCHEMA
 
 from .tools import get_wok_data
 
@@ -43,61 +43,6 @@ __all__ = ["Assignment", "BaseAssignment", "ManualAssignment"]
 
 
 NewPositionsType = Mapping[int, Mapping[Literal["alpha", "beta"], float | None]]
-SchemaType = Mapping[pta.ColumnNameOrSelector | pta.PolarsDataType, pta.PolarsDataType]
-
-
-FIBRE_DATA_SCHEMA: SchemaType = {
-    "index": polars.Int32,
-    "positioner_id": polars.Int32,
-    "fibre_type": polars.String,
-    "hole_id": polars.String,
-    "fibre_id": polars.Int32,
-    "site": polars.String,
-    "assigned": polars.Boolean,
-    "reassigned": polars.Boolean,
-    "valid": polars.Boolean,
-    "on_target": polars.Boolean,
-    "disabled": polars.Boolean,
-    "offline": polars.Boolean,
-    "deadlocked": polars.Boolean,
-    "decollided": polars.Boolean,
-    "dubious": polars.Boolean,
-    "wavelength": polars.Float32,
-    "fiberId": polars.Float32,
-    "catalogid": polars.Int64,
-    "ra_icrs": polars.Float64,
-    "dec_icrs": polars.Float64,
-    "pmra": polars.Float32,
-    "pmdec": polars.Float32,
-    "parallax": polars.Float32,
-    "epoch": polars.Float32,
-    "delta_ra": polars.Float32,
-    "delta_dec": polars.Float32,
-    "ra_offset": polars.Float64,
-    "dec_offset": polars.Float64,
-    "ra_epoch": polars.Float64,
-    "dec_epoch": polars.Float64,
-    "ra_observed": polars.Float64,
-    "dec_observed": polars.Float64,
-    "alt_observed": polars.Float64,
-    "az_observed": polars.Float64,
-    "xfocal": polars.Float64,
-    "yfocal": polars.Float64,
-    "xwok": polars.Float64,
-    "ywok": polars.Float64,
-    "zwok": polars.Float64,
-    "xwok_kaiju": polars.Float64,
-    "ywok_kaiju": polars.Float64,
-    "zwok_kaiju": polars.Float64,
-    "xwok_measured": polars.Float64,
-    "ywok_measured": polars.Float64,
-    "zwok_measured": polars.Float64,
-    "xtangent": polars.Float64,
-    "ytangent": polars.Float64,
-    "ztangent": polars.Float64,
-    "alpha": polars.Float64,
-    "beta": polars.Float64,
-}
 
 
 class BaseAssignment:
