@@ -107,7 +107,7 @@ setup.py
 .nox/
 
 # Large data files
-tests/data/*.fits
+tests/data/fcam/**/*.fits
 
 pyrightconfig.json
 

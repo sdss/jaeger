@@ -80,17 +80,23 @@ def setup_config():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def download_data():
-    """Download large files needed for testing."""
+def download_fcam_data():
+    """Download large fcam files needed for testing."""
 
-    FILES = {"fimg-fvcn-0059.fits": "s/utedos4d6sjlvek/fimg-fvcn-0059.fits?dl=0"}
+    BASE_URL = "https://data.sdss5.org/resources/target/mocks/samples/"
+    FILES = [
+        "fcam/60428/proc-fimg-fvc1n-0027.fits",
+        "fcam/calib/fimg-fvc1n-0011.fits",
+    ]
 
     for fname in FILES:
         outpath = os.path.join(os.path.dirname(__file__), "data", fname)
         if os.path.exists(outpath):
             continue
 
-        url = os.path.join("https://dl.dropboxusercontent.com", FILES[fname])
+        os.makedirs(os.path.dirname(outpath), exist_ok=True)
+
+        url = f"{BASE_URL}/{fname}"
         urllib.request.urlretrieve(url, outpath)
 
 
