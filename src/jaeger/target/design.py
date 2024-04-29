@@ -213,7 +213,8 @@ class Design:
                     offset_min_skybrightness=self.offset_min_skybrightness,
                 )
             else:
-                delta_ra = delta_dec = 0.0
+                delta_ra = numpy.zeros(len(group))
+                delta_dec = numpy.zeros(len(group))
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
