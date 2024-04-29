@@ -228,7 +228,7 @@ class Design:
 
         # Convert to data frame to group by fibre type (no need to group by design
         # mode since a design can only have one design mode).
-        df = polars.DataFrame(list(target_data))
+        df = polars.DataFrame(list(target_data), infer_schema_length=None)
         df = df.groupby("fibre_type").apply(_offset)
 
         # Return as a list of dicts again.
