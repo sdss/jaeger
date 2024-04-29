@@ -754,7 +754,7 @@ class FVC:
         self,
         new_filename: Optional[str | pathlib.Path] = None,
         broadcast: bool = False,
-    ) -> fits.HDUList:  # pragma: no cover
+    ) -> fits.HDUList:
         """Writes the processed image along with additional table data.
 
         If ``new_filename`` is not passed, defaults to adding the prefix ``proc-``
@@ -1070,7 +1070,7 @@ async def reprocess_configuration(
     path: pathlib.Path | str | None = None,
     centroid_method: str | None = None,
     use_suffix: bool = True,
-):
+):  # pragma: no cover
     """Reprocesses the FVC image from a configuration with a different centroid method.
 
     Outputs a new ``confSummaryF`` file.

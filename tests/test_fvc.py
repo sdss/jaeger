@@ -14,13 +14,16 @@ from typing import Sequence
 import numpy
 import polars
 import pytest
+import pytest_mock
 from astropy.io import fits
 
 import jaeger
 from jaeger.fvc import FVC
+from jaeger.target import Design
 from jaeger.target.schemas import FIBRE_DATA_SCHEMA
+from jaeger.testing import MockFPS
 
-from . import check_fps_calibrations_version
+from . import check_database, check_fps_calibrations_version
 
 
 def get_data_from_proc_fimg(path: pathlib.Path):
@@ -75,8 +78,12 @@ async def test_get_fibre_data_fcam(get_fimg_paths: Sequence[pathlib.Path]):
 async def test_fvc_processing(
     get_fimg_paths: Sequence[pathlib.Path],
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    mock_fps: MockFPS,
+    mocker: pytest_mock.MockFixture,
 ):
     check_fps_calibrations_version()
+    check_database()
 
     fimf_path, proc_fimg_path, calib_fimg_path = get_fimg_paths
 
@@ -147,3 +154,31 @@ async def test_fvc_processing(
         offsets_fvc["alpha_offset_corrected"].to_numpy(),
         atol=1e-5,
     )
+
+    # Write confSummaryF
+    # We set a configuration because it's needed, but which one should not matter.
+    design = Design(21637)
+    design.configuration.write_to_database()
+
+    fvc.configuration = design.configuration
+
+    confSummaryF_path = tmp_path / "confSummaryF.par"
+    fvc.write_summary_F(str(confSummaryF_path))
+    assert confSummaryF_path.exists()
+
+    # Write proc- file.
+    # Set a mock FPS with the current FPS positions.
+    positioner_coords_dict = {
+        positioner_id: {"alpha": alpha_beta_tuple[0], "beta": alpha_beta_tuple[1]}
+        for positioner_id, alpha_beta_tuple in positioner_coords.items()
+    }
+    mock_fps.rearrange(positioner_coords_dict)
+    fvc.fps = mock_fps
+
+    proc_gimg_path = tmp_path / "proc_gimg.fits"
+    await fvc.write_proc_image(new_filename=str(proc_gimg_path))
+    assert proc_gimg_path.exists()
+
+    # Send trajectory
+    mocker.patch.object(fvc.fps, "send_trajectory")
+    await fvc.apply_correction()
