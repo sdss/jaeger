@@ -1,5 +1,25 @@
 # Changelog
 
+## Next version
+
+### ⚙️ Engineering
+
+* [#202](https://github.com/sdss/jaeger/pull/202) This started as a quick rewrite of some parts to use `polars` and ended as a mid-to-large refactor of significant parts of the code, especially the `Configuration` and `Assignment` classes.
+
+  The main highlights are:
+
+  - Dropped support for Python 3.9 and extended support up to 3.12. For Python `>=3.11` the `1.4.0b1` version of `kaiju` is used.
+  - The code does not use `pandas` anymore, and `polars` data frames are used everywhere. `jaeger` still handles `pandas` dataframes when they are returned by other libraries (mostly from the `FVCTransform` code in `coordio`).
+  - The `Configuration` and `Assignment` classes have been completely rewritten. Coordinate transformations code is now mostly in `jaeger.target.coordinates`. The new code should be significantly cleaner and easier to maintain.
+  - `AssignmentData*` has been renamed to `Assignment*`.
+  - Some modest efficiency improvements to the coordinate transformations in `Assignment`. Before some conversions from ICRS to wok and vice-versa were done on a per-target bases. Now they are doing for all the targets at once, but the bottleneck is still the conversion between wok and positioner (and vice-versa) which has to be done as a loop for each target.
+  - Simplified the singleton patter for `FPS`.
+  - Significantly extended the test suite. Now `Design`/`Configuration`/`Assignment` and `FVC` are reasonably covered.
+  - Added a test database for CI testing.
+  - Added a `configuration_to_dataframe` function that generates a `confSummary`-like dataframe that could be saved to `sdsscore` as Parquet (currently not doing that).
+  - Added `ra/dec/alt/az_observed` to `confSummary`.
+
+
 ## 1.6.3 - April 1, 2024
 
 ### ✨ Improved
