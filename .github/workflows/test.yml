@@ -78,7 +78,7 @@ jobs:
 
       - name: Populate database
         run: |
-          cd tests/sdss5db/targetdb
+          cd tests/data/sdss5db/targetdb
           psql sdss5db_jaeger_test < targetdb.sql
           psql sdss5db_jaeger_test < restore_sample_files.sql
           cd ../opsdb_apo
