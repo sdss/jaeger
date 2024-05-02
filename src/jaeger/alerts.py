@@ -378,11 +378,10 @@ class AlertsBot(BaseBot):
         assert chiller is not None
 
         try:
-            # setpoint = (await chiller.read_device("TEMPERATURE_USER_SETPOINT"))[0]
+            setpoint = (await chiller.read_device("TEMPERATURE_USER_SETPOINT"))[0]
             fluid_temp = (await chiller.read_device("DISPLAY_VALUE"))[0]
-        except Exception:
-            # self.notify(f"Failed reading chiller values: {err}", level=logging.ERROR)
-            return
+        except Exception as err:
+            self.notify(f"Failed reading chiller values: {err}", level=logging.ERROR)
 
         _, t_d = await self.get_dew_point_temperarure()
 
@@ -393,16 +392,16 @@ class AlertsBot(BaseBot):
         else:
             self.set_keyword("alert_chiller_dew_point", False)
 
-        # chiller_config = config["alerts"]["chiller"]
+        chiller_config = config["alerts"]["chiller"]
 
-        # supply_temp = (await self.ieb.read_device(chiller_config["sensor_supply"]))[0]
+        supply_temp = (await self.ieb.read_device(chiller_config["sensor_supply"]))[0]
 
-        # if abs(setpoint - supply_temp) > chiller_config["threshold"]:
-        #     self.set_keyword("alert_fluid_temperature", True)
-        #     self.notify("Chiller set point is different from supply temperature.")
+        if abs(setpoint - supply_temp) > chiller_config["threshold"]:
+            self.set_keyword("alert_fluid_temperature", True)
+            self.notify("Chiller set point is different from supply temperature.")
 
-        # else:
-        #     self.set_keyword("alert_fluid_temperature", False)
+        else:
+            self.set_keyword("alert_fluid_temperature", False)
 
         # Check if there are chiller alerts.
         chiller_alerts: list[str] = []
