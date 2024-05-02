@@ -11,7 +11,7 @@
 CREATE TEMP TABLE temp_assignment AS (
     SELECT a.* from targetdb.assignment a
        JOIN design d ON a.design_id = d.design_id
-       WHERE d.design_id IN (505253, 505254, 503246, 503247, 502706, 21636, 21637));
+       WHERE d.design_id IN (50323, 505253, 505254, 503246, 503247, 502706, 21636, 21637));
 \COPY temp_assignment TO 'sample_files/assignment.csv' WITH CSV HEADER;
 
 CREATE TEMP TABLE temp_assignment_status AS (

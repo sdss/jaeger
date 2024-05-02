@@ -1,6 +1,7 @@
 design_id,design_mode_label,mugatu_version,run_on,assignment_hash,design_version_pk
 21636,dark_rm,1.0.4,2021-12-03,af5ed6f1-57ae-84bc-47c7-39bc160c7e21,105
 21637,dark_rm,1.0.4,2021-12-03,33408327-94fc-f52e-9410-5fb7c9c58f09,105
+50323,bright_time,1.1.1,2022-02-24,02efda71-5c4d-dcdc-f614-69c42a851716,118
 502706,dark_plane,2.2.1,2023-11-17,e026e832-d51d-b9a4-32cc-e2fb689ff463,192
 503246,bright_time,2.2.1,2023-11-17,163ab930-4e65-f87e-e987-e5a58d35a74f,192
 503247,bright_time,2.2.1,2023-11-17,a0583532-f2dd-2be4-26b9-3abe1bac662c,192
