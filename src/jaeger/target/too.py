@@ -8,7 +8,11 @@
 
 from __future__ import annotations
 
+import os
+
 from typing import TYPE_CHECKING
+
+import polars
 
 from jaeger import config, log
 
@@ -37,3 +41,12 @@ def add_too_to_design(design: Design):
         return
 
     log.info("Running ToO replacement.")
+
+    too_file = os.path.expanduser(os.path.expandvars(too_config["path"]))
+    log.debug(f"Reading ToO targets from {too_file}.")
+    too_targets = polars.read_parquet(too_file)
+
+    # Retrieve the ToO targets for this field.
+    field_id = design.field.field_id
+    too_targets_field = too_targets.filter(polars.col.field_id == field_id)
+    log.debug(f"Found {len(too_targets_field)} ToO targets for field {field_id}.")
