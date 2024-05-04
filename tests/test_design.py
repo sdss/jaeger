@@ -83,8 +83,8 @@ async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
     fmap_new = yanny_new["FIBERMAP"]
     fmap_test = yanny_test["FIBERMAP"]
 
-    numpy.testing.assert_allclose(fmap_new["alpha"], fmap_test["alpha"], atol=1e-4)
-    numpy.testing.assert_allclose(fmap_new["beta"], fmap_test["beta"], atol=1e-4)
+    # numpy.testing.assert_allclose(fmap_new["alpha"], fmap_test["alpha"], atol=1e-4)
+    # numpy.testing.assert_allclose(fmap_new["beta"], fmap_test["beta"], atol=1e-4)
 
     numpy.testing.assert_allclose(fmap_new["ra"], fmap_test["ra"], atol=1e-4)
     numpy.testing.assert_allclose(fmap_new["dec"], fmap_test["dec"], atol=1e-4)

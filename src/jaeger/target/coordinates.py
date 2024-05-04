@@ -20,8 +20,10 @@ from astropy.time import Time
 from coordio import ICRS, Field, FocalPlane, Observed, Site, Wok
 from coordio.conv import (
     positionerToTangent,
+    positionerToWok,
     tangentToPositioner,
     tangentToWok,
+    wokToPositioner,
     wokToTangent,
 )
 from coordio.defaults import INST_TO_WAVE, POSITIONER_HEIGHT, getHoleOrient
@@ -179,42 +181,59 @@ def positioner_from_icrs_dataframe(
         xwok=polars.Series(wok[:, 0]),
         ywok=polars.Series(wok[:, 1]),
         zwok=polars.Series(wok[:, 2]),
+    ).sort("positioner_id")
+
+    # Get the wok data and cast the positionerID to int32.
+    wok_data = get_wok_data(site.name)
+    wok_data = wok_data.with_columns(polars.col.positionerID.cast(polars.Int32))
+
+    # Left join with the input data so that we have one wok data entry per fibre.
+    data_to_wok = data.join(
+        wok_data,
+        how="left",
+        left_on="positioner_id",
+        right_on="positionerID",
     )
 
-    # Get the wok data. We'll pass it to wok_to_positioner to avoid it having to
-    # grab it for each positioner.
-    wok_data = get_wok_data(site.name)
+    # Create columns for the beta coordinates depending on the fibre type.
+    data_to_wok = data_to_wok.with_columns(
+        xBeta=polars.when(polars.col.fibre_type == "APOGEE")
+        .then(polars.col.apX)
+        .when(polars.col.fibre_type == "BOSS")
+        .then(polars.col.bossX)
+        .when(polars.col.fibre_type == "Metrology")
+        .then(polars.col.metX)
+        .otherwise(None),
+        yBeta=polars.when(polars.col.fibre_type == "APOGEE")
+        .then(polars.col.apY)
+        .when(polars.col.fibre_type == "BOSS")
+        .then(polars.col.bossY)
+        .when(polars.col.fibre_type == "Metrology")
+        .then(polars.col.metY)
+        .otherwise(None),
+    )
 
-    positioner_tangent: list[dict[str, float]] = []
-    for row in data.iter_rows(named=True):
-        positioner, tangent = wok_to_positioner(
-            row["hole_id"],
-            site.name,
-            row["fibre_type"],
-            row["xwok"],
-            row["ywok"],
-            row["zwok"],
-            wok_data=wok_data,
-        )
+    # Calculate alpha and beta coordinates.
+    alphas, betas = wokToPositioner(
+        data_to_wok["xwok"].to_numpy(),
+        data_to_wok["ywok"].to_numpy(),
+        data_to_wok["zwok"].to_numpy(),
+        data_to_wok["xBeta"].to_numpy(),
+        data_to_wok["yBeta"].to_numpy(),
+        data_to_wok["alphaArmLen"].to_numpy(),
+        data_to_wok["alphaOffset"].to_numpy(),
+        data_to_wok["betaOffset"].to_numpy(),
+        data_to_wok[["xWok", "yWok", "zWok"]].to_numpy(),
+        data_to_wok[["ix", "iy", "iz"]].to_numpy(),
+        data_to_wok[["jx", "jy", "jz"]].to_numpy(),
+        data_to_wok[["kx", "ky", "kz"]].to_numpy(),
+        data_to_wok["dx"].to_numpy(),
+        data_to_wok["dy"].to_numpy(),
+    )
 
-        # Store the data as a list of dicts to convert to a DataFrame later.
-        positioner_tangent.append(
-            {
-                "xtangent": tangent[0],
-                "ytangent": tangent[1],
-                "ztangent": tangent[2],
-                "alpha": positioner[0],
-                "beta": positioner[1],
-            }
-        )
-
-    pt_df = polars.DataFrame(positioner_tangent)
     data = data.with_columns(
-        xtangent=pt_df["xtangent"],
-        ytangent=pt_df["ytangent"],
-        ztangent=pt_df["ztangent"],
-        alpha=pt_df["alpha"],
-        beta=pt_df["beta"],
+        alpha=polars.Series(alphas, dtype=polars.Float64),
+        beta=polars.Series(betas, dtype=polars.Float64),
     )
 
     return data
@@ -277,6 +296,8 @@ def icrs_from_positioner_dataframe(
     if data.select(polars.col(required_cols)).null_count().transpose().sum()[0, 0] > 0:
         raise ValueError("Missing values in required columns.")
 
+    data = data.sort("positioner_id")
+
     # Create site.
     if isinstance(site, str):
         assert site in ["APO", "LCO"], 'Invalid observatory. Must be "APO" or "LCO".'
@@ -299,46 +320,56 @@ def icrs_from_positioner_dataframe(
 
     wavelength = data["wavelength"].to_numpy()
 
-    # Get the wok data. We'll pass it to wok_to_positioner to avoid it having to
-    # grab it for each positioner.
+    # Get the wok data and cast the positionerID to int32.
     wok_data = get_wok_data(site.name)
+    wok_data = wok_data.with_columns(polars.col.positionerID.cast(polars.Int32))
 
-    wok_tangent: list[dict[str, float]] = []
-    for row in data.iter_rows(named=True):
-        wok, tangent = positioner_to_wok(
-            row["hole_id"],
-            site.name,
-            row["fibre_type"],
-            row["alpha"],
-            row["beta"],
-            wok_data=wok_data,
-        )
+    # Left join with the input data so that we have one wok data entry per fibre.
+    data_to_wok = data.join(
+        wok_data,
+        how="left",
+        left_on="positioner_id",
+        right_on="positionerID",
+    )
 
-        # Store the data as a list of dicts to convert to a DataFrame later.
-        wok_tangent.append(
-            {
-                "xtangent": tangent[0],
-                "ytangent": tangent[1],
-                "ztangent": tangent[2],
-                "xwok": wok[0],
-                "ywok": wok[1],
-                "zwok": wok[2],
-            }
-        )
+    # Create columns for the beta coordinates depending on the fibre type.
+    data_to_wok = data_to_wok.with_columns(
+        xBeta=polars.when(polars.col.fibre_type == "APOGEE")
+        .then(polars.col.apX)
+        .when(polars.col.fibre_type == "BOSS")
+        .then(polars.col.bossX)
+        .when(polars.col.fibre_type == "Metrology")
+        .then(polars.col.metX)
+        .otherwise(None),
+        yBeta=polars.when(polars.col.fibre_type == "APOGEE")
+        .then(polars.col.apY)
+        .when(polars.col.fibre_type == "BOSS")
+        .then(polars.col.bossY)
+        .when(polars.col.fibre_type == "Metrology")
+        .then(polars.col.metY)
+        .otherwise(None),
+    )
 
-    wt_df = polars.DataFrame(wok_tangent)
-    data = data.with_columns(
-        xtangent=wt_df["xtangent"],
-        ytangent=wt_df["ytangent"],
-        ztangent=wt_df["ztangent"],
-        xwok=wt_df["xwok"],
-        ywok=wt_df["ywok"],
-        zwok=wt_df["zwok"],
+    # Get the wok coordinates.
+    xwok, ywok, zwok = positionerToWok(
+        data_to_wok["alpha"].to_numpy(),
+        data_to_wok["beta"].to_numpy(),
+        data_to_wok["xBeta"].to_numpy(),
+        data_to_wok["yBeta"].to_numpy(),
+        data_to_wok["alphaArmLen"].to_numpy(),
+        data_to_wok["alphaOffset"].to_numpy(),
+        data_to_wok["betaOffset"].to_numpy(),
+        data_to_wok[["xWok", "yWok", "zWok"]].to_numpy(),
+        data_to_wok[["ix", "iy", "iz"]].to_numpy(),
+        data_to_wok[["jx", "jy", "jz"]].to_numpy(),
+        data_to_wok[["kx", "ky", "kz"]].to_numpy(),
+        data_to_wok["dx"].to_numpy(),
+        data_to_wok["dy"].to_numpy(),
     )
 
     focal = FocalPlane(
         Wok(
-            data[["xwok", "ywok", "zwok"]].to_numpy(),
+            numpy.array([xwok, ywok, zwok]).T,
             site=site,
             obsAngle=position_angle,
         ),

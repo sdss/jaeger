@@ -118,9 +118,6 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "xwok_measured": polars.Float64,
     "ywok_measured": polars.Float64,
     "zwok_measured": polars.Float64,
-    "xtangent": polars.Float64,
-    "ytangent": polars.Float64,
-    "ztangent": polars.Float64,
     "alpha": polars.Float64,
     "beta": polars.Float64,
 }

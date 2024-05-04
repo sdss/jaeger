@@ -1328,13 +1328,13 @@ files = [
 
 [[package]]
 name = "jsonschema"
-version = "4.21.1"
+version = "4.22.0"
 description = "An implementation of JSON Schema validation for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jsonschema-4.21.1-py3-none-any.whl", hash = "sha256:7996507afae316306f9e2290407761157c6f78002dcf7419acb99822143d1c6f"},
-    {file = "jsonschema-4.21.1.tar.gz", hash = "sha256:85727c00279f5fa6bedbe6238d2aa6403bedd8b4864ab11207d07df3cc1b2ee5"},
+    {file = "jsonschema-4.22.0-py3-none-any.whl", hash = "sha256:ff4cfd6b1367a40e7bc6411caec72effadd3db0bbe5017de188f2d6108335802"},
+    {file = "jsonschema-4.22.0.tar.gz", hash = "sha256:5b22d434a45935119af990552c862e5d6d564e8f6601206b305a61fdf661a2b7"},
 ]
 
 [package.dependencies]
@@ -3057,13 +3057,13 @@ files = [
 
 [[package]]
 name = "referencing"
-version = "0.35.0"
+version = "0.35.1"
 description = "JSON Referencing + Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "referencing-0.35.0-py3-none-any.whl", hash = "sha256:8080727b30e364e5783152903672df9b6b091c926a146a759080b62ca3126cd6"},
-    {file = "referencing-0.35.0.tar.gz", hash = "sha256:191e936b0c696d0af17ad7430a3dc68e88bc11be6514f4757dc890f04ab05889"},
+    {file = "referencing-0.35.1-py3-none-any.whl", hash = "sha256:eda6d3234d62814d1c64e305c1331c9a3a6132da475ab6382eaa997b21ee75de"},
+    {file = "referencing-0.35.1.tar.gz", hash = "sha256:25b42124a6c8b632a425174f24087783efb348a6f1e0008e63cd4466fedf703c"},
 ]
 
 [package.dependencies]
@@ -3414,23 +3414,12 @@ websocket = ["websockets (>=11.0.3,<12.0.0)"]
 
 [[package]]
 name = "sdss-coordio"
-version = "1.10.0"
+version = "1.10.1a0"
 description = "Coordinate conversion for SDSS-V"
 optional = false
 python-versions = ">=3.7"
-files = [
-    {file = "sdss-coordio-1.10.0.tar.gz", hash = "sha256:5177d52ac77c0cb301ef62245ba7f581461e3e0791223e7ec867d0b64d2ffc6e"},
-    {file = "sdss_coordio-1.10.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:b8429d090359fa79a35af17da8f84c00e05b7af8bbc44ba32b04fe8ca49e4dea"},
-    {file = "sdss_coordio-1.10.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:70e797d0cc0205498d74f32170db6410910f1b71a89a161dd6d6fb2ff67c5d3b"},
-    {file = "sdss_coordio-1.10.0-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:180e6d0a6e413efa9ef418ce4be1b919d72fdd61e2b738f7412d0af4072f80a1"},
-    {file = "sdss_coordio-1.10.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3d0cb162be7c7da17193a0fdbafc383ea91f9d17fd4917d9998af6fbd815f398"},
-    {file = "sdss_coordio-1.10.0-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:c57123d27b3c92dbca33ca4011db0df7d34e2fc432590921ea56d6c505320c11"},
-    {file = "sdss_coordio-1.10.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:10e9d81b984a2f56e9f1fd4822e7b4fdb2dad2b10608e2d1501711de9ea3f3e6"},
-    {file = "sdss_coordio-1.10.0-cp38-cp38-macosx_11_0_x86_64.whl", hash = "sha256:c891704b6f0124dd1138264358e1e6cd94c5f5febcf44e812e55d599f3c7dd4d"},
-    {file = "sdss_coordio-1.10.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:92f12a396a0dc8d8a0104ef5ef033c301e3a8bc4d82ac7bc0eac4a57128d2368"},
-    {file = "sdss_coordio-1.10.0-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:0e76322b6067aed424b05aa4de733f17a99a7e41c181fe66c32cd11d9273ffd7"},
-    {file = "sdss_coordio-1.10.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:54e572b73f2fedad646a3006cde7ee6af2bfbf71b9e200e99bb92f130c1f5ce4"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 astropy = {version = ">=5.0.0", markers = "python_version > \"3.7\""}
@@ -3447,6 +3436,12 @@ seaborn = ">=0.12.1"
 
 [package.extras]
 dev = ["coverage[toml] (>=5.0)", "doc8 (>=0.8.0)", "flake8 (>=3.7.9)", "ipdb (>=0.12.3)", "isort (>=4.3.21)", "pytest (>=5.2.2)", "pytest-cov (>=2.8.1)", "pytest-mock (>=1.13.0)", "pytest-sugar (>=0.9.2)", "rstcheck (>=3.3.1)", "sphinx (>=4.0)", "twine (>=3.4.2)", "wheel (>=0.36.2)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/sdss/coordio"
+reference = "master"
+resolved_reference = "bc074c7df1707eda5927479b32dc2f3962bf3cce"
 
 [[package]]
 name = "sdss-drift"
@@ -3588,13 +3583,13 @@ numpy = "*"
 
 [[package]]
 name = "sdssdb"
-version = "0.11.3"
+version = "0.11.4"
 description = "SDSS product for database management"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sdssdb-0.11.3-py3-none-any.whl", hash = "sha256:bc0b5a53424b891042438911134bb5a34e94400ffd8fb9d1f6b2e86287dd74da"},
-    {file = "sdssdb-0.11.3.tar.gz", hash = "sha256:23be90d8f9b7605606deb5402526f9a52cbe21294afd35eb98649f6ea94a702d"},
+    {file = "sdssdb-0.11.4-py3-none-any.whl", hash = "sha256:5850a048c50ce221e332cb62d4088a9e5d0e95eb01b787c9afa1591f812f2d2b"},
+    {file = "sdssdb-0.11.4.tar.gz", hash = "sha256:3df3e4cf53b67af101a76b833d94069bf52fcc8c0fa87ece8cb40e9bbe94249f"},
 ]
 
 [package.dependencies]
@@ -4771,4 +4766,4 @@ test = ["zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10,<3.13"
-content-hash = "4e8c6acdeeddb4c33d78870de60e2176fbeb6c780157dc866bb2f50f1f137f64"
+content-hash = "5859463a07dda21cebdbf1fe2e52ea3efd072f2ba7fb9c5fa5cf9b63a6dff8b3"
