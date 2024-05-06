@@ -83,7 +83,7 @@ class BaseAssignment:
             self.target_data = self.design.target_data
             self.position_angle = self.design.field.position_angle
         else:
-            self.target_data = {}
+            self.target_data = None
             self.position_angle = 0.0
 
         self.boresight: Observed | None = None
@@ -162,23 +162,34 @@ class BaseAssignment:
                     "delta_ra": None,
                     "delta_dec": None,
                     "assigned": False,
+                    "too": False,
                 }
 
-                if hole_id in tdata and tdata[hole_id]["fibre_type"] == fibre_type:
-                    hole_data.update(
-                        {
-                            "catalogid": tdata[hole_id]["catalogid"],
-                            "ra_icrs": tdata[hole_id]["ra"],
-                            "dec_icrs": tdata[hole_id]["dec"],
-                            "pmra": tdata[hole_id]["pmra"],
-                            "pmdec": tdata[hole_id]["pmdec"],
-                            "parallax": tdata[hole_id]["parallax"],
-                            "coord_epoch": tdata[hole_id]["epoch"],
-                            "delta_ra": tdata[hole_id]["delta_ra"],
-                            "delta_dec": tdata[hole_id]["delta_dec"],
-                            "assigned": True,
-                        }
+                if tdata is not None:
+                    # Get the target data row for this hole and fibre.
+                    tdata_row = tdata.filter(
+                        polars.col.hole_id == hole_id,
+                        polars.col.fibre_type == fibre_type,
                     )
+
+                    if len(tdata_row) == 1:
+                        tdata_row_dict = tdata_row.rows(named=True)[0]
+
+                        hole_data.update(
+                            {
+                                "catalogid": tdata_row_dict["catalogid"],
+                                "ra_icrs": tdata_row_dict["ra"],
+                                "dec_icrs": tdata_row_dict["dec"],
+                                "pmra": tdata_row_dict["pmra"],
+                                "pmdec": tdata_row_dict["pmdec"],
+                                "parallax": tdata_row_dict["parallax"],
+                                "coord_epoch": tdata_row_dict["epoch"],
+                                "delta_ra": tdata_row_dict["delta_ra"],
+                                "delta_dec": tdata_row_dict["delta_dec"],
+                                "assigned": True,
+                                "too": tdata_row_dict["is_too"],
+                            }
+                        )
 
                 fibre_tdata.append(hole_data)
 

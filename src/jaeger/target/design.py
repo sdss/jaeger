@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from typing import Any
+
 import numpy
 import peewee
 import polars
@@ -20,6 +22,8 @@ from sdssdb.peewee.sdss5db import targetdb
 
 from jaeger import config, log
 from jaeger.fps import FPS
+from jaeger.target.schemas import TARGET_DATA_SCHEMA
+from jaeger.target.too import add_targets_of_opportunity_to_design
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -63,6 +67,9 @@ class Design:
         For offset calculation. Factor to add to ``mag_limit``. See ``object_offset``.
     offset_min_skybrightness
         Minimum sky brightness for the offset. See ``object_offset``.
+    use_targets_of_opportunity
+        Whether to replace targets with targets of opportunity accoding to the
+        parameters in ``configuration.targets_of_opportunity``.
 
     """
 
@@ -75,6 +82,7 @@ class Design:
         scale: float | None = None,
         safety_factor: float = 0.1,
         offset_min_skybrightness: float = 0.5,
+        use_targets_of_opportunity: bool = True,
     ):
         if calibration.wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
@@ -101,13 +109,18 @@ class Design:
 
         self.safety_factor = safety_factor
         self.offset_min_skybrightness = offset_min_skybrightness
-        self.target_data: dict[str, dict] = self.get_target_data()
+
+        self.target_data: polars.DataFrame = self.get_target_data()
+        self.replaced_target_data: polars.DataFrame | None = None
+
+        if use_targets_of_opportunity:
+            add_targets_of_opportunity_to_design(self)
 
         self.configuration: Configuration
         if create_configuration:
             self.configuration = Configuration(self, fps=fps, epoch=epoch, scale=scale)
 
-    def get_target_data(self) -> dict[str, dict]:
+    def get_target_data(self) -> polars.DataFrame:
         """Retrieves target data as a dictionary."""
 
         # TODO: this is all synchronous which is probably ok because this
@@ -125,15 +138,33 @@ class Design:
                 targetdb.CartonToTarget.delta_ra,
                 targetdb.CartonToTarget.delta_dec,
                 targetdb.CartonToTarget.can_offset,
-                targetdb.Target,
-                targetdb.Magnitude,
-                targetdb.Hole.holeid,
+                targetdb.CartonToTarget.priority,
+                targetdb.Target.catalogid,
+                targetdb.Target.ra,
+                targetdb.Target.dec,
+                targetdb.Target.epoch,
+                targetdb.Target.pmra,
+                targetdb.Target.pmdec,
+                targetdb.Target.parallax,
+                targetdb.Magnitude.bp,
+                targetdb.Magnitude.g,
+                targetdb.Magnitude.h,
+                targetdb.Magnitude.i,
+                targetdb.Magnitude.z,
+                targetdb.Magnitude.r,
+                targetdb.Magnitude.rp,
+                targetdb.Magnitude.gaia_g,
+                targetdb.Magnitude.j,
+                targetdb.Magnitude.k,
+                targetdb.Magnitude.optical_prov,
+                targetdb.Hole.holeid.alias("hole_id"),
                 targetdb.Instrument.label.alias("fibre_type"),
                 targetdb.Cadence.label.alias("cadence"),
                 targetdb.Carton.carton,
                 targetdb.Category.label.alias("category"),
                 targetdb.Carton.program,
                 targetdb.Design.design_mode,
+                peewee.SQL("false").alias("is_too"),
             )
             .join(targetdb.Assignment)
             .join(targetdb.CartonToTarget)
@@ -153,11 +184,13 @@ class Design:
             .dicts()
         )
 
+        target_data = polars.DataFrame(list(target_data), schema=TARGET_DATA_SCHEMA)
+
         target_data = self.calculate_offsets(target_data)
 
-        return {data["holeid"]: data for data in list(target_data)}
+        return target_data
 
-    def calculate_offsets(self, target_data: list[dict]):
+    def calculate_offsets(self, target_data: polars.DataFrame):
         """Determines the target offsets."""
 
         def _offset(group: polars.DataFrame):
@@ -227,13 +260,11 @@ class Design:
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
         log.debug(f"safety_factor={self.safety_factor}")
 
-        # Convert to data frame to group by fibre type (no need to group by design
-        # mode since a design can only have one design mode).
-        df = polars.DataFrame(list(target_data), infer_schema_length=None)
-        df = df.groupby("fibre_type").apply(_offset)
+        # Group by fibre type and apply the offset calculation. delta_ra and delta_dec
+        # are modified and target_data is updated.
+        target_data = target_data.groupby("fibre_type").apply(_offset)
 
-        # Return as a list of dicts again.
-        return df.rows(named=True)
+        return target_data
 
     @classmethod
     def check_design(cls, design_id: int, site: str):
@@ -292,3 +323,10 @@ class Design:
 
     def __repr__(self):
         return f"<Design (design_id={self.design_id})>"
+
+    def get_target_data_dict(self) -> dict[str, dict[str, Any]]:
+        """Returns a dictionary of the target data keyed by ``hole_id``."""
+
+        td_dicts = self.target_data.to_dicts()
+
+        return {td["hole_id"]: td for td in td_dicts}

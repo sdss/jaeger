@@ -548,3 +548,83 @@ def positioner_to_wok(
     wok_coords = numpy.array(wok)
 
     return wok_coords, numpy.array([tangent[0], tangent[1], 0])
+
+
+def apply_proper_motions(data: polars.DataFrame, epoch: float | None = None):
+    """Propagates ICRs coordinates to a given epoch handling missing values.
+
+    Parameters
+    ----------
+    data
+        A data frame with at least columns ``ra`` and ``dec`` which must be
+        ICRS coordinates in degrees. Optionally the data frame can have columns
+        ``pmra``, ``pmdec``, and ``epoch`` in ``mas/yr`` and ``JD`` respectively.
+        ``epoch`` is the epoch of the input coordinates.
+    epoch
+        The epoch, in Julian year, to which to propagate the input coordinates.
+        Defaults to the current time.
+
+    Returns
+    -------
+    data_epoch
+        A data frame with columns ``ra``, ``dec``, and ``epoch`` with the ICRS
+        coordinates of each target at ``epoch``.
+
+    """
+
+    data = data.clone()
+
+    now = Time.now().jd
+    epoch = epoch or now
+
+    # Add missing columns.
+    if "pmra" not in data.columns:
+        data = data.with_columns(pmra=polars.lit(0.0, dtype=polars.Float32))
+
+    if "pmdec" not in data.columns:
+        data = data.with_columns(pmdec=polars.lit(0.0, dtype=polars.Float32))
+
+    # If the epoch column is missing the pmra and pmdec columns are irrelevant.
+    if "epoch" not in data.columns:
+        data = data.with_columns(
+            pmra=polars.lit(0.0, dtype=polars.Float32),
+            pmdec=polars.lit(0.0, dtype=polars.Float32),
+            epoch=polars.lit(epoch, dtype=polars.Float32),
+        )
+
+    # Find rows with missing proper motions and set them to zero.
+    invalid_data = data.select(
+        (
+            polars.col.ra.is_null()
+            | polars.col.ra.is_nan()
+            | polars.col.dec.is_null()
+            | polars.col.dec.is_nan()
+            | polars.col.epoch.is_null()
+            | polars.col.epoch.is_nan()
+        )
+        .arg_true()
+        .alias("index")
+    )
+
+    data[invalid_data["index"], "pmra"] = 0.0
+    data[invalid_data["index"], "pmdec"] = 0.0
+    data[invalid_data["index"], "epoch"] = epoch
+
+    # Propagate coordinates.
+    icrs = ICRS(
+        numpy.array([data["ra"].to_numpy(), data["dec"].to_numpy()]).T,
+        pmra=data["pmra"].to_numpy(),
+        pmdec=data["pmdec"].to_numpy(),
+        epoch=Time(data["epoch"].to_numpy(), format="jyear").jd,
+    )
+    icrs_epoch = icrs.to_epoch(epoch)
+
+    data_epoch = polars.DataFrame(
+        {
+            "ra": polars.Series(icrs_epoch[:, 0], dtype=polars.Float64),
+            "dec": polars.Series(icrs_epoch[:, 1], dtype=polars.Float64),
+            "epoch": epoch,
+        }
+    )
+
+    return data_epoch

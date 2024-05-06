@@ -15,7 +15,12 @@ import polars
 import polars.type_aliases
 
 
-__all__ = ["CONFSUMMARY_FIBER_MAP_SCHEMA", "FIBRE_DATA_SCHEMA", "CONFIGURATION_SCHEMA"]
+__all__ = [
+    "CONFSUMMARY_FIBER_MAP_SCHEMA",
+    "FIBRE_DATA_SCHEMA",
+    "CONFIGURATION_SCHEMA",
+    "TARGET_DATA_SCHEMA",
+]
 
 
 CONFSUMMARY_FIBER_MAP_SCHEMA = [
@@ -26,6 +31,7 @@ CONFSUMMARY_FIBER_MAP_SCHEMA = [
     ("on_target", numpy.int16, 0),
     ("valid", numpy.int16, 0),
     ("decollided", numpy.int16, 0),
+    ("too", numpy.int16, 0),
     ("xwok", numpy.float64, -999.0),
     ("ywok", numpy.float64, -999.0),
     ("zwok", numpy.float64, -999.0),
@@ -82,6 +88,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "assigned": polars.Boolean,
     "reassigned": polars.Boolean,
     "valid": polars.Boolean,
+    "too": polars.Boolean,
     "on_target": polars.Boolean,
     "disabled": polars.Boolean,
     "offline": polars.Boolean,
@@ -165,3 +172,40 @@ CONFIGURATION_SCHEMA.update(
         "tmass_h_mag": polars.Float32,
     }
 )
+
+
+TARGET_DATA_SCHEMA = {
+    "assignment_pk": polars.Int64,
+    "carton_to_target_pk": polars.Int64,
+    "lambda_eff": polars.Float32,
+    "delta_ra": polars.Float32,
+    "delta_dec": polars.Float32,
+    "can_offset": polars.Boolean,
+    "priority": polars.Int32,
+    "catalogid": polars.Int64,
+    "dec": polars.Float64,
+    "epoch": polars.Float32,
+    "pmdec": polars.Float32,
+    "pmra": polars.Float32,
+    "ra": polars.Float64,
+    "parallax": polars.Float32,
+    "bp": polars.Float32,
+    "g": polars.Float32,
+    "h": polars.Float32,
+    "i": polars.Float32,
+    "z": polars.Float32,
+    "r": polars.Float32,
+    "rp": polars.Float32,
+    "gaia_g": polars.Float32,
+    "j": polars.Float32,
+    "k": polars.Float32,
+    "optical_prov": polars.String,
+    "hole_id": polars.String,
+    "fibre_type": polars.String,
+    "cadence": polars.String,
+    "carton": polars.String,
+    "category": polars.String,
+    "program": polars.String,
+    "design_mode": polars.String,
+    "is_too": polars.Boolean,
+}

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import time
+
 from typing import Tuple
 
 import numpy
@@ -24,6 +26,7 @@ __all__ = [
     "parse_identifier",
     "motor_steps_to_angle",
     "get_goto_move_time",
+    "Timer",
 ]
 
 
@@ -307,3 +310,28 @@ def get_goto_move_time(move, speed=None):
     speed = speed or config["positioner"]["motor_speed"]
 
     return move * config["positioner"]["reduction_ratio"] / (6.0 * speed) + 0.25
+
+
+class Timer:
+    """Convenience context manager to time events.
+
+    Modified from https://bit.ly/3ebdp3y.
+
+    """
+
+    def __enter__(self):
+        self.start = time.time()
+        self.end = None
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.time()
+        self.interval = self.end - self.start
+
+    @property
+    def elapsed(self):
+
+        if self.end:
+            return self.interval
+
+        return time.time() - self.start
