@@ -54,6 +54,7 @@ from jaeger.kaiju import (
 )
 from jaeger.target.assignment import Assignment, BaseAssignment, ManualAssignment
 from jaeger.target.tools import copy_summary_file, get_fibermap_table, get_wok_data
+from jaeger.utils import Timer
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -114,7 +115,10 @@ class BaseConfiguration(Generic[AssignmentType]):
         self.extra_summary_data = {}
 
         self.fps = fps
-        self.robot_grid = self._initialise_grid()
+
+        with Timer() as timer:
+            self.robot_grid = self._initialise_grid()
+        log.debug(f"Initialised robot grid in {timer.elapsed:.2f} seconds.")
 
         self.command: Command[JaegerActor] | None = None
 
@@ -968,13 +972,17 @@ class Configuration(BaseConfiguration[Assignment]):
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment = Assignment(
-            self,
-            epoch=epoch,
-            scale=scale,
-            boss_wavelength=boss_wavelength,
-            apogee_wavelength=apogee_wavelength,
-        )
+
+        log.info("Creating assignment instance.")
+        with Timer() as timer:
+            self.assignment = Assignment(
+                self,
+                epoch=epoch,
+                scale=scale,
+                boss_wavelength=boss_wavelength,
+                apogee_wavelength=apogee_wavelength,
+            )
+        log.debug(f"Assignment instance created in {timer.elapsed:.2f} seconds.")
 
         assert self.assignment.site.time
 

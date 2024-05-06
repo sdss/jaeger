@@ -31,6 +31,7 @@ from jaeger.target.coordinates import (
     positioner_from_icrs_dataframe,
 )
 from jaeger.target.schemas import FIBRE_DATA_SCHEMA
+from jaeger.utils import Timer
 
 from .tools import get_wok_data
 
@@ -88,7 +89,9 @@ class BaseAssignment:
 
         self.boresight: Observed | None = None
 
-        self.fibre_data = self.create_fibre_data()
+        with Timer() as timer:
+            self.fibre_data = self.create_fibre_data()
+        log.debug(f"Created fibre data in {timer.elapsed:.2f} s.")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} (design_id={self.design_id})>"
@@ -336,7 +339,10 @@ class Assignment(BaseAssignment):
         )
 
         if compute_coordinates:
-            self.compute_coordinates(epoch)
+            log.debug("Computing coordinates for assignment.")
+            with Timer() as timer:
+                self.compute_coordinates(epoch)
+            log.debug(f"Computed coordinates in {timer.elapsed:.2f} s.")
 
     def compute_coordinates(self, epoch: Optional[float] = None):
         """Computes coordinates in different systems.

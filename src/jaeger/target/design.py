@@ -26,6 +26,7 @@ from jaeger.target.schemas import TARGET_DATA_SCHEMA
 from jaeger.target.too import add_targets_of_opportunity_to_design
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
+from jaeger.utils.utils import Timer
 
 from .configuration import Configuration
 
@@ -87,16 +88,21 @@ class Design:
         if calibration.wokCoords is None:
             raise RuntimeError("Cannot retrieve wok calibration. Is $WOKCALIB_DIR set?")
 
+        log.info(f"Creating Design instance for design_id={design_id}.")
+
         self.fps = fps or FPS.get_instance()
         self.design_id = design_id
 
         if connect_database(targetdb.database) is False:
             raise RuntimeError("Cannot connect to database.")
 
-        try:
-            self.design = targetdb.Design.get(design_id=design_id)
-        except peewee.DoesNotExist:
-            raise ValueError(f"design_id {design_id} does not exist in the database.")
+        with Timer() as timer:
+            try:
+                self.design = targetdb.Design.get(design_id=design_id)
+            except peewee.DoesNotExist:
+                raise ValueError(f"design_id {design_id} does not exist in DB.")
+
+        log.debug(f"Design data retrieved from DB in {timer.elapsed:.2f} s.")
 
         self.field = FieldData(
             field_id=self.design.field.field_id,
@@ -110,14 +116,21 @@ class Design:
         self.safety_factor = safety_factor
         self.offset_min_skybrightness = offset_min_skybrightness
 
-        self.target_data: polars.DataFrame = self.get_target_data()
+        log.debug("Loading target data and calculating offsets.")
+        with Timer() as timer:
+            self.target_data: polars.DataFrame = self.get_target_data()
+        log.debug(f"Loaded target data in {timer.elapsed:.2f} s.")
+
         self.replaced_target_data: polars.DataFrame | None = None
 
         if use_targets_of_opportunity:
-            add_targets_of_opportunity_to_design(self)
+            with Timer() as timer:
+                add_targets_of_opportunity_to_design(self)
+            log.debug(f"Added targets of opportunity in {timer.elapsed:.2f} s.")
 
         self.configuration: Configuration
         if create_configuration:
+            log.info(f"Creating configuration for design_id={design_id}.")
             self.configuration = Configuration(self, fps=fps, epoch=epoch, scale=scale)
 
     def get_target_data(self) -> polars.DataFrame:
@@ -236,7 +249,7 @@ class Design:
 
                 delta_ra, delta_dec, _ = object_offset(
                     mag,
-                    mag_lim,
+                    numpy.array(mag_lim),
                     lunation,
                     fibre_type.capitalize(),
                     config["observatory"].upper(),
@@ -308,6 +321,7 @@ class Design:
 
         self = cls(design_id, fps=fps, create_configuration=False, **kwargs)
 
+        log.info(f"Creating configuration for design_id={self.design_id}.")
         configuration = await run_in_executor(
             Configuration,
             self,
