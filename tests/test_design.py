@@ -31,10 +31,19 @@ if TYPE_CHECKING:
     pass
 
 
+@pytest.fixture(autouse=True)
+def disable_too_replacement(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setitem(
+        jaeger.config["configuration"]["targets_of_opportunity"],
+        "replace",
+        False,
+    )
+
+
 async def test_create_design():
     check_database()
 
-    design = Design(21637, use_targets_of_opportunity=False)
+    design = Design(21637)
 
     assert design.configuration.fibre_data.height == 1500
 
@@ -45,7 +54,7 @@ async def test_create_design():
 async def test_configuration_write(tmp_path: pathlib.Path):
     check_database()
 
-    design = Design(21637, use_targets_of_opportunity=False)
+    design = Design(21637)
 
     assert opsdb.Configuration.select().count() == 0
     assert opsdb.AssignmentToFocal.select().count() == 0
@@ -70,7 +79,7 @@ async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
     check_database()
     check_fps_calibrations_version()
 
-    design = Design(21636, epoch=2460427, use_targets_of_opportunity=False)
+    design = Design(21636, epoch=2460427)
 
     design.configuration.write_to_database()
     confSummary_path = tmp_path / "confSummary.par"
@@ -103,7 +112,7 @@ async def test_configuration_to_dataframe(
 ):
     check_database()
 
-    design = Design(21637, use_targets_of_opportunity=False)
+    design = Design(21637)
     design.configuration.write_to_database()
 
     configuration_id = design.configuration.configuration_id
@@ -130,26 +139,6 @@ async def test_configuration_to_dataframe(
     assert file_path.exists()
 
 
-async def test_configuration_get_paths(mock_fps: MockFPS):
-    check_database()
-
-    design = Design(21637, fps=mock_fps, use_targets_of_opportunity=False)
-
-    assert design.design_id == 21637
-
-    from_destination = await design.configuration.get_paths()
-    assert isinstance(from_destination, dict)
-
-    assigned = design.configuration.fibre_data.filter(polars.col.assigned)
-    assert assigned.height == 499
-
-    on_target = design.configuration.fibre_data.filter(polars.col.on_target)
-    assert on_target.height < 499
-
-    reassigned = design.configuration.fibre_data.filter(polars.col.reassigned)
-    assert reassigned.height > 0
-
-
 async def test_design_too_replacement(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pathlib.Path,
@@ -160,6 +149,11 @@ async def test_design_too_replacement(
         jaeger.config["configuration"]["targets_of_opportunity"],
         "path",
         str(pathlib.Path(__file__).parent / "data/too_60431.parquet"),
+    )
+    monkeypatch.setitem(
+        jaeger.config["configuration"]["targets_of_opportunity"],
+        "replace",
+        True,
     )
 
     design = Design(50323, use_targets_of_opportunity=True)
@@ -181,3 +175,23 @@ async def test_design_too_replacement(
 
     yn = yanny(str(confSummary_path))
     assert yn["FIBERMAP"]["too"].sum() == 2
+
+
+async def test_configuration_get_paths(mock_fps: MockFPS):
+    check_database()
+
+    design = Design(21637, fps=mock_fps)
+
+    assert design.design_id == 21637
+
+    from_destination = await design.configuration.get_paths()
+    assert isinstance(from_destination, dict)
+
+    assigned = design.configuration.fibre_data.filter(polars.col.assigned)
+    assert assigned.height == 499
+
+    on_target = design.configuration.fibre_data.filter(polars.col.on_target)
+    assert on_target.height < 499
+
+    reassigned = design.configuration.fibre_data.filter(polars.col.reassigned)
+    assert reassigned.height > 0

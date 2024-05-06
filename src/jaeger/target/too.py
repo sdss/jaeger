@@ -47,7 +47,7 @@ def add_targets_of_opportunity_to_design(design: Design):
 
     too_config = config["configuration"].get("targets_of_opportunity", {})
 
-    if not too_config.get("replace", False):
+    if not too_config or not too_config.get("replace", False):
         log.info("[ToO]: replacement is disabled.")
         return
 
@@ -58,7 +58,7 @@ def add_targets_of_opportunity_to_design(design: Design):
     try:
         log.debug(f"[ToO]: Reading targets from {too_file}.")
         too_targets = polars.read_parquet(too_file)
-    except FileNotFoundError:
+    except FileNotFoundError:  # pragma: no cover
         log.error("Failed reading ToO file.")
         return
 
@@ -67,7 +67,7 @@ def add_targets_of_opportunity_to_design(design: Design):
     too_targets_field = too_targets.filter(polars.col.field_id == field_id)
     log.debug(f"[ToO]: found {len(too_targets_field)} targets for field {field_id}.")
 
-    if len(too_targets_field) == 0:
+    if len(too_targets_field) == 0:  # pragma: no cover
         log.info("[ToO]: no targets available for this field.")
         return
 
@@ -81,7 +81,7 @@ def add_targets_of_opportunity_to_design(design: Design):
         ~polars.col.catalogid.is_in(observed_targets["catalogid"])
     )
 
-    if len(too_targets_field) == 0:
+    if len(too_targets_field) == 0:  # pragma: no cover
         log.info("[ToO]: all ToO targets for this field have already been observed.")
         return
 
@@ -100,7 +100,7 @@ def add_targets_of_opportunity_to_design(design: Design):
     too_targets_dm = too_targets_field.filter(
         polars.col(bn_col) & polars.col(mag_lim_col)
     )
-    if len(too_targets_dm) == 0:
+    if len(too_targets_dm) == 0:  # pragma: no cover
         log.info("[ToO]: no valid ToO targets for this design mode.")
         return
     log.debug(f"[ToO]: {len(too_targets_dm)} targets are valid for this design mode.")
@@ -108,7 +108,7 @@ def add_targets_of_opportunity_to_design(design: Design):
     # Create a frame with the design targets that could be replaced.
     repl_design_targets = filter_targets(design.target_data)
 
-    if len(repl_design_targets) == 0:
+    if len(repl_design_targets) == 0:  # pragma: no cover
         log.info("[ToO]: no replaceable targets in this design.")
         return
 
@@ -125,7 +125,7 @@ def add_targets_of_opportunity_to_design(design: Design):
         repl_design_targets["hole_id"].to_list(),
     )
 
-    if len(too_to_hole) == 0:
+    if len(too_to_hole) == 0:  # pragma: no cover
         log.info("[ToO]: no ToO targets can be matched to holes.")
         return
 
