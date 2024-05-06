@@ -83,6 +83,7 @@ def download_fcam_data():
         "fcam/60428/fimg-fvc1n-0027.fits",
         "fcam/60428/proc-fimg-fvc1n-0027.fits",
         "fcam/calib/medComb.fits",
+        "too_60431.parquet",
     ]
 
     for fname in FILES:
