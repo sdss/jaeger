@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 async def test_create_design():
     check_database()
 
-    design = Design(21637)
+    design = Design(21637, use_targets_of_opportunity=False)
 
     assert design.configuration.fibre_data.height == 1500
 
@@ -44,7 +44,7 @@ async def test_create_design():
 async def test_configuration_write(tmp_path: pathlib.Path):
     check_database()
 
-    design = Design(21637)
+    design = Design(21637, use_targets_of_opportunity=False)
 
     assert opsdb.Configuration.select().count() == 0
     assert opsdb.AssignmentToFocal.select().count() == 0
@@ -69,7 +69,7 @@ async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
     check_database()
     check_fps_calibrations_version()
 
-    design = Design(21636, epoch=2460427)
+    design = Design(21636, epoch=2460427, use_targets_of_opportunity=False)
 
     design.configuration.write_to_database()
     confSummary_path = tmp_path / "confSummary.par"
@@ -102,7 +102,7 @@ async def test_configuration_to_dataframe(
 ):
     check_database()
 
-    design = Design(21637)
+    design = Design(21637, use_targets_of_opportunity=False)
     design.configuration.write_to_database()
 
     configuration_id = design.configuration.configuration_id
@@ -132,7 +132,7 @@ async def test_configuration_to_dataframe(
 async def test_configuration_get_paths(mock_fps: MockFPS):
     check_database()
 
-    design = Design(21637, fps=mock_fps)
+    design = Design(21637, fps=mock_fps, use_targets_of_opportunity=False)
 
     assert design.design_id == 21637
 
