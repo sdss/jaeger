@@ -439,8 +439,7 @@ def configuration_to_dataframe(
             pa=design.field.position_angle,
         )
 
-    # Additional target information.
-    if configuration.assignment.target_data and configuration.design:
+        # Additional target information.
         target_data = configuration.design.get_target_data_dict()
 
         # Iterate over each target and update the relevant columns.
