@@ -18,6 +18,8 @@
   ```
 
   Enabled only at APO for now.
+* Use `positionerToWok` and `wokToPositioner` functions from `sdss-coordio 1.11.0` which allow to convert wok to and from positioner coordinates as an array (all holes at the same time), which very significantly improves `Design` creation time.
+* Enabled chiller fault alarms.
 
 
 ## 1.7.0 - April 29, 2024
