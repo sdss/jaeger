@@ -362,7 +362,7 @@ class Assignment(BaseAssignment):
 
         # Get the positioner data for the targets with ICRS. The returned
         # dataframe has the same height and all the same columns, but populated.
-        pos_data = positioner_from_icrs_dataframe(
+        assigned = positioner_from_icrs_dataframe(
             fibre_data_icrs,
             self.boresight,
             self.site,
@@ -372,11 +372,11 @@ class Assignment(BaseAssignment):
         )
 
         # A couple sanity checks.
-        assert pos_data.height == fibre_data_icrs.height
-        assert pos_data.columns == fibre_data_icrs.columns
+        assert assigned.height == fibre_data_icrs.height
+        assert assigned.columns == fibre_data_icrs.columns
 
         # We mark these fibres as "assigned".
-        pos_data = pos_data.with_columns(assigned=True, on_target=True)
+        assigned = assigned.with_columns(assigned=True, on_target=True)
 
         # Now get a data frame with the fibres that are not assigned.
         unassigned = self.fibre_data.filter(
@@ -384,12 +384,12 @@ class Assignment(BaseAssignment):
         )
 
         # For these the positioner alpha/beta coordinates are the same as for the
-        # positioner with the same positioner_id in pos_data. We create lists
+        # positioner with the same positioner_id in assigned. We create lists
         # of the same height as unassinged and then add them.
         alpha_unassigned: list[float] = []
         beta_unassigned: list[float] = []
         for row in unassigned.iter_rows(named=True):
-            pid_data = pos_data.filter(polars.col.positioner_id == row["positioner_id"])
+            pid_data = assigned.filter(polars.col.positioner_id == row["positioner_id"])
             if pid_data.height == 0:
                 alpha_unassigned.append(numpy.nan)
                 beta_unassigned.append(numpy.nan)
@@ -423,7 +423,7 @@ class Assignment(BaseAssignment):
 
         # Join the two dataframes. Recast and resort.
         fibre_data = (
-            polars.concat([pos_data, icrs_unassigned])
+            polars.concat([assigned, icrs_unassigned])
             .sort("index")
             .cast(FIBRE_DATA_SCHEMA)
         )
