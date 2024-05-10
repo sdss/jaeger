@@ -540,6 +540,10 @@ class ManualAssignment(BaseAssignment):
             valid=True,
         )
 
+        # Artificially assign all the BOSS fibres.
+        boss_idx = (fdata["fibre_type"] == "BOSS").arg_true()
+        fdata[boss_idx, "assigned"] = True
+
         fdata = (
             icrs_from_positioner_dataframe(
                 fdata,
