@@ -438,7 +438,7 @@ async def take_fvc_loop(
                 pass
             else:
                 delta_rms = current_rms - new_rms
-                command.info(fvc_deltarms=delta_rms)
+                command.info(fvc_deltarms=round(delta_rms, 2))
             current_rms = new_rms
 
             command.info(fvc_perc_90=round(fvc.perc_90 * 1000.0, 2))
