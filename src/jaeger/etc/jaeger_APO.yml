@@ -53,6 +53,7 @@ fps:
   use_sync_line: false
   snapshot_path: /data/logs/jaeger/snapshots/
   configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
+  robot_grid_dumps: /data/logs/jaeger/grids/
   use_lock: True
 
 ieb:
