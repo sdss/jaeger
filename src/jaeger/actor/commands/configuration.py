@@ -207,6 +207,8 @@ async def _load_design(
                 epoch = float(Time.now().jd)
             epoch += epoch_delay / 86400.0
 
+            command.debug(text=f"Effective epoch: {epoch:.6f}.")
+
             design = await Design.create_async(
                 design_id,
                 epoch=epoch,

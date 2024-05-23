@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import pathlib
@@ -406,6 +407,22 @@ class BaseConfiguration(Generic[AssignmentType]):
             # Final check for collisions.
             if len(self.robot_grid.getCollidedRobotList()) > 0:
                 raise TrajectoryError("The robot grid remains collided.")
+
+        # Save the grid before trying to generate paths. Mostly for debugging
+        # if something fails.
+        now = Time.now()
+        grid_dump = dump_robot_grid(self.robot_grid)
+        grid_dump_path = os.path.join(
+            config["fps"]["robot_grid_dumps"],
+            str(get_sjd(self.assignment.observatory.upper())),
+            f"grid_dump_{now.isot}.json",
+        )
+
+        try:
+            os.makedirs(os.path.dirname(grid_dump_path), exist_ok=True)
+            json.dump(grid_dump, open(grid_dump_path, "w"))
+        except Exception as ee:
+            self.log(f"Error saving grid dump: {ee}", level=logging.ERROR)
 
         # Fix deadlocks (this sets the trajectories in the instance).
         self.log("Generating path pair.")

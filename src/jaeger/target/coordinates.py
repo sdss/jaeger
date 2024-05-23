@@ -386,8 +386,11 @@ def icrs_from_positioner_dataframe(
     else:
         field = obs = icrs = None
 
-    # Add focal coordinates. These always exist.
+    # Add wok and focal coordinates. These always exist.
     data = data.with_columns(
+        xwok=polars.Series(xwok),
+        ywok=polars.Series(ywok),
+        zwok=polars.Series(zwok),
         xfocal=polars.Series(focal[:, 0]),
         yfocal=polars.Series(focal[:, 1]),
     )
