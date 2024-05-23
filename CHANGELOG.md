@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.7.1 - May 8, 2024
+## Next version
 
 ### ✨ Improved
 
@@ -18,6 +18,12 @@
   ```
 
   Enabled only at APO for now.
+
+
+## 1.7.1 - May 8, 2024
+
+### ✨ Improved
+
 * Use `positionerToWok` and `wokToPositioner` functions from `sdss-coordio 1.11.0` which allow to convert wok to and from positioner coordinates as an array (all holes at the same time), which very significantly improves `Design` creation time.
 * Enabled chiller fault alarms.
 
