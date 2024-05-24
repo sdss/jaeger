@@ -927,7 +927,7 @@ class FVC:
             if len(offset_data) == 0 or len(offset_data) > 1:
                 raise ValueError(f"Invalid offset data for positioner {robot.id}.")
 
-            if offset_data[0, "transformation_valid"]:
+            if not offset_data[0, "transformation_valid"]:
                 continue
 
             new = offset_data[["alpha_new", "beta_new"]]

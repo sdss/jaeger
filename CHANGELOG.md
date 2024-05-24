@@ -19,6 +19,10 @@
 
   Enabled only at APO for now.
 
+### 🔧 Fixed
+
+* Fixed FVC `apply_corrections()` only setting the values of robots with invalid transformations.
+
 
 ## 1.7.1 - May 8, 2024
 
