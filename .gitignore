@@ -108,6 +108,7 @@ setup.py
 
 # Large data files
 tests/data/fcam/**/*.fits
+tests/data/too_*.parquet
 
 pyrightconfig.json
 

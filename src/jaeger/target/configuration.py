@@ -55,6 +55,7 @@ from jaeger.kaiju import (
 )
 from jaeger.target.assignment import Assignment, BaseAssignment, ManualAssignment
 from jaeger.target.tools import copy_summary_file, get_fibermap_table, get_wok_data
+from jaeger.utils import Timer
 from jaeger.utils.database import connect_database
 from jaeger.utils.helpers import run_in_executor
 
@@ -115,7 +116,10 @@ class BaseConfiguration(Generic[AssignmentType]):
         self.extra_summary_data = {}
 
         self.fps = fps
-        self.robot_grid = self._initialise_grid()
+
+        with Timer() as timer:
+            self.robot_grid = self._initialise_grid()
+        log.debug(f"Initialised robot grid in {timer.elapsed:.2f} seconds.")
 
         self.command: Command[JaegerActor] | None = None
 
@@ -704,6 +708,8 @@ class BaseConfiguration(Generic[AssignmentType]):
         a_data = self.fibre_data.clone()
         a_data = a_data.with_columns(cs.ends_with("focal").fill_nan(None))
 
+        target_data_hole = self.design.get_target_data_dict() if self.design else None
+
         focals = []
         for row in a_data.iter_rows(named=True):
             pid = row["positioner_id"]
@@ -716,8 +722,8 @@ class BaseConfiguration(Generic[AssignmentType]):
             else:
                 xfocal = yfocal = None
 
-            if self.design and hole_id in self.design.target_data and assigned:
-                assignment_pk = self.design.target_data[hole_id]["assignment_pk"]
+            if target_data_hole and hole_id in target_data_hole and assigned:
+                assignment_pk = target_data_hole[hole_id]["assignment_pk"]
             else:
                 assignment_pk = None
 
@@ -731,6 +737,7 @@ class BaseConfiguration(Generic[AssignmentType]):
                     configuration_id=self.configuration_id,
                     catalogid=row["catalogid"],
                     assigned=assigned,
+                    replaced=row["too"],
                 )
             )
 
@@ -789,6 +796,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         fdata = fdata.with_columns(cs.numeric().fill_null(-999).fill_nan(-999))
 
         design = self.design
+        target_data_hole = design.get_target_data_dict() if design else None
 
         header = {
             "configuration_id": self.configuration_id,
@@ -856,6 +864,7 @@ class BaseConfiguration(Generic[AssignmentType]):
                     "fiberType": fibre_type.upper(),
                     "assigned": int(row_data["assigned"]),
                     "valid": int(row_data["valid"]),
+                    "too": int(row_data["too"]),
                     "on_target": int(row_data["on_target"]),
                     "xwok": row_data["xwok"],
                     "ywok": row_data["ywok"],
@@ -877,8 +886,8 @@ class BaseConfiguration(Generic[AssignmentType]):
             )
 
             # And now only the one that is associated with a target.
-            if row_data["assigned"] and design and hole_id in design.target_data:
-                target = design.target_data[hole_id]
+            if row_data["assigned"] and target_data_hole:
+                target = target_data_hole[hole_id]
                 row.update(
                     {
                         "racat": target["ra"],
@@ -980,13 +989,17 @@ class Configuration(BaseConfiguration[Assignment]):
 
         self.design = design
         self.design_id = design.design_id
-        self.assignment = Assignment(
-            self,
-            epoch=epoch,
-            scale=scale,
-            boss_wavelength=boss_wavelength,
-            apogee_wavelength=apogee_wavelength,
-        )
+
+        log.info("Creating assignment instance.")
+        with Timer() as timer:
+            self.assignment = Assignment(
+                self,
+                epoch=epoch,
+                scale=scale,
+                boss_wavelength=boss_wavelength,
+                apogee_wavelength=apogee_wavelength,
+            )
+        log.debug(f"Assignment instance created in {timer.elapsed:.2f} seconds.")
 
         assert self.assignment.site.time
 

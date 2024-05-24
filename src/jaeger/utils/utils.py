@@ -8,15 +8,13 @@
 
 from __future__ import annotations
 
-import os
+import time
 
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy
-from astropy.time import Time
 
 from jaeger import config
-from jaeger.exceptions import JaegerError
 from jaeger.maskbits import ResponseCode
 
 
@@ -28,7 +26,7 @@ __all__ = [
     "parse_identifier",
     "motor_steps_to_angle",
     "get_goto_move_time",
-    "get_sjd",
+    "Timer",
 ]
 
 
@@ -314,30 +312,26 @@ def get_goto_move_time(move, speed=None):
     return move * config["positioner"]["reduction_ratio"] / (6.0 * speed) + 0.25
 
 
-def get_sjd(observatory: Optional[str] = None) -> int:
-    """Returns the SDSS Julian Date as an integer based on the observatory.
+class Timer:
+    """Convenience context manager to time events.
 
-    Parameters
-    ----------
-    observatory
-        The current observatory, either APO or LCO. If `None`, uses ``$OBSERVATORY``.
+    Modified from https://bit.ly/3ebdp3y.
 
     """
 
-    if observatory is None:
-        try:
-            observatory = os.environ["OBSERVATORY"]
-        except KeyError:
-            raise JaegerError("Observatory not passed and $OBSERVATORY is not set.")
+    def __enter__(self):
+        self.start = time.time()
+        self.end = None
+        return self
 
-    observatory = observatory.upper()
-    if observatory not in ["APO", "LCO"]:
-        raise JaegerError(f"Invalid observatory {observatory}.")
+    def __exit__(self, *args):
+        self.end = time.time()
+        self.interval = self.end - self.start
 
-    time = Time.now()
-    mjd = time.mjd
+    @property
+    def elapsed(self):
 
-    if observatory == "APO":
-        return int(mjd + 0.3)
-    else:
-        return int(mjd + 0.4)
+        if self.end:
+            return self.interval
+
+        return time.time() - self.start

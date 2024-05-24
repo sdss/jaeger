@@ -21,6 +21,7 @@ from astropy.time import Time
 from coordio import __version__ as coordio_version
 from coordio.defaults import calibration
 from kaiju import __version__ as kaiju_version
+from sdssdb.peewee.sdss5db import database
 from sdsstools import yanny
 from sdsstools.time import get_sjd
 
@@ -438,9 +439,8 @@ def configuration_to_dataframe(
             pa=design.field.position_angle,
         )
 
-    # Additional target information.
-    if configuration.assignment.target_data != {}:
-        target_data: dict[str, dict[str, Any]] = configuration.assignment.target_data
+        # Additional target information.
+        target_data = configuration.design.get_target_data_dict()
 
         # Iterate over each target and update the relevant columns.
         for irow, row in enumerate(data.iter_rows(named=True)):
@@ -458,6 +458,7 @@ def configuration_to_dataframe(
             data[irow, "firstcarton"] = target["carton"]
             data[irow, "program"] = target["program"]
             data[irow, "category"] = target["category"]
+            data[irow, "too"] = target["is_too"]
 
             data[irow, "sloan_g_mag"] = target["g"]
             data[irow, "sloan_r_mag"] = target["r"]
@@ -504,3 +505,23 @@ def configuration_to_dataframe(
         data.write_parquet(write_path)
 
     return data
+
+
+def get_tonight_targets():
+    """Returns a list of ``catalogids`` observed tonight."""
+
+    observatory = config["observatory"]
+    mjd = get_sjd(observatory)
+
+    opsdb = f"opsdb_{observatory}"
+    df = polars.read_database(
+        f"""
+        SELECT a2f.catalogid from {opsdb}.assignment_to_focal a2f
+            JOIN {opsdb}.configuration c USING (configuration_id)
+            JOIN {opsdb}.design_to_status d2s USING (design_id)
+        WHERE mjd IS NOT NULL AND mjd >= {mjd}
+        """,
+        database,
+    )
+
+    return df

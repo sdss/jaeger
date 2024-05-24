@@ -19,6 +19,7 @@ import pytest
 from sdssdb.peewee.sdss5db import opsdb
 from sdsstools import yanny
 
+import jaeger
 from jaeger.target.design import Design
 from jaeger.target.tools import configuration_to_dataframe
 from jaeger.testing import MockFPS
@@ -28,6 +29,15 @@ from . import check_database, check_fps_calibrations_version
 
 if TYPE_CHECKING:
     pass
+
+
+@pytest.fixture(autouse=True)
+def disable_too_replacement(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setitem(
+        jaeger.config["configuration"]["targets_of_opportunity"],
+        "replace",
+        False,
+    )
 
 
 async def test_create_design():
@@ -83,8 +93,8 @@ async def test_configuration_compare_confSummary(tmp_path: pathlib.Path):
     fmap_new = yanny_new["FIBERMAP"]
     fmap_test = yanny_test["FIBERMAP"]
 
-    # numpy.testing.assert_allclose(fmap_new["alpha"], fmap_test["alpha"], atol=1e-4)
-    # numpy.testing.assert_allclose(fmap_new["beta"], fmap_test["beta"], atol=1e-4)
+    numpy.testing.assert_allclose(fmap_new["alpha"], fmap_test["alpha"], atol=1e-4)
+    numpy.testing.assert_allclose(fmap_new["beta"], fmap_test["beta"], atol=1e-4)
 
     numpy.testing.assert_allclose(fmap_new["ra"], fmap_test["ra"], atol=1e-4)
     numpy.testing.assert_allclose(fmap_new["dec"], fmap_test["dec"], atol=1e-4)
@@ -127,6 +137,44 @@ async def test_configuration_to_dataframe(
         / f"configuration-{configuration_id}.parquet"
     )
     assert file_path.exists()
+
+
+async def test_design_too_replacement(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+):
+    check_database()
+
+    monkeypatch.setitem(
+        jaeger.config["configuration"]["targets_of_opportunity"],
+        "path",
+        str(pathlib.Path(__file__).parent / "data/too_60431.parquet"),
+    )
+    monkeypatch.setitem(
+        jaeger.config["configuration"]["targets_of_opportunity"],
+        "replace",
+        True,
+    )
+
+    design = Design(50323, use_targets_of_opportunity=True)
+
+    assert design.configuration.fibre_data.height == 1500
+    assert design.target_data.filter(polars.col.is_too).height == 2
+
+    design.configuration.write_to_database()
+
+    assert (
+        opsdb.AssignmentToFocal.select().where(opsdb.AssignmentToFocal.replaced).count()
+        == 2
+    )
+
+    confSummary_path = tmp_path / "confSummary.par"
+    design.configuration.write_summary(confSummary_path)
+
+    assert confSummary_path.exists()
+
+    yn = yanny(str(confSummary_path))
+    assert yn["FIBERMAP"]["too"].sum() == 2
 
 
 async def test_configuration_get_paths(mock_fps: MockFPS):

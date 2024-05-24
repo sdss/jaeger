@@ -2,6 +2,23 @@
 
 ## Next version
 
+### ✨ Improved
+
+* [#203](https://github.com/sdss/jaeger/pull/203) Implementation of targets of opportunity. When a `Design` is created (and unless `use_targets_of_opportunity=False`) design targets can be replaced with ToOs from a dump file (defaults to `$TOO_DATA_DIR/current`). The replacement options are managed via `configuration.targets_of_opportunity` which accepts the following options
+
+  ```yaml
+  configuration:
+    targets_of_opportunity:
+      replace: true
+      path: $TOO_DATA_DIR/current
+      exclude_design_modes: ['^.+?_eng$', '^.+?_rm_?.*$']
+      max_replacements: 2
+      categories: ['science']
+      minimum_priority: [6000, 3000, 0]
+  ```
+
+  Enabled only at APO for now.
+
 ### 🔧 Fixed
 
 * Fixed FVC `apply_corrections()` only setting the values of robots with invalid transformations.
