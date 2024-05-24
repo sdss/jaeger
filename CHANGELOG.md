@@ -17,7 +17,7 @@
       minimum_priority: [6000, 3000, 0]
   ```
 
-  Enabled only at APO for now.
+  Initially disabled in the configuration.
 
 ### 🔧 Fixed
 

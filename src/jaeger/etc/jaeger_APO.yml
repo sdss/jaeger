@@ -95,7 +95,7 @@ configuration:
   max_cloned_time: 4500
   max_designs_epoch: 4
   targets_of_opportunity:
-    replace: true
+    replace: false
     path: $TOO_DATA_DIR/current
     exclude_design_modes: ['^.+?_eng$', '^.+?_rm_?.*$']
     max_replacements: 2
