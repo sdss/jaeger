@@ -519,8 +519,7 @@ def get_tonight_targets():
         SELECT a2f.catalogid from {opsdb}.assignment_to_focal a2f
             JOIN {opsdb}.configuration c USING (configuration_id)
             JOIN {opsdb}.design_to_status d2s USING (design_id)
-            JOIN {opsdb}.completion_stations cs ON d2s.completion_station_pk = cs.pk
-        WHERE mjd IS NOT NULL AND mjd >= {mjd} AND d2s.label = 'done';
+        WHERE mjd IS NOT NULL AND mjd >= {mjd}
         """,
         database,
     )
