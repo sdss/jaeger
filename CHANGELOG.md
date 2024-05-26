@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🔧 Fixed
+
+* Fix import of `os` in `target/tools.py` which was affecting the loading of cloned configurations and possibly other features.
+
+
 ## 1.7.2 - May 24, 2024
 
 ### ✨ Improved
