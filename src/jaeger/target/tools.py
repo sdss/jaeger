@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 from functools import cache
@@ -38,8 +39,6 @@ from jaeger.target.schemas import CONFIGURATION_SCHEMA, CONFSUMMARY_FIBER_MAP_SC
 
 
 if TYPE_CHECKING:
-    import os
-
     from jaeger import FPS
     from jaeger.target.configuration import BaseConfiguration
 
