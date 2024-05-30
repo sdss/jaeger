@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Bumped `kaiju` to 1.4.0 with speed-up improvements.
+
+
 ## 1.7.3 - May 26, 2024
 
 ### 🔧 Fixed
