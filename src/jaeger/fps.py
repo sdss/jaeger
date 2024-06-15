@@ -219,7 +219,6 @@ class FPS(BaseFPS):
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
-
         # Start file logger
         start_file_loggers(start_log=True, start_can=False)
 

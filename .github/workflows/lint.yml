@@ -37,9 +37,4 @@ jobs:
           # stop the build if there are Python syntax errors or undefined names
           python -m pip install ruff
           ruff check .
-
-      - name: Lint with black
-        run: |
-          python -m pip install black
-          black --check src/
-          black --check tests/
+          ruff format --check src/ tests/

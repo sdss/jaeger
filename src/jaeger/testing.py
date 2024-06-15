@@ -429,7 +429,6 @@ class MockFPS(FPS):
         positioner_data: Mapping[int, Mapping[str, float | bool]] = {},
         random: bool = False,
     ):
-
         alpha0, beta0 = config["kaiju"]["lattice_position"]
 
         self.observatory = observatory
