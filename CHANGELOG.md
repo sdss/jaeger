@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🏷️ Changed
+
+* Disabled `alert_fluid_temperature`.
+
+
 ## 1.7.4 - May 30, 2024
 
 ### ✨ Improved
