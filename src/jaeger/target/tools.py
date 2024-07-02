@@ -494,7 +494,7 @@ def configuration_to_dataframe(
                 configuration_id,
                 observatory,
                 "",
-                test=True,
+                legacy=False,
             )
             summary_dir = pathlib.Path(summary_path).parent
             write_path = summary_dir / f"configuration-{configuration_id}.parquet"
