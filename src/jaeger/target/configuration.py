@@ -749,7 +749,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         configuration_id: int,
         observatory: str,
         flavour: str,
-        test: bool = False,
+        legacy: bool = False,
     ):
         """Returns the path for a configuration file in ``SDSSCORE_DIR``."""
 
@@ -760,12 +760,12 @@ class BaseConfiguration(Generic[AssignmentType]):
             raise JaegerError("$SDSSCORE_DIR is not set. Cannot write summary file.")
 
         sdsscore_dir = os.environ["SDSSCORE_DIR"]
-        sdsscore_test_dir = os.environ.get("SDSSCORE_TEST_DIR", "")
+        sdsscore_legacy_dir = os.environ.get("SDSSCORE_LEGACY_DIR", "")
         path = os.path.join(
-            sdsscore_dir if test is False else sdsscore_test_dir,
+            sdsscore_dir if legacy is False else sdsscore_legacy_dir,
             observatory.lower(),
             "summary_files",
-            f"{int(configuration_id / 1000):03d}XXX" if test else "",
+            f"{int(configuration_id / 1000):03d}XXX" if not legacy else "",
             f"{int(configuration_id / 100):04d}XX",
             f"confSummary{flavour}-{configuration_id}.par",
         )
@@ -779,7 +779,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         overwrite: bool = False,
         headers: dict = {},
         fibre_data: polars.DataFrame | None = None,
-        write_confSummary_test: bool = True,
+        write_confSummary_legacy: bool = True,
     ):
         """Writes the confSummary file."""
 
@@ -935,7 +935,7 @@ class BaseConfiguration(Generic[AssignmentType]):
                 flavour,
             )
         else:
-            write_confSummary_test = False  # Do not write test file if path is custom.
+            write_confSummary_legacy = False  # Do not write test file if path is custom
 
         path = os.path.expandvars(os.path.expanduser(str(path)))
 
@@ -960,15 +960,15 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         # This is a test for now, but eventually we'll change to this format of
         # SDSSCORE directories.
-        if write_confSummary_test and "SDSSCORE_TEST_DIR" in os.environ:
-            test_path = self._get_summary_file_path(
+        if write_confSummary_legacy and "SDSSCORE_LEGACY_DIR" in os.environ:
+            legacy_path = self._get_summary_file_path(
                 self.configuration_id,
                 self.assignment.observatory,
                 flavour,
-                test=True,
+                legacy=True,
             )
-            os.makedirs(os.path.dirname(test_path), exist_ok=True)
-            shutil.copyfile(path, test_path)
+            os.makedirs(os.path.dirname(legacy_path), exist_ok=True)
+            shutil.copyfile(path, legacy_path)
 
         return path
 

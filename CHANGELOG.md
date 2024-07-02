@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🏷️ Changed
+
+* [#204](https://github.com/sdss/jaeger/pull/204) Replace the old `confSummary_test` paths which have not become the default. When a configuration or FVC writes a configuration file, it does so to `$SDSSCORE_DIR` with the new formatting (i.e., using thousand and hundred groupings). Additionally, and at least for now, it also writes the same file to `$SDSSCORE_LEGACY_DIR` with the old format (only hundred groupings).
+
+
 ## 1.7.5 - June 15, 2024
 
 ### 🏷️ Changed
