@@ -3478,26 +3478,30 @@ simplification = ">=0.7.10"
 
 [[package]]
 name = "sdss-kaiju"
-version = "1.4.0"
+version = "1.4.1a0"
 description = "Collision Avoidance for SDSS-V Positioners"
 optional = false
 python-versions = "*"
-files = [
-    {file = "sdss_kaiju-1.4.0-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:de70e0a5efa398ba51e731c90b81915c99dd21e4c29cae645a4f9bbe6536784a"},
-    {file = "sdss_kaiju-1.4.0.tar.gz", hash = "sha256:9a9e028b7af50bce57a9a69789b3f4c5da8efdbef3c7f70fea0c201fced17784"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 descartes = ">=1.1.0"
 fitsio = ">=1.0.5"
 matplotlib = ">=2.2.3"
-numpy = ">=1.14.3"
+numpy = ">=1.14.3,<2"
 psutil = ">=5.8.0"
 pybind11 = ">=2.2.4"
 sdss-coordio = ">=1.2.1"
 seaborn = "*"
 shapely = ">=1.6.4.post1,<2.0.0"
 simplification = "0.7.10"
+
+[package.source]
+type = "git"
+url = "https://github.com/sdss/kaiju.git"
+reference = "master"
+resolved_reference = "8e27ea6946135f17d8190b5e68c3b496191b3c27"
 
 [[package]]
 name = "sdss-sep"
@@ -4719,4 +4723,4 @@ test = ["zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10,<3.13"
-content-hash = "34e88abc09fee475585459eb301cc2b13d61e92374e896640b62225444ebf189"
+content-hash = "c9df3279485607b6936d9c4976293e81d46605934206db2206235b16ce46f2ec"
