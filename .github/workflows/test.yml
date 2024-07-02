@@ -89,7 +89,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade wheel pip setuptools
-          pip install .
+          pip install --use-pep517 .
 
       - name: Test with pytest
         run: |
