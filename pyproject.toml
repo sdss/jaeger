@@ -31,8 +31,7 @@ sdsstools = "^1.6.0"
 sdssdb = "^0.11.3"
 sdss-kaiju =  [
     {version="1.4.0b1", python=">=3.11"},
-    # {version="^1.4.0", python=">=3.10,<3.11"}
-    { git = "https://github.com/sdss/kaiju.git", branch = "master", python=">=3.10,<3.11" }
+    {version="^1.4.0", python=">=3.10,<3.11"}
 ]
 sdss-coordio = "^1.11.0"
 click_default_group = ">=1.2.2"
