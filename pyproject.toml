@@ -27,7 +27,7 @@ python = "^3.10,<3.13"
 numpy = "^1.26.0"
 sdss-drift = "^1.0.0"
 sdss-clu = "^2.0.0"
-sdsstools = "^1.6.0"
+sdsstools = "^1.7.1"
 sdssdb = "^0.11.3"
 sdss-kaiju =  [
     {version="1.4.0b1", python=">=3.11"},
@@ -38,8 +38,6 @@ click_default_group = ">=1.2.2"
 "zc.lockfile" = "^2.0"
 polars = "^0.20.9"
 adbc-driver-postgresql = ">=0.9.0"
-pyarrow = ">=15.0.0"
-tables = "^3.9.2"
 nptyping = "^2.5.0"
 
 [tool.poetry.group.dev.dependencies]
