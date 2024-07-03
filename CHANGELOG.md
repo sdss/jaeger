@@ -1,10 +1,15 @@
 # Changelog
 
-## Next version
+## 1.7.6 - July 2, 2024
 
 ### 🏷️ Changed
 
 * [#204](https://github.com/sdss/jaeger/pull/204) Replace the old `confSummary_test` paths which have not become the default. When a configuration or FVC writes a configuration file, it does so to `$SDSSCORE_DIR` with the new formatting (i.e., using thousand and hundred groupings). Additionally, and at least for now, it also writes the same file to `$SDSSCORE_LEGACY_DIR` with the old format (only hundred groupings).
+
+### ⚙️ Engineering
+
+* Upgrade `sdsstools` to 1.7.1 with support for Numpy 2.0.
+* Upgrade `polars` to 1.0.0.
 
 
 ## 1.7.5 - June 15, 2024
