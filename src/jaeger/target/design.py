@@ -275,7 +275,7 @@ class Design:
 
         # Group by fibre type and apply the offset calculation. delta_ra and delta_dec
         # are modified and target_data is updated.
-        target_data = target_data.groupby("fibre_type").apply(_offset)
+        target_data = target_data.group_by("fibre_type").map_groups(_offset)
 
         return target_data
 

@@ -36,7 +36,7 @@ sdss-kaiju =  [
 sdss-coordio = "^1.11.0"
 click_default_group = ">=1.2.2"
 "zc.lockfile" = "^2.0"
-polars = "^0.20.9"
+polars = "^1.0.0"
 adbc-driver-postgresql = ">=0.9.0"
 nptyping = "^2.5.0"
 
