@@ -39,6 +39,7 @@ click_default_group = ">=1.2.2"
 polars = "^1.0.0"
 adbc-driver-postgresql = ">=0.9.0"
 nptyping = "^2.5.0"
+pyarrow = "^16.1.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = ">=8.0.0"

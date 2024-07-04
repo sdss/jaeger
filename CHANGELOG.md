@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ⚙️ Engineering
+
+* Add back `pyarrow` dependency.
+
+
 ## 1.7.6 - July 2, 2024
 
 ### 🏷️ Changed
