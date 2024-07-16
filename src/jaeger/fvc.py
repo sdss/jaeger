@@ -662,6 +662,7 @@ class FVC:
                 "alpha_measured": polars.Float64,
                 "beta_measured": polars.Float64,
             },
+            orient="row",
         ).sort("positioner_id")
 
         # Merge the reported positions.
@@ -672,6 +673,7 @@ class FVC:
                 "alpha_reported": polars.Float64,
                 "beta_reported": polars.Float64,
             },
+            orient="row",
         ).sort("positioner_id")
 
         offsets = reported.join(measured, on="positioner_id", how="left")
