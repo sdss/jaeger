@@ -54,6 +54,12 @@ __all__ = ["FVC"]
 FVC_CONFIG = config["fvc"]
 
 
+class NoLightInImage(FVCError):
+    """Raised when no light is detected in an image."""
+
+    pass
+
+
 # Create a coroutine out of the original plotFVCResults.
 async def plotFVCResultsCo(*args, **kwargs):
     transforms.plotFVCResults(*args, **kwargs)
@@ -372,6 +378,7 @@ class FVC:
                 "alphaReport": polars.Float64,
                 "betaReport": polars.Float64,
             },
+            orient="row",
         ).sort("positionerID")
 
         FVCTransform = get_transform(self.fps.observatory)
@@ -397,8 +404,23 @@ class FVC:
             plotPathPrefix=plot_path_root,
         )
 
-        self.centroids = polars.from_pandas(fvc_transform.extractCentroids())
-        fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
+        centroids = fvc_transform.extractCentroids()
+        if len(centroids) == 0:
+            raise NoLightInImage("No centroids detected in the image.")
+
+        self.centroids = polars.from_pandas(centroids)
+
+        try:
+            fvc_transform.fit(centType=centroid_method, newInvKin=use_new_invkin)
+        except ValueError as err:
+            # This error is raised when the image has no backilluminated sources.
+            # We change the exception type to catch it later and retry.
+            if "zero-size array" in str(err) or "SVD did not converge" in str(err):
+                raise NoLightInImage("No light detected in the image.")
+
+            # Otherwise raise normally.
+            raise
+
         self.centroid_method = fvc_transform.centType
 
         self.log(f"Centroid method: {self.centroid_method}.")

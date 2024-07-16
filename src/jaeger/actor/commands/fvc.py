@@ -18,7 +18,7 @@ from drift import DriftError, Relay
 
 from jaeger import config
 from jaeger.exceptions import FVCError
-from jaeger.fvc import FVC
+from jaeger.fvc import FVC, NoLightInImage
 from jaeger.ieb import FVC_IEB
 from jaeger.target.configuration import ManualConfiguration
 from jaeger.utils import run_in_executor
@@ -161,12 +161,26 @@ async def loop(command: Command[JaegerActor], fps: FPS, **kwargs):
 
     """
 
-    result = await take_fvc_loop(
-        command,
-        fps,
-        configuration=fps.configuration,
-        **kwargs,
-    )
+    N_RETRIES = 3
+
+    for i_retry in range(N_RETRIES):
+        try:
+            result = await take_fvc_loop(
+                command,
+                fps,
+                configuration=fps.configuration,
+                **kwargs,
+            )
+            break  # Break if the function completes. Only retry on error.
+
+        except NoLightInImage:
+            if i_retry < N_RETRIES - 1:
+                command.warning("No light found in FVC image. Retrying.")
+                continue
+
+            command.error("No light found in FVC image. No retries left.")
+            result = False
+            break
 
     if result is not False:
         return command.finish()
@@ -275,13 +289,18 @@ async def snapshot(command: JaegerCommandType, fps: FPS):
         positions,
     )
 
-    result = await take_fvc_loop(
-        command,
-        fps,
-        apply=False,
-        configuration=configuration,
-        no_write_summary=True,
-    )
+    try:
+        result = await take_fvc_loop(
+            command,
+            fps,
+            apply=False,
+            configuration=configuration,
+            no_write_summary=True,
+        )
+    except NoLightInImage:
+        # Don't retry here.
+        result = False
+        command.error("No light detected in the FVC image.")
 
     if (
         result is False
@@ -486,6 +505,10 @@ async def take_fvc_loop(
                 break
 
             n += 1
+
+    except NoLightInImage:
+        # Raise the exception. It will be catched in loop and retried.
+        raise
 
     except Exception as err:
         failed = True
