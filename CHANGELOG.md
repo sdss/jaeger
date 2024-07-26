@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🔧 Fixed
+
+* Set the configuration epoch for `DitheredConfiguration` as the epoch of the parent.
+
 ### 🚑 Hotfix
 
 * [#205](https://github.com/sdss/jaeger/pull/205) Added a hotfix for an issue caused when the back-illuminated fibres don't turn on during and FVC loop (cause under investigation). When light is not detected in the FVC image the code will retry up to three times, each time turning the LEDs off and then on again.

@@ -1033,6 +1033,8 @@ class DitheredConfiguration(BaseConfiguration[Assignment]):
 
         self.is_dither = True
 
+        self.epoch = epoch or self.parent_configuration.epoch
+
         self.design = self.parent_configuration.design
         self.design_id = self.design.design_id
 
