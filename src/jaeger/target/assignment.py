@@ -288,6 +288,7 @@ class BaseAssignment:
             boresight=self.boresight,
             epoch=self.epoch,
             position_angle=self.position_angle,
+            focal_plane_scale=self.scale,
         ).cast(FIBRE_DATA_SCHEMA)
 
         # Update fdata for the new coordinates.
@@ -568,6 +569,7 @@ class ManualAssignment(BaseAssignment):
                 boresight=self.boresight,
                 epoch=self.site.time.jd,
                 position_angle=self.position_angle,
+                focal_plane_scale=self.scale,
             )
             .sort("index")
             .cast(FIBRE_DATA_SCHEMA)

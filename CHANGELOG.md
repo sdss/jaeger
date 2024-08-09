@@ -5,6 +5,7 @@
 ### 🔧 Fixed
 
 * Set the configuration epoch for `DitheredConfiguration` as the epoch of the parent.
+* Use the configuration focal scale in all calls to `icrs_from_positioner_dataframe()`.
 
 ### 🚑 Hotfix
 
