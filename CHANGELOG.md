@@ -7,7 +7,7 @@
 * Relax Python requirement to `^3.10, <4`.
 
 
-## 1.7.6 - August 9, 2024
+## 1.7.7 - August 9, 2024
 
 ### ✨ Improved
 
