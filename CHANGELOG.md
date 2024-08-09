@@ -2,6 +2,10 @@
 
 ## Next version
 
+### ✨ Improved
+
+* Add ``rot_ref_angle`` option to the FVC command to set the reference rotator angle for fiducial fitting.
+
 ### 🔧 Fixed
 
 * Set the configuration epoch for `DitheredConfiguration` as the epoch of the parent.

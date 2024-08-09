@@ -106,6 +106,7 @@ fvc:
   max_fvc_iterations: 2
   centroid_method: null
   check_rotator: false
+  rot_ref_angle: null
   k: 1.0
   max_correction: 15
   ieb_keys:

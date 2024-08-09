@@ -144,6 +144,7 @@ class FVC:
         self.perc_90 = -9.99
         self.fvc_percent_reached = -9.99
         self.centroid_method = config["fvc"]["centroid_method"]
+        self.rot_ref_angle = config["fvc"]["rot_ref_angle"]
 
     def set_command(self, command: Command[JaegerActor]):
         """Sets the command."""
@@ -251,6 +252,7 @@ class FVC:
         polids: list[int] | None = None,
         plot: bool | str = False,
         outdir: str | None = None,
+        rot_ref_angle: float | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
     ) -> tuple[fits.ImageHDU, polars.DataFrame, polars.DataFrame | None]:
         """Processes a raw FVC image.
@@ -287,6 +289,9 @@ class FVC:
             Whether to save additional debugging plots along with the processed image.
             If ``plot`` is a string, it will be used as the directory to which to
             save the plots.
+        rot_ref_angle
+            Telescope rotator angle in mount coordinate degrees at which
+            ``xyCCD ~= xyWok``.
         loop
             The running event loop. Used to schedule the plotting of the FVC
             transform fit as a task.
@@ -305,6 +310,7 @@ class FVC:
         self.reset()
 
         centroid_method = centroid_method or self.centroid_method
+        rot_ref_angle = rot_ref_angle or self.rot_ref_angle
 
         path = str(path)
         if not os.path.exists(path):
@@ -402,6 +408,7 @@ class FVC:
             rotpos,
             polids=polids,
             plotPathPrefix=plot_path_root,
+            telRotAngRef=rot_ref_angle,
         )
 
         centroids = fvc_transform.extractCentroids()
