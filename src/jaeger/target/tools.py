@@ -323,7 +323,6 @@ def read_confSummary(
     header = dict(y)
 
     fibermap = header.pop("FIBERMAP")
-    fibermap = fibermap[[col for col in fibermap.dtype.names if col != "mag"]]
 
     df = polars.DataFrame(fibermap)
     df = df.with_columns(polars.selectors.binary().cast(polars.String()))
