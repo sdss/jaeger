@@ -104,6 +104,7 @@ async def create_random_configuration(
     n_failed: int = 0,
     max_retries: int = 5,
     path_generation_mode: str | None = None,
+    sea_anemone: bool = False,
     **kwargs,
 ):
     """Creates a random configuration using Kaiju."""
@@ -122,7 +123,20 @@ async def create_random_configuration(
         if robot.isOffline:
             continue
 
-        if uniform is not None:
+        if sea_anemone:
+            # configuration with robot arms mostly extended
+            # and pointing generally radially outward
+            # intended for fvc calibration
+            theta = numpy.degrees(numpy.arctan2(robot.yPos, robot.xPos))
+            alpha = (theta + 90) % 360
+            if alpha < 5:
+                alpha = 5
+            if alpha > 355:
+                alpha = 355
+
+            robot.setAlphaBeta(alpha + numpy.random.uniform(-3, 3), 9)
+
+        elif uniform is not None:
             alpha0, alpha1, beta0, beta1 = uniform
             robot.setAlphaBeta(
                 numpy.random.uniform(alpha0, alpha1),
