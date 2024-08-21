@@ -2,6 +2,10 @@
 
 ## Next version
 
+### ✨ Improved
+
+* [#206](https://github.com/sdss/jaeger/pull/206) Added flag `--sea-anemone` to `jaeger configuration random`.
+
 ### ⚙️ Engineering
 
 * Relax Python requirement to `^3.10, <4`.
