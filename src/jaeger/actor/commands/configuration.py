@@ -969,7 +969,7 @@ async def slew(
 @click.option(
     "--sea-anemone",
     is_flag=True,
-    help="Points robots radially outward...with a touch of randomness"
+    help="Points robots radially outward...with a touch of randomness",
 )
 @click.option(
     "--uniform",
@@ -1008,7 +1008,7 @@ async def random(
     send_trajectory: bool = True,
     max_retries: int = 10,
     path_generation_mode: str | None = None,
-    sea_anemone: bool = False
+    sea_anemone: bool = False,
 ):
     """Executes a random, valid configuration."""
 
