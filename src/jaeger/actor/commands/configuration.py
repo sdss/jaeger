@@ -967,6 +967,11 @@ async def slew(
 @click.argument("SEED", type=int, required=False)
 @click.option("--danger", is_flag=True, help="Use full range of alpha and beta.")
 @click.option(
+    "--sea-anemone",
+    is_flag=True,
+    help="Points robots radially outward...with a touch of randomness"
+)
+@click.option(
     "--uniform",
     type=str,
     default=None,
@@ -1003,6 +1008,7 @@ async def random(
     send_trajectory: bool = True,
     max_retries: int = 10,
     path_generation_mode: str | None = None,
+    sea_anemone: bool = False
 ):
     """Executes a random, valid configuration."""
 
@@ -1044,6 +1050,7 @@ async def random(
             safe=not danger,
             collision_buffer=collision_buffer,
             max_retries=max_retries,
+            sea_anemone=sea_anemone,
         )
 
         command.info("Getting trajectory.")
