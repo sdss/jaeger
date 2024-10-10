@@ -88,6 +88,7 @@ sdss = ["sdsstools", "clu", "sdssdb", "drift", "coordio", "kaiju", "fps_calibrat
 [tool.pytest.ini_options]
 addopts = "-p no:logging --disable-warnings --cov jaeger --cov-report xml --cov-report html --cov-report term"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
     "ignore:.*The loop argument is deprecated since.*",
     "ignore:.*Loading an empty FPS.*",
