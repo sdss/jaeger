@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11', 3.12']
+        python-version: ['3.10.x', '3.11.x', 3.12.x']
 
     steps:
       - name: Checkout code
@@ -26,7 +26,7 @@ jobs:
 
       - name: Create release
         uses: taiki-e/create-gh-release-action@v1
-        if: ${{ matrix.python-version == '3.12' }}
+        if: ${{ matrix.python-version == '3.12.x' }}
         with:
           title: jaeger $version
           changelog: CHANGELOG.md
@@ -39,12 +39,12 @@ jobs:
           version: ${{ matrix.python-version }}
 
       - name: Build source and wheel
-        if: ${{ matrix.python-version == '3.10' }}
+        if: ${{ matrix.python-version == '3.10.x' }}
         run: |
           uv build
 
       - name: Build wheel
-        if: ${{ matrix.python-version != '3.10' }}
+        if: ${{ matrix.python-version != '3.10.x' }}
         run: |
           uv build --wheel
 
