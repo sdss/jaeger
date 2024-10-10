@@ -2,13 +2,17 @@
 
 ## Next version
 
+### 🚀 New
+
+* Drop `poetry` and use `uv` for project management. Update GitHub workflows.
+
 ### ✨ Improved
 
 * [#206](https://github.com/sdss/jaeger/pull/206) Added flag `--sea-anemone` to `jaeger configuration random`.
 
 ### ⚙️ Engineering
 
-* Relax Python requirement to `^3.10, <4`.
+* Relax Python requirement to `^3.10,<4`.
 
 
 ## 1.7.7 - August 9, 2024
