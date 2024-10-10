@@ -93,7 +93,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          uv pip install install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
+          uv pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
           pytest
         env:
           PGSERVICE: ${{ steps.postgres.outputs.service-name }}
