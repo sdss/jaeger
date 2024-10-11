@@ -396,7 +396,7 @@ class FVC:
             transforms.plotFVCResults = partial(plotFVCResultsMP, loop)
 
         # ZB polynomial orders to use.
-        polids = config["fvc"].get("polids", None)
+        polids = polids or config["fvc"].get("polids", None)
         if polids is None:
             self.log("Using coordio default ZB polynomial orders.")
         else:

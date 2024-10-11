@@ -123,6 +123,8 @@ async def test_fvc_processing(
         positioner_coords,
         fibre_data=fibre_data,
         centroid_method="nudge",
+        rot_ref_angle=135.4,
+        polids=numpy.arange(33).tolist(),
     )
 
     assert fvc.fitrms is not None and fvc.fitrms > 0.05 and fvc.fitrms < 0.06
