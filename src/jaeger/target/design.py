@@ -82,7 +82,7 @@ class Design:
         epoch: float | None = None,
         scale: float | None = None,
         safety_factor: float = 0.1,
-        offset_min_skybrightness: float = 0.5,
+        offset_min_skybrightness: float = 0.0,
         use_targets_of_opportunity: bool = True,
     ):
         if calibration.wokCoords is None:
