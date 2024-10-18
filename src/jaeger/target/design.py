@@ -247,7 +247,7 @@ class Design:
                 # object_offset that will return delta_ra=-1 when the design_mode
                 # doesn't have any magnitude limits defined.
 
-                delta_ra, delta_dec, _ = object_offset(
+                delta_ra, delta_dec, offset_flags = object_offset(
                     mag,
                     numpy.array(mag_lim),
                     lunation,
@@ -261,13 +261,17 @@ class Design:
             else:
                 delta_ra = numpy.zeros(len(group))
                 delta_dec = numpy.zeros(len(group))
+                offset_flags = numpy.zeros(len(group),
+                                           dtype=numpy.int32)
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
+            assert isinstance(offset_flags, numpy.ndarray)
 
             return group.with_columns(
                 delta_ra=polars.Series(values=delta_ra, dtype=polars.Float32),
                 delta_dec=polars.Series(values=delta_dec, dtype=polars.Float32),
+                offset_flags=polars.Series(values=offset_flags, dtype=polars.Int32)
             )
 
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
