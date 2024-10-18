@@ -81,7 +81,7 @@ class Design:
         create_configuration: bool = True,
         epoch: float | None = None,
         scale: float | None = None,
-        safety_factor: float = 0.1,
+        safety_factor: float | None = None,
         offset_min_skybrightness: float = 0.0,
         use_targets_of_opportunity: bool = True,
     ):

@@ -62,7 +62,7 @@ async def _load_design(
     apogee_wavelength: float | None = None,
     get_paths: bool = True,
     path_generation_mode: str | None = None,
-    safety_factor: float = 1,
+    safety_factor: float | None = None,
     offset_min_skybrightness: float = 0.5,
 ):
     """Helper to load or preload a design."""
