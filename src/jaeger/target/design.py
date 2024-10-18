@@ -81,8 +81,8 @@ class Design:
         create_configuration: bool = True,
         epoch: float | None = None,
         scale: float | None = None,
-        safety_factor: float = 0.1,
-        offset_min_skybrightness: float = 0.5,
+        safety_factor: float | None = None,
+        offset_min_skybrightness: float = 0.0,
         use_targets_of_opportunity: bool = True,
     ):
         if calibration.wokCoords is None:
@@ -214,7 +214,7 @@ class Design:
 
             mag = numpy.array(
                 [
-                    group["gaia_g"].to_numpy(),
+                    group["g"].to_numpy(),
                     group["r"].to_numpy(),
                     group["i"].to_numpy(),
                     group["z"].to_numpy(),
@@ -247,7 +247,7 @@ class Design:
                 # object_offset that will return delta_ra=-1 when the design_mode
                 # doesn't have any magnitude limits defined.
 
-                delta_ra, delta_dec, _ = object_offset(
+                delta_ra, delta_dec, offset_flags = object_offset(
                     mag,
                     numpy.array(mag_lim),
                     lunation,
@@ -261,13 +261,29 @@ class Design:
             else:
                 delta_ra = numpy.zeros(len(group))
                 delta_dec = numpy.zeros(len(group))
+                offset_flags = numpy.zeros(len(group),
+                                           dtype=numpy.int32)
+                
+            # check offset flags to see if should be used or not
+            offset_valid = numpy.zeros(len(group),
+                                       dtype=bool)
+            bad_flags = [8, 16, 32]
+            for i, fl in enumerate(offset_flags):
+                for bfl in bad_flags:
+                    if bfl & int(fl):
+                      offset_valid[i] = False
+                    else:
+                        offset_valid[i] = True  
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
+            assert isinstance(offset_flags, numpy.ndarray)
 
             return group.with_columns(
                 delta_ra=polars.Series(values=delta_ra, dtype=polars.Float32),
                 delta_dec=polars.Series(values=delta_dec, dtype=polars.Float32),
+                offset_flags=polars.Series(values=offset_flags, dtype=polars.Int32),
+                offset_valid=polars.Series(values=offset_valid, dtype=polars.Boolean)
             )
 
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
