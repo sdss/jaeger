@@ -263,6 +263,17 @@ class Design:
                 delta_dec = numpy.zeros(len(group))
                 offset_flags = numpy.zeros(len(group),
                                            dtype=numpy.int32)
+                
+            # check offset flags to see if should be used or not
+            offset_valid = numpy.zeros(len(group),
+                                       dtype=bool)
+            bad_flags = [8, 16, 32]
+            for i, fl in enumerate(offset_flags):
+                for bfl in bad_flags:
+                    if bfl & int(fl):
+                      offset_valid[i] = False
+                    else:
+                        offset_valid[i] = True  
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
@@ -271,7 +282,8 @@ class Design:
             return group.with_columns(
                 delta_ra=polars.Series(values=delta_ra, dtype=polars.Float32),
                 delta_dec=polars.Series(values=delta_dec, dtype=polars.Float32),
-                offset_flags=polars.Series(values=offset_flags, dtype=polars.Int32)
+                offset_flags=polars.Series(values=offset_flags, dtype=polars.Int32),
+                offset_valid=polars.Series(values=offset_valid, dtype=polars.Boolean)
             )
 
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
