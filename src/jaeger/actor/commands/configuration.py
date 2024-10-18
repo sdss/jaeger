@@ -374,7 +374,7 @@ async def load(
     no_clone: bool = False,
     path_generation_mode: str | None = None,
     safety_factor: float = 1,
-    offset_min_skybrightness: float = 0.5,
+    offset_min_skybrightness: float = 0.0,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
