@@ -214,7 +214,7 @@ class Design:
 
             mag = numpy.array(
                 [
-                    group["gaia_g"].to_numpy(),
+                    group["g"].to_numpy(),
                     group["r"].to_numpy(),
                     group["i"].to_numpy(),
                     group["z"].to_numpy(),
