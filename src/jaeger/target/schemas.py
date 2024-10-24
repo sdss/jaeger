@@ -180,6 +180,8 @@ TARGET_DATA_SCHEMA = {
     "lambda_eff": polars.Float32,
     "delta_ra": polars.Float32,
     "delta_dec": polars.Float32,
+    "offset_flags": polars.Int32,
+    "offset_valid": polars.Boolean,
     "can_offset": polars.Boolean,
     "priority": polars.Int32,
     "catalogid": polars.Int64,
