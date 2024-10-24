@@ -261,22 +261,19 @@ class Design:
             else:
                 delta_ra = numpy.zeros(len(group))
                 delta_dec = numpy.zeros(len(group))
-                offset_flags = numpy.zeros(len(group),
-                                           dtype=numpy.int32)
-                
+                offset_flags = numpy.zeros(len(group), dtype=numpy.int32)
+
             # check offset flags to see if should be used or not
-            offset_valid = numpy.zeros(len(group),
-                                       dtype=bool)
+            offset_valid = numpy.zeros(len(group), dtype=bool)
             bad_flags = [8, 16, 32]
             for i, fl in enumerate(offset_flags):
-                check_flags = numpy.zeros(len(bad_flags),
-                                          dtype=bool)
+                check_flags = numpy.zeros(len(bad_flags), dtype=bool)
                 for j, bfl in enumerate(bad_flags):
                     if bfl & int(fl):
                         check_flags[j] = False
                     else:
                         check_flags[j] = True
-                offset_valid[i] = np.all(check_flags)  # all checks must pass
+                offset_valid[i] = numpy.all(check_flags)  # all checks must pass
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
@@ -286,7 +283,7 @@ class Design:
                 delta_ra=polars.Series(values=delta_ra, dtype=polars.Float32),
                 delta_dec=polars.Series(values=delta_dec, dtype=polars.Float32),
                 offset_flags=polars.Series(values=offset_flags, dtype=polars.Int32),
-                offset_valid=polars.Series(values=offset_valid, dtype=polars.Boolean)
+                offset_valid=polars.Series(values=offset_valid, dtype=polars.Boolean),
             )
 
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
