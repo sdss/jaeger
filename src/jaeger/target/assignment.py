@@ -178,21 +178,25 @@ class BaseAssignment:
                     if len(tdata_row) == 1:
                         tdata_row_dict = tdata_row.rows(named=True)[0]
 
-                        hole_data.update(
-                            {
-                                "catalogid": tdata_row_dict["catalogid"],
-                                "ra_icrs": tdata_row_dict["ra"],
-                                "dec_icrs": tdata_row_dict["dec"],
-                                "pmra": tdata_row_dict["pmra"],
-                                "pmdec": tdata_row_dict["pmdec"],
-                                "parallax": tdata_row_dict["parallax"],
-                                "coord_epoch": tdata_row_dict["epoch"],
-                                "delta_ra": tdata_row_dict["delta_ra"],
-                                "delta_dec": tdata_row_dict["delta_dec"],
-                                "assigned": True,
-                                "too": tdata_row_dict["is_too"],
-                            }
-                        )
+                        # Keep robots with invalid offsets folded.
+                        offset_valid = tdata_row_dict.get("offset_valid", True)
+
+                        if offset_valid:
+                            hole_data.update(
+                                {
+                                    "catalogid": tdata_row_dict["catalogid"],
+                                    "ra_icrs": tdata_row_dict["ra"],
+                                    "dec_icrs": tdata_row_dict["dec"],
+                                    "pmra": tdata_row_dict["pmra"],
+                                    "pmdec": tdata_row_dict["pmdec"],
+                                    "parallax": tdata_row_dict["parallax"],
+                                    "coord_epoch": tdata_row_dict["epoch"],
+                                    "delta_ra": tdata_row_dict["delta_ra"],
+                                    "delta_dec": tdata_row_dict["delta_dec"],
+                                    "assigned": True,
+                                    "too": tdata_row_dict["is_too"],
+                                }
+                            )
 
                 fibre_tdata.append(hole_data)
 
