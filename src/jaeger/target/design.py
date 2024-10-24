@@ -263,17 +263,32 @@ class Design:
                 delta_dec = numpy.zeros(len(group))
                 offset_flags = numpy.zeros(len(group), dtype=numpy.int32)
 
+            # make bad mag cases nan
+            cases = [-999, -9999, 999, 0.0, np.nan, 99.9, None]
+            mag[np.isin(mag, cases)] = np.nan
+
+            # check stars that are too bright for design mode
+            mag_lim = numpy.array(mag_lim)
+            valid_ind = np.where(np.array(mag_lim) != -999.0)[0]
+            mag_bright = np.any(mag[:, valid_ind] < mag_lim[valid_ind], axis=1)
+
+            # grab program as below check not valid for skies or standards
+            program = group["program"].to_numpy()
+
             # check offset flags to see if should be used or not
             offset_valid = numpy.zeros(len(group), dtype=bool)
-            bad_flags = [8, 16, 32]
             for i, fl in enumerate(offset_flags):
-                check_flags = numpy.zeros(len(bad_flags), dtype=bool)
-                for j, bfl in enumerate(bad_flags):
-                    if bfl & int(fl):
-                        check_flags[j] = False
-                    else:
-                        check_flags[j] = True
-                offset_valid[i] = numpy.all(check_flags)  # all checks must pass
+                # manually check bad flags
+                if program[i] == 'SKY' or 'ops' in program[i]:
+                    offset_valid[i] = True
+                elif 8 & int(fl) and mag_bright[i]:  # if below sky brightness and brighter than mag limit
+                    offset_valid[i] = False
+                elif 16 & int(fl)  and mag_bright[i]:  # if can_offset False and brighter than mag limit
+                    offset_valid[i] = False
+                elif 32 & int(fl):  # if brighter than safety limit
+                    offset_valid[i] = False
+                else:
+                    offset_valid[i] = True
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
