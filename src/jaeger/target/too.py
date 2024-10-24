@@ -158,6 +158,8 @@ def add_targets_of_opportunity_to_design(design: Design):
                 "epoch": too_entry["epoch"],
                 "delta_ra": too_entry["delta_ra"],
                 "delta_dec": too_entry["delta_dec"],
+                "offset_flags": 0,
+                "offset_valid": True,
                 "can_offset": too_entry["can_offset"],
                 "lambda_eff": defaults.INST_TO_WAVE[fibre_type.capitalize()],
                 "g": too_entry["g_mag"],
