@@ -201,7 +201,7 @@ class BaseAssignment:
                 fibre_tdata.append(hole_data)
 
         # Create initial DF from wok_data. This contains 1500 columns, one per fibre.
-        fibre_data = polars.DataFrame(fibre_tdata)
+        fibre_data = polars.DataFrame(fibre_tdata, infer_schema_length=1500)
 
         # Add empty columns for the rest of the schema. Negate boolean columns.
         fibre_data = (
