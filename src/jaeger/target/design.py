@@ -264,13 +264,13 @@ class Design:
                 offset_flags = numpy.zeros(len(group), dtype=numpy.int32)
 
             # make bad mag cases nan
-            cases = [-999, -9999, 999, 0.0, np.nan, 99.9, None]
-            mag[np.isin(mag, cases)] = np.nan
+            cases = [-999, -9999, 999, 0.0, numpy.nan, 99.9, None]
+            mag[numpy.isin(mag, cases)] = numpy.nan
 
             # check stars that are too bright for design mode
             mag_lim = numpy.array(mag_lim)
-            valid_ind = np.where(np.array(mag_lim) != -999.0)[0]
-            mag_bright = np.any(mag[:, valid_ind] < mag_lim[valid_ind], axis=1)
+            valid_ind = numpy.where(numpy.array(mag_lim) != -999.0)[0]
+            mag_bright = numpy.any(mag[:, valid_ind] < mag_lim[valid_ind], axis=1)
 
             # grab program as below check not valid for skies or standards
             program = group["program"].to_numpy()
@@ -279,13 +279,16 @@ class Design:
             offset_valid = numpy.zeros(len(group), dtype=bool)
             for i, fl in enumerate(offset_flags):
                 # manually check bad flags
-                if program[i] == 'SKY' or 'ops' in program[i]:
+                if program[i] == "SKY" or "ops" in program[i]:
                     offset_valid[i] = True
-                elif 8 & int(fl) and mag_bright[i]:  # if below sky brightness and brighter than mag limit
+                elif 8 & int(fl) and mag_bright[i]:
+                    # if below sky brightness and brighter than mag limit
                     offset_valid[i] = False
-                elif 16 & int(fl)  and mag_bright[i]:  # if can_offset False and brighter than mag limit
+                elif 16 & int(fl) and mag_bright[i]:
+                    # if can_offset False and brighter than mag limit
                     offset_valid[i] = False
-                elif 32 & int(fl):  # if brighter than safety limit
+                elif 32 & int(fl):
+                    # if brighter than safety limit
                     offset_valid[i] = False
                 else:
                     offset_valid[i] = True
