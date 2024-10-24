@@ -1,6 +1,6 @@
 # Changelog
 
-## Next version
+## 1.8.0 - October 24, 2024
 
 ### 🚀 New
 
@@ -10,7 +10,6 @@
 
 * [#207](https://github.com/sdss/jaeger/pull/207) Update the call to determine target offsets.
 * [#206](https://github.com/sdss/jaeger/pull/206) Added flag `--sea-anemone` to `jaeger configuration random`.
-
 
 ### ⚙️ Engineering
 
