@@ -269,11 +269,14 @@ class Design:
                                        dtype=bool)
             bad_flags = [8, 16, 32]
             for i, fl in enumerate(offset_flags):
-                for bfl in bad_flags:
+                check_flags = numpy.zeros(len(bad_flags),
+                                          dtype=bool)
+                for j, bfl in enumerate(bad_flags):
                     if bfl & int(fl):
-                      offset_valid[i] = False
+                        check_flags[j] = False
                     else:
-                        offset_valid[i] = True  
+                        check_flags[j] = True
+                offset_valid[i] = np.all(check_flags)  # all checks must pass
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
