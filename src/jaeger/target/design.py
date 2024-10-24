@@ -289,6 +289,10 @@ class Design:
         log.debug(f"offset_min_skybrightness={self.offset_min_skybrightness}")
         log.debug(f"safety_factor={self.safety_factor}")
 
+        invalid = target_data.filter(~polars.col.offset_valid)
+        if len(invalid) > 0:
+            log.warning(f"Found {len(invalid)} targets with invalid offsets.")
+
         # Group by fibre type and apply the offset calculation. delta_ra and delta_dec
         # are modified and target_data is updated.
         target_data = target_data.group_by("fibre_type").map_groups(_offset)
