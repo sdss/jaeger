@@ -117,6 +117,9 @@ class Positioner(StatusMixIn):
         ):
             return False
 
+        if self.status == self.flags.UNKNOWN:
+            return False
+
         return True
 
     def reset(self):

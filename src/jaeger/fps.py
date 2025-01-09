@@ -223,7 +223,7 @@ class FPS(BaseFPS):
         start_file_loggers(start_log=True, start_can=False)
 
         if config._CONFIG_FILE:
-            log.debug(f"Using configuration from {config._CONFIG_FILE}")
+            log.info(f"Using configuration from {config._CONFIG_FILE}")
         else:
             warnings.warn("Unknown configuration file.", JaegerUserWarning)
 
@@ -303,7 +303,7 @@ class FPS(BaseFPS):
         ieb=None,
         initialise=True,
         start_pollers: bool | None = None,
-        enable_low_temperature: bool = True,
+        check_low_temperature: bool = True,
     ) -> "FPS":
         """Starts the CAN bus and initialises it.
 
@@ -331,7 +331,7 @@ class FPS(BaseFPS):
         if initialise:
             await instance.initialise(
                 start_pollers=start_pollers,
-                enable_low_temperature=enable_low_temperature,
+                check_low_temperature=check_low_temperature,
             )
 
         return instance
@@ -402,9 +402,9 @@ class FPS(BaseFPS):
     async def initialise(
         self: Self,
         start_pollers: bool | None = None,
-        enable_low_temperature: bool = True,
+        check_low_temperature: bool | None = None,
         keep_disabled: bool = True,
-        skip_fibre_assignments_check: bool = False,
+        skip_assignments_check: bool | None = None,
     ) -> Self:
         """Initialises all positioners with status and firmware version.
 
@@ -412,14 +412,22 @@ class FPS(BaseFPS):
         ----------
         start_pollers
             Whether to initialise the pollers.
-        enable_low_temperature
+        check_low_temperature
             Enables the low temperature warnings.
         keep_disabled
             Maintain the list of disabled/offline robots.
-        skip_fibre_assignments_check
+        skip_assignments_check
             Do not check fibre assignments.
 
         """
+
+        fps_config = config["fps"]
+
+        if skip_assignments_check is None:
+            skip_assignments_check = fps_config.get("skip_assignments_check", False)
+
+        if check_low_temperature is None:
+            check_low_temperature = fps_config.get("check_low_temperature", True)
 
         if start_pollers is None:
             start_pollers = config["fps"]["start_pollers"]
@@ -561,13 +569,7 @@ class FPS(BaseFPS):
             [
                 positioner
                 for positioner in self.positioners.values()
-                if (
-                    positioner.offline is False
-                    and (
-                        positioner.status == positioner.flags.UNKNOWN
-                        or not positioner.initialised
-                    )
-                )
+                if not positioner.initialised
             ]
         )
 
@@ -670,7 +672,8 @@ class FPS(BaseFPS):
             )
 
         # Check that all the robots match the fibre assignments.
-        self._check_fibre_assignments(raise_error=not skip_fibre_assignments_check)
+        if not skip_assignments_check:
+            self._check_fibre_assignments()
 
         # Start temperature watcher.
         if self.__temperature_task is not None:
@@ -678,7 +681,7 @@ class FPS(BaseFPS):
         if (
             isinstance(self.ieb, IEB)
             and not self.ieb.disabled
-            and enable_low_temperature
+            and check_low_temperature
         ):
             self.__temperature_task = asyncio.create_task(self._handle_temperature())
         else:
@@ -696,16 +699,13 @@ class FPS(BaseFPS):
 
         return self
 
-    def _check_fibre_assignments(self, raise_error: bool = True):
+    def _check_fibre_assignments(self):
         """Checks that all the expected robots are present."""
 
         if calibration is None:
-            msg = "coordio.calibrations failed to import. Cannot check assignments."
-            if raise_error:
-                raise JaegerError(msg)
-            else:
-                warnings.warn(msg, JaegerUserWarning)
-                return
+            raise JaegerError(
+                "coordio.calibrations failed to import. Cannot check assignments."
+            )
 
         cal_obs = calibration.fiberAssignments.loc[self.observatory]
         cal_obs = cal_obs.loc[cal_obs.Device == "Positioner"]
@@ -728,7 +728,7 @@ class FPS(BaseFPS):
                 )
                 failed = True
 
-        if raise_error and failed:
+        if failed:
             raise JaegerError("Some positioners do not match fiberAssignments.csv.")
 
     def set_status(self, status: FPSStatus):

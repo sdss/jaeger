@@ -4,13 +4,11 @@ actor:
   host: 0.0.0.0
   port: 19990
   verbose: 30
+  tron_host: null
+  tron_port: null
   status:
     port: 19991
     delay: 5
-  tron_host: sdss5-hub
-  tron_port: 6093
-  models:
-    - fliswarm
   schema: etc/schema.json
   log_dir: /data/logs/actors/jaeger
 
@@ -19,12 +17,7 @@ profiles:
   cannet:
     interface: cannet
     channels:
-      - sdss-cannet1
-      - sdss-cannet2
-      - sdss-cannet3
-      - sdss-cannet4
-      - sdss-cannet5
-      - sdss-cannet6
+      - 10.8.68.82
     port: 19228
     buses: [1, 2, 3, 4]
     bitrate: 1000000
@@ -44,7 +37,7 @@ fps:
   start_pollers: false
   status_poller_delay: 5
   position_poller_delay: 5
-  disabled_positioners: [1074, 759, 1286]
+  disabled_positioners: []
   offline_positioners: null
   disable_collision_detection_positioners: []
   open_loop_positioners: []
@@ -53,9 +46,11 @@ fps:
   configuration_snapshot_path: /data/logs/jaeger/configuration_snapshots/
   robot_grid_dumps: /data/logs/jaeger/grids/
   use_lock: True
+  check_low_temperature: false
+  skip_assignments_check: true
 
 ieb:
-  config: etc/ieb_LCO.yaml
+  config: etc/sextants/ieb_sextant.yaml
   disabled_devices: []
 
 positioner:
@@ -66,8 +61,8 @@ positioner:
   initialise_datums_timeout: 300
   disable_precise_moves: true
   uid_bits: 6
-  trajectory_data_n_points: 10
-  firmware_messages_per_positioner: 8
+  trajectory_data_n_points: 3
+  firmware_messages_per_positioner: 16
   trajectory_dump_path: /data/logs/jaeger/trajectories/
 
 kaiju:
@@ -84,26 +79,33 @@ kaiju:
   phobia: 0.6
 
 configuration:
-  default_focal_scale: 1.0003
-  scale_temperature_coeffs: null
+  default_focal_scale: 1
+  scale_temperature_coeffs: [1.01810522e-05, 9.99758691e-01]
   use_guider_scale: true
   guider_max_scale_age: 3600
-  clip_scale: 3000
-  scale_fudge_factor: 0.9986
+  clip_scale: 500
+  scale_fudge_factor: 0.99988
   max_cloned_time: 4500
   max_designs_epoch: 4
+  targets_of_opportunity:
+    replace: false
+    path: $TOO_DATA_DIR/current
+    exclude_design_modes: ['^.+?_eng$', '^.+?_rm_?.*$']
+    max_replacements: 2
+    categories: ['science']
+    minimum_priority: [6000, 3000, 0]
 
 fvc:
   config: etc/fvc.yaml
   exposure_time: 5.
-  fbi_level: 9.
-  dark_image: /data/fcam/calib/60062/fimg-fvc1s-0001.fits
-  polids: [0, 1, 2, 3, 4, 5, 6, 9, 20, 27, 28, 29, 30]
+  fbi_level: 4.
+  dark_image: /data/fcam/calib/60062/fimg-fvc1n-0011.fits
+  polids: null
   target_90_percentile: 30.0
   target_distance: 5
   max_fvc_iterations: 2
-  centroid_method: null
-  check_rotator: false
+  centroid_method: zbplus2
+  check_rotator: true
   rot_ref_angle: null
   k: 1.0
   max_correction: 15
@@ -118,6 +120,8 @@ fvc:
 
 chiller:
   config: null
+  temperature: auto
+  flow: 6
 
 files:
   log_dir: /data/logs/jaeger
@@ -146,7 +150,7 @@ database:
 
 alerts:
   interval: 60
-  enabled: ['gfa', 'ieb', 'robot', 'flow', 'temperature']
+  enabled: []
   gfa:
     warning: 30
     critical: 35

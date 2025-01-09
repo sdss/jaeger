@@ -40,8 +40,6 @@ profiles:
     channel: test1
 
 fps:
-  use_database: true
-  allow_unknown: true
   initialise_timeouts: 0.5
   start_pollers: false
   status_poller_delay: 5

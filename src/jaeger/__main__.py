@@ -78,16 +78,14 @@ class FPSWrapper(object):
         ieb=None,
         initialise=True,
         npositioners=10,
-        enable_low_temperature=True,
-        skip_fibre_assignments_check=False,
+        skip_assignments_check=False,
     ):
         self.profile = profile
         if self.profile in ["test", "virtual"]:
             self.profile = "virtual"
 
         self.ieb = ieb
-        self.enable_low_temperature = enable_low_temperature
-        self.skip_fibre_assignments_check = skip_fibre_assignments_check
+        self.skip_assignments_check = skip_assignments_check
         self.initialise = initialise
 
         self.vpositioners = []
@@ -111,14 +109,8 @@ class FPSWrapper(object):
 
         if self.initialise:
             await self.fps.initialise(
-                enable_low_temperature=self.enable_low_temperature,
-                skip_fibre_assignments_check=self.skip_fibre_assignments_check,
+                skip_assignments_check=self.skip_assignments_check,
             )
-            if self.enable_low_temperature is False:
-                warnings.warn(
-                    "Disabling low temperature handling for sextant.",
-                    JaegerUserWarning,
-                )
 
         return self.fps
 
@@ -196,7 +188,7 @@ pass_fps = click.make_pass_decorator(FPSWrapper, ensure=True)
 )
 @click.option(
     "-x",
-    "--skip-fibre-assignments-check",
+    "--skip-assignments-check",
     is_flag=True,
     help="Do not fail if the fibre assignment check fails.",
 )
@@ -213,7 +205,7 @@ def jaeger(
     npositioners,
     allow_host,
     no_lock,
-    skip_fibre_assignments_check,
+    skip_assignments_check,
 ):
     """CLI for the SDSS-V focal plane system.
 
@@ -262,11 +254,6 @@ def jaeger(
         config["ieb"]["config"] = sextant_file
         log.debug(f"Using internal IEB sextant onfiguration file {sextant_file}.")
 
-    if sextant or "sextants/" in config["ieb"]["config"]:
-        enable_low_temperature = False
-    else:
-        enable_low_temperature = True
-
     if virtual is True:
         profile = "virtual"
 
@@ -274,8 +261,7 @@ def jaeger(
         profile,
         ieb=ieb,
         npositioners=npositioners,
-        enable_low_temperature=enable_low_temperature,
-        skip_fibre_assignments_check=skip_fibre_assignments_check,
+        skip_assignments_check=skip_assignments_check,
     )
 
 
@@ -321,9 +307,7 @@ async def actor(fps_maker, no_tron: bool = False):
     async with fps_maker as fps:
         actor_: JaegerActor = JaegerActor.from_config(config_copy, fps)
 
-        await fps.initialise(
-            skip_fibre_assignments_check=fps_maker.skip_fibre_assignments_check
-        )
+        await fps.initialise(skip_assignments_check=fps_maker.skip_assignments_check)
 
         await actor_.start()
         await actor_.run_forever()

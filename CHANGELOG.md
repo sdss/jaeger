@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Improved handling of sextant controllers.
+
+
 ## 1.8.0 - October 24, 2024
 
 ### 🚀 New
