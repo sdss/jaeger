@@ -6,6 +6,10 @@
 
 * Improved handling of sextant controllers.
 
+### 🔧 Fixed
+
+* Prevent the ToO code from selecting the same target for two different positioners.
+
 
 ## 1.8.0 - October 24, 2024
 

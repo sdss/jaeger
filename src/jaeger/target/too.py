@@ -139,42 +139,52 @@ def add_targets_of_opportunity_to_design(design: Design):
     )
 
     too_to_add: list[dict[str, Any]] = []
+    assigned_hole_ids: list[str] = []
     max_replacements = too_config.get("max_replacements", 1)
-    for too_id in too_to_hole["too_id"].unique().to_list():
+    for too_id in (
+        too_to_hole.sort("priority", descending=True)["too_id"]
+        .unique(maintain_order=True)
+        .to_list()
+    ):
         too_entry = (
-            too_to_hole.filter(polars.col.too_id == too_id)
-            .sort("priority", descending=True)
-            .head(1)
-        ).to_dicts()[0]
+            too_to_hole.filter(
+                polars.col.too_id == too_id,
+                polars.col.hole_id.is_in(assigned_hole_ids).not_(),
+            ).head(1)
+        ).to_dicts()
 
-        fibre_type = too_entry["fiber_type"]
+        if len(too_entry) == 0:
+            continue
+
+        fibre_type = too_entry[0]["fiber_type"]
         too_to_add.append(
             {
-                "catalogid": too_entry["catalogid"],
-                "ra": too_entry["ra"],
-                "dec": too_entry["dec"],
-                "pmra": too_entry["pmdec"],
-                "pmdec": too_entry["pmra"],
-                "epoch": too_entry["epoch"],
-                "delta_ra": too_entry["delta_ra"],
-                "delta_dec": too_entry["delta_dec"],
+                "catalogid": too_entry[0]["catalogid"],
+                "ra": too_entry[0]["ra"],
+                "dec": too_entry[0]["dec"],
+                "pmra": too_entry[0]["pmdec"],
+                "pmdec": too_entry[0]["pmra"],
+                "epoch": too_entry[0]["epoch"],
+                "delta_ra": too_entry[0]["delta_ra"],
+                "delta_dec": too_entry[0]["delta_dec"],
                 "offset_flags": 0,
                 "offset_valid": True,
-                "can_offset": too_entry["can_offset"],
+                "can_offset": too_entry[0]["can_offset"],
                 "lambda_eff": defaults.INST_TO_WAVE[fibre_type.capitalize()],
-                "g": too_entry["g_mag"],
-                "i": too_entry["i_mag"],
-                "z": too_entry["z_mag"],
-                "r": too_entry["r_mag"],
-                "h": too_entry["h_mag"],
-                "gaia_g": too_entry["gaia_g_mag"],
-                "optical_prov": too_entry["optical_prov"],
-                "hole_id": too_entry["hole_id"],
+                "g": too_entry[0]["g_mag"],
+                "i": too_entry[0]["i_mag"],
+                "z": too_entry[0]["z_mag"],
+                "r": too_entry[0]["r_mag"],
+                "h": too_entry[0]["h_mag"],
+                "gaia_g": too_entry[0]["gaia_g_mag"],
+                "optical_prov": too_entry[0]["optical_prov"],
+                "hole_id": too_entry[0]["hole_id"],
                 "fibre_type": fibre_type.upper(),
                 "design_mode": design_mode,
                 "is_too": True,
             }
         )
+        assigned_hole_ids.append(too_entry[0]["hole_id"])
 
         if len(too_to_add) >= max_replacements:
             break
