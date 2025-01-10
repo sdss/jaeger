@@ -586,7 +586,8 @@ class BaseConfiguration(Generic[AssignmentType]):
             if robot.id in positioner_ids:
                 new_alpha_beta[robot.id] = {"alpha": robot.alpha, "beta": robot.beta}
 
-        self.assignment.update_positioner_coordinates(new_alpha_beta)
+        if len(new_alpha_beta) > 0:
+            self.assignment.update_positioner_coordinates(new_alpha_beta)
 
         if mark_off_target:
             idx = self.fibre_data["positioner_id"].is_in(positioner_ids).arg_true()

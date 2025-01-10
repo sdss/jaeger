@@ -9,6 +9,7 @@
 ### 🔧 Fixed
 
 * Prevent the ToO code from selecting the same target for two different positioners.
+* Fix a case when the configuration fails to retrieve the trajectory paths because there are no robots that need updated coordinates.
 
 
 ## 1.8.0 - October 24, 2024
