@@ -128,10 +128,10 @@ async def test_robots_sextant(
 if __name__ == "__main__":
     asyncio.run(
         test_robots_sextant(
-            n_moves=5,
+            n_moves=50,
             disabled_robots=[],
-            sequential=True,
-            alpha_range=(30, 350),
-            beta_range=(30, 170),
+            sequential=False,
+            alpha_range=(20, 350),
+            beta_range=(20, 170),
         )
     )
