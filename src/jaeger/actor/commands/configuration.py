@@ -1052,13 +1052,6 @@ async def random(
             max_retries=max_retries,
             sea_anemone=sea_anemone,
         )
-
-        command.info("Getting trajectory.")
-        trajectory = await configuration.get_paths(
-            decollide=False,
-            collision_buffer=collision_buffer,
-            path_generation_mode=path_generation_mode,
-        )
     except JaegerError as err:
         return command.fail(error=f"jaeger random failed: {err}")
 
@@ -1072,7 +1065,7 @@ async def random(
     command.info("Executing random trajectory.")
 
     try:
-        await fps.send_trajectory(trajectory, command=command)
+        await fps.send_trajectory(configuration.from_destination, command=command)
     except TrajectoryError as err:
         return command.fail(error=f"Trajectory failed with error: {err}")
 

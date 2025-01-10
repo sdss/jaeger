@@ -173,7 +173,7 @@ async def create_random_configuration(
     except JaegerError:
         raise JaegerError("Decollision failed. Cannot create random configuration.")
 
-    _, _, did_fail, deadlocks = await get_path_pair_in_executor(
+    to_, from_, did_fail, deadlocks = await get_path_pair_in_executor(
         robot_grid,
         path_generation_mode=path_generation_mode,
     )
@@ -230,7 +230,7 @@ async def create_random_configuration(
                     "Failed creating random configuration: cannot remove deadlocks."
                 )
 
-            _, _, did_fail, deadlocks = await get_path_pair_in_executor(
+            to_, from_, did_fail, deadlocks = await get_path_pair_in_executor(
                 robot_grid,
                 path_generation_mode=path_generation_mode,
             )
@@ -257,7 +257,11 @@ async def create_random_configuration(
     for pid in grid_data:
         data[pid] = (grid_data[pid][0], grid_data[pid][1])
 
-    return ManualConfiguration(data, fps.observatory, **kwargs)
+    configuration = ManualConfiguration(data, fps.observatory, **kwargs)
+    configuration.to_destination = to_
+    configuration.from_destination = from_
+
+    return configuration
 
 
 def copy_summary_file(
