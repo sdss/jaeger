@@ -423,7 +423,7 @@ class FVC:
             # This error is raised when the image has no backilluminated sources.
             # We change the exception type to catch it later and retry.
             if "zero-size array" in str(err) or "SVD did not converge" in str(err):
-                raise NoLightInImage("No light detected in the image.")
+                raise NoLightInImage("FVC transformation did not converge.")
 
             # Otherwise raise normally.
             raise
