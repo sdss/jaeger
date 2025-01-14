@@ -5,6 +5,7 @@
 ### ✨ Improved
 
 * Improved handling of sextant controllers.
+* `configuration random` now calculates paths only once.
 
 ### 🔧 Fixed
 
