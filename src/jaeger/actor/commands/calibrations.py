@@ -90,11 +90,14 @@ async def reset_offsets(
 
     met_before: polars.DataFrame | None = None
     if take_fvc_images:
-        met_before = await _take_fvc_image(
-            command,
-            fps,
-            positioner_table=positioner_table_orig,
-        )
+        try:
+            met_before = await _take_fvc_image(
+                command,
+                fps,
+                positioner_table=positioner_table_orig,
+            )
+        except Exception as ee:
+            return command.fail(f"Failed to take FVC images: {ee}")
 
     for nn, pid in enumerate(positioner_ids):
         command.info(f"Processing positioner {pid} ({nn + 1}/{len(positioner_ids)}).")
@@ -149,11 +152,14 @@ async def reset_offsets(
 
     met_after: polars.DataFrame | None = None
     if take_fvc_images:
-        met_after = await _take_fvc_image(
-            command,
-            fps,
-            positioner_table=positioner_table_orig,
-        )
+        try:
+            met_after = await _take_fvc_image(
+                command,
+                fps,
+                positioner_table=positioner_table_orig,
+            )
+        except Exception as ee:
+            return command.fail(f"Failed to take FVC images: {ee}")
 
         assert met_before is not None and met_after is not None
 
