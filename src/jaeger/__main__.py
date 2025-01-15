@@ -21,9 +21,7 @@ from functools import wraps
 from typing import Optional
 
 import click
-import numpy
 from click_default_group import DefaultGroup
-from rich.prompt import Confirm
 
 from sdsstools.daemonizer import DaemonGroup
 
@@ -754,92 +752,6 @@ async def unlock(fps_maker: FPSWrapper):
 
     if os.path.exists(LOCK_FILE):
         os.remove(LOCK_FILE)
-
-
-@jaeger.command()
-@click.argument("POSITIONER-IDS", type=int, nargs=-1, required=False)
-@pass_fps
-@cli_coro
-async def reset_offsets(fps_maker: FPSWrapper, positioner_ids: list[int] | None = None):
-    """Sets the positions of a robot to its current (alpha,beta) + offsets.
-
-    Reads the positionerTable data for each positioner and resets it position
-    to the current alpha and beta plus the offsets. As it does so, it zeroes the
-    values for alphaOffset and betaOffset in the positionerTable.
-
-    If called without a list of positioners, resets all positioners.
-
-    """
-
-    import polars
-
-    from coordio.defaults import calibration
-
-    console = log.rich_console
-
-    if not hasattr(calibration, "positionerTable"):
-        raise RuntimeError("Calibration data not loaded.")
-
-    if not hasattr(calibration, "positionerTableFile"):
-        raise RuntimeError("Calibration file for the positionerTable cannot be found.")
-
-    positioner_file = calibration.positionerTableFile  # type: ignore
-
-    positioner_data = polars.DataFrame(calibration.positionerTable.reset_index())
-    positioner_data = positioner_data.with_row_count("id")  # To match the file columns.
-
-    async with fps_maker as fps:
-        if positioner_ids is None or len(positioner_ids) == 0:
-            positioner_ids = list(fps.positioners.keys())
-
-        if not Confirm.ask(
-            "Are you sure that you want to reset the offsets for "
-            f"{len(positioner_ids)} positioners? This change cannot be undone.",
-            console=console,
-        ):
-            return
-
-        for nn, pid in enumerate(positioner_ids):
-            log.info(f"Processing positioner {pid} ({nn + 1}/{len(positioner_ids)}).")
-
-            positioner = fps.positioners[pid]
-            await positioner.update_position()
-
-            pid_data = positioner_data.filter(polars.col.positionerID == pid)
-            if len(pid_data) == 0:
-                raise RuntimeError(f"Positioner {pid} not found in positionerTable.")
-
-            new_alpha = positioner.alpha + pid_data[0, "alphaOffset"]
-            new_beta = positioner.beta + pid_data[0, "betaOffset"]
-
-            # Flash the new position
-            log.info(f"Setting positioner {pid} to ({new_alpha}, {new_beta}).")
-            result = await positioner.set_position(new_alpha, new_beta)
-            if not result:
-                raise RuntimeError(f"Failed to set position for positioner {pid}.")
-
-            # Check the new position.
-            await asyncio.sleep(1)
-            await positioner.update_position()
-
-            if (
-                not positioner.alpha
-                or not positioner.beta
-                or not numpy.allclose(
-                    [positioner.alpha, positioner.beta],
-                    [new_alpha, new_beta],
-                    atol=0.1,
-                )
-            ):
-                raise RuntimeError(f"Failed to set position for positioner {pid}.")
-
-            # Update the positionerTable data.
-            positioner_data[pid_data["id"], "alphaOffset"] = 0
-            positioner_data[pid_data["id"], "betaOffset"] = 0
-            positioner_data.rename({"id": ""}).write_csv(positioner_file)
-            log.info("Offsets reset in positionerTable.")
-
-        log.info("All positioner offsets have been reset.")
 
 
 if __name__ == "__main__":

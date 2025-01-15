@@ -254,6 +254,7 @@ class FVC:
         outdir: str | None = None,
         rot_ref_angle: float | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        fvc_transform_kwargs: dict[str, Any] = {},
     ) -> tuple[fits.ImageHDU, polars.DataFrame, polars.DataFrame | None]:
         """Processes a raw FVC image.
 
@@ -292,6 +293,8 @@ class FVC:
         rot_ref_angle
             Telescope rotator angle in mount coordinate degrees at which
             ``xyCCD ~= xyWok``.
+        fvc_transform_kwargs
+            Additional arguments to initialise the ``FVCTransform`` class.
         loop
             The running event loop. Used to schedule the plotting of the FVC
             transform fit as a task.
@@ -409,6 +412,7 @@ class FVC:
             polids=polids,
             plotPathPrefix=plot_path_root,
             telRotAngRef=rot_ref_angle,
+            **fvc_transform_kwargs,
         )
 
         centroids = fvc_transform.extractCentroids()

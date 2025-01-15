@@ -20,6 +20,7 @@ JaegerCommandType = Command[JaegerActor]
 
 
 from .alerts import *
+from .calibrations import *
 from .can import *
 from .chiller import *
 from .configuration import *
