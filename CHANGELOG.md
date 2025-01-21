@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🚀 New
+
+* Add actor command `calibrations reset-offsets` to zero the alpha/beta offsets in one or more positioners.
+
 ### ✨ Improved
 
 * Improved handling of sextant controllers.
