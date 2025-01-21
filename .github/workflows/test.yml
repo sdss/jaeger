@@ -62,7 +62,7 @@ jobs:
           uv sync --no-dev
 
       - name: Install Postgresql
-        uses: ikalnytskyi/action-setup-postgres@v5
+        uses: ikalnytskyi/action-setup-postgres@v7
         with:
           username: sdss
         id: postgres
