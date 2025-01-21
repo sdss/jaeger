@@ -282,8 +282,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         if self.configuration_id is not None:
             raise JaegerError(
-                "Cannot recompute coordinates once the configuration "
-                "ID has been set."
+                "Cannot recompute coordinates once the configuration ID has been set."
             )
 
         self.assignment.compute_coordinates(epoch=epoch)

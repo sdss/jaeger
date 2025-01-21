@@ -254,6 +254,7 @@ class FVC:
         outdir: str | None = None,
         rot_ref_angle: float | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        fvc_transform_kwargs: dict[str, Any] = {},
     ) -> tuple[fits.ImageHDU, polars.DataFrame, polars.DataFrame | None]:
         """Processes a raw FVC image.
 
@@ -292,6 +293,8 @@ class FVC:
         rot_ref_angle
             Telescope rotator angle in mount coordinate degrees at which
             ``xyCCD ~= xyWok``.
+        fvc_transform_kwargs
+            Additional arguments to initialise the ``FVCTransform`` class.
         loop
             The running event loop. Used to schedule the plotting of the FVC
             transform fit as a task.
@@ -409,6 +412,7 @@ class FVC:
             polids=polids,
             plotPathPrefix=plot_path_root,
             telRotAngRef=rot_ref_angle,
+            **fvc_transform_kwargs,
         )
 
         centroids = fvc_transform.extractCentroids()
@@ -464,6 +468,9 @@ class FVC:
         fvc_fibre_idx = (fdata["fibre_type"] == fibre_type).arg_true()
         fdata[fvc_fibre_idx, "xwok_measured"] = wok_measured["xWokMeasMetrology"]
         fdata[fvc_fibre_idx, "ywok_measured"] = wok_measured["yWokMeasMetrology"]
+
+        fdata[fvc_fibre_idx, "xwok_report_metrology"] = measured["xWokReportMetrology"]
+        fdata[fvc_fibre_idx, "ywok_report_metrology"] = measured["yWokReportMetrology"]
 
         # Only use online, assigned robots for final RMS. First get groups of fibres
         # with an assigned robot, that are not offline or dubious.

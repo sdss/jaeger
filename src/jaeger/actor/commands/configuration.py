@@ -706,8 +706,7 @@ async def preload(
         return command.fail()
     elif configuration.design_id is None:
         return command.fail(
-            "Preloaded configuration does not have design ID. "
-            "This should never happen."
+            "Preloaded configuration does not have design ID. This should never happen."
         )
     else:
         fps._preloaded_configuration = configuration

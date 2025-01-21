@@ -75,8 +75,7 @@ async def enable(command: JaegerCommandType, fps: FPS, positioner_id: int):
 
     if positioner_id in permanently_disabled:
         return command.fail(
-            f"Positioner {positioner_id} is permanently "
-            "disabled and cannot be enabled."
+            f"Positioner {positioner_id} is permanently disabled and cannot be enabled."
         )
 
     positioner = fps.positioners[positioner_id]

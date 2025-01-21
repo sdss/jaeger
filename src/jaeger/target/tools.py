@@ -331,7 +331,7 @@ def read_confSummary(
     else:
         sdsscore_dir = pathlib.Path(os.environ["SDSSCORE_DIR"])
         summary_files = sdsscore_dir / "apo" / "summary_files"
-        conf_xx = summary_files / f"{int(input/100):04d}XX"
+        conf_xx = summary_files / f"{int(input / 100):04d}XX"
         path = conf_xx / f"confSummary{flavour}-{input}.par"
 
     if not os.path.exists(str(path)):

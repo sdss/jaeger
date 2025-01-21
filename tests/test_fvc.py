@@ -108,6 +108,8 @@ async def test_fvc_processing(
         xwok_measured=polars.lit(None, dtype=polars.Float64),
         ywok_measured=polars.lit(None, dtype=polars.Float64),
         zwok_measured=polars.lit(None, dtype=polars.Float64),
+        xwok_report_metrology=polars.lit(None, dtype=polars.Float64),
+        ywok_report_metrology=polars.lit(None, dtype=polars.Float64),
     )
 
     # Get the positioner alpha/beta reported as a dict and array.

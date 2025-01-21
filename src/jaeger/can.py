@@ -379,8 +379,7 @@ class JaegerCAN(Generic[Bus_co]):
         if cmd.status != CommandStatus.READY:
             if cmd.status != CommandStatus.CANCELLED:
                 can_log.error(
-                    f"{log_header} command is not ready "
-                    f"(status={cmd.status.name!r})"
+                    f"{log_header} command is not ready (status={cmd.status.name!r})"
                 )
                 cmd.cancel()
             return

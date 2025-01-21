@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -45,6 +45,11 @@ jobs:
           path: /home/runner/work/jaeger/jaeger/tests/data/fcam
           key: ${{ runner.os }}-tests-fcam
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bzip2 libbz2-dev
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -57,7 +62,7 @@ jobs:
           uv sync --no-dev
 
       - name: Install Postgresql
-        uses: ikalnytskyi/action-setup-postgres@v5
+        uses: ikalnytskyi/action-setup-postgres@v7
         with:
           username: sdss
         id: postgres
@@ -65,7 +70,7 @@ jobs:
       - name: Install Q3C
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-server-dev-14
+          sudo apt-get install -y postgresql-server-dev-17 libreadline8 libreadline-dev
           wget https://github.com/segasai/q3c/archive/refs/tags/v2.0.1.tar.gz
           tar xvf v2.0.1.tar.gz
           cd q3c-2.0.1
@@ -94,7 +99,7 @@ jobs:
       - name: Test with pytest
         run: |
           uv pip install pytest pytest-mock pytest-asyncio pytest-cov pyserial-asyncio
-          uv run pytest
+          uv run pytest tests/
         env:
           PGSERVICE: ${{ steps.postgres.outputs.service-name }}
 

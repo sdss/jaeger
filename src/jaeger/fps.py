@@ -641,8 +641,7 @@ class FPS(BaseFPS):
 
             else:
                 warnings.warn(
-                    "Setting open loop mode for positioners: "
-                    f"{open_loop_positioners}.",
+                    f"Setting open loop mode for positioners: {open_loop_positioners}.",
                     JaegerUserWarning,
                 )
                 await self.send_command(
@@ -987,8 +986,7 @@ class FPS(BaseFPS):
             if positioner.collision:
                 self._locked = True
                 raise JaegerError(
-                    "Cannot unlock the FPS until all the "
-                    "collisions have been cleared."
+                    "Cannot unlock the FPS until all the collisions have been cleared."
                 )
 
         self._locked = False

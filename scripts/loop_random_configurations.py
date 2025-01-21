@@ -43,7 +43,7 @@ async def loop_random_configurations():
     fps = await FPS().initialise()
 
     for nn in range(N_CONFIGURATIONS):
-        log.warning(f"Random configuration {nn+1}/{N_CONFIGURATIONS}")
+        log.warning(f"Random configuration {nn + 1}/{N_CONFIGURATIONS}")
 
         if not await fps.is_folded():
             raise RuntimeError("The array is not folded.")
