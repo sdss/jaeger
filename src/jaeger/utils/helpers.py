@@ -124,9 +124,9 @@ class StatusMixIn(Generic[Status_co]):
     def do_callbacks(self):
         """Calls functions in ``callbacks``."""
 
-        assert hasattr(
-            self, "callbacks"
-        ), "missing callbacks attribute. Did you call __init__()?"
+        assert hasattr(self, "callbacks"), (
+            "missing callbacks attribute. Did you call __init__()?"
+        )
 
         for func in self.callbacks:
             func()

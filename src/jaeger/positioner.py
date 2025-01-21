@@ -581,8 +581,7 @@ class Positioner(StatusMixIn):
             )
 
             self._log(
-                f"set motor={motor!r}, loop={loop!r}, "
-                f"detect_collision={collisions}",
+                f"set motor={motor!r}, loop={loop!r}, detect_collision={collisions}",
             )
 
         return True
