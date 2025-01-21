@@ -45,6 +45,11 @@ jobs:
           path: /home/runner/work/jaeger/jaeger/tests/data/fcam
           key: ${{ runner.os }}-tests-fcam
 
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bzip2 libbz2-dev
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v3
         with:
