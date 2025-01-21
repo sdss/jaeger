@@ -4,7 +4,7 @@
 
 ### 🚀 New
 
-* Add actor command `calibrations reset-offsets` to zero the alpha/beta offsets in one or more positioners.
+* [#208](https://github.com/sdss/jaeger/pull/208) Add actor command `calibrations reset-offsets` to zero the alpha/beta offsets in one or more positioners.
 
 ### ✨ Improved
 
