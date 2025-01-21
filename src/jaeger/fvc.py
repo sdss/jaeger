@@ -469,6 +469,9 @@ class FVC:
         fdata[fvc_fibre_idx, "xwok_measured"] = wok_measured["xWokMeasMetrology"]
         fdata[fvc_fibre_idx, "ywok_measured"] = wok_measured["yWokMeasMetrology"]
 
+        fdata[fvc_fibre_idx, "xwok_report_metrology"] = measured["xWokReportMetrology"]
+        fdata[fvc_fibre_idx, "ywok_report_metrology"] = measured["yWokReportMetrology"]
+
         # Only use online, assigned robots for final RMS. First get groups of fibres
         # with an assigned robot, that are not offline or dubious.
         if fdata["assigned"].sum() > 0:

@@ -21,6 +21,7 @@ from coordio.defaults import calibration
 
 from jaeger.fvc import FVC
 from jaeger.target.configuration import ManualConfiguration
+from jaeger.target.tools import get_wok_data
 from jaeger.utils.helpers import run_in_executor
 
 from . import jaeger_parser
@@ -74,7 +75,8 @@ async def reset_offsets(
         raise RuntimeError("Calibration file for the positionerTable cannot be found.")
 
     positioner_file = calibration.positionerTableFile  # type: ignore
-    positioner_table_orig = calibration.positionerTable
+    positioner_table_pandas = calibration.positionerTable.reset_index()
+    positioner_table_orig = calibration.positionerTable.copy()
 
     positioner_data = polars.DataFrame(calibration.positionerTable.reset_index())
     positioner_data = positioner_data.with_row_count("id")  # To match the file columns.
@@ -113,24 +115,24 @@ async def reset_offsets(
 
         # Flash the new position
         command.info(f"Setting positioner {pid} to ({new_alpha}, {new_beta}).")
-        # result = await positioner.set_position(new_alpha, new_beta)
-        # if not result:
-        #     raise RuntimeError(f"Failed to set position for positioner {pid}.")
+        result = await positioner.set_position(new_alpha, new_beta)
+        if not result:
+            raise RuntimeError(f"Failed to set position for positioner {pid}.")
 
         # Check the new position.
         await asyncio.sleep(1)
         await positioner.update_position()
 
-        # if (
-        #     not positioner.alpha
-        #     or not positioner.beta
-        #     or not numpy.allclose(
-        #         [positioner.alpha, positioner.beta],
-        #         [new_alpha, new_beta],
-        #         atol=0.1,
-        #     )
-        # ):
-        #     raise RuntimeError(f"Failed to set position for positioner {pid}.")
+        if (
+            not positioner.alpha
+            or not positioner.beta
+            or not numpy.allclose(
+                [positioner.alpha, positioner.beta],
+                [new_alpha, new_beta],
+                atol=0.1,
+            )
+        ):
+            raise RuntimeError(f"Failed to set position for positioner {pid}.")
 
         # Update the positionerTable data.
         positioner_data[pid_data["id"], "alphaOffset"] = 0
@@ -146,6 +148,7 @@ async def reset_offsets(
     new_positioner_table = pandas.read_csv(positioner_file, comment="#", index_col=0)
     new_positioner_table.set_index(["site", "holeID"], inplace=True)
     calibration.positionerTable = new_positioner_table
+    get_wok_data.cache_clear()
 
     await fps.initialise()
     fps.configuration = ManualConfiguration.create_from_positions(obs, positions)
@@ -156,7 +159,7 @@ async def reset_offsets(
             met_after = await _take_fvc_image(
                 command,
                 fps,
-                positioner_table=positioner_table_orig,
+                positioner_table=positioner_table_pandas,
             )
         except Exception as ee:
             return command.fail(f"Failed to take FVC images: {ee}")
@@ -168,17 +171,17 @@ async def reset_offsets(
             before = met_before.filter(polars.col.positioner_id == pid)
             after = met_after.filter(polars.col.positioner_id == pid)
 
-            xwok_before = before[0, "xwok_measured"]
-            ywok_before = before[0, "ywok_measured"]
-            xwok_after = after[0, "xwok_measured"]
-            ywok_after = after[0, "ywok_measured"]
+            xwok_before = before[0, "xwok_report_metrology"]
+            ywok_before = before[0, "ywok_report_metrology"]
+            xwok_after = after[0, "xwok_report_metrology"]
+            ywok_after = after[0, "ywok_report_metrology"]
 
             if not numpy.allclose(
                 [xwok_before, ywok_before],
                 [xwok_after, ywok_after],
                 atol=0.015,
             ):
-                command.error(f"Positioner {pid} has different wok.")
+                command.error(f"Positioner {pid} has different wok positions.")
 
 
 async def _take_fvc_image(
