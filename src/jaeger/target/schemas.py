@@ -12,7 +12,7 @@ from typing import Mapping
 
 import numpy
 import polars
-import polars.type_aliases
+import polars._typing
 
 
 __all__ = [
@@ -74,8 +74,8 @@ CONFSUMMARY_FIBER_MAP_SCHEMA = [
 ]
 
 SchemaType = Mapping[
-    polars.type_aliases.ColumnNameOrSelector | polars.type_aliases.PolarsDataType,
-    polars.type_aliases.PolarsType,
+    polars._typing.ColumnNameOrSelector | polars._typing.PolarsDataType,
+    polars._typing.PolarsType,
 ]
 
 FIBRE_DATA_SCHEMA: SchemaType = {

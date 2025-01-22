@@ -10,6 +10,7 @@ requires-python = ">=3.10,<4"
 dependencies = [
     "numpy>=1.26.0,<2",
     "sdss-drift>=1.0.0",
+    "pymodbus>=3.7,<3.8",
     "sdss-clu>=2.0.0",
     "sdsstools>=1.7.1",
     "sdssdb>=0.11.3",
