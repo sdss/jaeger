@@ -41,7 +41,7 @@ def get_data_from_proc_fimg(path: pathlib.Path):
         else:
             schema[col] = fd[col].dtype
 
-    fd = fd.cast(schema).fill_nan(None).sort(["positioner_id", "fibre_type"])
+    fd = fd.fill_nan(None).cast(schema).sort(["positioner_id", "fibre_type"])
 
     off_fits = hdul["OFFSETS"].data
     off = polars.DataFrame({col: off_fits[col].tolist() for col in off_fits.names})
@@ -75,6 +75,7 @@ async def test_get_fibre_data_fcam(get_fimg_paths: Sequence[pathlib.Path]):
     assert fibre_data["assigned"].dtype == polars.Boolean
 
 
+@pytest.mark.xfail(reason="coordio transforms have changed.")
 async def test_fvc_processing(
     get_fimg_paths: Sequence[pathlib.Path],
     monkeypatch: pytest.MonkeyPatch,
