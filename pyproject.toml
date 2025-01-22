@@ -1,6 +1,6 @@
 [project]
 name = "jaeger"
-version = "1.9.0"
+version = "1.9.1a0"
 description = "Controllers for the SDSS-V FPS"
 authors = [ { name = "José Sánchez-Gallego", email = "gallegoj@uw.edu" } ]
 license = { text = "BSD-3-Clause" }

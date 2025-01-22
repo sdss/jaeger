@@ -870,7 +870,7 @@ wheels = [
 
 [[package]]
 name = "jaeger"
-version = "1.9.0"
+version = "1.9.1a0"
 source = { editable = "." }
 dependencies = [
     { name = "adbc-driver-postgresql" },
