@@ -56,7 +56,7 @@ def add_targets_of_opportunity_to_design(design: Design):
     too_file = os.path.expanduser(os.path.expandvars(too_config["path"]))
 
     try:
-        log.debug(f"[ToO]: Reading targets from {too_file}.")
+        log.debug(f"[ToO]: Reading targets from {os.path.realpath(too_file)}.")
         too_targets = polars.read_parquet(too_file)
     except FileNotFoundError:  # pragma: no cover
         log.error("Failed reading ToO file.")
