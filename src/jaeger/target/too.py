@@ -317,6 +317,9 @@ def match_too_to_hole(
     # Remove targets without any nearby holes.
     too_targets = too_targets.filter(polars.col.valid_hole_id.is_not_null())
 
+    if len(too_targets) == 0:
+        return too_targets
+
     # Join with the wok data and select the relevant columns.
     too_wok_data = too_targets.join(
         wok_data,

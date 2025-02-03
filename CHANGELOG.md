@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### 🔧 Fixed
+
+* Fixed a crash loading a configuration when a ToO can be found in the field but cannot be matched to any valid hole ID.
+
+
 ## 1.9.0 - January 22, 2025
 
 ### 🚀 New

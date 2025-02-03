@@ -220,6 +220,7 @@ async def _load_design(
             )
         except Exception as err:
             command.error(error=f"Failed retrieving design: {err}")
+            raise
             return False
 
         configuration = design.configuration
