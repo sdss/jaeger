@@ -11,6 +11,7 @@
 * Fixed a crash loading a configuration when a ToO can be found in the field but cannot be matched to any valid hole ID.
 * Move the check for invalid offsets to the right place.
 * Correctly use `offset_min_skybrightness=0` and `safety_factor=None`.
+* `assigned=0` only when a robot does not have an assigned target in a design, not when the alpha/beta coordinates are invalid or the target offsets are invalid. For those cases `valid=1`.
 
 
 ## 1.9.0 - January 22, 2025

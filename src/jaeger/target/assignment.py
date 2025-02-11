@@ -181,22 +181,22 @@ class BaseAssignment:
                         # Keep robots with invalid offsets folded.
                         offset_valid = tdata_row_dict.get("offset_valid", True)
 
-                        if offset_valid:
-                            hole_data.update(
-                                {
-                                    "catalogid": tdata_row_dict["catalogid"],
-                                    "ra_icrs": tdata_row_dict["ra"],
-                                    "dec_icrs": tdata_row_dict["dec"],
-                                    "pmra": tdata_row_dict["pmra"],
-                                    "pmdec": tdata_row_dict["pmdec"],
-                                    "parallax": tdata_row_dict["parallax"],
-                                    "coord_epoch": tdata_row_dict["epoch"],
-                                    "delta_ra": tdata_row_dict["delta_ra"],
-                                    "delta_dec": tdata_row_dict["delta_dec"],
-                                    "assigned": True,
-                                    "too": tdata_row_dict["is_too"],
-                                }
-                            )
+                        hole_data.update(
+                            {
+                                "catalogid": tdata_row_dict["catalogid"],
+                                "ra_icrs": tdata_row_dict["ra"],
+                                "dec_icrs": tdata_row_dict["dec"],
+                                "pmra": tdata_row_dict["pmra"],
+                                "pmdec": tdata_row_dict["pmdec"],
+                                "parallax": tdata_row_dict["parallax"],
+                                "coord_epoch": tdata_row_dict["epoch"],
+                                "delta_ra": tdata_row_dict["delta_ra"],
+                                "delta_dec": tdata_row_dict["delta_dec"],
+                                "assigned": True,
+                                "offset_valid": offset_valid,
+                                "too": tdata_row_dict["is_too"],
+                            }
+                        )
 
                 fibre_tdata.append(hole_data)
 
@@ -315,9 +315,12 @@ class BaseAssignment:
             | polars.col.beta.is_nan()
         )
         over_180 = polars.col.beta > 180
+        invalid_offset = polars.col.offset_valid.not_()
 
         self.fibre_data = self.fibre_data.with_columns(
-            valid=polars.when(na | over_180).then(False).otherwise(True),
+            valid=polars.when(na | over_180 | invalid_offset)
+            .then(False)
+            .otherwise(True),
             on_target=polars.when(polars.col.on_target.not_() | na | over_180)
             .then(False)
             .otherwise(True),
@@ -407,7 +410,7 @@ class Assignment(BaseAssignment):
 
         # For these the positioner alpha/beta coordinates are the same as for the
         # positioner with the same positioner_id in assigned. We create lists
-        # of the same height as unassinged and then add them.
+        # of the same height as unassigned and then add them.
         alpha_unassigned: list[float] = []
         beta_unassigned: list[float] = []
         for row in unassigned.iter_rows(named=True):
@@ -426,7 +429,11 @@ class Assignment(BaseAssignment):
 
         # If a fibre has alpha/beta NaN that means that it was not assigned.
         # We set these to the folded alpha/beta positions.
-        when = polars.when(polars.col.alpha.is_null(), polars.col.beta.is_null())
+        when = polars.when(
+            polars.col.alpha.is_null(),
+            polars.col.beta.is_null(),
+            polars.col.offset_valid.not_(),
+        )
         unassigned = unassigned.with_columns(
             alpha=when.then(alpha0).otherwise(polars.col.alpha),
             beta=when.then(beta0).otherwise(polars.col.beta),
@@ -441,7 +448,7 @@ class Assignment(BaseAssignment):
             position_angle=self.design.field.position_angle,
             focal_plane_scale=self.scale,
         )
-        icrs_unassigned = icrs_unassigned.with_columns(assigned=False, on_target=False)
+        icrs_unassigned = icrs_unassigned.with_columns(on_target=False)
 
         # Join the two dataframes. Recast and resort.
         fibre_data = (
