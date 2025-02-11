@@ -63,7 +63,7 @@ async def _load_design(
     get_paths: bool = True,
     path_generation_mode: str | None = None,
     safety_factor: float | None = None,
-    offset_min_skybrightness: float = 0.0,
+    offset_min_skybrightness: float | None = None,
 ):
     """Helper to load or preload a design."""
 
@@ -347,7 +347,6 @@ def configuration():
 @click.option(
     "--offset-min-skybrightness",
     type=float,
-    default=0,
     help="Minimum sky brightness for the offset.",
 )
 @click.argument("DESIGNID", type=int, required=False)
@@ -374,7 +373,7 @@ async def load(
     no_clone: bool = False,
     path_generation_mode: str | None = None,
     safety_factor: float | None = None,
-    offset_min_skybrightness: float = 0.0,
+    offset_min_skybrightness: float | None = None,
 ):
     """Creates and ingests a configuration from a design in the database."""
 
@@ -647,7 +646,6 @@ async def clone(command: Command[JaegerActor], fps: FPS):
 @click.option(
     "--offset-min-skybrightness",
     type=float,
-    default=0,
     help="Minimum sky brightness for the offset.",
 )
 @click.argument("DESIGNID", type=int, required=False)
@@ -667,7 +665,7 @@ async def preload(
     make_active: bool = True,
     clear: bool = False,
     safety_factor: float | None = None,
-    offset_min_skybrightness: float = 0.0,
+    offset_min_skybrightness: float | None = None,
 ):
     """Preloads a design.
 

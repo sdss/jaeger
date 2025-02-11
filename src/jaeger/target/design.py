@@ -82,7 +82,7 @@ class Design:
         epoch: float | None = None,
         scale: float | None = None,
         safety_factor: float | None = None,
-        offset_min_skybrightness: float = 0.0,
+        offset_min_skybrightness: float | None = None,
         use_targets_of_opportunity: bool = True,
     ):
         if calibration.wokCoords is None:
@@ -113,8 +113,11 @@ class Design:
             position_angle=self.design.field.position_angle,
         )
 
-        self.safety_factor = safety_factor
-        self.offset_min_skybrightness = offset_min_skybrightness
+        self.safety_factor = safety_factor or config["configuration"]["safety_factor"]
+        self.offset_min_skybrightness = (
+            offset_min_skybrightness
+            or config["configuration"]["offset_min_skybrightness"]
+        )
 
         log.debug("Loading target data and calculating offsets.")
         with Timer() as timer:
