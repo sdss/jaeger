@@ -29,6 +29,7 @@ CONFSUMMARY_FIBER_MAP_SCHEMA = [
     ("fiberType", "U10", ""),
     ("assigned", numpy.int16, 0),
     ("on_target", numpy.int16, 0),
+    ("disabled", numpy.int16, 0),
     ("valid", numpy.int16, 0),
     ("decollided", numpy.int16, 0),
     ("too", numpy.int16, 0),

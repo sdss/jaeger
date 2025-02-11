@@ -5,6 +5,7 @@
 ### ✨ Improved
 
 * [#210](https://github.com/sdss/jaeger/pull/210) Move the default values for `offset_min_skybrightness` and `safety_factor` to the configuration file. The default values are now `offset_min_skybrightness=0` and `safety_factor=None`.
+* Add field `disabled` to the summary file for robots that are disabled or offline.
 
 ### 🔧 Fixed
 

@@ -880,6 +880,7 @@ class BaseConfiguration(Generic[AssignmentType]):
                     "valid": int(row_data["valid"]),
                     "too": int(row_data["too"]),
                     "on_target": int(row_data["on_target"]),
+                    "disabled": int(row_data["disabled"] or row_data["offline"]),
                     "xwok": row_data["xwok"],
                     "ywok": row_data["ywok"],
                     "zwok": row_data["zwok"],
