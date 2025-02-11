@@ -89,6 +89,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "reassigned": polars.Boolean,
     "valid": polars.Boolean,
     "too": polars.Boolean,
+    "offset_valid": polars.Boolean,
     "on_target": polars.Boolean,
     "disabled": polars.Boolean,
     "offline": polars.Boolean,

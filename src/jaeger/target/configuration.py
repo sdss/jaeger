@@ -401,7 +401,10 @@ class BaseConfiguration(Generic[AssignmentType]):
                     to_command=False,
                 )
 
-                self.update_coordinates_from_robot_grid(positioner_ids=decollided)
+                self.update_coordinates_from_robot_grid(
+                    positioner_ids=decollided,
+                    mark_decollided=True,
+                )
 
             # Final check for collisions.
             if len(self.robot_grid.getCollidedRobotList()) > 0:
@@ -433,7 +436,10 @@ class BaseConfiguration(Generic[AssignmentType]):
         )
 
         if len(unlocked) > 0:
-            self.update_coordinates_from_robot_grid(positioner_ids=unlocked)
+            self.update_coordinates_from_robot_grid(
+                positioner_ids=unlocked,
+                mark_decollided=True,
+            )
 
         # Mark decollided (and unlocked) positioner_ids. First we get the
         # indices of those rows.
@@ -534,6 +540,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         self,
         positioner_ids: list[int] | None = None,
         mark_off_target: bool = True,
+        mark_decollided: bool = False,
     ):
         """Updates the coordinates of robots from a robot grid.
 
@@ -544,6 +551,9 @@ class BaseConfiguration(Generic[AssignmentType]):
         ``positioner_ids`` (or all the positioners is ``positioner_ids=None``).
 
         If ``mark_off_target=True``, sets the ``on_target`` column to ``False``
+        for the list of ``positioner_ids``.
+
+        If ``mark_decollided=True``, sets the ``decollided`` column to ``True``
         for the list of ``positioner_ids``.
 
         """
@@ -588,9 +598,12 @@ class BaseConfiguration(Generic[AssignmentType]):
         if len(new_alpha_beta) > 0:
             self.assignment.update_positioner_coordinates(new_alpha_beta)
 
+        idx = self.fibre_data["positioner_id"].is_in(positioner_ids).arg_true()
         if mark_off_target:
-            idx = self.fibre_data["positioner_id"].is_in(positioner_ids).arg_true()
             self.fibre_data[idx, "on_target"] = False
+        if mark_decollided:
+            # Note that this marks all 3 fibres for each robot.
+            self.fibre_data[idx, "decollided"] = True
 
     async def save_snapshot(self, highlight=None):
         """Saves a snapshot of the current robot grid."""
@@ -863,6 +876,7 @@ class BaseConfiguration(Generic[AssignmentType]):
                     "holeId": hole_id,
                     "fiberType": fibre_type.upper(),
                     "assigned": int(row_data["assigned"]),
+                    "decollided": int(row_data["decollided"]),
                     "valid": int(row_data["valid"]),
                     "too": int(row_data["too"]),
                     "on_target": int(row_data["on_target"]),
