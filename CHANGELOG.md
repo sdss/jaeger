@@ -2,6 +2,10 @@
 
 ## Next version
 
+### ✨ Improved
+
+* [#210](https://github.com/sdss/jaeger/pull/210) Move the default values for `offset_min_skybrightness` and `safety_factor` to the configuration file. The default values are now `offset_min_skybrightness=0` and `safety_factor=None`.
+
 ### 🔧 Fixed
 
 * Fixed a crash loading a configuration when a ToO can be found in the field but cannot be matched to any valid hole ID.

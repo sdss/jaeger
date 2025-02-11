@@ -92,6 +92,15 @@ configuration:
   scale_fudge_factor: 0.9986
   max_cloned_time: 4500
   max_designs_epoch: 4
+  offset_min_skybrightness: 0.0
+  safety_factor: null
+  targets_of_opportunity:
+    replace: false
+    path: $TOO_DATA_DIR/current
+    exclude_design_modes: ['^.+?_eng$', '^.+?_rm_?.*$']
+    max_replacements: 2
+    categories: ['science']
+    minimum_priority: [6000, 3000, 0]
 
 fvc:
   config: etc/fvc.yaml
