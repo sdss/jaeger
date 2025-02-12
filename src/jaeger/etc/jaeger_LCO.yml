@@ -89,7 +89,7 @@ configuration:
   use_guider_scale: true
   guider_max_scale_age: 3600
   clip_scale: 3000
-  scale_fudge_factor: 0.9986
+  scale_fudge_factor: 1
   max_cloned_time: 4500
   max_designs_epoch: 4
   offset_min_skybrightness: 0.0
