@@ -478,15 +478,19 @@ class FVC:
             assigned = fdata.filter(
                 (
                     polars.col.assigned.any()
+                    & polars.col.disabled.not_().all()
                     & polars.col.offline.not_().all()
                     & polars.col.dubious.not_().all()
+                    & polars.col.valid.all()
                 ).over("positioner_id")
             )
         else:
             self.log("No assigned fibres found. Using all matched fibres.")
             assigned = fdata.filter(
                 polars.col.offline.not_().all(),
+                polars.col.disabled.not_().all(),
                 polars.col.dubious.not_().all(),
+                polars.col.valid.all(),
             )
 
         # Now get the metrology fibre from those groups.

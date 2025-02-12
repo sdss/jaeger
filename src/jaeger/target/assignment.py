@@ -165,6 +165,8 @@ class BaseAssignment:
                     "delta_ra": None,
                     "delta_dec": None,
                     "assigned": False,
+                    "offset_valid": True,
+                    "valid": True,
                     "too": False,
                 }
 
@@ -194,6 +196,7 @@ class BaseAssignment:
                                 "delta_dec": tdata_row_dict["delta_dec"],
                                 "assigned": True,
                                 "offset_valid": offset_valid,
+                                "valid": offset_valid,
                                 "too": tdata_row_dict["is_too"],
                             }
                         )
@@ -381,8 +384,10 @@ class Assignment(BaseAssignment):
 
         # Select only the rows with valid ICRS coordinates.
         fibre_data_icrs = self.fibre_data.filter(
-            polars.col("ra_icrs").is_not_null(),
-            polars.col("dec_icrs").is_not_null(),
+            polars.col.ra_icrs.is_not_null(),
+            polars.col.dec_icrs.is_not_null(),
+            polars.col.offset_valid,
+            polars.col.valid,
         )
 
         # Get the positioner data for the targets with ICRS. The returned
@@ -433,6 +438,7 @@ class Assignment(BaseAssignment):
             polars.col.alpha.is_null(),
             polars.col.beta.is_null(),
             polars.col.offset_valid.not_(),
+            polars.col.valid.not_(),
         )
         unassigned = unassigned.with_columns(
             alpha=when.then(alpha0).otherwise(polars.col.alpha),
