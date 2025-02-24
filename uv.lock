@@ -905,7 +905,7 @@ wheels = [
 
 [[package]]
 name = "jaeger"
-version = "1.9.1a0"
+version = "1.9.1"
 source = { editable = "." }
 dependencies = [
     { name = "adbc-driver-postgresql" },
@@ -966,7 +966,7 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=16.1.0" },
     { name = "pymodbus", specifier = ">=3.7,<3.8" },
     { name = "sdss-clu", specifier = ">=2.0.0" },
-    { name = "sdss-coordio", specifier = ">=1.11.0" },
+    { name = "sdss-coordio", specifier = ">=1.14.0" },
     { name = "sdss-drift", specifier = ">=1.0.0" },
     { name = "sdss-kaiju", marker = "python_full_version == '3.10.*'", specifier = ">=1.4.0" },
     { name = "sdss-kaiju", marker = "python_full_version >= '3.11'", specifier = "==1.4.0b1" },
