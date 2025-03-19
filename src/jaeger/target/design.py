@@ -181,6 +181,8 @@ class Design:
                 targetdb.Carton.program,
                 targetdb.Design.design_mode,
                 peewee.SQL("false").alias("is_too"),
+                peewee.SQL(-999).alias("too_id"),
+                peewee.SQL("").alias("too_program"),
             )
             .join(targetdb.Assignment)
             .join(targetdb.CartonToTarget)

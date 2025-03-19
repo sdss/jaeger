@@ -159,6 +159,8 @@ def add_targets_of_opportunity_to_design(design: Design):
         fibre_type = too_entry[0]["fiber_type"]
         too_to_add.append(
             {
+                "too_id": too_entry[0]["too_id"],
+                "too_program": too_entry[0]["program"],
                 "catalogid": too_entry[0]["catalogid"],
                 "ra": too_entry[0]["ra"],
                 "dec": too_entry[0]["dec"],

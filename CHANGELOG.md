@@ -1,5 +1,12 @@
 # Changelog
 
+## Next version
+
+### ✨ Improved
+
+* Add `too_id` and `too_program` to configuration summary files.
+
+
 ## 1.9.1 - February 24, 2025
 
 ### ✨ Improved

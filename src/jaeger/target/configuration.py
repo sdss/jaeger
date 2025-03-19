@@ -918,6 +918,8 @@ class BaseConfiguration(Generic[AssignmentType]):
                         "firstcarton": target["carton"] or "",
                         "program": target["program"] or "",
                         "category": target["category"] or "",
+                        "too_id": target["too_id"] or -999,
+                        "too_program": target["too_program"] or "",
                         "delta_ra": target["delta_ra"] or 0.0,
                         "delta_dec": target["delta_dec"] or 0.0,
                     }

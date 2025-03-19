@@ -474,7 +474,10 @@ def configuration_to_dataframe(
             data[irow, "firstcarton"] = target["carton"]
             data[irow, "program"] = target["program"]
             data[irow, "category"] = target["category"]
+
             data[irow, "too"] = target["is_too"]
+            data[irow, "too_id"] = target["too_id"]
+            data[irow, "too_program"] = target["too_program"]
 
             data[irow, "sloan_g_mag"] = target["g"]
             data[irow, "sloan_r_mag"] = target["r"]
