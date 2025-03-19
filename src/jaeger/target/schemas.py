@@ -72,6 +72,8 @@ CONFSUMMARY_FIBER_MAP_SCHEMA = [
     ("sdssv_apogee_target0", numpy.int64, 0),
     ("delta_ra", numpy.float64, 0.0),
     ("delta_dec", numpy.float64, 0.0),
+    ("too_id", numpy.int64, -999),
+    ("too_program", "U20", ""),
 ]
 
 SchemaType = Mapping[
