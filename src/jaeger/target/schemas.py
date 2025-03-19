@@ -92,7 +92,7 @@ FIBRE_DATA_SCHEMA: SchemaType = {
     "reassigned": polars.Boolean,
     "valid": polars.Boolean,
     "too": polars.Boolean,
-    "too_id": polars.Int32,
+    "too_id": polars.Int64,
     "too_program": polars.String,
     "offset_valid": polars.Boolean,
     "on_target": polars.Boolean,
@@ -218,6 +218,6 @@ TARGET_DATA_SCHEMA = {
     "program": polars.String,
     "design_mode": polars.String,
     "is_too": polars.Boolean,
-    "too_id": polars.Int32,
+    "too_id": polars.Int64,
     "too_program": polars.String,
 }
