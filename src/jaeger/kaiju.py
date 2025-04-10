@@ -211,10 +211,15 @@ def decollide(
             if robot_grid.isCollided(robot_id):
                 if robot_grid.robotDict[robot_id].isOffline:
                     continue
+                alpha_save = robot_grid.robotDict[robot_id].alpha
+                beta_save = robot_grid.robotDict[robot_id].beta
                 robot_grid.decollideRobot(robot_id)
-                decollided.append(robot_id)  # Even if we failed it may have moved.
-                if robot_grid.isCollided(robot_id):
-                    raise JaegerError(f"Failed decolliding positioner {robot_id}.")
+                if not robot_grid.isCollided(robot_id):
+                    decollided.append(robot_id)  # moving this robot worked
+                else:
+                    # return robot to original spot and hope a different robot
+                    # decollision fixes the problem
+                    robot_grid.robotDict[robot_id].setAlphaBeta(alpha_save, beta_save)
 
     # Second pass. If still collided, try a grid decollision.
     if len(robot_grid.getCollidedRobotList()) > 0:
