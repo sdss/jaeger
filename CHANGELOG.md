@@ -6,6 +6,10 @@
 
 * Add `too_id` and `too_program` to configuration summary files.
 
+### 🔧 Fixed
+
+* Prevent repeated positioners appearing in the permanently disabled list.
+
 
 ## 1.9.1 - February 24, 2025
 
