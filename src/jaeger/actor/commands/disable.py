@@ -33,7 +33,7 @@ async def disable(
 ):
     """Disables a positioner"""
 
-    permanently_disabled = config["fps"]["disabled_positioners"]
+    permanently_disabled = config["fps"]["disabled_positioners"].copy()
     if config["fps"]["offline_positioners"] is not None:
         permanently_disabled += list(config["fps"]["offline_positioners"].keys())
 
