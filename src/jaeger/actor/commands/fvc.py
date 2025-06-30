@@ -514,7 +514,7 @@ async def take_fvc_loop(
             n += 1
 
     except NoLightInImage:
-        # Raise the exception. It will be catched in loop and retried.
+        # Raise the exception. It will be caught in loop and retried.
         raise
 
     except Exception as err:
