@@ -9,6 +9,7 @@
 ### 🔧 Fixed
 
 * Prevent repeated positioners appearing in the permanently disabled list.
+* Hotfix to force retry when the FVC loop fails but the reason is unknown.
 
 
 ## 1.9.1 - February 24, 2025
