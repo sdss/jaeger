@@ -241,6 +241,7 @@ async def goto(
     go_cowboy: bool = False,
     force: bool = False,
     command: CluCommand[JaegerActor] | None = None,
+    save_snapshot: bool = True,
 ):
     """Send positioners to a given position using a trajectory with ``kaiju`` check.
 
@@ -265,6 +266,8 @@ async def goto(
         will be raised. Use ``force=True`` to apply the trajectory anyway.
     command
         A command to pass to `.send_trajectory` to output additional information.
+    save_snapshot
+        If `True`, a snapshot image is saved at the end of the trajectory.
 
     """
 
@@ -375,4 +378,5 @@ async def goto(
         use_sync_line=use_sync_line,
         command=command,
         extra_dump_data={"kaiju_trajectory": not go_cowboy},
+        save_snapshot=save_snapshot,
     )

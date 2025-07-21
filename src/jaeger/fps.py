@@ -1283,6 +1283,7 @@ class FPS(BaseFPS):
         relative=False,
         use_sync_line: bool | None = None,
         go_cowboy: bool = False,
+        save_snapshot: bool = True,
     ):
         """Sends a list of positioners to a given position.
 
@@ -1300,6 +1301,8 @@ class FPS(BaseFPS):
             Whether to use the SYNC line to start the trajectories.
         go_cowboy
             If set, does not create a ``kaiju``-safe trajectory. Use at your own risk.
+        save_snapshot
+            If `True`, a snapshot image is saved at the end of the trajectory.
 
         """
 
@@ -1311,6 +1314,7 @@ class FPS(BaseFPS):
                 speed=speed,
                 use_sync_line=use_sync_line,
                 go_cowboy=go_cowboy,
+                save_snapshot=save_snapshot,
             )
         except Exception:
             raise
