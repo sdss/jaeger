@@ -282,9 +282,24 @@ LOG_FILE = os.path.join(
     is_flag=True,
     help="Does not connect to Tron.",
 )
+@click.option(
+    "--no-chiller",
+    is_flag=True,
+    help="Does not start the chiller bot.",
+)
+@click.option(
+    "--no-alerts",
+    is_flag=True,
+    help="Does not start the alerts bot.",
+)
 @pass_fps
 @cli_coro
-async def actor(fps_maker, no_tron: bool = False):
+async def actor(
+    fps_maker,
+    no_tron: bool = False,
+    no_chiller: bool = False,
+    no_alerts: bool = False,
+):
     """Runs the actor."""
 
     try:
@@ -309,7 +324,7 @@ async def actor(fps_maker, no_tron: bool = False):
 
         await fps.initialise(skip_assignments_check=fps_maker.skip_assignments_check)
 
-        await actor_.start()
+        await actor_.start(chiller=not no_chiller, alerts=not no_alerts)
         await actor_.run_forever()
 
         await actor_.stop()
