@@ -31,7 +31,7 @@ __all__ = ["unwind_command", "explode_command"]
 @jaeger_parser.command(name="unwind")
 @click.option(
     "--collision-buffer",
-    type=click.FloatRange(1.6, 3.0),
+    type=click.FloatRange(1.6, 3.5),
     help="Custom collision buffer",
 )
 @click.option(
