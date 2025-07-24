@@ -276,7 +276,8 @@ async def _home_beta_phase(
 
     command.info(f"Starting phase {phase} calibration.")
 
-    command.debug(f"Homing positioners {home_positioner_ids}.")
+    if not dry_run:
+        command.debug(f"Homing positioners {home_positioner_ids}.")
 
     if dry_run is False:
         command.info("Homing in beta.")
