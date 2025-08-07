@@ -106,15 +106,16 @@ class JaegerActor(clu.LegacyActor):
         chiller_config = self.config["chiller"].get("config", None)
         self.chiller = ChillerBot(self.fps) if chiller_config else None
 
-    async def start(self, *args, **kwargs):
+    async def start(self, *args, alerts: bool = True, chiller: bool = True, **kwargs):
         """Starts the actor and the bots."""
 
         await super().start(*args, **kwargs)
 
-        self.alerts.set_actor(self)
-        await self.alerts.start()
+        if alerts and self.alerts:
+            self.alerts.set_actor(self)
+            await self.alerts.start()
 
-        if self.chiller:
+        if chiller and self.chiller:
             self.chiller.set_actor(self)
             await self.chiller.start()
 

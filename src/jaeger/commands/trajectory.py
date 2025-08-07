@@ -67,6 +67,7 @@ async def send_trajectory(
     command: Optional[CluCommand[JaegerActor]] = None,
     dump: bool | str = True,
     extra_dump_data: dict[str, Any] = {},
+    save_snapshot: bool = True,
 ) -> Trajectory:
     """Sends a set of trajectories to the positioners.
 
@@ -107,6 +108,8 @@ async def send_trajectory(
         called, regardless of whether the trajectory succeeds.
     extra_dump_data
         A dictionary with additional parameters to add to the dump JSON.
+    save_snapshot
+        If `True`, a snapshot image is saved at the end of the trajectory.
 
     Raises
     ------
@@ -133,6 +136,7 @@ async def send_trajectory(
         trajectories,
         dump=dump,
         extra_dump_data=extra_dump_data,
+        save_snapshot=save_snapshot,
     )
 
     if use_sync_line is None:
@@ -237,6 +241,8 @@ class Trajectory(object):
         called, regardless of whether the trajectory succeeds.
     extra_dump_data
         A dictionary with additional parameters to add to the dump JSON.
+    save_snapshot
+        If `True`, a snapshot image is saved at the end of the trajectory.
 
     Raises
     ------
@@ -266,6 +272,7 @@ class Trajectory(object):
         trajectories: str | pathlib.Path | TrajectoryDataType,
         dump: bool | str = True,
         extra_dump_data: dict[str, Any] = {},
+        save_snapshot: bool = True,
     ):
         self.fps = fps
         self.trajectories: TrajectoryDataType
@@ -320,6 +327,8 @@ class Trajectory(object):
             "initial_positions": self.fps.get_positions_dict(),
             "final_positions": {},
         }
+
+        self.save_snapshot = save_snapshot
 
         if dump is False:
             self.dump_file = None
@@ -633,7 +642,8 @@ class Trajectory(object):
         finally:
             # Not explicitely updating the positions here because save_snapshot()
             # will do that and no need to waste extra time. Do not wait for this.
-            asyncio.create_task(self.fps.save_snapshot())
+            if self.save_snapshot:
+                asyncio.create_task(self.fps.save_snapshot())
 
             if self.dump_file:
                 self.dump_trajectory()

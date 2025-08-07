@@ -17,7 +17,7 @@ profiles:
   cannet:
     interface: cannet
     channels:
-      - 10.8.68.82
+      - 10.25.1.129
     port: 19228
     buses: [1, 2, 3, 4]
     bitrate: 1000000
