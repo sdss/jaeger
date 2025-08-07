@@ -2,6 +2,10 @@
 
 ## Next version
 
+### 🔥 Breaking change
+
+* Until Kaiju can be properly updated to compiles on Python 3.11+, `jaeger` will only support 3.10.
+
 ### ✨ Improved
 
 * Add `too_id` and `too_program` to configuration summary files.
