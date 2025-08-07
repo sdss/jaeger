@@ -9,7 +9,7 @@
 ### 🔧 Fixed
 
 * Prevent repeated positioners appearing in the permanently disabled list.
-* Hotfix to force retry when the FVC loop fails but the reason is unknown.
+* Improved handling of FVC images with no light.
 
 
 ## 1.9.1 - February 24, 2025

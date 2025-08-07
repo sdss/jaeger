@@ -415,9 +415,12 @@ class FVC:
             **fvc_transform_kwargs,
         )
 
-        centroids = fvc_transform.extractCentroids()
-        if len(centroids) == 0:
-            raise NoLightInImage("No centroids detected in the image.")
+        try:
+            centroids = fvc_transform.extractCentroids()
+        except Exception as err:
+            if "Too few centroids found in image" in str(err):
+                raise NoLightInImage("Insufficient centroids found in image.")
+            raise
 
         self.centroids = polars.from_pandas(centroids)
 

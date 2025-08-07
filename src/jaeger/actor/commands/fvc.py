@@ -518,11 +518,8 @@ async def take_fvc_loop(
         raise
 
     except Exception as err:
-        # HOTFIX: raise NoLightInImage always to force a retry.
-        raise NoLightInImage() from err
-
         failed = True
-        command.error(error=f"Failed processing image: {err}")
+        command.error(error=f"Failed processing image: {err}", exception_info=err)
         return False
 
     finally:
