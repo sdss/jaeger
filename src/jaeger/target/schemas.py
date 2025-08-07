@@ -176,6 +176,8 @@ CONFIGURATION_SCHEMA.update(
         "gaia_rp_mag": polars.Float32,
         "gaia_g_mag": polars.Float32,
         "tmass_h_mag": polars.Float32,
+        "too_id": polars.Int64,
+        "too_program": polars.String,
     }
 )
 

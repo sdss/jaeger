@@ -14,6 +14,7 @@
 
 * Prevent repeated positioners appearing in the permanently disabled list.
 * Improved handling of FVC images with no light.
+* Include `too_id` and `too_program` in output of `configuration_to_dataframe()`.
 
 
 ## 1.9.1 - February 24, 2025
