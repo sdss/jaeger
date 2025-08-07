@@ -11,19 +11,18 @@ dependencies = [
     "numpy>=1.26.0,<2",
     "sdss-drift>=1.0.0",
     "pymodbus>=3.7,<3.8",
-    "sdss-clu>=2.0.0",
+    "sdss-clu>=2.5.0",
     "sdsstools>=1.7.1",
     "sdssdb>=0.11.3",
     "sdss-kaiju==1.4.0b1; python_version>='3.11'",
     "sdss-kaiju>=1.4.0; python_version>='3.10' and python_version<'3.11'",
     "sdss-coordio>=1.14.0",
-    "click<8.2.0",
     "click_default_group>=1.2.2",
     "zc.lockfile>=2.0",
     "polars>=1.0.0",
     "adbc-driver-postgresql>=0.9.0",
     "nptyping>=2.5.0",
-    "pyarrow>=16.1.0",
+    "pyarrow<21.0.0",
 ]
 
 [project.urls]
@@ -65,6 +64,9 @@ dev-dependencies = [
     "matplotlib>=3.4.3",
     "ruff>=0.1.0",
 ]
+
+[tool.uv.sources]
+# sdss-clu = { git = "https://github.com/sdss/clu", branch = "main" }
 
 [tool.ruff]
 line-length = 88
