@@ -1,5 +1,12 @@
 # Changelog
 
+## Next release
+
+### ✨ Improved
+
+* Explicitly require `sdss-coordio>=1.15.0` and `sdss-clu>=2.5.3`.
+
+
 ## 1.10.0 - August 7, 2025
 
 ### 🔥 Breaking change
