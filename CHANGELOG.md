@@ -5,6 +5,7 @@
 ### ✨ Improved
 
 * Explicitly require `sdss-coordio>=1.17.0` and `sdss-clu>=2.5.3`.
+* Use `check_valid_offset=True` in `object_offset()` calls and remove duplicate code.
 
 
 ## 1.10.0 - August 7, 2025
