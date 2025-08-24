@@ -255,7 +255,7 @@ class Design:
                 # program is needed to check for valid offsets.
                 program = group["program"].to_numpy()
 
-                delta_ra, delta_dec, offset_flags = object_offset(  # type: ignore
+                delta_ra, delta_dec, offset_flags, offset_valid = object_offset(  # type: ignore
                     mag,
                     numpy.array(mag_lim),
                     lunation,
@@ -265,42 +265,14 @@ class Design:
                     skybrightness=skybrightness,
                     safety_factor=self.safety_factor,
                     offset_min_skybrightness=self.offset_min_skybrightness,
-                    check_valid_offset=False,
+                    check_valid_offset=True,
+                    program=program,
                 )
             else:
                 delta_ra = numpy.zeros(len(group))
                 delta_dec = numpy.zeros(len(group))
                 offset_flags = numpy.zeros(len(group), dtype=numpy.int32)
-
-            # make bad mag cases nan
-            cases = [-999, -9999, 999, 0.0, numpy.nan, 99.9, None]
-            mag[numpy.isin(mag, cases)] = numpy.nan
-
-            # check stars that are too bright for design mode
-            mag_lim = numpy.array(mag_lim)
-            valid_ind = numpy.where(numpy.array(mag_lim) != -999.0)[0]
-            mag_bright = numpy.any(mag[:, valid_ind] < mag_lim[valid_ind], axis=1)
-
-            # grab program as below check not valid for skies or standards
-            program = group["program"].to_numpy()
-
-            # check offset flags to see if should be used or not
-            offset_valid = numpy.zeros(len(group), dtype=bool)
-            for i, fl in enumerate(offset_flags):
-                # manually check bad flags
-                if program[i] == "SKY" or "ops" in program[i]:
-                    offset_valid[i] = True
-                elif 8 & int(fl) and mag_bright[i]:
-                    # if below sky brightness and brighter than mag limit
-                    offset_valid[i] = False
-                elif 16 & int(fl) and mag_bright[i]:
-                    # if can_offset False and brighter than mag limit
-                    offset_valid[i] = False
-                elif 32 & int(fl):
-                    # if brighter than safety limit
-                    offset_valid[i] = False
-                else:
-                    offset_valid[i] = True
+                offset_valid = numpy.ones(len(group), dtype=bool)
 
             assert isinstance(delta_ra, numpy.ndarray)
             assert isinstance(delta_dec, numpy.ndarray)
