@@ -1,15 +1,18 @@
 # Changelog
 
+## Next release
+
+### 🔧 Fixed
+
+* Replace nulls in `can_offset` with `true` before calling the offset function.
+
+
 ## 1.10.1 - August 22, 2025
 
 ### ✨ Improved
 
 * Explicitly require `sdss-coordio>=1.17.0` and `sdss-clu>=2.5.3`.
 * Use `check_valid_offset=True` in `object_offset()` calls and remove duplicate code.
-
-### 🔧 Fixed
-
-* Replace nulls in `can_offset` with `true` before calling the offset function.
 
 
 ## 1.10.0 - August 7, 2025
