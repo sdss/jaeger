@@ -81,6 +81,13 @@ def add_targets_of_opportunity_to_design(design: Design):
         ~polars.col.catalogid.is_in(observed_targets["catalogid"])
     )
 
+    # Sort by too_id and drop duplicate catalogids, keeping the first.
+    too_targets_field = (
+        too_targets_field.sort("too_id")
+        .unique("too_id", keep="first")
+        .unique("catalogid", keep="first")
+    )
+
     if len(too_targets_field) == 0:  # pragma: no cover
         log.info("[ToO]: all ToO targets for this field have already been observed.")
         return

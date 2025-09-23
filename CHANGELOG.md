@@ -6,6 +6,10 @@
 
 * Add additional logging when `SEND_TRAJECTORY_COMMAND` fails.
 
+### 🔧 Fixed
+
+* Remove ToOs with duplicate `catalogid`.
+
 
 ## 1.10.2 - August 24, 2025
 
