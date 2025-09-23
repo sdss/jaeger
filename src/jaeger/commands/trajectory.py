@@ -498,8 +498,10 @@ class Trajectory(object):
                 if status.failed or status.timed_out:
                     for reply in self.data_send_cmd.replies:
                         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
-                            code = reply.response_code.name
-                            self.failed_positioners[reply.positioner_id] = code
+                            pid = reply.positioner_id
+                            code = reply.response_code.name or "UNKNOWN_ERROR"
+                            self.failed_positioners[pid] = code
+                            log.warning(f"Positioner {pid} failed with code {code!r}.")
                     self.failed = True
                     raise TrajectoryError(
                         "At least one SEND_TRAJECTORY_COMMAND failed.",
@@ -669,6 +671,7 @@ class Trajectory(object):
         self.dump_data["use_sync_line"] = self.use_sync_line
         self.dump_data["end_time"] = time.time()
         self.dump_data["final_positions"] = self.fps.get_positions_dict()
+        self.dump_data["failed_positioners"] = self.failed_positioners
 
         if not os.path.exists(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))

@@ -1,5 +1,12 @@
 # Changelog
 
+## Next release
+
+### ✨ Improved
+
+* Add additional logging when `SEND_TRAJECTORY_COMMAND` fails.
+
+
 ## 1.10.2 - August 24, 2025
 
 ### 🔧 Fixed
