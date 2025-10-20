@@ -228,7 +228,7 @@ def dump_trajectory(
 
         path = trajectory.dump_file
 
-    path = pathlib.Path(path)
+    path = pathlib.Path(path).absolute()
 
     trajectory.dump_data["success"] = not trajectory.failed
     trajectory.dump_data["trajectory_start_time"] = trajectory.start_time
@@ -244,7 +244,7 @@ def dump_trajectory(
         f.write(json.dumps(trajectory.dump_data, indent=2))
 
     if command:
-        command.debug(trajectory_dump_file=path)
+        command.debug(trajectory_dump_file=str(path))
 
 
 class Trajectory(object):
