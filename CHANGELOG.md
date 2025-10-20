@@ -5,10 +5,12 @@
 ### ✨ Improved
 
 * Add additional logging when `SEND_TRAJECTORY_COMMAND` fails.
+* Refactor the dumping of trajectory data.
 
 ### 🔧 Fixed
 
 * Remove ToOs with duplicate `catalogid`.
+* Use SJD instead of MJD in trajectory dump files.
 
 
 ## 1.10.2 - August 24, 2025

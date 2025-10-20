@@ -19,10 +19,10 @@ from glob import glob
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 import numpy
-from astropy.time import Time
 
 import drift
 from sdsstools import read_yaml_file
+from sdsstools.time import get_sjd
 
 from jaeger import config, log
 from jaeger.commands import Command, CommandID
@@ -131,13 +131,10 @@ async def send_trajectory(
 
     """
 
-    traj = Trajectory(
-        fps,
-        trajectories,
-        dump=dump,
-        extra_dump_data=extra_dump_data,
-        save_snapshot=save_snapshot,
-    )
+    traj = Trajectory(fps, trajectories, extra_dump_data=extra_dump_data)
+
+    if dump is False:
+        traj.dump_file = None
 
     if use_sync_line is None:
         use_sync_line = config["fps"]["use_sync_line"]
@@ -151,6 +148,7 @@ async def send_trajectory(
             raise TrajectoryError("The SYNC line is on high.", traj)
 
     if send_trajectory is False:
+        dump_trajectory(traj, command=command)
         return traj
 
     msg = "Sending trajectory data."
@@ -161,6 +159,7 @@ async def send_trajectory(
     try:
         await traj.send()
     except TrajectoryError as err:
+        dump_trajectory(traj, command=command)
         raise TrajectoryError(
             f"Something went wrong sending the trajectory: {err}",
             err.trajectory,
@@ -176,11 +175,7 @@ async def send_trajectory(
         command.info(move_time=round(traj.move_time, 2))
 
     if start_trajectory is False:
-        if traj.dump_file:
-            traj.dump_trajectory()
-            if command:
-                command.debug(trajectory_dump_file=traj.dump_file)
-
+        dump_trajectory(traj)
         return traj
 
     msg = "Starting trajectory ..."
@@ -202,8 +197,12 @@ async def send_trajectory(
             err.trajectory,
         )
     finally:
-        if traj.dump_file and command:
-            command.debug(trajectory_dump_file=traj.dump_file)
+        # Not explicitly updating the positions here because save_snapshot()
+        # will do that and no need to waste extra time. Do not wait for this.
+        if save_snapshot:
+            asyncio.create_task(fps.save_snapshot())
+
+        dump_trajectory(traj)
 
     if command:
         command.info(folded=(await fps.is_folded()))
@@ -214,6 +213,38 @@ async def send_trajectory(
         command.info(msg)
 
     return traj
+
+
+def dump_trajectory(
+    trajectory: Trajectory,
+    path: pathlib.Path | str | None = None,
+    command: CluCommand[JaegerActor] | None = None,
+):
+    """Dumps the trajectory to a JSON file."""
+
+    if path is None:
+        if trajectory.dump_file is None:
+            return
+
+        path = trajectory.dump_file
+
+    path = pathlib.Path(path)
+
+    trajectory.dump_data["success"] = not trajectory.failed
+    trajectory.dump_data["trajectory_start_time"] = trajectory.start_time
+    trajectory.dump_data["trajectory_send_time"] = trajectory.data_send_time
+    trajectory.dump_data["use_sync_line"] = trajectory.use_sync_line
+    trajectory.dump_data["end_time"] = time.time()
+    trajectory.dump_data["final_positions"] = trajectory.fps.get_positions_dict()
+    trajectory.dump_data["failed_positioners"] = trajectory.failed_positioners
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(path, "w") as f:
+        f.write(json.dumps(trajectory.dump_data, indent=2))
+
+    if command:
+        command.debug(trajectory_dump_file=path)
 
 
 class Trajectory(object):
@@ -233,16 +264,8 @@ class Trajectory(object):
         dictionary containing two keys: ``alpha`` and ``beta``, each
         pointing to a list of tuples ``(position, time)``, where
         ``position`` is in degrees and ``time`` is in seconds.
-    dump
-        Whether to dump a JSON with the trajectory to disk. If `True`,
-        the trajectory is stored in ``/data/logs/jaeger/trajectories/<MJD>`` with
-        a unique sequence for each trajectory. A string can be passed with a
-        custom path. The dump file is created only if `.Trajectory.start` is
-        called, regardless of whether the trajectory succeeds.
     extra_dump_data
         A dictionary with additional parameters to add to the dump JSON.
-    save_snapshot
-        If `True`, a snapshot image is saved at the end of the trajectory.
 
     Raises
     ------
@@ -270,9 +293,7 @@ class Trajectory(object):
         self,
         fps: FPS,
         trajectories: str | pathlib.Path | TrajectoryDataType,
-        dump: bool | str = True,
         extra_dump_data: dict[str, Any] = {},
-        save_snapshot: bool = True,
     ):
         self.fps = fps
         self.trajectories: TrajectoryDataType
@@ -328,24 +349,20 @@ class Trajectory(object):
             "final_positions": {},
         }
 
-        self.save_snapshot = save_snapshot
+        # Generate default dump file path.
+        dirname = config["positioner"]["trajectory_dump_path"]
+        mjd = str(get_sjd())
+        dirname = pathlib.Path(dirname) / mjd
 
-        if dump is False:
-            self.dump_file = None
-        elif isinstance(dump, (str, pathlib.Path)):
-            self.dump_file = str(dump)
+        files = list(sorted(glob(os.path.join(dirname, "*.json"))))
+        if len(files) == 0:
+            seq = 1
         else:
-            dirname = config["positioner"]["trajectory_dump_path"]
-            mjd = str(int(Time.now().mjd))
-            dirname = os.path.join(dirname, mjd)
+            seq = int(files[-1].split("-")[-1].split(".")[0]) + 1
 
-            files = list(sorted(glob(os.path.join(dirname, "*.json"))))
-            if len(files) == 0:
-                seq = 1
-            else:
-                seq = int(files[-1].split("-")[-1].split(".")[0]) + 1
+        basename = f"trajectory-{mjd}-{seq:04d}.json"
 
-            self.dump_file = os.path.join(dirname, f"trajectory-{mjd}-{seq:04d}.json")
+        self.dump_file: pathlib.Path | None = dirname / basename
 
     def validate(self):
         """Validates the trajectory."""
@@ -566,7 +583,7 @@ class Trajectory(object):
         else:
             # Start trajectories
             n_expected = len([pos for pos in self.fps.values() if not pos.offline])
-            command = await self.fps.send_command(
+            start_traj_command = await self.fps.send_command(
                 "START_TRAJECTORY",
                 positioner_ids=0,
                 timeout=1,
@@ -575,7 +592,7 @@ class Trajectory(object):
                 n_positioners=n_expected,
             )
 
-            if command.status.failed:
+            if start_traj_command.status.failed:
                 await self.fps.stop_trajectory()
                 self.failed = True
                 raise TrajectoryError("START_TRAJECTORY failed", self)
@@ -642,14 +659,6 @@ class Trajectory(object):
             raise
 
         finally:
-            # Not explicitely updating the positions here because save_snapshot()
-            # will do that and no need to waste extra time. Do not wait for this.
-            if self.save_snapshot:
-                asyncio.create_task(self.fps.save_snapshot())
-
-            if self.dump_file:
-                self.dump_trajectory()
-
             self.end_time = time.time()
             if restart_pollers:
                 self.fps.pollers.start()
@@ -659,25 +668,7 @@ class Trajectory(object):
     def dump_trajectory(self, path: str | None = None):
         """Dumps the trajectory to a JSON file."""
 
-        if path is None:
-            if self.dump_file is None:
-                return
-
-            path = self.dump_file
-
-        self.dump_data["success"] = not self.failed
-        self.dump_data["trajectory_start_time"] = self.start_time
-        self.dump_data["trajectory_send_time"] = self.data_send_time
-        self.dump_data["use_sync_line"] = self.use_sync_line
-        self.dump_data["end_time"] = time.time()
-        self.dump_data["final_positions"] = self.fps.get_positions_dict()
-        self.dump_data["failed_positioners"] = self.failed_positioners
-
-        if not os.path.exists(os.path.dirname(path)):
-            os.makedirs(os.path.dirname(path))
-
-        with open(path, "w") as f:
-            f.write(json.dumps(self.dump_data, indent=2))
+        dump_trajectory(self, path=path)
 
     async def abort_trajectory(self):
         """Aborts the trajectory transmission."""
