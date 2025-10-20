@@ -6,6 +6,7 @@
 
 * Add additional logging when `SEND_TRAJECTORY_COMMAND` fails.
 * Refactor the dumping of trajectory data.
+* Allow to disable multiple positioners at once.
 
 ### 🔧 Fixed
 
