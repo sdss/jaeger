@@ -175,7 +175,7 @@ async def send_trajectory(
         command.info(move_time=round(traj.move_time, 2))
 
     if start_trajectory is False:
-        dump_trajectory(traj)
+        dump_trajectory(traj, command=command)
         return traj
 
     msg = "Starting trajectory ..."
@@ -202,7 +202,7 @@ async def send_trajectory(
         if save_snapshot:
             asyncio.create_task(fps.save_snapshot())
 
-        dump_trajectory(traj)
+        dump_trajectory(traj, command=command)
 
     if command:
         command.info(folded=(await fps.is_folded()))
