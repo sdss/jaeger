@@ -448,13 +448,6 @@ class FVC:
         measured = polars.from_pandas(positionerTableMeas.drop("index", axis=1))
         measured = measured.sort("positionerID")
 
-        n_dubious = measured["wokErrWarn"].sum()
-        if n_dubious > 0:
-            self.log(
-                f"Found {n_dubious} positioners with dubious centroid matches.",
-                level=logging.WARNING,
-            )
-
         # Create a column to mark positioners with dubious matches.
         dubious_pid = measured.filter(polars.col.wokErrWarn)["positionerID"]
         fdata = fdata.with_columns(
@@ -462,6 +455,14 @@ class FVC:
             .then(True)
             .otherwise(False)
         )
+
+        n_dubious = measured["wokErrWarn"].sum()
+        if n_dubious > 0:
+            self.log(
+                f"Found {n_dubious} positioners with dubious centroid "
+                f"matches: {dubious_pid.to_list()}.",
+                level=logging.WARNING,
+            )
 
         metrology_data = fdata.clone()  # Sorted by positioner_id, same as "measured"
         metrology_data = metrology_data.filter(polars.col.fibre_type == fibre_type)

@@ -8,6 +8,7 @@
 * Refactor the dumping of trajectory data.
 * Allow to disable multiple positioners at once.
 * Write timeouts and failures to the standard log when a CAN command fails.
+* List positionerIDs of dubious robots in FVC log message.
 
 ### 🔧 Fixed
 
