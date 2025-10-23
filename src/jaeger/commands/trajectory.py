@@ -520,8 +520,10 @@ class Trajectory(object):
                             self.failed_positioners[pid] = code
                             log.warning(f"Positioner {pid} failed with code {code!r}.")
                     self.failed = True
+
+                    error_type = "timed out" if status.timed_out else "failed"
                     raise TrajectoryError(
-                        "At least one SEND_TRAJECTORY_COMMAND failed.",
+                        f"At least one SEND_TRAJECTORY_COMMAND {error_type}.",
                         self,
                     )
 
