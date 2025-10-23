@@ -527,12 +527,24 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         if not self.done():
             level = logging.WARNING if not silent else logging.DEBUG
             if not self.is_broadcast and self.status == CommandStatus.TIMEDOUT:
-                self._log("this command timed out and it is not a broadcast.", level)
+                self._log(
+                    "this command timed out and it is not a broadcast.",
+                    level,
+                    logs=[log, can_log],
+                )
             elif self.status == CommandStatus.CANCELLED:
-                self._log("command has been cancelled.", logging.DEBUG)
+                self._log(
+                    "command has been cancelled.",
+                    logging.DEBUG,
+                    logs=[log, can_log],
+                )
             elif self.status.failed:
                 level = logging.ERROR if not silent else logging.DEBUG
-                self._log(f"command finished with status {self.status.name!r}", level)
+                self._log(
+                    f"command finished with status {self.status.name!r}",
+                    level,
+                    logs=[log, can_log],
+                )
             elif self.status.timed_out and self._n_replies is not None:
                 # Report the command timed out, but only if this is not a broadcast
                 # and the number expected replies is not known. In those cases the

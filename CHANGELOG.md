@@ -7,6 +7,7 @@
 * Add additional logging when `SEND_TRAJECTORY_COMMAND` fails.
 * Refactor the dumping of trajectory data.
 * Allow to disable multiple positioners at once.
+* Write timeouts and failures to the standard log when a CAN command fails.
 
 ### 🔧 Fixed
 
