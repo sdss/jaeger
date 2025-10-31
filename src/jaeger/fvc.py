@@ -464,6 +464,29 @@ class FVC:
                 level=logging.WARNING,
             )
 
+        # next look for both broken metrology fibers and broken fiducial fibers
+        # if any are broken output a warning
+        if "fiberBroken" in positionerTableMeas.columns:
+            # check this column exists first to maintain backward compat coordio
+            metBroken = positionerTableMeas[positionerTableMeas.fiberBroken]
+            metBroken = metBroken["positionerID"].to_list()
+
+            fcm = fvc_transform.fiducialCoordsMeas.copy()
+            fifBroken = fcm[fcm.fiberBroken]
+            fifBroken = fifBroken["id"].to_list()
+            if metBroken:
+                self.log(
+                    f"Found {len(metBroken)} positioners with dead metrology "
+                    f"matches: {metBroken}.",
+                    level=logging.WARNING,
+                )
+            if fifBroken:
+                self.log(
+                    f"Found {len(fifBroken)} dead fiducials "
+                    f"matches: {fifBroken}.",
+                    level=logging.WARNING,
+                )
+
         metrology_data = fdata.clone()  # Sorted by positioner_id, same as "measured"
         metrology_data = metrology_data.filter(polars.col.fibre_type == fibre_type)
 
