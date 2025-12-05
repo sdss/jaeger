@@ -9,6 +9,7 @@
 * Allow to disable multiple positioners at once.
 * Write timeouts and failures to the standard log when a CAN command fails.
 * List positionerIDs of dubious robots in FVC log message.
+* Update `sdss-coordio` to 1.18.1.
 
 ### 🔧 Fixed
 
