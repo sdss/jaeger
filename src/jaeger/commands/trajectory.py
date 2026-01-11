@@ -512,13 +512,23 @@ class Trajectory(object):
                 )
 
                 status = self.data_send_cmd.status
+                replies = self.data_send_cmd.replies
                 if status.failed or status.timed_out:
-                    for reply in self.data_send_cmd.replies:
+                    for reply in replies:
                         if reply.response_code != ResponseCode.COMMAND_ACCEPTED:
                             pid = reply.positioner_id
                             code = reply.response_code.name or "UNKNOWN_ERROR"
                             self.failed_positioners[pid] = code
                             log.warning(f"Positioner {pid} failed with code {code!r}.")
+
+                    if status.timed_out:
+                        sent_pid = set(send_trajectory_pids)
+                        replied_pid = set(reply.positioner_id for reply in replies)
+                        not_responded = sent_pid - replied_pid
+                        for pid in not_responded:
+                            self.failed_positioners[pid] = "TIMED_OUT"
+                            log.warning(f"Positioner {pid} timed out.")
+
                     self.failed = True
 
                     error_type = "timed out" if status.timed_out else "failed"

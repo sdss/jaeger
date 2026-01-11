@@ -1,5 +1,12 @@
 # Changelog
 
+## Next release
+
+### 🔧 Fixed
+
+* Include timed-out positioners in the failed positioners list during trajectory sending.
+
+
 ## 1.11.0 - December 5, 2025
 
 ### ✨ Improved
