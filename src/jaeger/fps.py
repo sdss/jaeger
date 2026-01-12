@@ -121,7 +121,7 @@ class BaseFPS(Dict[int, Positioner]):
         return new_obj
 
     @classmethod
-    def get_instance(cls, *args, **kwargs) -> Self:
+    def get_instance(cls, *args, **kwargs) -> BaseFPS:
         """Returns the running instance."""
 
         if cls not in _FPS_INSTANCES:
@@ -326,6 +326,8 @@ class FPS(BaseFPS):
             del _FPS_INSTANCES[cls]
 
         instance = cls.get_instance(can=can, ieb=ieb)
+        assert isinstance(instance, FPS)
+
         await instance.start_can()
 
         if initialise:
@@ -355,7 +357,7 @@ class FPS(BaseFPS):
 
         if isinstance(self.can, JaegerCAN):
             await self.can.start()
-            return
+            return True
 
         self.can = await JaegerCAN.create(self.can, fps=self)
         return True

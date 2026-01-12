@@ -742,7 +742,7 @@ class SendTrajectoryData(Command):
 
     command_id = CommandID.SEND_TRAJECTORY_DATA
     broadcastable = False
-    move_command = True
+    move_command = True  # Technically no, but it's move-adjacent.
 
     def __init__(self, positioner_ids, positions=None, **kwargs):
         if positions is not None:
@@ -793,7 +793,7 @@ class StartTrajectory(Command):
     command_id = CommandID.START_TRAJECTORY
     broadcastable = True
     move_command = True
-    safe = True
+    safe = False
 
 
 class StopTrajectory(Command):
