@@ -550,7 +550,11 @@ async def get_snapshot(
 
     from jaeger.fps import FPS
 
-    fps = fps or FPS.get_instance()
+    if fps is None:
+        base_fps = FPS.get_instance()
+        assert isinstance(base_fps, FPS)
+        fps = base_fps
+
     if fps.initialised is False:
         await fps.initialise()
 

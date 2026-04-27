@@ -24,6 +24,7 @@ from typing import (
     List,
     Optional,
     Type,
+    TypedDict,
     TypeVar,
     cast,
 )
@@ -53,12 +54,18 @@ __all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
 
 LOG_HEADER = "({cmd.command_id.name}, {cmd.command_uid}):"
 
+
+class InterfacesDict(TypedDict):
+    class_: Type[BusABC] | None
+    multibus: bool
+
+
 #: Accepted CAN interfaces and whether they are multibus.
-INTERFACES = {
-    "slcan": {"class": slcanBus, "multibus": False},
-    "socketcan": {"class": SocketcanBus, "multibus": False},
-    "virtual": {"class": VirtualBus, "multibus": False},
-    "cannet": {"class": CANNetBus, "multibus": True},
+INTERFACES: dict[str, InterfacesDict] = {
+    "slcan": {"class_": slcanBus, "multibus": False},
+    "socketcan": {"class_": SocketcanBus, "multibus": False},
+    "virtual": {"class_": VirtualBus, "multibus": False},
+    "cannet": {"class_": CANNetBus, "multibus": True},
 }
 
 
@@ -128,7 +135,10 @@ class JaegerCAN(Generic[Bus_co]):
 
         itype = self.interface_type
 
-        InterfaceClass: Type[Bus_co] = INTERFACES[itype]["class"]
+        InterfaceClass: Type[Bus_co] | None = INTERFACES[itype]["class_"]  # type: ignore
+        if InterfaceClass is None:
+            raise ValueError(f"Interface {itype} is not supported.")
+
         self.multibus = INTERFACES[itype]["multibus"]
 
         if not isinstance(self.channels, (list, tuple)):
@@ -175,7 +185,7 @@ class JaegerCAN(Generic[Bus_co]):
         for interface in self.interfaces:
             interface: Any
             try:
-                interface.close()
+                interface.close()  # ty:ignore[unresolved-attribute]
             except AttributeError:
                 pass
 
@@ -428,7 +438,7 @@ class JaegerCAN(Generic[Bus_co]):
                 )
 
                 if bus:
-                    iface.send(message, bus=bus)  # type: ignore
+                    iface.send(message, bus=bus)
                 else:
                     iface.send(message)
 

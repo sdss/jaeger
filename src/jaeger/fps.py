@@ -64,7 +64,7 @@ if TYPE_CHECKING:
 try:
     from coordio import calibration
 except ImportError:
-    calibration = None
+    calibration: None = None
 
 try:
     IPYTHON = get_ipython()  # type: ignore

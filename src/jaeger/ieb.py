@@ -108,8 +108,8 @@ class IEB(Drift):
                 if n_retries >= 5:
                     raise DriftError("Failed connecting to the IEB.")
 
-    async def __aexit__(self, *args):
-        await Drift.__aexit__(self, *args)
+    async def __aexit__(self, exc_type, exc, tb):
+        await Drift.__aexit__(self, exc_type, exc, tb)
 
     def enable(self):
         """Re-enables the IEB instance."""
