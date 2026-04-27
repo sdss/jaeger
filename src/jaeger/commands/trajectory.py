@@ -531,6 +531,12 @@ class Trajectory(object):
 
                     if allow_retry:
                         log.warning("Failed sending trajectory data. Retrying once.")
+
+                        # Stop trajectories and wait a few seconds before retrying.
+                        await self.fps.stop_trajectory()
+                        await self.fps.stop_trajectory(clear_flags=True)
+                        await asyncio.sleep(5)
+
                         return await self.send(allow_retry=False)
                     else:
                         self.failed = True
