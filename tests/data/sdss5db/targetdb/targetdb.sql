@@ -146,7 +146,8 @@ CREATE TABLE targetdb.field (
     -- slots_exposures is 2x24, for dark/bright x LST
     -- needs INTEGER b/c RM I think?
     slots_exposures INTEGER[][],
-    field_id INTEGER);
+    field_id INTEGER,
+    overplan_pk INTEGER);
 
 CREATE TABLE targetdb.design_to_field (
     pk SERIAL PRIMARY KEY NOT NULL,
