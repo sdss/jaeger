@@ -803,7 +803,7 @@ class StartTrajectory(Command):
     command_id = CommandID.START_TRAJECTORY
     broadcastable = True
     move_command = True
-    safe = False
+    safe = True
 
 
 class StopTrajectory(Command):
