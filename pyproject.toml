@@ -20,7 +20,7 @@ dependencies = [
     "click_default_group>=1.2.2",
     "zc.lockfile>=2.0",
     "polars>=1.0.0",
-    "adbc-driver-postgresql>=0.9.0",
+    "adbc-driver-postgresql>=0.9.0,<0.11.0",
     "nptyping>=2.5.0",
     "pyarrow<21.0.0",
 ]

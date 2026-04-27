@@ -14,6 +14,7 @@
 ### ⚙️ Engineering
 
 * Update GitHub workflow versions.
+* Pin `adbc-driver-postgresql` to `<0.11.0` which fails to compile in CentOS 7.
 
 
 ## 1.11.0 - December 5, 2025

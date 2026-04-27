@@ -32,19 +32,17 @@ wheels = [
 
 [[package]]
 name = "adbc-driver-postgresql"
-version = "1.11.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adbc-driver-manager" },
-    { name = "importlib-resources" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/68/10/2962c25035887cd03af3b348eac3302493936f45048c220021a802d07f12/adbc_driver_postgresql-1.11.0.tar.gz", hash = "sha256:f5688b8648ac7a86d8b89340231bb3686ac5df56ee95d1ca0b875dad5d52b48a", size = 32328, upload-time = "2026-04-07T00:17:29.232Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/c7/c90e2faea8f2eac9bbdf89ab3c6bad78e4d0361043cc59b63a37da143a55/adbc_driver_postgresql-1.11.0-py3-none-macosx_10_15_x86_64.whl", hash = "sha256:c54e3119998c845d895ff548c2181c73313e9a52616c61a8cd918d8b4d5279ea", size = 3046985, upload-time = "2026-04-07T00:16:44.233Z" },
-    { url = "https://files.pythonhosted.org/packages/93/63/eb2ea42f7451a898e11847a0b949baa06cbe212a4de09e4c62e1bf9af448/adbc_driver_postgresql-1.11.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:9678d10d7597f775efd59f74cadd0c63fc40671ee52b65e289019ae8b5a2adf0", size = 3337180, upload-time = "2026-04-07T00:16:47.015Z" },
-    { url = "https://files.pythonhosted.org/packages/f0/32/63e4b41f0e4cb36a61ed62edd151ea71c4cc555b2dd554a068812c8dae52/adbc_driver_postgresql-1.11.0-py3-none-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:03cca73acc3840c9751305cef86aa5a9971fe2374a7aabaf1704b3582b351518", size = 3800773, upload-time = "2026-04-07T00:16:48.977Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/f8/93c681d2ccd5b0e70db58998b0f61a7bf52ccf6b9e199d5055c49ef37959/adbc_driver_postgresql-1.11.0-py3-none-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c5904ed3da009fe1361ddf6d5c1a61c8963a6d1dfeda0e96bd4445e028f37216", size = 3489464, upload-time = "2026-04-07T00:16:51.305Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/47/dd2322a40537ee9e22aa9937c70614ca29e9259d1b8b17441b92fbb49d5c/adbc_driver_postgresql-1.11.0-py3-none-win_amd64.whl", hash = "sha256:95c13b3203615b816a258db91c375785750cb82395b985f16c0dc6af88b932e3", size = 3067900, upload-time = "2026-04-07T00:16:53.08Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/c2/cd74e31f13177fd77bf95ef6784f7fb8152359f92721d6a63d0f1ad18c51/adbc_driver_postgresql-0.10.0-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:727fc6852bd504deda6a03c6b77aa1a788ba9485012f043fd9b647476f9c0501", size = 2242438, upload-time = "2024-02-22T14:18:31.477Z" },
+    { url = "https://files.pythonhosted.org/packages/de/27/40df6210b06a7d493b5ada156a9ff0be79648dce782d7eb6efa6d0c8ef24/adbc_driver_postgresql-0.10.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:9cc41c581c1c13899ff92c196ce23bc8287cb069524271d60bedeabb824a89b2", size = 2016374, upload-time = "2024-02-22T14:18:34.019Z" },
+    { url = "https://files.pythonhosted.org/packages/54/ee/11c635b13fc8a2417bdfede4de789c279455f7edb8b3d2c453d252422a7f/adbc_driver_postgresql-0.10.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6bcd69ce87186bd827c9f9f459af0523d5cf14a135ea28baf313d5a9c8749fd8", size = 2390713, upload-time = "2024-02-22T14:18:36.694Z" },
+    { url = "https://files.pythonhosted.org/packages/59/47/50a224d17a6c07fd30ed29a81c78e43920dfc0d1828e5916917d4baa75c0/adbc_driver_postgresql-0.10.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:28baf681f539fbaa9f6b192a69025b5b4f218c5172c8fc8e27fd3a4570aeda71", size = 2565584, upload-time = "2024-02-22T14:18:39.109Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/bd/1a2a77c1198158e336937e3c61d87f6cb5ea891807bfa12e2f51181d6e8e/adbc_driver_postgresql-0.10.0-py3-none-win_amd64.whl", hash = "sha256:1bea75ced7d0bfa0672ebfc0fd051246d728a3dc77b5d2f8cdd9d4980541b904", size = 2020755, upload-time = "2024-02-22T14:18:41.963Z" },
 ]
 
 [[package]]
@@ -604,15 +602,6 @@ wheels = [
 ]
 
 [[package]]
-name = "importlib-resources"
-version = "7.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e4/06/b56dfa750b44e86157093bc8fca0ab81dccbf5260510de4eaf1cb69b5b99/importlib_resources-7.1.0.tar.gz", hash = "sha256:0722d4c6212489c530f2a145a34c0a7a3b4721bc96a15fada5930e2a0b760708", size = 44985, upload-time = "2026-04-12T16:36:09.232Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/db/55a262f3606bebcae07cc14095338471ad7c0bbcaa37707e6f0ee49725b7/importlib_resources-7.1.0-py3-none-any.whl", hash = "sha256:1bd7b48b4088eddb2cd16382150bb515af0bd2c70128194392725f82ad2c96a1", size = 37232, upload-time = "2026-04-12T16:36:08.219Z" },
-]
-
-[[package]]
 name = "iniconfig"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -729,7 +718,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adbc-driver-postgresql", specifier = ">=0.9.0" },
+    { name = "adbc-driver-postgresql", specifier = ">=0.9.0,<0.11.0" },
     { name = "click-default-group", specifier = ">=1.2.2" },
     { name = "nptyping", specifier = ">=2.5.0" },
     { name = "numpy", specifier = ">=1.26.0,<2" },
@@ -2372,7 +2361,7 @@ wheels = [
 
 [[package]]
 name = "virtualenv"
-version = "21.2.4"
+version = "21.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distlib" },
@@ -2381,9 +2370,9 @@ dependencies = [
     { name = "python-discovery" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0c/98/3a7e644e19cb26133488caff231be390579860bbbb3da35913c49a1d0a46/virtualenv-21.2.4.tar.gz", hash = "sha256:b294ef68192638004d72524ce7ef303e9d0cf5a44c95ce2e54a7500a6381cada", size = 5850742, upload-time = "2026-04-14T22:15:31.438Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/8b/6331f7a7fe70131c301106ec1e7cf23e2501bf7d4ca3636805801ca191bb/virtualenv-21.3.0.tar.gz", hash = "sha256:733750db978ec95c2d8eb4feadaa57091002bce404cb39ba69899cf7bd28944e", size = 7614069, upload-time = "2026-04-27T17:05:58.927Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/8d/edd0bd910ff803c308ee9a6b7778621af0d10252219ad9f19ef4d4982a61/virtualenv-21.2.4-py3-none-any.whl", hash = "sha256:29d21e941795206138d0f22f4e45ff7050e5da6c6472299fb7103318763861ac", size = 5831232, upload-time = "2026-04-14T22:15:29.342Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/eb/03bfb1299d4c4510329e470f13f9a4ce793df7fcb5a2fd3510f911066f61/virtualenv-21.3.0-py3-none-any.whl", hash = "sha256:4d28ee41f6d9ec8f1f00cd472b9ffbcedda1b3d3b9a575b5c94a2d004fd51bd7", size = 7594690, upload-time = "2026-04-27T17:05:55.468Z" },
 ]
 
 [[package]]
