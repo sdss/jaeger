@@ -2,6 +2,10 @@
 
 ## Next release
 
+### ✨ Improved
+
+* Add a retry when `SEND_TRAJECTORY_DATA` command fails.
+
 ### 🔧 Fixed
 
 * Include timed-out positioners in the failed positioners list during trajectory sending.
@@ -12,7 +16,7 @@
 
 ### ✨ Improved
 
-* Add additional logging when `SEND_TRAJECTORY_COMMAND` fails.
+* Add additional logging when `SEND_TRAJECTORY_DATA` fails.
 * Refactor the dumping of trajectory data.
 * Allow to disable multiple positioners at once.
 * Write timeouts and failures to the standard log when a CAN command fails.

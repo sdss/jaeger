@@ -400,7 +400,7 @@ class Trajectory(object):
                                 self,
                             )
 
-    async def send(self):
+    async def send(self, allow_retry: bool = True):
         """Sends the trajectory but does not start it."""
 
         if self.fps.locked:
@@ -529,13 +529,17 @@ class Trajectory(object):
                             self.failed_positioners[pid] = "TIMED_OUT"
                             log.warning(f"Positioner {pid} timed out.")
 
-                    self.failed = True
+                    if allow_retry:
+                        log.warning("Failed sending trajectory data. Retrying once.")
+                        return await self.send(allow_retry=False)
+                    else:
+                        self.failed = True
 
-                    error_type = "timed out" if status.timed_out else "failed"
-                    raise TrajectoryError(
-                        f"At least one SEND_TRAJECTORY_COMMAND {error_type}.",
-                        self,
-                    )
+                        error_type = "timed out" if status.timed_out else "failed"
+                        raise TrajectoryError(
+                            f"At least one SEND_TRAJECTORY_DATA command {error_type}.",
+                            self,
+                        )
 
         # Finalise the trajectories
         self.end_traj_cmds = await self.fps.send_command(
