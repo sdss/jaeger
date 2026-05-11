@@ -83,6 +83,21 @@ class ChillerBot(BaseBot):
                 assert isinstance(self.ieb, IEB) and self.ieb.disabled is False
 
                 ambient_temp = (await self.ieb.read_device("T3"))[0]
+                rtd_6 = (await self.ieb.read_device("RTD6"))[0]
+
+                # Run some sanity check on the ambient temperature. Due to a grounding
+                # issue, the ambient temperature can sometimes spike. We avoid setting
+                # the chiller set point if the temperature is above 30 degC or
+                # if the difference between the ambient temperature and the RTD6
+                # temperature is above 10 degC.
+                if ambient_temp > 30 or abs(ambient_temp - rtd_6) > 10:
+                    self.notify(
+                        f"Suspicious ambient temperature {ambient_temp:.1f} C. "
+                        "Skipping chiller set point update.",
+                        logging.WARNING,
+                    )
+                    break
+
                 rh = (await self.ieb.read_device("RH3"))[0]
 
                 # Dewpoint temperature.

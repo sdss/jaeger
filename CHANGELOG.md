@@ -1,5 +1,12 @@
 # Changelog
 
+## Next release
+
+### ✨ Improved
+
+* Do not set chiller temperature if the T3 sensor reports an unrealistic value.
+
+
 ## 1.11.1 - April 28, 2026
 
 ### ✨ Improved
