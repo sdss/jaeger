@@ -31,10 +31,7 @@ from coordio import (
     PositionerBoss,
 )
 from coordio import __version__ as coordio_version
-from coordio.defaults import (
-    INST_TO_WAVE,
-    calibration,
-)
+from coordio.defaults import INST_TO_WAVE, PLATE_SCALE, calibration
 from kaiju import __version__ as kaiju_version
 from sdssdb.peewee.sdss5db import opsdb, targetdb
 from sdsstools._vendor.yanny import write_ndarray_to_yanny
@@ -1029,31 +1026,189 @@ class Configuration(BaseConfiguration[Assignment]):
             f"design_id={self.design_id})>"
         )
 
+    async def swap_fibre(
+        self,
+        positioner_id: int,
+        fibre_type: str | None = None,
+    ) -> ChildConfiguration:
+        """Swaps the fibre type for a given positioner. Returns a new configuration.
 
-class DitheredConfiguration(BaseConfiguration[Assignment]):
-    """A positioner configuration dithered from a parent configuration."""
+        Parameters
+        ----------
+        positioner_id
+            The positioner ID to swap.
+        fibre_type
+            The new fibre type. Must be one of ``'BOSS'``, ``'APOGEE'``, or
+            ``'Metrology'``. If ``None``, swaps to the other science fibre type
+            (BOSS <-> APOGEE). If the positioner is currently set to Metrology,
+            if fails.
+
+        Returns
+        -------
+        ChildConfiguration
+            A new configuration with the swapped fibre type.
+
+        """
+
+        if self.assignment is None:
+            raise JaegerError("Assignment is not set.")
+
+        new_config = ChildConfiguration(
+            parent=self,
+            fps=self.fps,
+            epoch=self.epoch,
+            scale=self.scale,
+        )
+
+        current_fibre = new_config.assignment.get_fibre_type(positioner_id)
+        if current_fibre is None:
+            raise JaegerError(f"Positioner {positioner_id} is not assigned.")
+        elif current_fibre == "Metrology":
+            raise JaegerError(
+                f"Positioner {positioner_id} is currently set to Metrology. "
+                "Cannot swap fibre type."
+            )
+
+        if fibre_type is None:
+            new_fibre = "APOGEE" if current_fibre == "BOSS" else "BOSS"
+        else:
+            if fibre_type not in ["BOSS", "APOGEE"]:
+                raise ValueError(
+                    f"Invalid fibre type {fibre_type}. Must be one of "
+                    "'BOSS', 'APOGEE', or None."
+                )
+            elif fibre_type == current_fibre:
+                raise ValueError(
+                    f"Positioner {positioner_id} is already set to {fibre_type}."
+                )
+            new_fibre = fibre_type
+
+        log.info(
+            f"Swapping fibre type for positioner {positioner_id} "
+            f"from {current_fibre} to {new_fibre}."
+        )
+
+        # Update alpha/beta coordinates for the positioner_id so that the new fibre
+        # is on target.
+        new_alpha, new_beta = new_config.assignment.swap_fibre(positioner_id, new_fibre)
+
+        # Update paths.
+        new_config.robot_grid = new_config._initialise_grid()
+
+        fps = new_config.fps or FPS.get_instance()
+
+        await fps.update_position()
+        positions = fps.get_positions_dict()
+
+        for robot in new_config.robot_grid.robotDict.values():
+            if robot.isOffline:
+                continue
+
+            robot.setAlphaBeta(*positions[robot.id])
+            if robot.id == positioner_id:
+                # Move the robot to the new alpha/beta coordinates.
+                robot.setDestinationAlphaBeta(new_alpha, new_beta)
+            else:
+                # Do not move other robots.
+                robot.setDestinationAlphaBeta(*positions[robot.id])
+
+        # Use greedy and stop_if_deadlock so that we move the fibre as much as
+        # possible while still avoiding collisions.
+        (
+            new_config.to_destination,
+            new_config.from_destination,
+            *_,
+        ) = await get_path_pair_in_executor(
+            new_config.robot_grid,
+            path_generation_mode="greedy",
+            ignore_did_fail=True,
+            stop_if_deadlock=True,
+            ignore_initial_collisions=True,
+        )
+
+        if new_config.to_destination is None or new_config.from_destination is None:
+            raise ValueError("Failed generating to and from destination paths.")
+
+        # Get the actual last points Kaiju found for the positioner being swapped.
+        # Due to deadlocks and collisions these may not actually be the ones we set.
+        kaiju_alpha = new_config.to_destination[positioner_id]["alpha"][-1][0]
+        kaiju_beta = new_config.to_destination[positioner_id]["beta"][-1][0]
+
+        # Before we update the coordinates from the Kaiju-computed alpha/beta,
+        # collect the desired xwok/ywok for the swapped fibre. We'll use this to
+        # determined if we got close enough to the desired positioner or not due
+        # to deadlocks.
+        xwok, ywok = (
+            new_config.assignment.fibre_data.filter(
+                polars.col.positioner_id == positioner_id,
+                polars.col.fibre_type == new_fibre,
+            )
+            .select(["xwok", "ywok"])
+            .row()
+        )
+
+        # Recompute coordinates for the new positions.
+        new_config.assignment.update_positioner_coordinates(
+            {positioner_id: {"alpha": kaiju_alpha, "beta": kaiju_beta}},
+            validate=False,
+        )
+
+        # Get the Kaiju-computed xwok/ywok for the swapped fibre.
+        kaiju_xwok, kaiju_ywok = (
+            new_config.assignment.fibre_data.filter(
+                polars.col.positioner_id == positioner_id,
+                polars.col.fibre_type == new_fibre,
+            )
+            .select(["xwok", "ywok"])
+            .row()
+        )
+
+        # Calculate the distance between the desired and Kaiju-computed positions.
+        wok_dist = numpy.sqrt((xwok - kaiju_xwok) ** 2 + (ywok - kaiju_ywok) ** 2)
+
+        # Convert to on-sky distance.
+        sky_dist = wok_dist / PLATE_SCALE * 3600.0  # arcseconds
+
+        # TODO: this is an arbitrary threshold for now.
+        if sky_dist > 0.5:
+            raise ValueError(
+                f"Failed to swap fibre type for positioner {positioner_id}. "
+                f"Kaiju-computed position is {sky_dist:.2f} arcseconds away from "
+                "the desired position. This is likely due to deadlocks."
+            )
+        elif sky_dist > 0.1:
+            log.warning(
+                f"Swapped fibre type for positioner {positioner_id}, but the "
+                f"Kaiju-computed position is {sky_dist:.2f} arcseconds away from "
+                "the desired position. This may be due to deadlocks."
+            )
+
+        return new_config
+
+
+class ChildConfiguration(BaseConfiguration[Assignment]):
+    """A configuration that is a child of another configuration."""
 
     def __init__(
         self,
-        parent: BaseConfiguration,
-        radius: float,
+        parent: Configuration,
         fps: FPS | None = None,
         epoch: float | None = None,
+        scale: float | None = None,
     ):
         assert parent.design
 
-        super().__init__(fps=fps, scale=parent.scale)
+        super().__init__(fps=fps or parent.fps, scale=scale or parent.scale)
 
-        # This needs to be set after the __init__ beccause __init__ sets parent=None.
         self.parent_configuration = parent
         assert self.parent_configuration.design
-
-        self.is_dither = True
 
         self.epoch = epoch or self.parent_configuration.epoch
 
         self.design = self.parent_configuration.design
         self.design_id = self.design.design_id
+
+        self.is_dither = False
 
         self.assignment = Assignment(
             self,
@@ -1072,6 +1227,26 @@ class DitheredConfiguration(BaseConfiguration[Assignment]):
             wavelength=INST_TO_WAVE["GFA"],
         )
 
+        self.extra_summary_data = {
+            "parent_configuration": parent.configuration_id or -999,
+            "is_dithered": 0,
+            "dither_radius": -999.0,
+        }
+
+
+class DitheredConfiguration(ChildConfiguration[Assignment]):
+    """A positioner configuration dithered from a parent configuration."""
+
+    def __init__(
+        self,
+        parent: BaseConfiguration,
+        radius: float,
+        fps: FPS | None = None,
+        epoch: float | None = None,
+    ):
+        super().__init__(parent, fps=fps, epoch=epoch)
+
+        self.is_dither = True
         self.radius = radius
 
         self.extra_summary_data = {
@@ -1136,6 +1311,7 @@ class DitheredConfiguration(BaseConfiguration[Assignment]):
         for ax in ["x", "y", "z"]:
             wok_ax[f"{ax}wok_measured"] = polars.lit(None, dtype=polars.Float64)
             wok_ax[f"{ax}wok_kaiju"] = polars.lit(None, dtype=polars.Float64)
+            wok_ax[f"{ax}wok_report_metrology"] = polars.lit(None, dtype=polars.Float64)
 
         self.fibre_data = self.fibre_data.with_columns(
             on_target=False,

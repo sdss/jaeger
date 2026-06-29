@@ -905,6 +905,49 @@ async def dither(
 
 
 @configuration.command()
+@click.argument("POSITIONER_ID", type=int)
+@click.option(
+    "--fibre-type",
+    type=click.Choice(["BOSS", "APOGEE"]),
+    help="The fibre type to swap to.",
+)
+async def swap_fibre(
+    command: Command[JaegerActor],
+    fps: FPS,
+    positioner_id: int,
+    fibre_type: str | None = None,
+):
+    """Swaps a science fibre from a loaded configuration."""
+
+    if fps.configuration is None:
+        return command.fail("A configuration must first be loaded.")
+
+    parent = fps.configuration
+    assert isinstance(parent, Configuration)
+
+    if not parent.executed:
+        return command.fail("The configuration has not been executed yet.")
+
+    try:
+        swap_config = await parent.swap_fibre(positioner_id, fibre_type=fibre_type)
+    except Exception as e:
+        return command.fail(str(e))
+
+    fps.configuration = swap_config
+    fps.configuration.write_to_database()
+    fps.configuration.write_summary(overwrite=True)
+
+    _output_configuration_loaded(command, fps)
+
+    command.info("Executing configuration.")
+    execute_cmd = await command.send_command("jaeger", "configuration execute")
+    if execute_cmd.status.did_fail:
+        command.fail("Failed executing configuration.")
+
+    command.finish(f"Configuration {fps.configuration.configuration_id} executed.")
+
+
+@configuration.command()
 @click.argument("POSITION_ANGLE", type=float, required=False)
 async def slew(
     command: Command[JaegerActor],

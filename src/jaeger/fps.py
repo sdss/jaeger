@@ -25,6 +25,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 import numpy
@@ -295,6 +296,12 @@ class FPS(BaseFPS):
                 ),
             ]
         )
+
+    @classmethod
+    def get_instance(cls, *args, **kwargs) -> FPS:
+        """Returns the running instance."""
+
+        return cast(FPS, super().get_instance(*args, **kwargs))
 
     @classmethod
     async def create(

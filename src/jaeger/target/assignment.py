@@ -26,6 +26,7 @@ from coordio.defaults import (
 )
 
 from jaeger import config, log
+from jaeger.target import BaseConfiguration, wok_to_positioner
 from jaeger.target.coordinates import (
     icrs_from_positioner_dataframe,
     positioner_from_icrs_dataframe,
@@ -37,7 +38,7 @@ from .tools import get_wok_data
 
 
 if TYPE_CHECKING:
-    from .configuration import Configuration, DitheredConfiguration, ManualConfiguration
+    from .configuration import ManualConfiguration
 
 
 __all__ = ["Assignment", "BaseAssignment", "ManualAssignment"]
@@ -51,7 +52,7 @@ class BaseAssignment:
 
     def __init__(
         self,
-        configuration: Configuration | ManualConfiguration | DitheredConfiguration,
+        configuration: BaseConfiguration,
         observatory: Optional[str] = None,
         scale: float | None = None,
         boss_wavelength: float | None = None,
@@ -127,7 +128,7 @@ class BaseAssignment:
 
         raise ValueError(f"Invalid fibre type {fibre_type!r}.")
 
-    def create_fibre_data(self):
+    def create_fibre_data(self) -> polars.DataFrame:
         """Creates an empty fibre table."""
 
         # Manually create a list of dictionaries with the target data. This includes
@@ -329,13 +330,25 @@ class BaseAssignment:
             .otherwise(True),
         )
 
+    def get_fibre_type(self, positioner_id: int) -> str | None:
+        """Returns the fibre type for a given positioner ID."""
+
+        row = self.fibre_data.filter(
+            polars.col.positioner_id == positioner_id,
+            polars.col.assigned,
+        )
+        if row.height == 0:
+            return None
+
+        return row.item(0, "fibre_type")
+
 
 class Assignment(BaseAssignment):
     """Assignment data from a valid design with associated target information."""
 
     def __init__(
         self,
-        configuration: Configuration | DitheredConfiguration,
+        configuration: BaseConfiguration,
         epoch: float | None = None,
         compute_coordinates: bool = True,
         scale: float | None = None,
@@ -470,6 +483,102 @@ class Assignment(BaseAssignment):
         self.fibre_data = self.fibre_data.with_columns(valid=True)
 
         self.validate()
+
+    def swap_fibre(
+        self, positioner_id: int, new_fibre_type: str
+    ) -> tuple[float, float]:
+        """Swaps the fibre type for a given positioner ID.
+
+        Parameters
+        ----------
+        positioner_id
+            The positioner ID to swap.
+        new_fibre_type
+            The new fibre type. Must be one of "APOGEE", "BOSS", or "Metrology".
+
+        Returns
+        -------
+        tuple[float, float]
+            The new alpha and beta coordinates for the positioner being swapped.
+
+        """
+
+        current_fibre_type = self.get_fibre_type(positioner_id)
+        if current_fibre_type is None:
+            raise ValueError(f"Positioner ID {positioner_id} not found in fibre data.")
+        elif current_fibre_type == new_fibre_type:
+            raise ValueError(
+                f"Positioner ID {positioner_id} already has "
+                f"fibre type {new_fibre_type}."
+            )
+
+        fibre_df = self.fibre_data.filter(polars.col.positioner_id == positioner_id)
+
+        # Run some sanity checks to make sure the positioner we are swapping is valid,
+        # assigned, and on target.
+        if fibre_df.height == 0:
+            raise ValueError(f"Positioner ID {positioner_id} not found in fibre data.")
+        elif not all(fibre_df["valid"]):
+            raise ValueError(f"Positioner ID {positioner_id} positions are invalid.")
+        elif not any(fibre_df["assigned"]):
+            raise ValueError(f"Positioner ID {positioner_id} is not assigned.")
+        elif not any(fibre_df["on_target"]):
+            raise ValueError(f"Positioner ID {positioner_id} is not on target.")
+
+        hole_id = fibre_df.item(0, "hole_id")
+
+        xwok = fibre_df.filter(polars.col.fibre_type == new_fibre_type).item(0, "xwok")
+        ywok = fibre_df.filter(polars.col.fibre_type == new_fibre_type).item(0, "ywok")
+
+        new_positioner, _ = wok_to_positioner(
+            hole_id,
+            self.site.name,
+            new_fibre_type,
+            xwok,
+            ywok,
+        )
+
+        # Update the alpha/beta coordinates for the positioner and
+        # recalculate upstream coordinates.
+        self.update_positioner_coordinates(
+            {positioner_id: {"alpha": new_positioner[0], "beta": new_positioner[1]}},
+            validate=False,
+        )
+
+        # Split the fibre data into two dataframes, one for the positioner ID
+        # and the rest.
+        fibre_df = self.fibre_data.filter(polars.col.positioner_id == positioner_id)
+        rest_df = self.fibre_data.filter(polars.col.positioner_id != positioner_id)
+
+        # Set the new fibre as on-target.
+        fibre_df = fibre_df.with_columns(
+            on_target=polars.when(polars.col.fibre_type == new_fibre_type)
+            .then(True)
+            .otherwise(False),
+            valid=polars.lit(True),
+        )
+
+        # Unset all the measured and kaiju work coordinates.
+        for ax in ["x", "y", "z"]:
+            fibre_df[f"{ax}wok_measured"] = polars.lit(
+                None,
+                dtype=polars.Float64,
+            )
+            fibre_df[f"{ax}wok_kaiju"] = polars.lit(
+                None,
+                dtype=polars.Float64,
+            )
+            fibre_df[f"{ax}wok_report_metrology"] = polars.lit(
+                None,
+                dtype=polars.Float64,
+            )
+
+        # Recombine the two dataframes.
+        self.fibre_data = polars.concat([fibre_df, rest_df]).sort("index")
+        self.validate()
+
+        # Return new alpha/beta coordinates for the positioner.
+        return new_positioner[0], new_positioner[1]
 
 
 class ManualAssignment(BaseAssignment):
