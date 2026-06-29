@@ -1166,8 +1166,8 @@ class Configuration(BaseConfiguration[Assignment]):
         # Calculate the distance between the desired and Kaiju-computed positions.
         wok_dist = numpy.sqrt((xwok - kaiju_xwok) ** 2 + (ywok - kaiju_ywok) ** 2)
 
-        # Convert to on-sky distance.
-        sky_dist = wok_dist / PLATE_SCALE * 3600.0  # arcseconds
+        # Convert to on-sky distance (arcsec).
+        sky_dist = wok_dist / PLATE_SCALE[self.assignment.site.name] * 3600.0
 
         # TODO: this is an arbitrary threshold for now.
         if sky_dist > 0.5:
@@ -1186,7 +1186,7 @@ class Configuration(BaseConfiguration[Assignment]):
         return new_config
 
 
-class ChildConfiguration(BaseConfiguration[Assignment]):
+class ChildConfiguration(Configuration, Generic[AssignmentType]):
     """A configuration that is a child of another configuration."""
 
     def __init__(
@@ -1198,7 +1198,11 @@ class ChildConfiguration(BaseConfiguration[Assignment]):
     ):
         assert parent.design
 
-        super().__init__(fps=fps or parent.fps, scale=scale or parent.scale)
+        super().__init__(
+            design=parent.design,
+            fps=fps or parent.fps,
+            scale=scale or parent.scale,
+        )
 
         self.parent_configuration = parent
         assert self.parent_configuration.design
@@ -1239,7 +1243,7 @@ class DitheredConfiguration(ChildConfiguration[Assignment]):
 
     def __init__(
         self,
-        parent: BaseConfiguration,
+        parent: Configuration,
         radius: float,
         fps: FPS | None = None,
         epoch: float | None = None,

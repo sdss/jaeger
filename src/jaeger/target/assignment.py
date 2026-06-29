@@ -26,10 +26,10 @@ from coordio.defaults import (
 )
 
 from jaeger import config, log
-from jaeger.target import BaseConfiguration, wok_to_positioner
 from jaeger.target.coordinates import (
     icrs_from_positioner_dataframe,
     positioner_from_icrs_dataframe,
+    wok_to_positioner,
 )
 from jaeger.target.schemas import FIBRE_DATA_SCHEMA
 from jaeger.utils import Timer
@@ -38,7 +38,7 @@ from .tools import get_wok_data
 
 
 if TYPE_CHECKING:
-    from .configuration import ManualConfiguration
+    from .configuration import BaseConfiguration, ManualConfiguration
 
 
 __all__ = ["Assignment", "BaseAssignment", "ManualAssignment"]
@@ -559,18 +559,13 @@ class Assignment(BaseAssignment):
         )
 
         # Unset all the measured and kaiju work coordinates.
-        for ax in ["x", "y", "z"]:
-            fibre_df[f"{ax}wok_measured"] = polars.lit(
-                None,
-                dtype=polars.Float64,
-            )
-            fibre_df[f"{ax}wok_kaiju"] = polars.lit(
-                None,
-                dtype=polars.Float64,
-            )
-            fibre_df[f"{ax}wok_report_metrology"] = polars.lit(
-                None,
-                dtype=polars.Float64,
+        for ax in ["x", "y"]:
+            fibre_df = fibre_df.with_columns(
+                polars.lit(None).cast(dtype=polars.Float64).alias(f"{ax}wok_measured"),
+                polars.lit(None).cast(dtype=polars.Float64).alias(f"{ax}wok_kaiju"),
+                polars.lit(None)
+                .cast(dtype=polars.Float64)
+                .alias(f"{ax}wok_report_metrology"),
             )
 
         # Recombine the two dataframes.
