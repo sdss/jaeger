@@ -1020,6 +1020,8 @@ class Configuration(BaseConfiguration[Assignment]):
         self.epoch = self.assignment.site.time.jd
         self.scale = scale
 
+        self.parent_configuration: Configuration | None = None
+
     def __repr__(self):
         return (
             f"<Configuration (configuration_id={self.configuration_id} "
@@ -1028,15 +1030,15 @@ class Configuration(BaseConfiguration[Assignment]):
 
     async def swap_fibre(
         self,
-        positioner_id: int,
+        positioner_ids: int | list[int],
         fibre_type: str | None = None,
     ) -> ChildConfiguration:
         """Swaps the fibre type for a given positioner. Returns a new configuration.
 
         Parameters
         ----------
-        positioner_id
-            The positioner ID to swap.
+        positioner_ids
+            The positioner IDs to swap.
         fibre_type
             The new fibre type. Must be one of ``'BOSS'``, ``'APOGEE'``, or
             ``'Metrology'``. If ``None``, swaps to the other science fibre type
@@ -1053,6 +1055,9 @@ class Configuration(BaseConfiguration[Assignment]):
         if self.assignment is None:
             raise JaegerError("Assignment is not set.")
 
+        if isinstance(positioner_ids, int):
+            positioner_ids = [positioner_ids]
+
         new_config = ChildConfiguration(
             parent=self,
             fps=self.fps,
@@ -1060,37 +1065,49 @@ class Configuration(BaseConfiguration[Assignment]):
             scale=self.scale,
         )
 
-        current_fibre = new_config.assignment.get_fibre_type(positioner_id)
-        if current_fibre is None:
-            raise JaegerError(f"Positioner {positioner_id} is not assigned.")
-        elif current_fibre == "Metrology":
-            raise JaegerError(
-                f"Positioner {positioner_id} is currently set to Metrology. "
-                "Cannot swap fibre type."
+        swap_data: dict[int, dict[str, float]] = {}
+
+        for positioner_id in positioner_ids:
+            current_fibre = new_config.assignment.get_fibre_type(positioner_id)
+
+            if current_fibre is None:
+                raise JaegerError(f"Positioner {positioner_id} is not assigned.")
+            elif current_fibre == "Metrology":
+                raise JaegerError(
+                    f"Positioner {positioner_id} is currently set to Metrology. "
+                    "Cannot swap fibre type."
+                )
+
+            if fibre_type is None:
+                new_fibre = "APOGEE" if current_fibre == "BOSS" else "BOSS"
+            else:
+                if fibre_type not in ["BOSS", "APOGEE"]:
+                    raise ValueError(
+                        f"Invalid fibre type {fibre_type}. Must be one of "
+                        "'BOSS', 'APOGEE', or None."
+                    )
+                elif fibre_type == current_fibre:
+                    raise ValueError(
+                        f"Positioner {positioner_id} is already set to {fibre_type}."
+                    )
+                new_fibre = fibre_type
+
+            log.info(
+                f"Swapping fibre type for positioner {positioner_id} "
+                f"from {current_fibre} to {new_fibre}."
             )
 
-        if fibre_type is None:
-            new_fibre = "APOGEE" if current_fibre == "BOSS" else "BOSS"
-        else:
-            if fibre_type not in ["BOSS", "APOGEE"]:
-                raise ValueError(
-                    f"Invalid fibre type {fibre_type}. Must be one of "
-                    "'BOSS', 'APOGEE', or None."
-                )
-            elif fibre_type == current_fibre:
-                raise ValueError(
-                    f"Positioner {positioner_id} is already set to {fibre_type}."
-                )
-            new_fibre = fibre_type
+            # Update alpha/beta coordinates for the positioner_id so that the new fibre
+            # is on target.
+            new_alpha, new_beta = new_config.assignment.swap_fibre(
+                positioner_id,
+                new_fibre,
+            )
 
-        log.info(
-            f"Swapping fibre type for positioner {positioner_id} "
-            f"from {current_fibre} to {new_fibre}."
-        )
-
-        # Update alpha/beta coordinates for the positioner_id so that the new fibre
-        # is on target.
-        new_alpha, new_beta = new_config.assignment.swap_fibre(positioner_id, new_fibre)
+            swap_data[positioner_id] = {
+                "alpha": new_alpha,
+                "beta": new_beta,
+            }
 
         # Update paths.
         new_config.robot_grid = new_config._initialise_grid()
@@ -1105,12 +1122,30 @@ class Configuration(BaseConfiguration[Assignment]):
                 continue
 
             robot.setAlphaBeta(*positions[robot.id])
-            if robot.id == positioner_id:
+            if robot.id in swap_data:
                 # Move the robot to the new alpha/beta coordinates.
-                robot.setDestinationAlphaBeta(new_alpha, new_beta)
+                robot.setDestinationAlphaBeta(
+                    swap_data[robot.id]["alpha"],
+                    swap_data[robot.id]["beta"],
+                )
             else:
                 # Do not move other robots.
                 robot.setDestinationAlphaBeta(*positions[robot.id])
+                robot.isOffline = True
+
+        # Check for collisions. If robots are collided just leave them there.
+        collided = new_config.robot_grid.getCollidedRobotList()
+        n_coll = len(collided)
+        if n_coll > 0:
+            for pid in collided:
+                positioner = fps[pid]
+                alpha = positioner.alpha
+                beta = positioner.beta
+                new_config.robot_grid.robotDict[pid].setAlphaBeta(alpha, beta)
+                new_config.robot_grid.robotDict[pid].setDestinationAlphaBeta(
+                    alpha,
+                    beta,
+                )
 
         # Use greedy and stop_if_deadlock so that we move the fibre as much as
         # possible while still avoiding collisions.
@@ -1131,57 +1166,66 @@ class Configuration(BaseConfiguration[Assignment]):
 
         # Get the actual last points Kaiju found for the positioner being swapped.
         # Due to deadlocks and collisions these may not actually be the ones we set.
-        kaiju_alpha = new_config.to_destination[positioner_id]["alpha"][-1][0]
-        kaiju_beta = new_config.to_destination[positioner_id]["beta"][-1][0]
+        kaiju_positions: dict[int, dict[Literal["alpha", "beta"], float]] = {}
+        computed_wok: dict[int, tuple[float, float]] = {}
+        for positioner_id in positioner_ids:
+            kaiju_alpha = new_config.to_destination[positioner_id]["alpha"][-1][0]
+            kaiju_beta = new_config.to_destination[positioner_id]["beta"][-1][0]
+            kaiju_positions[positioner_id] = {"alpha": kaiju_alpha, "beta": kaiju_beta}
 
-        # Before we update the coordinates from the Kaiju-computed alpha/beta,
-        # collect the desired xwok/ywok for the swapped fibre. We'll use this to
-        # determined if we got close enough to the desired positioner or not due
-        # to deadlocks.
-        xwok, ywok = (
-            new_config.assignment.fibre_data.filter(
-                polars.col.positioner_id == positioner_id,
-                polars.col.fibre_type == new_fibre,
+            # Before we update the coordinates from the Kaiju-computed alpha/beta,
+            # collect the desired xwok/ywok for the swapped fibre. We'll use this to
+            # determined if we got close enough to the desired positioner or not due
+            # to deadlocks.
+            xwok, ywok = (
+                new_config.assignment.fibre_data.filter(
+                    polars.col.positioner_id == positioner_id,
+                    polars.col.fibre_type == new_fibre,
+                )
+                .select(["xwok", "ywok"])
+                .row()
             )
-            .select(["xwok", "ywok"])
-            .row()
-        )
+            computed_wok[positioner_id] = (xwok, ywok)
 
         # Recompute coordinates for the new positions.
         new_config.assignment.update_positioner_coordinates(
-            {positioner_id: {"alpha": kaiju_alpha, "beta": kaiju_beta}},
+            kaiju_positions,
             validate=False,
         )
 
-        # Get the Kaiju-computed xwok/ywok for the swapped fibre.
-        kaiju_xwok, kaiju_ywok = (
-            new_config.assignment.fibre_data.filter(
-                polars.col.positioner_id == positioner_id,
-                polars.col.fibre_type == new_fibre,
-            )
-            .select(["xwok", "ywok"])
-            .row()
-        )
-
         # Calculate the distance between the desired and Kaiju-computed positions.
-        wok_dist = numpy.sqrt((xwok - kaiju_xwok) ** 2 + (ywok - kaiju_ywok) ** 2)
-
-        # Convert to on-sky distance (arcsec).
-        sky_dist = wok_dist / PLATE_SCALE[self.assignment.site.name] * 3600.0
-
-        # TODO: this is an arbitrary threshold for now.
-        if sky_dist > 0.5:
-            raise ValueError(
-                f"Failed to swap fibre type for positioner {positioner_id}. "
-                f"Kaiju-computed position is {sky_dist:.2f} arcseconds away from "
-                "the desired position. This is likely due to deadlocks."
+        for positioner_id in positioner_ids:
+            # Get the Kaiju-computed xwok/ywok for the swapped fibre.
+            kaiju_xwok, kaiju_ywok = (
+                new_config.assignment.fibre_data.filter(
+                    polars.col.positioner_id == positioner_id,
+                    polars.col.fibre_type == new_fibre,
+                )
+                .select(["xwok", "ywok"])
+                .row()
             )
-        elif sky_dist > 0.1:
-            log.warning(
-                f"Swapped fibre type for positioner {positioner_id}, but the "
-                f"Kaiju-computed position is {sky_dist:.2f} arcseconds away from "
-                "the desired position. This may be due to deadlocks."
-            )
+
+            # Get the desired xwok/ywok for the swapped fibre.
+            xwok, ywok = computed_wok[positioner_id]
+
+            wok_dist = numpy.sqrt((xwok - kaiju_xwok) ** 2 + (ywok - kaiju_ywok) ** 2)
+
+            # Convert to on-sky distance (arcsec).
+            sky_dist = wok_dist / PLATE_SCALE[self.assignment.site.name] * 3600.0
+
+            # TODO: this is an arbitrary threshold for now.
+            if sky_dist > 0.5:
+                raise ValueError(
+                    f"Failed to swap fibre type for positioner {positioner_id}. "
+                    f"Kaiju-computed position is {sky_dist:.2f} arcseconds away from "
+                    "the desired position. This is likely due to deadlocks."
+                )
+            elif sky_dist > 0.1:
+                log.warning(
+                    f"Swapped fibre type for positioner {positioner_id}, but the "
+                    f"Kaiju-computed position is {sky_dist:.2f} arcseconds away from "
+                    "the desired position. This may be due to deadlocks."
+                )
 
         return new_config
 

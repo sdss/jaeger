@@ -485,7 +485,9 @@ class Assignment(BaseAssignment):
         self.validate()
 
     def swap_fibre(
-        self, positioner_id: int, new_fibre_type: str
+        self,
+        positioner_id: int,
+        new_fibre_type: str,
     ) -> tuple[float, float]:
         """Swaps the fibre type for a given positioner ID.
 
@@ -503,10 +505,10 @@ class Assignment(BaseAssignment):
 
         """
 
-        current_fibre_type = self.get_fibre_type(positioner_id)
-        if current_fibre_type is None:
+        current_ftype = self.get_fibre_type(positioner_id)
+        if current_ftype is None:
             raise ValueError(f"Positioner ID {positioner_id} not found in fibre data.")
-        elif current_fibre_type == new_fibre_type:
+        elif current_ftype == new_fibre_type:
             raise ValueError(
                 f"Positioner ID {positioner_id} already has "
                 f"fibre type {new_fibre_type}."
@@ -525,10 +527,16 @@ class Assignment(BaseAssignment):
         elif not any(fibre_df["on_target"]):
             raise ValueError(f"Positioner ID {positioner_id} is not on target.")
 
+        cftype_df = fibre_df.filter(polars.col.fibre_type == current_ftype)
+        assigned = cftype_df.item(0, "assigned")
+        if not assigned:
+            raise ValueError(f"Positioner ID {positioner_id} is not assigned.")
+
         hole_id = fibre_df.item(0, "hole_id")
 
-        xwok = fibre_df.filter(polars.col.fibre_type == new_fibre_type).item(0, "xwok")
-        ywok = fibre_df.filter(polars.col.fibre_type == new_fibre_type).item(0, "ywok")
+        # Get the current xywok positions. We want the new fibre to be on that position.
+        xwok = cftype_df.item(0, "xwok")
+        ywok = cftype_df.item(0, "ywok")
 
         new_positioner, _ = wok_to_positioner(
             hole_id,
@@ -550,9 +558,12 @@ class Assignment(BaseAssignment):
         fibre_df = self.fibre_data.filter(polars.col.positioner_id == positioner_id)
         rest_df = self.fibre_data.filter(polars.col.positioner_id != positioner_id)
 
-        # Set the new fibre as on-target.
+        # Set the new fibre as on-target and assigned (although that's a bit not true).
         fibre_df = fibre_df.with_columns(
             on_target=polars.when(polars.col.fibre_type == new_fibre_type)
+            .then(True)
+            .otherwise(False),
+            assigned=polars.when(polars.col.fibre_type == new_fibre_type)
             .then(True)
             .otherwise(False),
             valid=polars.lit(True),
