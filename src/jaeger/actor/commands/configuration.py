@@ -939,9 +939,15 @@ async def swap_fibre(
 
     _output_configuration_loaded(command, fps)
 
+    trajectory = swap_config.to_destination
+
+    command.debug("Checking configuration paths.")
+    if not (await check_trajectory(trajectory, fps=fps, atol=1)):
+        return command.fail(error="Trajectory validation failed.")
+
     command.info("Executing configuration.")
     fps.configuration.set_command(command)
-    await fps.send_trajectory(fps.configuration.to_destination, command=command)
+    await fps.send_trajectory(trajectory, command=command)
     if command.status.did_fail:
         return
 

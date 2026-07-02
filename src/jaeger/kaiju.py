@@ -622,6 +622,11 @@ async def check_trajectory(
         if fps:
             await fps.update_position()
             current_positions = fps.get_positions_dict(ignore_disabled=True)
+            current_positions = {
+                int(pid): pos
+                for pid, pos in current_positions.items()
+                if pid in trajectory
+            }
         else:
             raise RuntimeError("Either current_positions or fps must be passed.")
 
