@@ -4,6 +4,7 @@
 
 ### ✨ Improved
 
+* Improve chiller set temperature logic (see [sdss/issue-tracking#3](https://github.com/sdss/issue-tracking/issues/3)).
 * Do not set chiller temperature if the T3 sensor reports an unrealistic value.
 
 

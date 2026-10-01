@@ -132,6 +132,16 @@ class IEB(Drift):
 
         return status
 
+    async def fps_is_on(self) -> bool:
+        """Returns `True` if the FPS is on (i.e., any of PS1-6 are on)."""
+
+        try:
+            status = await _get_category_data(self, "power_sextant")
+        except DriftError:
+            return False
+
+        return any(status)
+
 
 class FVC_IEB(IEB):
     """Connects to the FVC IEB."""

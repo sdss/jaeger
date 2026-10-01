@@ -60,6 +60,11 @@ class ChillerBot(BaseBot):
             if not isinstance(self.ieb, IEB) or self.ieb.disabled is True:
                 return
 
+        if isinstance(self.fps.ieb, IEB):
+            fps_on = await self.fps.ieb.fps_is_on()
+        else:
+            fps_on = False
+
         failed: bool = False
 
         # Try up to 10 times since sometimes setting the temperature fails.
@@ -109,13 +114,14 @@ class ChillerBot(BaseBot):
                 # Calculate the new set point temperature and write it
                 # to the device if it's different than the current one.
 
-                # New set point is two degC below ambient clipped to 1 degC
-                # and above the dew point depression region.
-                new_temp = ambient_temp - 2
-                if new_temp <= 1:
-                    new_temp = 1
-                if new_temp < (t_d + 3):
-                    new_temp = t_d + 3
+                # If the FPS is off or the ambient temperature is below 16 degC,
+                # don't change the set point.
+                if fps_on is False or ambient_temp < 16:
+                    break
+
+                # If the FPS is on and the ambient temperature is > 16 degC, set the
+                # chillet to the greater value of dewpoint + 3 degC or 14 degC.
+                new_temp = max(t_d + 3, 14)
 
                 # Round to closest 0.5
                 new_temp = round(new_temp * 2) / 2.0
