@@ -5,24 +5,22 @@ description = "Controllers for the SDSS-V FPS"
 authors = [ { name = "José Sánchez-Gallego", email = "gallegoj@uw.edu" } ]
 license = { text = "BSD-3-Clause" }
 readme = "README.md"
-requires-python = ">=3.10,<3.11"
+requires-python = ">=3.12"
 
 dependencies = [
-    "numpy>=1.26.0,<2",
+    "numpy>=2.0.0",
+    "scipy>=1.18.1",
     "sdss-drift>=1.2.0",
     "pymodbus>=3.7,<3.8",
     "sdss-clu>=2.6.0",
     "sdsstools>=1.9.6",
     "sdssdb>=0.13.5,<1.0.0",
-    "sdss-kaiju==1.4.0b1; python_version>='3.11'",
-    "sdss-kaiju>=1.4.1; python_version>='3.10' and python_version<'3.11'",
-    "sdss-coordio>=1.18.1",
+    "sdss-kaiju",
+    "sdss-coordio>=1.19.0b2",
     "click_default_group>=1.2.2",
     "zc.lockfile>=2.0",
-    "polars>=1.0.0",
-    "adbc-driver-postgresql>=0.9.0,<0.11.0",
-    "nptyping>=2.5.0",
-    "pyarrow<21.0.0",
+    "polars>=2.0.0",
+    "adbc-driver-postgresql>=0.9.0",
 ]
 
 [project.urls]
@@ -70,6 +68,7 @@ package = true
 
 [tool.uv.sources]
 # sdss-clu = { git = "https://github.com/sdss/clu", branch = "main" }
+sdss-kaiju = { git = "https://github.com/sdss/kaiju", branch = "albireox/1.4.0" }
 
 [tool.ruff]
 line-length = 88
