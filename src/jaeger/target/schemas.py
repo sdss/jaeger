@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping
+from collections.abc import Mapping
 
 import numpy
 import polars
@@ -16,9 +16,9 @@ import polars._typing
 
 
 __all__ = [
+    "CONFIGURATION_SCHEMA",
     "CONFSUMMARY_FIBER_MAP_SCHEMA",
     "FIBRE_DATA_SCHEMA",
-    "CONFIGURATION_SCHEMA",
     "TARGET_DATA_SCHEMA",
 ]
 

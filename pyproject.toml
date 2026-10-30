@@ -21,6 +21,7 @@ dependencies = [
     "zc.lockfile>=2.0",
     "polars>=2.0.0",
     "adbc-driver-postgresql>=0.9.0",
+    "anyio>=4.15.1",
 ]
 
 [project.urls]
@@ -76,11 +77,11 @@ target-version = 'py312'
 exclude = ["typings/"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+ignore = ["UP009", "EXE001", "BLE001"]
 unfixable = ["F841"]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401", "F403", "E402"]
+"__init__.py" = ["F403", "E402", "F401"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["jaeger"]
@@ -90,6 +91,12 @@ section-order = ["future", "standard-library", "typing", "third-party", "sdss", 
 [tool.ruff.lint.isort.sections]
 typing = ["typing"]
 sdss = ["sdsstools", "clu", "sdssdb", "drift", "coordio", "kaiju", "fps_calibrations"]
+
+[tool.ty.environment]
+extra-paths = ["./typings"]
+
+[tool.ty.analysis]
+return-type-inference = "always"
 
 [tool.pytest.ini_options]
 addopts = "-p no:logging --disable-warnings --cov jaeger --cov-report xml --cov-report html --cov-report term"

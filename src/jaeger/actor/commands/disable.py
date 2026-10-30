@@ -52,13 +52,14 @@ async def disable(
 
     manually_disabled: list[int] = []
     for positioner in fps.positioners.values():
-        if positioner.offline or positioner.disabled:
-            if positioner.positioner_id not in permanently_disabled:
-                manually_disabled.append(positioner.positioner_id)
+        if (
+            positioner.offline or positioner.disabled
+        ) and positioner.positioner_id not in permanently_disabled:
+            manually_disabled.append(positioner.positioner_id)
 
     return command.finish(
-        permanently_disabled=list(sorted(permanently_disabled)),
-        manually_disabled=list(sorted(manually_disabled)),
+        permanently_disabled=sorted(permanently_disabled),
+        manually_disabled=sorted(manually_disabled),
     )
 
 

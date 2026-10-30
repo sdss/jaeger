@@ -171,7 +171,7 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
             command.debug({category: await _get_category_data(command, category)})
 
         elif isinstance(devname, (tuple, list)):
-            devname = list([dn for dn in devname if dn not in disabled])
+            devname = [dn for dn in devname if dn not in disabled]
             devs = [ieb.get_device(dn) for dn in devname]
             category = devs[0].category.lower()
 
@@ -216,8 +216,6 @@ async def _power_sequence(command, ieb, seq, mode="on", delay=3) -> bool:
 @pass_args()
 def power(command, fps):
     """Runs the power on/off sequences and powers individual devices."""
-
-    pass
 
 
 @power.command()

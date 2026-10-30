@@ -177,7 +177,7 @@ async def test_disable_collision(vfps, vpositioners, monkeypatch):
         [2],
     )
 
-    with pytest.warns(JaegerUserWarning) as w:
+    with pytest.warns(JaegerUserWarning) as w:  # noqa: PT031
         await vfps.initialise()
         msg = str(w[-1].message)
         assert msg == "Disabling collision detection for positioners [2]."

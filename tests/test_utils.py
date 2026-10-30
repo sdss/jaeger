@@ -67,7 +67,7 @@ def test_get_identifier(positioner_id, command_id, result):
     "identifier, result", [(1315072, (5, 4, 0)), (117969920, (450, 5, 0))]
 )
 def test_parse_identifier(identifier, result):
-    positioner_id, command_id, uid, response_flag = jaeger.utils.parse_identifier(
+    positioner_id, command_id, _uid, response_flag = jaeger.utils.parse_identifier(
         identifier
     )
 

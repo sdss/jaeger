@@ -10,12 +10,14 @@ from __future__ import annotations
 import asyncio
 import time
 
+from typing import ClassVar
+
 from .bus import BusABC
 from .message import Message
 
 
 class CANNetMessage(Message):
-    __slots__ = ("interface", "bus")
+    __slots__ = ("bus", "interface")
 
 
 class CANNetBus(BusABC):
@@ -38,7 +40,7 @@ class CANNetBus(BusABC):
     """
 
     # the supported bitrates and their commands
-    _BITRATES = {
+    _BITRATES: ClassVar[dict[int, str]] = {
         5000: "5",
         10000: "10",
         20000: "20",
@@ -61,10 +63,12 @@ class CANNetBus(BusABC):
         channel,
         port=None,
         bitrate=None,
-        buses=[1],
+        buses=None,
         timeout=5,
         **kwargs,
     ):
+        if buses is None:
+            buses = [1]
         if not channel:  # if None or empty
             raise TypeError("Must specify a TCP address.")
 
@@ -86,7 +90,7 @@ class CANNetBus(BusABC):
 
         self.channel_info = f"CAN@net channel={channel!r}, buses={self.buses!r}"
 
-        super(CANNetBus, self).__init__(channel, bitrate=None, **kwargs)
+        super().__init__(channel, bitrate=None, **kwargs)
 
     def write(self, string):
         if not self.connected or not self.writer:
@@ -113,7 +117,7 @@ class CANNetBus(BusABC):
         try:
             open_conn = asyncio.open_connection(self.channel, self.port)
             self.reader, self.writer = await asyncio.wait_for(open_conn, timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.connected = False
             return False
 
@@ -241,7 +245,7 @@ class CANNetBus(BusABC):
                 else:
                     sendStr += f"CSD {msg.arbitration_id:03X}"
 
-            sendStr += "".join([" %02X" % b for b in msg.data])
+            sendStr += "".join([f" {b:02X}" for b in msg.data])
 
             self.write(sendStr)
 

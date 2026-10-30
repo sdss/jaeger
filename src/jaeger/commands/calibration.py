@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import struct
 
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING
 
 import numpy
 
@@ -27,13 +27,13 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "calibrate_positioners",
+    "HallOff",
+    "HallOn",
+    "SaveInternalCalibration",
+    "StartCoggingCalibration",
     "StartDatumCalibration",
     "StartMotorCalibration",
-    "StartCoggingCalibration",
-    "SaveInternalCalibration",
-    "HallOn",
-    "HallOff",
+    "calibrate_positioners",
 ]
 
 
@@ -187,8 +187,6 @@ async def calibrate_positioners(
 
         log.info(f"Positioners {positioner_ids} have been calibrated.")
 
-    return
-
 
 async def _wait_status(fps: FPS, positioner_ids: list[int], statuses: list[PS]):
     """Waits for status."""
@@ -240,10 +238,10 @@ class GetOffset(Command):
     broadcastable = False
     safe = True
 
-    def get_replies(self) -> Dict[int, numpy.ndarray]:
+    def get_replies(self) -> dict[int, numpy.ndarray]:
         return self.get_offsets()
 
-    def get_offsets(self) -> Dict[int, numpy.ndarray]:
+    def get_offsets(self) -> dict[int, numpy.ndarray]:
         """Returns the alpha and beta offsets, in degrees.
 
         Raises
@@ -276,7 +274,7 @@ class SetOffsets(Command):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
+        positioner_ids: int | list[int],
         alpha=None,
         beta=None,
         **kwargs,
@@ -331,10 +329,10 @@ class GetHoldingCurrents(Command):
     broadcastable = False
     safe = True
 
-    def get_replies(self) -> Dict[int, numpy.ndarray]:
+    def get_replies(self) -> dict[int, numpy.ndarray]:
         return self.get_holding_currents()
 
-    def get_holding_currents(self) -> Dict[int, numpy.ndarray]:
+    def get_holding_currents(self) -> dict[int, numpy.ndarray]:
         """Returns the alpha and beta holding currents, in percent.
 
         Raises
@@ -413,10 +411,10 @@ class GetAlphaHallCalibration(Command):
     move_command = False
     safe = True
 
-    def get_replies(self) -> Dict[int, Tuple[int, int, int, int]]:
+    def get_replies(self) -> dict[int, tuple[int, int, int, int]]:
         return self.get_values()
 
-    def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
+    def get_values(self) -> dict[int, tuple[int, int, int, int]]:
         """Returns the ``maxA, maxB, minA, minB`` values."""
 
         values = {}
@@ -433,10 +431,10 @@ class GetBetaHallCalibration(Command):
     move_command = False
     safe = True
 
-    def get_replies(self) -> Dict[int, Tuple[int, int, int, int]]:
+    def get_replies(self) -> dict[int, tuple[int, int, int, int]]:
         return self.get_values()
 
-    def get_values(self) -> dict[int, Tuple[int, int, int, int]]:
+    def get_values(self) -> dict[int, tuple[int, int, int, int]]:
         """Returns the ``maxA, maxB, minA, minB`` values."""
 
         values = {}
@@ -453,10 +451,10 @@ class GetHallCalibrationError(Command):
     move_command = False
     safe = True
 
-    def get_replies(self) -> Dict[int, Tuple[int, int]]:
+    def get_replies(self) -> dict[int, tuple[int, int]]:
         return self.get_values()
 
-    def get_values(self) -> dict[int, Tuple[int, int]]:
+    def get_values(self) -> dict[int, tuple[int, int]]:
         """Returns the alpha and beta error values."""
 
         values = {}

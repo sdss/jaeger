@@ -8,8 +8,7 @@
 
 
 import pathlib
-
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy
 import polars
@@ -118,7 +117,7 @@ async def test_fvc_processing(
     reported_positions = numpy.zeros((500, 3), dtype=numpy.float64)
     for irow, row in enumerate(offsets.rows(named=True)):
         pid = row["positioner_id"]
-        positioner_coords[pid] = [row["alpha_reported"], row["beta_reported"]]
+        positioner_coords[pid] = (row["alpha_reported"], row["beta_reported"])
         reported_positions[irow, :] = (pid, row["alpha_reported"], row["beta_reported"])
 
     fvc.process_fvc_image(

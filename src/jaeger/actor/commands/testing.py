@@ -26,8 +26,6 @@ __all__ = ["testing"]
 def testing():
     """Commands for testing. Use with caution."""
 
-    pass
-
 
 @testing.command(name="fake-configuration")
 @click.argument("RA", type=float)

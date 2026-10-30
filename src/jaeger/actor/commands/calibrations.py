@@ -41,8 +41,6 @@ __all__ = ["calibrations_parser"]
 def calibrations_parser():
     """Commands to command the FVC."""
 
-    pass
-
 
 @calibrations_parser.command()
 @click.argument("POSITIONER-IDS", type=int, nargs=-1, required=False)
@@ -74,12 +72,12 @@ async def reset_offsets(
     if not hasattr(calibration, "positionerTableFile"):
         raise RuntimeError("Calibration file for the positionerTable cannot be found.")
 
-    positioner_file = calibration.positionerTableFile  # type: ignore
+    positioner_file = calibration.positionerTableFile
     positioner_table_pandas = calibration.positionerTable.reset_index()
     positioner_table_orig = calibration.positionerTable.copy()
 
     positioner_data = polars.DataFrame(calibration.positionerTable.reset_index())
-    positioner_data = positioner_data.with_row_count("id")  # To match the file columns.
+    positioner_data = positioner_data.with_row_index("id")  # To match the file columns.
 
     await fps.update_position()
 

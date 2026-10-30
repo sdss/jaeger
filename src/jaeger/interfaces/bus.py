@@ -13,7 +13,7 @@ import abc
 from .message import Message
 
 
-class BusABC(object, metaclass=abc.ABCMeta):
+class BusABC(metaclass=abc.ABCMeta):
     """A base CAN bus."""
 
     def __init__(self, *args, **kwargs):
@@ -38,10 +38,6 @@ class BusABC(object, metaclass=abc.ABCMeta):
     async def get(self):
         """Receives messages from the bus."""
 
-        pass
-
     @abc.abstractmethod
     def send(self, msg: Message, **kwargs):
         """Sends a message to the bus."""
-
-        pass

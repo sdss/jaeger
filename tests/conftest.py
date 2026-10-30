@@ -52,7 +52,7 @@ def setup_config():
     config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
     config["fps"]["use_lock"] = False
 
-    if os.environ.get("CI", False):
+    if os.environ.get("CI", "False") != "False":
         tmp = os.environ.get("RUNNER_TEMP")
 
         for section, subsection in [
@@ -152,7 +152,7 @@ async def vfps(ieb_server, monkeypatch):
         await fps.can._command_queue_task
 
     tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
-    list(map(lambda task: task.cancel(), tasks))
+    [task.cancel() for task in tasks]
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
@@ -183,7 +183,7 @@ async def actor(vfps):
         log_dir=False,
         config={"chiller": {"config": None}},
     )
-    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)  # type: ignore
+    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)
 
     yield jaeger_actor
 
@@ -214,7 +214,7 @@ def cleanup(database: PeeweeDatabaseConnection):
 def database():
     from sdssdb.peewee.sdss5db import database
 
-    if os.environ.get("CI", False):
+    if os.environ.get("CI", "False") != "False":
         database.connect("sdss5db_jaeger_test", host=None, user=None, port=5432)
     else:
         database.connect("sdss5db_jaeger_test")

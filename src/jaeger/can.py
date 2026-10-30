@@ -13,17 +13,12 @@ import binascii
 import collections
 import pprint
 import re
-import socket
 from dataclasses import dataclass, field
 
 from typing import (
     TYPE_CHECKING,
     Any,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Type,
+    Self,
     TypedDict,
     TypeVar,
     cast,
@@ -49,14 +44,14 @@ if TYPE_CHECKING:
     from .fps import FPS
 
 
-__all__ = ["JaegerCAN", "CANnetInterface", "INTERFACES"]
+__all__ = ["INTERFACES", "CANnetInterface", "JaegerCAN"]
 
 
 LOG_HEADER = "({cmd.command_id.name}, {cmd.command_uid}):"
 
 
 class InterfacesDict(TypedDict):
-    class_: Type[BusABC] | None
+    class_: type[BusABC] | None
     multibus: bool
 
 
@@ -69,12 +64,12 @@ INTERFACES: dict[str, InterfacesDict] = {
 }
 
 
-Bus_co = TypeVar("Bus_co", bound="BusABC")
+Bus_co = TypeVar("Bus_co", bound="BusABC")  # noqa: PLC0105
 T = TypeVar("T", bound="JaegerCAN")
 
 
 @dataclass
-class JaegerCAN(Generic[Bus_co]):
+class JaegerCAN[Bus_co: "BusABC"]:
     """A CAN interface with a command queue and reply handling.
 
     Provides support for multi-channel CAN networks, with each channel being
@@ -104,8 +99,8 @@ class JaegerCAN(Generic[Bus_co]):
 
     interface_type: str
     channels: list | tuple
-    fps: Optional[jaeger.fps.FPS] = None
-    interface_args: Dict[str, Any] = field(default_factory=dict)
+    fps: jaeger.fps.FPS | None = None
+    interface_args: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.interface_type not in INTERFACES:
@@ -116,26 +111,26 @@ class JaegerCAN(Generic[Bus_co]):
             start_file_loggers(start_log=False, start_can=True)
 
         # List of interfaces for each channel.
-        self.interfaces: List[Bus_co] = []
+        self.interfaces: list[Bus_co] = []
 
         self.multibus: bool = False
 
         self._started: bool = False
 
         # Currently running commands.
-        self.running_commands: Dict[int, Command] = {}
+        self.running_commands: dict[int, Command] = {}
 
         self.command_queue: asyncio.Queue[Command] | None = None
         self._command_queue_task: asyncio.Task | None = None
 
         self.notifier: Notifier | None = None
 
-    async def start(self: T) -> T:
+    async def start(self) -> Self:
         self.stop()
 
         itype = self.interface_type
 
-        InterfaceClass: Type[Bus_co] | None = INTERFACES[itype]["class_"]  # type: ignore
+        InterfaceClass: type[Bus_co] | None = INTERFACES[itype]["class_"]  # type: ignore
         if InterfaceClass is None:
             raise ValueError(f"Interface {itype} is not supported.")
 
@@ -145,7 +140,7 @@ class JaegerCAN(Generic[Bus_co]):
             self.channels = [self.channels]
 
         for channel in self.channels:
-            iargs = "".join([f" {k}={repr(v)}" for k, v in self.interface_args.items()])
+            iargs = "".join([f" {k}={v!r}" for k, v in self.interface_args.items()])
             log.debug(f"creating interface {itype}, channel={channel!r}{iargs}.")
             try:
                 interface = InterfaceClass(channel, **self.interface_args)
@@ -158,7 +153,7 @@ class JaegerCAN(Generic[Bus_co]):
                     f"connection to {itype}:{channel} failed. "
                     "Possibly another instance is connected to the device."
                 )
-            except (socket.timeout, ConnectionError, ConnectionRefusedError, OSError):
+            except (TimeoutError, ConnectionError, ConnectionRefusedError, OSError):
                 log.error(f"connection to {itype}:{channel} failed.")
             except Exception as ee:
                 raise ee.__class__(f"connection to {itype}:{channel} failed: {ee}.")
@@ -199,12 +194,12 @@ class JaegerCAN(Generic[Bus_co]):
     @classmethod
     async def create(
         cls,
-        profile: Optional[str] = None,
+        profile: str | None = None,
         fps: FPS | None = None,
-        interface_type: Optional[str] = None,
-        channels: list | tuple = [],
-        interface_args: Dict[str, Any] = {},
-    ) -> "JaegerCAN":
+        interface_type: str | None = None,
+        channels: list | tuple | None = None,
+        interface_args: dict[str, Any] | None = None,
+    ) -> JaegerCAN:
         """Create and initialise a new bus interface from a configuration profile.
 
         This is the preferred method to initialise a new `.JaegerCAN` instance and is
@@ -227,6 +222,10 @@ class JaegerCAN(Generic[Bus_co]):
 
         """
 
+        if interface_args is None:
+            interface_args = {}
+        if channels is None:
+            channels = []
         if profile is not None or (profile is None and interface_type is None):
             if "profiles" not in config:
                 raise ValueError("No 'interfaces' section in the configuration file.")
@@ -259,11 +258,11 @@ class JaegerCAN(Generic[Bus_co]):
             raise JaegerCANError("profile and interface_type are mutually exclusive.")
 
         if interface_type == "cannet":
-            cls = CANnetInterface
+            new_cls = CANnetInterface
 
         assert interface_type, "interface_type not set. This should not have happened."
 
-        instance = cls(
+        instance = new_cls(
             interface_type,
             channels=channels,
             fps=fps,
@@ -359,13 +358,12 @@ class JaegerCAN(Generic[Bus_co]):
             )
             return
 
-        if not running_cmd.is_broadcast:
-            if reply_uid not in running_cmd.message_uids:
-                can_log.debug(
-                    f"[{command_id_flag.name}, {positioner_id}]: "
-                    f"matching command does not contain reply UID={reply_uid}."
-                )
-                return
+        if not running_cmd.is_broadcast and reply_uid not in running_cmd.message_uids:
+            can_log.debug(
+                f"[{command_id_flag.name}, {positioner_id}]: "
+                f"matching command does not contain reply UID={reply_uid}."
+            )
+            return
 
         can_log.debug(
             f"[{command_id_flag.name}, "
@@ -419,11 +417,13 @@ class JaegerCAN(Generic[Bus_co]):
             # Get the interface and buses to which to send this command.
             interfaces = self.interfaces
             bus = None
+            positioner_id = message.positioner_id
             is_multibus = self.multibus or len(self.interfaces) > 1
-            if is_multibus and message.positioner_id != 0:
-                if self.fps and message.positioner_id in self.fps.positioner_to_bus:
-                    interface, bus = self.fps.positioner_to_bus[message.positioner_id]
-                    interfaces = [cast(Bus_co, interface)]
+            is_broadcast = positioner_id == 0
+            positioner_in_bus = self.fps and positioner_id in self.fps.positioner_to_bus
+            if is_multibus and not is_broadcast and positioner_in_bus:
+                interface, bus = self.fps.positioner_to_bus[message.positioner_id]
+                interfaces = [cast(Bus_co, interface)]
 
             for iface in interfaces:
                 iface_idx = self.interfaces.index(iface)
@@ -445,7 +445,7 @@ class JaegerCAN(Generic[Bus_co]):
         cmd.status = CommandStatus.RUNNING
 
     @staticmethod
-    def print_profiles() -> List[str]:
+    def print_profiles() -> list[str]:
         """Prints interface profiles and returns a list of profile names."""
 
         pprint.pprint(config["interfaces"])
@@ -628,7 +628,7 @@ class CANnetInterface(JaegerCAN[CANNetBus]):
 
             # Unpack the status characters. If they are different
             # than '-', they are True.
-            status_bool = list(map(lambda x: x != "-", status))
+            status_bool = [x != "-" for x in status]
             (
                 bus_off,
                 error_warning,

@@ -24,8 +24,6 @@ __all__ = ["alerts"]
 def alerts(*args):
     """Manages the alerts system."""
 
-    pass
-
 
 @alerts.command()
 async def status(command: JaegerCommandType, fps: FPS):

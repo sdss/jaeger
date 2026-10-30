@@ -11,12 +11,13 @@ from __future__ import annotations
 import asyncio
 import binascii
 import collections
+import inspect
 import logging
-import sys
 import time
 import warnings
+from collections.abc import Callable
 
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 from jaeger import can_log, config, log, maskbits
 from jaeger.exceptions import CommandError, JaegerError, JaegerUserWarning
@@ -27,7 +28,7 @@ from jaeger.utils import StatusMixIn, get_identifier, parse_identifier
 from . import CommandID
 
 
-__all__ = ["SuperMessage", "Command", "EmptyPool"]
+__all__ = ["Command", "EmptyPool", "SuperMessage"]
 
 
 # A pool of UIDs that can be assigned to each command for a given command_id.
@@ -64,7 +65,7 @@ class SuperMessage(Message):
     def __init__(
         self,
         command: Command,
-        data: bytearray = bytearray([]),
+        data: bytearray | None = None,
         positioner_id: int = 0,
         uid: int = 0,
         response_code: int = 0,
@@ -88,6 +89,8 @@ class SuperMessage(Message):
         else:
             arbitration_id = positioner_id
 
+        data = data or bytearray([])
+
         Message.__init__(
             self,
             data=data,
@@ -96,7 +99,7 @@ class SuperMessage(Message):
         )
 
 
-class Reply(object):
+class Reply:
     """Parses a reply message.
 
     Parameters
@@ -108,7 +111,7 @@ class Reply(object):
 
     """
 
-    def __init__(self, message: Message, command: Optional[Command] = None):
+    def __init__(self, message: Message, command: Command | None = None):
         assert isinstance(message, Message), "invalid message"
 
         #: The command for which this reply is intended.
@@ -154,13 +157,10 @@ class EmptyPool(CommandError):
     pass
 
 
-data_co = Union[None, bytearray, List[bytearray]]
+data_co = list[bytearray] | bytearray | None
 
 
-if sys.version_info >= (3, 9):
-    Future_co = asyncio.Future["Command"]
-else:
-    Future_co = asyncio.Future
+Future_co = asyncio.Future["Command"]
 
 
 class Command(StatusMixIn[CommandStatus], Future_co):
@@ -229,11 +229,11 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
-        timeout: Optional[float] = None,
-        done_callback: Optional[Callable] = None,
-        n_positioners: Optional[int] = None,
-        data: Union[None, data_co, Dict[int, data_co]] = None,
+        positioner_ids: int | list[int],
+        timeout: float | None = None,
+        done_callback: Callable | None = None,
+        n_positioners: int | None = None,
+        data: None | data_co | dict[int, data_co] = None,
         ignore_unknown: bool = True,
     ):
         global COMMAND_UID
@@ -274,9 +274,8 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         else:
             raise ValueError(f"Invalid data {data!r}.")
 
-        if self.is_broadcast:
-            if len(self.data[0]) > 1:
-                raise CommandError("Broadcasts can only include a single data packet.")
+        if self.is_broadcast and len(self.data[0]) > 1:
+            raise CommandError("Broadcasts can only include a single data packet.")
 
         # Number of replies expected unless broadcast.
         if self.is_broadcast:
@@ -297,7 +296,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
                 )
 
         #: A list of messages with the responses to this command.
-        self.replies: List[Reply] = []
+        self.replies: list[Reply] = []
 
         # Messages sent.
         self.messages = []
@@ -320,13 +319,13 @@ class Command(StatusMixIn[CommandStatus], Future_co):
                     command_pool[pid] = set(range(1, 2**uid_bits))
         else:
             if 0 not in command_pool:
-                command_pool[0] = set([0])
+                command_pool[0] = {0}
 
         # What interface and bus this command should be sent to. Only relevant
         # for multibus interfaces. To be filled by the FPS class when queueing
         # the command.
-        self._interfaces: Optional[List[BusABC]] = []
-        self._bus: Optional[int] = None
+        self._interfaces: list[BusABC] | None = []
+        self._bus: int | None = None
 
         self._done_callback = done_callback
 
@@ -357,10 +356,12 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         level=logging.DEBUG,
         command_id=None,
         positioner_ids=None,
-        logs=[can_log],
+        logs=None,
     ):
         """Logs a message."""
 
+        if logs is None:
+            logs = [can_log]
         command_id = command_id or self.command_id
         c_name = command_id.name
         pid = positioner_ids or self.positioner_ids
@@ -445,14 +446,13 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             )
             return
 
-        if not self.is_broadcast:
-            if reply.positioner_id not in self.positioner_ids:
-                self._log(
-                    f"received a reply from {pid} from a non-commanded positioner.",
-                    level=logging.ERROR,
-                    logs=[log, can_log],
-                )
-                return
+        if not self.is_broadcast and reply.positioner_id not in self.positioner_ids:
+            self._log(
+                f"received a reply from {pid} from a non-commanded positioner.",
+                level=logging.ERROR,
+                logs=[log, can_log],
+            )
+            return
 
         self.replies.append(reply)
 
@@ -468,13 +468,14 @@ class Command(StatusMixIn[CommandStatus], Future_co):
         code = reply.response_code
         COMMAND_ACCEPTED = ResponseCode.COMMAND_ACCEPTED
         UNKNOWN_COMMAND = ResponseCode.UNKNOWN_COMMAND
-        if code != COMMAND_ACCEPTED:
-            if not self._ignore_unknown or code != UNKNOWN_COMMAND:
-                warnings.warn(
-                    f"Positioner {reply.positioner_id} replied to {self.name} "
-                    f"UID={self.command_uid} with {code.name!r}.",
-                    JaegerUserWarning,
-                )
+        if code != COMMAND_ACCEPTED and (
+            not self._ignore_unknown or code != UNKNOWN_COMMAND
+        ):
+            warnings.warn(
+                f"Positioner {reply.positioner_id} replied to {self.name} "
+                f"UID={self.command_uid} with {code.name!r}.",
+                JaegerUserWarning,
+            )
 
         reply_status = self._check_replies()
 
@@ -493,8 +494,8 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             reply_codes = [reply.response_code for reply in self.replies]
             invalid = [code for code in reply_codes if code != COMMAND_ACCEPTED]
             ignore_unknown = self._ignore_unknown
-            if not all([code == COMMAND_ACCEPTED for code in reply_codes]):
-                if all([inv == UNKNOWN_COMMAND for inv in invalid]) and ignore_unknown:
+            if not all(code == COMMAND_ACCEPTED for code in reply_codes):
+                if all(inv == UNKNOWN_COMMAND for inv in invalid) and ignore_unknown:
                     self.finish_command(CommandStatus.DONE)
                 else:
                     self.finish_command(CommandStatus.FAILED)
@@ -565,7 +566,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
             is_done = self.status in [CommandStatus.TIMEDOUT, CommandStatus.DONE]
 
             if is_done and self._done_callback:
-                if asyncio.iscoroutinefunction(self._done_callback):
+                if inspect.iscoroutinefunction(self._done_callback):
                     asyncio.create_task(self._done_callback())
                 else:
                     self._done_callback()
@@ -607,7 +608,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         cid = self.command_id
 
-        messages: List[SuperMessage] = []
+        messages: list[SuperMessage] = []
 
         for pid in self.data:
             pid_data = self.data[pid]
@@ -642,7 +643,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         return messages
 
-    def get_replies(self) -> Dict[int, Any]:
+    def get_replies(self) -> dict[int, Any]:
         """Returns the formatted replies as a dictionary.
 
         The values returned will depend on the specific command.
@@ -651,7 +652,7 @@ class Command(StatusMixIn[CommandStatus], Future_co):
 
         return {}
 
-    def cancel(self, silent=False, msg=None):
+    def cancel(self, silent=False, msg=None):  # ty: ignore[invalid-method-override]
         """Cancels a command, stopping the reply queue watcher."""
 
         self.finish_command(CommandStatus.CANCELLED, silent=silent)

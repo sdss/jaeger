@@ -11,14 +11,16 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import enum
+import inspect
 import logging
 import warnings
+from collections.abc import Callable
 from concurrent.futures import Executor
 from contextlib import suppress
 from functools import partial
 from threading import Thread
 
-from typing import TYPE_CHECKING, Callable, Generic, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from jaeger import log
 
@@ -30,12 +32,12 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AsyncQueue",
-    "StatusMixIn",
-    "PollerList",
-    "Poller",
     "AsyncioExecutor",
-    "run_in_executor",
     "BaseBot",
+    "Poller",
+    "PollerList",
+    "StatusMixIn",
+    "run_in_executor",
 ]
 
 
@@ -50,7 +52,7 @@ class AsyncQueue(asyncio.Queue):
 
     """
 
-    def __init__(self, callback: Optional[Callable] = None):
+    def __init__(self, callback: Callable | None = None):
         async def process_queue():
             """Waits for the next item and sends it to the cb function."""
 
@@ -65,10 +67,10 @@ class AsyncQueue(asyncio.Queue):
         self.watcher = asyncio.create_task(process_queue())
 
 
-Status_co = TypeVar("Status_co", bound=enum.Enum)
+Status_co = TypeVar("Status_co", bound=enum.Enum)  # noqa: PLC0105
 
 
-class StatusMixIn(Generic[Status_co]):
+class StatusMixIn[Status_co: enum.Enum]:
     """A mixin that provides status tracking with callbacks.
 
     Provides a status property that executes a list of callbacks when
@@ -95,14 +97,14 @@ class StatusMixIn(Generic[Status_co]):
 
     def __init__(
         self,
-        maskbit_flags: Type[Status_co],
-        initial_status: Optional[Status_co] = None,
-        callback_func: Optional[Callable] = None,
+        maskbit_flags: type[Status_co],
+        initial_status: Status_co | None = None,
+        callback_func: Callable | None = None,
         call_now: bool = False,
     ):
         self._flags = maskbit_flags
         self.callbacks = []
-        self._status: Optional[Status_co] = initial_status
+        self._status: Status_co | None = initial_status
         self.watcher = None
 
         if callback_func is not None:
@@ -157,16 +159,13 @@ class StatusMixIn(Generic[Status_co]):
         return self._flags
 
     @flags.setter
-    def flags(self, value: Type[Status_co]):
+    def flags(self, value: type[Status_co]):
         """Sets the flags associated to this status."""
 
         self._flags = value
         self._status = None
 
-    async def wait_for_status(
-        self,
-        value,
-    ):
+    async def wait_for_status(self, value):
         """Awaits until the status matches ``value``."""
 
         if self.status == value:
@@ -185,7 +184,9 @@ class StatusMixIn(Generic[Status_co]):
 class PollerList(list):
     """A list of `.Poller` to be managed jointly."""
 
-    def __init__(self, pollers=[]):
+    def __init__(self, pollers=None):
+        if pollers is None:
+            pollers = []
         names = [poller.name for poller in pollers]
         assert len(names) == len(set(names)), "repeated names in poller list."
 
@@ -270,10 +271,10 @@ class PollerList(list):
     def running(self):
         """Returns `True` if at least one poller is running."""
 
-        return any([poller.running for poller in self])
+        return any(poller.running for poller in self)
 
 
-class Poller(object):
+class Poller:
     """A task that runs a callback periodically.
 
     Parameters
@@ -308,14 +309,14 @@ class Poller(object):
 
         while True:
             try:
-                if asyncio.iscoroutinefunction(self.callback):
+                if inspect.iscoroutinefunction(self.callback):
                     await self.callback()
                 else:
                     self.callback()
             except Exception as ee:
                 if ee.__class__ == asyncio.CancelledError:
                     raise
-                if not self._task.cancelled:
+                if not self._task.cancelled():
                     asyncio.get_running_loop().call_exception_handler(
                         {"message": "failed running callback", "exception": ee}
                     )
@@ -392,7 +393,7 @@ class Poller(object):
             await self.stop()
             restart = True
 
-        if asyncio.iscoroutinefunction(self.callback):
+        if inspect.iscoroutinefunction(self.callback):
             await asyncio.create_task(self.callback())
         else:
             self.callback()
@@ -404,10 +405,7 @@ class Poller(object):
     def running(self):
         """Returns `True` if the poller is running."""
 
-        if self._task and not self._task.cancelled():
-            return True
-
-        return False
+        return bool(self._task and not self._task.cancelled())
 
 
 class AsyncioExecutor(Executor):
@@ -437,7 +435,7 @@ class AsyncioExecutor(Executor):
         coro = fn(*args, **kwargs)
         return asyncio.run_coroutine_threadsafe(coro, self._loop)
 
-    def shutdown(self, wait=True):
+    def shutdown(self, wait=True, *, cancel_futures=False):
         self._loop.call_soon_threadsafe(self._loop.stop)
         if wait:
             self._thread.join()
@@ -467,9 +465,8 @@ async def run_in_executor(fn, *args, catch_warnings=False, executor="thread", **
         raise ValueError("Invalid executor name.")
 
     if catch_warnings:
-        with warnings.catch_warnings(record=True) as records:
-            with executor() as pool:
-                result = await asyncio.get_event_loop().run_in_executor(pool, fn)
+        with warnings.catch_warnings(record=True) as records, executor() as pool:
+            result = await asyncio.get_event_loop().run_in_executor(pool, fn)
 
         for ww in records:
             warnings.warn(ww.message, ww.category)

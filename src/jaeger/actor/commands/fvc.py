@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 import click
 
@@ -41,15 +41,13 @@ __all__ = ["fvc_parser"]
 def fvc_parser():
     """Commands to command the FVC."""
 
-    pass
-
 
 @fvc_parser.command()
 @click.argument("EXPOSURE-TIME", default=None, type=float, required=False)
 async def expose(
     command: Command[JaegerActor],
     fps: FPS,
-    exposure_time: Optional[float] = None,
+    exposure_time: float | None = None,
 ):
     """Takes an exposure with the FVC."""
 
@@ -539,7 +537,7 @@ async def take_fvc_loop(
                     asyncio.create_task(fvc.write_proc_image(proc_path, broadcast=True))
                 else:
                     command.warning("Cannot write processed image.")
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         command.debug("Turning LEDs off.")

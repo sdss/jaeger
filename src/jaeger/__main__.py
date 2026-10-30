@@ -18,8 +18,6 @@ import warnings
 from copy import deepcopy
 from functools import wraps
 
-from typing import Optional
-
 import click
 from click_default_group import DefaultGroup
 
@@ -69,7 +67,7 @@ def cli_coro(f):
     return wrapper
 
 
-class FPSWrapper(object):
+class FPSWrapper:
     """A helper to store FPS initialisation parameters."""
 
     def __init__(
@@ -215,12 +213,12 @@ def jaeger(
 
     if allow_host is False:
         hostname = socket.getfqdn()
-        if hostname.endswith("apo.nmsu.edu") or hostname.endswith("lco.cl"):
-            if not hostname.startswith("sdss5-fps"):
-                raise RuntimeError(
-                    "At the observatories jaeger must run on sdss5-fps. "
-                    "If you want to run jaeger on another computer use --allow-host."
-                )
+        hostname_is_obs = hostname.endswith(("apo.nmsu.edu", "lco.cl"))
+        if hostname_is_obs and not hostname.startswith("sdss5-fps"):
+            raise RuntimeError(
+                "At the observatories jaeger must run on sdss5-fps. "
+                "If you want to run jaeger on another computer use --allow-host."
+            )
 
     if verbose > 0 and quiet:
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
@@ -547,9 +545,8 @@ async def goto(
         else:
             positioner_ids = list(positioner_ids)
 
-        if not relative:
-            if alpha < 0 or beta < 0:
-                raise JaegerError("Negative angles only allowed in relative mode.")
+        if not relative and (alpha < 0 or beta < 0):
+            raise JaegerError("Negative angles only allowed in relative mode.")
 
         new_positions = {}
         for pid in positioner_ids:
@@ -617,8 +614,6 @@ async def home(fps_maker: FPSWrapper, positioner_id: int, axis: str | None = Non
             raise ValueError("Positioner has been disabled.")
 
         await fps[positioner_id].home(alpha=alpha, beta=beta)
-
-    return
 
 
 @jaeger.command()
@@ -690,8 +685,6 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
         log.info("Executing unwind trajectory.")
         await fps.send_trajectory(trajectory)
 
-    return
-
 
 @jaeger.command()
 @click.argument("EXPLODE-DEG", type=float)
@@ -725,8 +718,6 @@ async def explode(
         log.info("Executing explode trajectory.")
         await fps.send_trajectory(trajectory)
 
-    return
-
 
 @jaeger.command()
 @click.argument("PATH", required=False, type=click.Path(exists=False, dir_okay=False))
@@ -735,7 +726,7 @@ async def explode(
 @cli_coro
 async def snapshot(
     fps_maker: FPSWrapper,
-    path: Optional[str] = None,
+    path: str | None = None,
     collision_buffer: float | None = None,
 ):
     """Takes a snapshot image."""
