@@ -259,6 +259,8 @@ class JaegerCAN[Bus_co: "BusABC"]:
 
         if interface_type == "cannet":
             new_cls = CANnetInterface
+        else:
+            new_cls = cls
 
         assert interface_type, "interface_type not set. This should not have happened."
 
