@@ -226,13 +226,13 @@ class CANNetBus(BusABC):
 
         return None
 
-    def send(self, msg, bus=None):
+    def send(self, msg, bus=None):  # ty: ignore[invalid-method-override]
         buses = bus or self.buses
         if not isinstance(buses, (list, tuple)):
             buses = [buses]
 
-        for bus in buses:
-            sendStr = f"M {bus} "
+        for bus_ in buses:
+            sendStr = f"M {bus_} "
 
             if msg.is_extended_id:
                 if msg.is_remote_frame:

@@ -52,7 +52,7 @@ source_parsers = {
 master_doc = "index"
 
 # General information about the project.
-project = project = "jaeger"
+project = "jaeger"
 copyright = "{}, {}".format("2018-2020", "José Sánchez-Gallego")
 author = "José Sánchez-Gallego"
 

@@ -23,7 +23,7 @@ __all__ = ["Notifier"]
 
 
 Listener_co = Callable[..., Coroutine[Message, Any, Any]]
-Bus_co = TypeVar("Bus_co", bound="BusABC")  # noqa: PLC0105
+Bus_co = TypeVar("Bus_co", bound="BusABC")
 
 
 class Notifier:

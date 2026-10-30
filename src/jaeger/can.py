@@ -64,7 +64,7 @@ INTERFACES: dict[str, InterfacesDict] = {
 }
 
 
-Bus_co = TypeVar("Bus_co", bound="BusABC")  # noqa: PLC0105
+Bus_co = TypeVar("Bus_co", bound="BusABC")
 T = TypeVar("T", bound="JaegerCAN")
 
 

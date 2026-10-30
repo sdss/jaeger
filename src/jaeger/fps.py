@@ -862,7 +862,7 @@ class FPS(BaseFPS):
 
         # Check if we are in bootloader mode.
         in_boot = [p for p in pids if p != 0 and self[p].is_bootloader()]
-        if (broadcast and self.is_bootloader()) or (not broadcast and any(in_boot)):  # noqa: SIM102
+        if (broadcast and self.is_bootloader()) or (not broadcast and any(in_boot)):
             if not command.bootloader:
                 raise JaegerError(
                     f"Cannot send command {command.command_id.name!r} "

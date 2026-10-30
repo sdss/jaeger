@@ -246,12 +246,12 @@ async def check_positions(
     positions = fps.get_positions(ignore_disabled=not check_disabled)
 
     alpha_pos = positions[:, 1]
-    if alpha_min is not None and alpha_max is not None:  # noqa: SIM102
+    if alpha_min is not None and alpha_max is not None:
         if numpy.any(alpha_pos < alpha_min) or numpy.any(alpha_pos > alpha_max):
             return False
 
     beta_pos = positions[:, 2]
-    if beta_min is not None and beta_max is not None:  # noqa: SIM102
+    if beta_min is not None and beta_max is not None:
         if numpy.any(beta_pos < beta_min) or numpy.any(beta_pos > beta_max):
             return False
 

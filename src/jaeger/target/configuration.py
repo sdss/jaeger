@@ -77,7 +77,7 @@ __all__ = [
 ]
 
 PositionerType = PositionerApogee | PositionerBoss
-AssignmentType = TypeVar(  # noqa: PLC0105
+AssignmentType = TypeVar(
     "AssignmentType",
     bound=BaseAssignment,
     covariant=True,

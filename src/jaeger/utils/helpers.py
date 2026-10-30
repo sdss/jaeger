@@ -67,7 +67,7 @@ class AsyncQueue(asyncio.Queue):
         self.watcher = asyncio.create_task(process_queue())
 
 
-Status_co = TypeVar("Status_co", bound=enum.Enum)  # noqa: PLC0105
+Status_co = TypeVar("Status_co", bound=enum.Enum)
 
 
 class StatusMixIn[Status_co: enum.Enum]:

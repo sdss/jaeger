@@ -56,7 +56,7 @@ class ChillerBot(BaseBot):
         if self.temperature is False or self.temperature is None:
             return
 
-        if self.temperature == "auto":  # noqa: SIM102
+        if self.temperature == "auto":
             if not isinstance(self.ieb, IEB) or self.ieb.disabled is True:
                 return
 
