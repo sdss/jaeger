@@ -15,7 +15,7 @@ dependencies = [
     "sdss-clu>=2.6.0",
     "sdsstools>=1.9.6",
     "sdssdb>=0.13.5,<1.0.0",
-    "sdss-kaiju",
+    "sdss-kaiju>=1.4.2",
     "sdss-coordio>=1.19.0b2",
     "click_default_group>=1.2.2",
     "zc.lockfile>=2.0",
@@ -62,10 +62,6 @@ dev = [
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-# sdss-clu = { git = "https://github.com/sdss/clu", branch = "main" }
-sdss-kaiju = { git = "https://github.com/sdss/kaiju", branch = "albireox/1.4.0" }
 
 [tool.ruff]
 line-length = 88

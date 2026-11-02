@@ -40,7 +40,7 @@ from jaeger.testing import VirtualFPS
 __FPS__ = None
 
 
-def shutdown(sign):
+def shutdown(sign, loop):
     """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
 
     if __FPS__ is not None:
