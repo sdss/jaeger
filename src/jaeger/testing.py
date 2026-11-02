@@ -180,7 +180,7 @@ class VirtualPositioner(StatusMixIn):
             self.reply(command_id, uid, data=data_firmware)
 
         elif command_id == CommandID.GET_STATUS:
-            data_status = utils.int_to_bytes(self.status.value)
+            data_status = utils.int_to_bytes(self.status.value, "u8")
             self.reply(command_id, uid, data=data_status)
 
         elif command_id == CommandID.GET_NUMBER_TRAJECTORIES:

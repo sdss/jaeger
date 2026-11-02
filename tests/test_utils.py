@@ -57,7 +57,8 @@ def test_bytes_to_int(bytes, dtype, byteorder, result):
 
 
 @pytest.mark.parametrize(
-    "positioner_id, command_id, result", [(5, 17, 1328128), (450, 5, 117969920)]
+    "positioner_id, command_id, result",
+    [(5, 17, 1328128), (450, 5, 117969920)],
 )
 def test_get_identifier(positioner_id, command_id, result):
     assert jaeger.utils.get_identifier(positioner_id, command_id) == result

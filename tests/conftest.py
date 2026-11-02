@@ -17,12 +17,8 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pytest
-from pymodbus.datastore import (
-    ModbusSequentialDataBlock,
-    ModbusServerContext,
-    ModbusSlaveContext,
-)
 from pymodbus.server import ServerAsyncStop, StartAsyncTcpServer
+from pymodbus.simulator import DataType, SimData, SimDevice
 
 import clu.testing
 from clu.testing import TestCommand
@@ -106,16 +102,19 @@ def test_config(setup_config):
 
 @pytest.fixture()
 async def ieb_server():
-    store = ModbusSlaveContext(
-        di=ModbusSequentialDataBlock(0, [0] * 100),
-        co=ModbusSequentialDataBlock(512, [0] * 100),
-        hr=ModbusSequentialDataBlock(512, [0] * 100),
-        ir=ModbusSequentialDataBlock(0, [0] * 100),
+    # Non-shared blocks: (coils, discrete inputs, holding registers, input registers).
+    # Addresses are zero-based, identical to the request addresses.
+    device = SimDevice(
+        id=0,
+        simdata=(
+            [SimData(512, count=100, values=False, datatype=DataType.BITS)],
+            [SimData(0, count=100, values=False, datatype=DataType.BITS)],
+            [SimData(512, count=100, values=0, datatype=DataType.REGISTERS)],
+            [SimData(0, count=100, values=0, datatype=DataType.REGISTERS)],
+        ),
     )
 
-    context = ModbusServerContext(slaves=store, single=True)
-
-    task = asyncio.create_task(StartAsyncTcpServer(context, address=("0.0.0.0", 5020)))
+    task = asyncio.create_task(StartAsyncTcpServer(device, address=("0.0.0.0", 5020)))
 
     yield
 
