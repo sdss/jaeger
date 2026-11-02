@@ -11,17 +11,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import signal
 import socket
 import sys
 import warnings
 from copy import deepcopy
-from functools import wraps
 
 import click
 from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
+from sdsstools.daemonizer import cli_coro as cli_coro_fn
 
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
@@ -53,18 +52,7 @@ def shutdown(sign):
         sys.exit(1)
 
 
-def cli_coro(f):
-    """Decorator function that allows defining coroutines with click."""
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-        for ss in signals:
-            loop.add_signal_handler(ss, shutdown, ss)
-        return loop.run_until_complete(f(*args, **kwargs))
-
-    return wrapper
+cli_coro = cli_coro_fn(shutdown_func=shutdown)
 
 
 class FPSWrapper:
