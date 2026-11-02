@@ -208,7 +208,7 @@ class Positioner(StatusMixIn):
             n_replies = len(command.replies)
 
             if n_replies == 1:
-                status = int(bytes_to_int(command.replies[0].data))
+                status = int(bytes_to_int(command.replies[0].data, "u8"))
             else:
                 self.status = self.flags.UNKNOWN
                 raise PositionerError(f"GET_STATUS received {n_replies} replies.")

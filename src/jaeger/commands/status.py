@@ -54,7 +54,10 @@ class GetStatus(Command):
     def get_positioner_status(self) -> dict[int, int]:
         """Returns the status flag for each positioner that replied."""
 
-        return {reply.positioner_id: bytes_to_int(reply.data) for reply in self.replies}
+        return {
+            reply.positioner_id: bytes_to_int(reply.data, "u8")
+            for reply in self.replies
+        }
 
 
 class GetActualPosition(Command):
