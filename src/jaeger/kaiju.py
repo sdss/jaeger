@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import time
 import warnings
+from collections.abc import Sequence
 
-from typing import TYPE_CHECKING, Literal, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import numpy
 from matplotlib.figure import Figure
@@ -24,20 +25,20 @@ from jaeger.utils.helpers import run_in_executor
 if TYPE_CHECKING:
     from kaiju import RobotGridCalib
 
-    from jaeger.fps import FPS
+    from jaeger.fps import FPS, BaseFPS
 
 
 __all__ = [
-    "get_robot_grid",
-    "dump_robot_grid",
+    "check_trajectory",
     "decollide",
+    "decollide_in_executor",
+    "dump_robot_grid",
+    "explode",
     "get_path_pair",
+    "get_path_pair_in_executor",
+    "get_robot_grid",
     "get_snapshot",
     "unwind",
-    "explode",
-    "get_path_pair_in_executor",
-    "decollide_in_executor",
-    "check_trajectory",
 ]
 
 
@@ -50,7 +51,7 @@ def warn(message):
     warnings.warn(message, JaegerUserWarning)
 
 
-def get_robot_grid(fps: FPS | None, seed: int | None = None, collision_buffer=None):
+def get_robot_grid(fps: BaseFPS | None, seed: int | None = None, collision_buffer=None):
     """Returns a new robot grid with the destination set to the lattice position.
 
     If an initialised instance of the FPS is available, disabled robots will be
@@ -139,11 +140,11 @@ def load_robot_grid(data: dict, set_destination: bool = True) -> RobotGridCalib:
 
 
 def decollide(
-    robot_grid: Optional[RobotGridCalib] = None,
-    data: Optional[dict] = None,
+    robot_grid: RobotGridCalib | None = None,
+    data: dict | None = None,
     simple: bool = False,
     decollide_grid_fallback: bool = False,
-    priority_order: list[int] = [],
+    priority_order: list[int] | None = None,
 ) -> tuple[RobotGridCalib | dict, list[int]]:
     """Decollides a potentially collided grid. Raises on fail.
 
@@ -175,6 +176,8 @@ def decollide(
 
     """
 
+    if priority_order is None:
+        priority_order = []
     if robot_grid is not None and data is not None:
         raise JaegerError("robot_grid and data are mutually exclusive.")
 
@@ -241,8 +244,8 @@ def decollide(
 
 
 def get_path_pair(
-    robot_grid: Optional[RobotGridCalib] = None,
-    data: Optional[dict] = None,
+    robot_grid: RobotGridCalib | None = None,
+    data: dict | None = None,
     path_generation_mode: str | None = None,
     ignore_did_fail: bool = False,
     explode_deg: float = 5,
@@ -304,7 +307,7 @@ def get_path_pair(
         raise JaegerError("robot_grid and data are mutually exclusive.")
 
     if data is not None:
-        set_destination = False if path_generation_mode == "explode" else True
+        set_destination = path_generation_mode != "explode"
         robot_grid = load_robot_grid(data, set_destination=set_destination)
 
     assert robot_grid is not None
@@ -408,7 +411,7 @@ async def decollide_in_executor(
 async def unwind(
     current_positions: dict[int, tuple[float | None, float | None]],
     collision_buffer: float | None = None,
-    disabled: list[int] = [],
+    disabled: list[int] | None = None,
     force: bool = False,
 ):
     """Folds all the robots to the lattice position.
@@ -417,6 +420,8 @@ async def unwind(
 
     """
 
+    if disabled is None:
+        disabled = []
     alpha0, beta0 = config["kaiju"]["lattice_position"]
 
     # We create the data directly since it's simple. This should be a bit faster
@@ -449,7 +454,7 @@ async def explode(
     current_positions: dict[int, tuple[float | None, float | None]],
     explode_deg=20.0,
     collision_buffer: float | None = None,
-    disabled: list[int] = [],
+    disabled: list[int] | None = None,
     positioner_id: int | None = None,
 ):
     """Explodes the grid by a number of degrees.
@@ -458,6 +463,8 @@ async def explode(
 
     """
 
+    if disabled is None:
+        disabled = []
     alpha0, beta0 = config["kaiju"]["lattice_position"]
 
     data = {"collision_buffer": collision_buffer, "grid": {}}
@@ -484,8 +491,8 @@ async def explode(
 
 def get_snapshot_async(
     path: str,
-    robot_grid: Optional[RobotGridCalib] = None,
-    data: Optional[dict] = None,
+    robot_grid: RobotGridCalib | None = None,
+    data: dict | None = None,
     highlight: int | None = None,
     title: str | None = None,
 ):
@@ -566,7 +573,7 @@ async def get_snapshot(
         if len(fps.positioners) == 0:
             raise ValueError("No positioners connected.")
 
-        for pid in fps.positioners.keys():
+        for pid in fps.positioners:
             data["grid"][int(pid)] = (
                 fps[pid].alpha,
                 fps[pid].beta,

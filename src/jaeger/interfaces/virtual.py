@@ -10,14 +10,12 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import Dict, List
-
 from jaeger.interfaces.bus import BusABC
 
 from .message import Message
 
 
-queues: Dict[str, List[asyncio.Queue]] = {}
+queues: dict[str, list[asyncio.Queue]] = {}
 
 
 class VirtualBus(BusABC):
@@ -33,7 +31,7 @@ class VirtualBus(BusABC):
         else:
             queues[self.channel].append(self.queue)
 
-    def send(self, msg: Message):
+    def send(self, msg: Message, **kwargs):
         """Send message to the virtual bus (self does not receive a copy)."""
 
         for queue in queues[self.channel]:

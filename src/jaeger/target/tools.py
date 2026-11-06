@@ -11,9 +11,10 @@ from __future__ import annotations
 import os
 import pathlib
 import re
+from collections.abc import Mapping
 from functools import cache
 
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
 import numpy
 import polars
@@ -44,10 +45,10 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "get_wok_data",
     "copy_summary_file",
-    "read_confSummary",
     "get_fibermap_table",
+    "get_wok_data",
+    "read_confSummary",
 ]
 
 
@@ -129,10 +130,8 @@ async def create_random_configuration(
             # intended for fvc calibration
             theta = numpy.degrees(numpy.arctan2(robot.yPos, robot.xPos))
             alpha = (theta + 90) % 360
-            if alpha < 5:
-                alpha = 5
-            if alpha > 355:
-                alpha = 355
+            alpha = max(alpha, 5)
+            alpha = min(alpha, 355)
 
             robot.setAlphaBeta(alpha + numpy.random.uniform(-3, 3), 9)
 
@@ -290,12 +289,13 @@ def copy_summary_file(
     new_path = pathlib.Path(new_file)
     new_path.parent.mkdir(parents=True, exist_ok=True)
 
-    summary_data = open(orig_file, "r").read()
-    summary_data = re.sub(
-        r"(configuration_id\s)[0-9]+",
-        rf"\g<1>{configuration_id1}",
-        summary_data,
-    )
+    with open(orig_file, "r") as fd:
+        summary_data = fd.read()
+        summary_data = re.sub(
+            r"(configuration_id\s)[0-9]+",
+            rf"\g<1>{configuration_id1}",
+            summary_data,
+        )
 
     if design_id1:
         summary_data = re.sub(

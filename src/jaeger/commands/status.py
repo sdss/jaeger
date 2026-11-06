@@ -8,22 +8,20 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
 from jaeger.commands import Command, CommandID
 from jaeger.utils import bytes_to_int, int_to_bytes, motor_steps_to_angle
 
 
 __all__ = [
-    "GetID",
-    "GetStatus",
-    "GetCurrent",
     "GetActualPosition",
+    "GetCurrent",
+    "GetID",
     "GetNumberTrajectories",
-    "SetNumberTrajectories",
-    "SwitchLEDOn",
-    "SwitchLEDOff",
+    "GetStatus",
     "GetTemperature",
+    "SetNumberTrajectories",
+    "SwitchLEDOff",
+    "SwitchLEDOn",
 ]
 
 
@@ -36,7 +34,7 @@ class GetID(Command):
     safe = True
     bootloader = True
 
-    def get_ids(self) -> List:
+    def get_ids(self) -> list:
         """Returns a list of positioners that replied back."""
 
         return [reply.positioner_id for reply in self.replies]
@@ -50,13 +48,16 @@ class GetStatus(Command):
     safe = True
     bootloader = True
 
-    def get_replies(self) -> Dict[int, int]:
+    def get_replies(self) -> dict[int, int]:
         return self.get_positioner_status()
 
-    def get_positioner_status(self) -> Dict[int, int]:
+    def get_positioner_status(self) -> dict[int, int]:
         """Returns the status flag for each positioner that replied."""
 
-        return {reply.positioner_id: bytes_to_int(reply.data) for reply in self.replies}
+        return {
+            reply.positioner_id: bytes_to_int(reply.data, "u8")
+            for reply in self.replies
+        }
 
 
 class GetActualPosition(Command):
@@ -66,10 +67,10 @@ class GetActualPosition(Command):
     broadcastable = False
     safe = True
 
-    def get_replies(self) -> Dict[int, Tuple[float, float]]:
+    def get_replies(self) -> dict[int, tuple[float, float]]:
         return self.get_positions()
 
-    def get_positions(self) -> Dict[int, Tuple[float, float]]:
+    def get_positions(self) -> dict[int, tuple[float, float]]:
         """Returns the positions of alpha and beta in degrees.
 
         Raises
@@ -112,10 +113,10 @@ class GetCurrent(Command):
     broadcastable = False
     safe = True
 
-    def get_replies(self) -> Dict[int, Tuple[int, int]]:
+    def get_replies(self) -> dict[int, tuple[int, int]]:
         return self.get_currents()
 
-    def get_currents(self) -> Dict[int, Tuple[int, int]]:
+    def get_currents(self) -> dict[int, tuple[int, int]]:
         """Returns a dictionary of current of alpha and beta for each positioner.
 
         Raises
@@ -144,10 +145,10 @@ class GetTemperature(Command):
     broadcastable = False
     safe = True
 
-    def get_replies(self) -> Dict[int, int]:
+    def get_replies(self) -> dict[int, int]:
         return self.get_replies()
 
-    def get_temperatures(self) -> Dict[int, int]:
+    def get_temperatures(self) -> dict[int, int]:
         """Returns the temperature in Celsius.
 
         Raises
@@ -190,7 +191,7 @@ class GetNumberTrajectories(Command):
     def get_replies(self):
         return self.get_number_trajectories()
 
-    def get_number_trajectories(self) -> Dict[int, int | None]:
+    def get_number_trajectories(self) -> dict[int, int | None]:
         """Returns the number of trajectories.
 
         Raises
@@ -218,8 +219,8 @@ class SetNumberTrajectories(Command):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
-        moves: int | Dict[int, int],
+        positioner_ids: int | list[int],
+        moves: int | dict[int, int],
         **kwargs,
     ):
         if isinstance(moves, int):

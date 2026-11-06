@@ -8,6 +8,7 @@
 
 import pathlib
 
+import anyio
 import pytest
 
 from jaeger import maskbits
@@ -37,7 +38,8 @@ async def test_load_firmware(vfps, vpositioners):
     await vfps.initialise()
 
     firmware_file = pathlib.Path(__file__).parent / "data/firmware.bin"
-    firmware_version = open(firmware_file).read().strip()[-8:]
+    async with await anyio.open_file(firmware_file) as fd:
+        firmware_version = (await fd.read()).strip()[-8:]
 
     await load_firmware(vfps, firmware_file, positioners=[1], force=True)
 

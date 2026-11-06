@@ -17,12 +17,8 @@ from typing import TYPE_CHECKING
 
 import numpy
 import pytest
-from pymodbus.datastore import (
-    ModbusSequentialDataBlock,
-    ModbusServerContext,
-    ModbusSlaveContext,
-)
 from pymodbus.server import ServerAsyncStop, StartAsyncTcpServer
+from pymodbus.simulator import DataType, SimData, SimDevice
 
 import clu.testing
 from clu.testing import TestCommand
@@ -52,7 +48,7 @@ def setup_config():
     config["fps"]["trajectory_dump_path"] = "/var/tmp/logs/jaeger/trajectories"
     config["fps"]["use_lock"] = False
 
-    if os.environ.get("CI", False):
+    if os.environ.get("CI", "False") != "False":
         tmp = os.environ.get("RUNNER_TEMP")
 
         for section, subsection in [
@@ -106,16 +102,19 @@ def test_config(setup_config):
 
 @pytest.fixture()
 async def ieb_server():
-    store = ModbusSlaveContext(
-        di=ModbusSequentialDataBlock(0, [0] * 100),
-        co=ModbusSequentialDataBlock(512, [0] * 100),
-        hr=ModbusSequentialDataBlock(512, [0] * 100),
-        ir=ModbusSequentialDataBlock(0, [0] * 100),
+    # Non-shared blocks: (coils, discrete inputs, holding registers, input registers).
+    # Addresses are zero-based, identical to the request addresses.
+    device = SimDevice(
+        id=0,
+        simdata=(
+            [SimData(512, count=100, values=False, datatype=DataType.BITS)],
+            [SimData(0, count=100, values=False, datatype=DataType.BITS)],
+            [SimData(512, count=100, values=0, datatype=DataType.REGISTERS)],
+            [SimData(0, count=100, values=0, datatype=DataType.REGISTERS)],
+        ),
     )
 
-    context = ModbusServerContext(slaves=store, single=True)
-
-    task = asyncio.create_task(StartAsyncTcpServer(context, address=("0.0.0.0", 5020)))
+    task = asyncio.create_task(StartAsyncTcpServer(device, address=("0.0.0.0", 5020)))
 
     yield
 
@@ -152,7 +151,7 @@ async def vfps(ieb_server, monkeypatch):
         await fps.can._command_queue_task
 
     tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
-    list(map(lambda task: task.cancel(), tasks))
+    [task.cancel() for task in tasks]
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
@@ -183,7 +182,7 @@ async def actor(vfps):
         log_dir=False,
         config={"chiller": {"config": None}},
     )
-    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)  # type: ignore
+    jaeger_actor = await clu.testing.setup_test_actor(jaeger_actor)
 
     yield jaeger_actor
 
@@ -214,7 +213,7 @@ def cleanup(database: PeeweeDatabaseConnection):
 def database():
     from sdssdb.peewee.sdss5db import database
 
-    if os.environ.get("CI", False):
+    if os.environ.get("CI", "False") != "False":
         database.connect("sdss5db_jaeger_test", host=None, user=None, port=5432)
     else:
         database.connect("sdss5db_jaeger_test")

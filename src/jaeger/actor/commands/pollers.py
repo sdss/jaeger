@@ -18,8 +18,6 @@ __all__ = ["pollers"]
 def pollers():
     """Handle the positioner pollers."""
 
-    pass
-
 
 @pollers.command()
 async def list(command, fps):

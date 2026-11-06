@@ -24,7 +24,7 @@ class JaegerError(Exception):
 
     def __init__(self, message=None):
         message = "There has been an error" if not message else message
-        super(JaegerError, self).__init__(message)
+        super().__init__(message)
 
 
 class FPSLockedError(JaegerError):
@@ -36,7 +36,7 @@ class JaegerNotImplemented(JaegerError):
 
     def __init__(self, message=None):
         message = "This feature is not implemented yet." if not message else message
-        super(JaegerNotImplemented, self).__init__(message)
+        super().__init__(message)
 
 
 class JaegerCANError(JaegerError):
@@ -49,7 +49,7 @@ class JaegerCANError(JaegerError):
         if serial_reply is not None:
             message = message.strip() + " " + serial_reply
 
-        super(JaegerCANError, self).__init__(message)
+        super().__init__(message)
 
 
 class PositionerError(JaegerError):
@@ -72,7 +72,7 @@ class PositionerError(JaegerError):
 
         message = f"Positioner {pid}: {message}"
 
-        super(PositionerError, self).__init__(message)
+        super().__init__(message)
 
 
 class CommandError(JaegerError):
@@ -94,13 +94,11 @@ class CommandError(JaegerError):
             c_uid = command.command_uid
             message = f"({c_name}, {c_uid!s}): {message}"
 
-        super(CommandError, self).__init__(message)
+        super().__init__(message)
 
 
 class JaegerMissingDependency(JaegerError):
     """A custom exception for missing dependencies."""
-
-    pass
 
 
 class TrajectoryError(JaegerError):
@@ -120,28 +118,18 @@ class TrajectoryError(JaegerError):
 class FVCError(JaegerError):
     """An error handling the FVC or the FVC loop."""
 
-    pass
-
 
 class JaegerWarning(Warning):
     """Base warning for Jaeger."""
-
-    pass
 
 
 class JaegerUserWarning(UserWarning, JaegerWarning):
     """The primary warning class."""
 
-    pass
-
 
 class JaegerSkippedTestWarning(JaegerUserWarning):
     """A warning for when a test is skipped."""
 
-    pass
-
 
 class JaegerDeprecationWarning(JaegerUserWarning):
     """A warning for deprecated features."""
-
-    pass

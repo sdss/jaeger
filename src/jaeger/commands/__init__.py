@@ -10,13 +10,11 @@ from __future__ import annotations
 
 import enum
 
-from typing import Dict, Type, Union
-
 
 class TypesEnumMeta(enum.EnumMeta):
     """Metaclass to allow initialising an Enum from a string."""
 
-    def __call__(cls: Type[enum.Enum], value: Union[str, int]):
+    def __call__(cls: type[enum.Enum], value: str | int):  # ty: ignore[invalid-method-override]
         if isinstance(value, str):
             for flag in cls:
                 if flag.name.lower() == value.lower():
@@ -89,7 +87,7 @@ class CommandID(enum.IntEnum, metaclass=TypesEnumMeta):
     START_FIRMWARE_UPGRADE = 200
     SEND_FIRMWARE_DATA = 201
 
-    def get_command_class(self) -> Type[Command]:
+    def get_command_class(self) -> type[Command]:
         """Returns the class associated with this command."""
 
         if self in COMMAND_LIST:
@@ -116,7 +114,7 @@ def all_subclasses(cls):
 
 
 # Generate a dictionary of commands
-COMMAND_LIST: Dict[int, Type[Command]] = {
+COMMAND_LIST: dict[int, type[Command]] = {
     cclass.command_id: cclass
     for cclass in all_subclasses(Command)
     if cclass.command_id in CommandID

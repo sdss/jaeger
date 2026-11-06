@@ -15,6 +15,7 @@ from time import time
 
 from typing import TYPE_CHECKING
 
+import anyio
 import click
 import numpy
 
@@ -37,30 +38,29 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "current",
     "goto",
-    "speed",
-    "initialise",
-    "stop",
     "hall",
+    "initialise",
+    "set_collision_margin",
+    "speed",
+    "status",
+    "stop",
     "trajectory",
     "unlock",
-    "current",
-    "status",
-    "set_collision_margin",
 ]
 
 
 def check_positioners(positioner_ids, command, fps, initialised=False):
     """Checks if some of the positioners are not connected."""
 
-    if any([pid not in fps.positioners for pid in positioner_ids]):
+    if any(pid not in fps.positioners for pid in positioner_ids):
         command.fail(error="some positioners are not connected.")
         return False
 
-    if initialised:
-        if any([not fps[pid].initialised for pid in positioner_ids]):
-            command.fail(error="some positioners are not initialised.")
-            return False
+    if initialised and any(not fps[pid].initialised for pid in positioner_ids):
+        command.fail(error="some positioners are not initialised.")
+        return False
 
     return True
 
@@ -141,7 +141,8 @@ async def goto(
         return command.fail(error="FPS is moving. Cannot send goto.")
 
     if from_file is not None:
-        trajectory = json.loads(open(from_file, "r").read())["trajectory"]
+        async with await anyio.open_file(from_file, "r") as fd:
+            trajectory = json.loads(await fd.read())["trajectory"]
 
         if go_cowboy is True:
             try:
@@ -173,9 +174,8 @@ async def goto(
         else:
             positioner_ids = list(positioner_ids)
 
-        if not relative:
-            if alpha < 0 or beta < 0:
-                return command.fail("Negative angles only allowed in relative mode.")
+        if not relative and (alpha < 0 or beta < 0):
+            return command.fail("Negative angles only allowed in relative mode.")
 
         if not check_positioners(positioner_ids, command, fps, initialised=True):
             return
@@ -441,8 +441,6 @@ async def trajectory(command, fps, path):
 def hall():
     """Turns the hall sensor on/off."""
 
-    pass
-
 
 @hall.command()
 @click.argument("POSITIONER-ID", type=int, nargs=-1, required=False)
@@ -484,8 +482,6 @@ async def off(command, fps, positioner_id):
 @jaeger_parser.group()
 def led():
     """Turns the positioner LED on/off."""
-
-    pass
 
 
 @led.command(name="on")

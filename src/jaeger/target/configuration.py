@@ -16,7 +16,7 @@ import shutil
 from copy import deepcopy
 from time import time
 
-from typing import TYPE_CHECKING, Generic, Literal, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 import numpy
 import polars
@@ -72,11 +72,11 @@ if TYPE_CHECKING:
 __all__ = [
     "BaseConfiguration",
     "Configuration",
-    "ManualConfiguration",
     "DitheredConfiguration",
+    "ManualConfiguration",
 ]
 
-PositionerType = Union[PositionerApogee, PositionerBoss]
+PositionerType = PositionerApogee | PositionerBoss
 AssignmentType = TypeVar(
     "AssignmentType",
     bound=BaseAssignment,
@@ -84,7 +84,7 @@ AssignmentType = TypeVar(
 )
 
 
-class BaseConfiguration(Generic[AssignmentType]):
+class BaseConfiguration[AssignmentType: BaseAssignment]:
     """A base configuration class."""
 
     assignment: AssignmentType
@@ -226,7 +226,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         return deepcopy(self)
 
-    def set_command(self, command: Optional[Command[JaegerActor]]):
+    def set_command(self, command: Command[JaegerActor] | None):
         """Sets the command to which to output messages."""
 
         self.command = command
@@ -262,6 +262,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         """Returns the T3 temperature."""
 
         fps = self.fps or FPS.get_instance()
+        assert isinstance(fps, FPS), "FPS instance not initialised."
 
         if fps and isinstance(fps.ieb, IEB):
             temp: float = (await fps.ieb.read_device("T3"))[0]
@@ -270,7 +271,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         return round(temp, 1)
 
-    def recompute_coordinates(self, epoch: Optional[float] = None):
+    def recompute_coordinates(self, epoch: float | None = None):
         """Recalculates the coordinates.
 
         Parameters
@@ -422,7 +423,8 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         try:
             os.makedirs(os.path.dirname(grid_dump_path), exist_ok=True)
-            json.dump(grid_dump, open(grid_dump_path, "w"))
+            with open(grid_dump_path, "w") as fd:  # noqa: ASYNC230
+                json.dump(grid_dump, fd)
         except Exception as ee:
             self.log(f"Error saving grid dump: {ee}", level=logging.ERROR)
 
@@ -518,11 +520,11 @@ class BaseConfiguration(Generic[AssignmentType]):
                 self.robot_grid.robotDict[to_move].setXYUniform()
 
                 # Now check if it's collided and decollide it.
-                if self.robot_grid.isCollided(to_move):
-                    if self.robot_grid.robotDict[to_move].isOffline is False:
-                        self.robot_grid.decollideRobot(to_move)
-                        if self.robot_grid.isCollided(to_move):
-                            raise TrajectoryError("Cannot decollide deadlocked robot.")
+                is_online = self.robot_grid.robotDict[to_move].isOffline is False
+                if self.robot_grid.isCollided(to_move) and is_online:
+                    self.robot_grid.decollideRobot(to_move)
+                    if self.robot_grid.isCollided(to_move):
+                        raise TrajectoryError("Cannot decollide deadlocked robot.")
 
                 if to_move not in decollided:
                     decollided.append(to_move)
@@ -709,7 +711,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
             with opsdb.database.atomic():
                 opsdb.AssignmentToFocal.delete().where(
-                    opsdb.AssignmentToFocal.configuration_id == self.configuration_id
+                    opsdb.AssignmentToFocal.configuration_id == self.configuration_id  # ty: ignore[unresolved-attribute]
                 ).execute(opsdb.database)
 
                 configuration = opsdb.Configuration.get_by_id(self.configuration_id)
@@ -741,17 +743,17 @@ class BaseConfiguration(Generic[AssignmentType]):
                 assignment_pk = None
 
             focals.append(
-                dict(
-                    assignment_pk=assignment_pk,
-                    xfocal=xfocal,
-                    yfocal=yfocal,
-                    positioner_id=pid,
-                    fiber_type=row["fibre_type"].lower(),
-                    configuration_id=self.configuration_id,
-                    catalogid=row["catalogid"],
-                    assigned=assigned,
-                    replaced=row["too"],
-                )
+                {
+                    "assignment_pk": assignment_pk,
+                    "xfocal": xfocal,
+                    "yfocal": yfocal,
+                    "positioner_id": pid,
+                    "fiber_type": row["fibre_type"].lower(),
+                    "configuration_id": self.configuration_id,
+                    "catalogid": row["catalogid"],
+                    "assigned": assigned,
+                    "replaced": row["too"],
+                }
             )
 
         with opsdb.database.atomic():
@@ -790,7 +792,7 @@ class BaseConfiguration(Generic[AssignmentType]):
         path: str | pathlib.Path | None = None,
         flavour: str = "",
         overwrite: bool = False,
-        headers: dict = {},
+        headers: dict | None = None,
         fibre_data: polars.DataFrame | None = None,
         write_confSummary_legacy: bool = True,
     ):
@@ -800,6 +802,8 @@ class BaseConfiguration(Generic[AssignmentType]):
         # all the info at once for all the assignments. Need to be careful
         # to maintain the order.
 
+        if headers is None:
+            headers = {}
         if self.configuration_id is None:
             raise JaegerError("Configuration needs to be set and loaded to the DB.")
 
@@ -852,8 +856,7 @@ class BaseConfiguration(Generic[AssignmentType]):
 
         fibermap, default = get_fibermap_table(len(fdata))
 
-        i = 0
-        for row_data in fdata.iter_rows(named=True):
+        for ii, row_data in enumerate(fdata.iter_rows(named=True)):
             pid = row_data["positioner_id"]
             fibre_type = row_data["fibre_type"]
 
@@ -938,9 +941,7 @@ class BaseConfiguration(Generic[AssignmentType]):
                     }
                 )
 
-            fibermap[i] = tuple(row.values())
-
-            i += 1
+            fibermap[ii] = tuple(row.values())
 
         fibermap = Table(fibermap)
         fibermap.sort(["positionerId", "fiberType"])
@@ -1080,12 +1081,13 @@ class DitheredConfiguration(BaseConfiguration[Assignment]):
             "dither_radius": radius,
         }
 
-    async def get_paths(self, collision_buffer: float | None = None):
+    async def get_paths(self, collision_buffer: float | None = None):  # ty: ignore[invalid-method-override]
         """Get trajectory paths."""
 
         self.robot_grid = self._initialise_grid(collision_buffer=collision_buffer)
 
         fps = self.fps or FPS.get_instance()
+        assert isinstance(fps, FPS), "FPS instance not initialised."
 
         await fps.update_position()
         positions = fps.get_positions_dict()

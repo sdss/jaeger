@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import pathlib
 
-from typing import TYPE_CHECKING
-
 import numpy
 import polars
 import pytest
@@ -25,10 +23,6 @@ from jaeger.target.tools import configuration_to_dataframe
 from jaeger.testing import MockFPS
 
 from . import check_database, check_fps_calibrations_version
-
-
-if TYPE_CHECKING:
-    pass
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +57,7 @@ async def test_configuration_write(tmp_path: pathlib.Path):
 
     assert (
         opsdb.Configuration.select()
-        .where(opsdb.Configuration.design_id == 21637)
+        .where(opsdb.Configuration.design_id == 21637)  # ty: ignore[unresolved-attribute]
         .exists()
     )
 

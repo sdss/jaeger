@@ -11,19 +11,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import signal
 import socket
 import sys
 import warnings
 from copy import deepcopy
-from functools import wraps
-
-from typing import Optional
 
 import click
 from click_default_group import DefaultGroup
 
 from sdsstools.daemonizer import DaemonGroup
+from sdsstools.daemonizer import cli_coro as cli_coro_fn
 
 from jaeger import can_log, config, log
 from jaeger.commands.bootloader import load_firmware
@@ -43,7 +40,7 @@ from jaeger.testing import VirtualFPS
 __FPS__ = None
 
 
-def shutdown(sign):
+def shutdown(sign, loop):
     """Shuts down the FPS and stops the positioners in case of a signal interrupt."""
 
     if __FPS__ is not None:
@@ -55,21 +52,10 @@ def shutdown(sign):
         sys.exit(1)
 
 
-def cli_coro(f):
-    """Decorator function that allows defining coroutines with click."""
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-        for ss in signals:
-            loop.add_signal_handler(ss, shutdown, ss)
-        return loop.run_until_complete(f(*args, **kwargs))
-
-    return wrapper
+cli_coro = cli_coro_fn(shutdown_func=shutdown)
 
 
-class FPSWrapper(object):
+class FPSWrapper:
     """A helper to store FPS initialisation parameters."""
 
     def __init__(
@@ -215,12 +201,12 @@ def jaeger(
 
     if allow_host is False:
         hostname = socket.getfqdn()
-        if hostname.endswith("apo.nmsu.edu") or hostname.endswith("lco.cl"):
-            if not hostname.startswith("sdss5-fps"):
-                raise RuntimeError(
-                    "At the observatories jaeger must run on sdss5-fps. "
-                    "If you want to run jaeger on another computer use --allow-host."
-                )
+        hostname_is_obs = hostname.endswith(("apo.nmsu.edu", "lco.cl"))
+        if hostname_is_obs and not hostname.startswith("sdss5-fps"):
+            raise RuntimeError(
+                "At the observatories jaeger must run on sdss5-fps. "
+                "If you want to run jaeger on another computer use --allow-host."
+            )
 
     if verbose > 0 and quiet:
         raise click.UsageError("--quiet and --verbose are mutually exclusive.")
@@ -547,9 +533,8 @@ async def goto(
         else:
             positioner_ids = list(positioner_ids)
 
-        if not relative:
-            if alpha < 0 or beta < 0:
-                raise JaegerError("Negative angles only allowed in relative mode.")
+        if not relative and (alpha < 0 or beta < 0):
+            raise JaegerError("Negative angles only allowed in relative mode.")
 
         new_positions = {}
         for pid in positioner_ids:
@@ -617,8 +602,6 @@ async def home(fps_maker: FPSWrapper, positioner_id: int, axis: str | None = Non
             raise ValueError("Positioner has been disabled.")
 
         await fps[positioner_id].home(alpha=alpha, beta=beta)
-
-    return
 
 
 @jaeger.command()
@@ -690,8 +673,6 @@ async def unwind(fps_maker, collision_buffer: float | None = None, force: bool =
         log.info("Executing unwind trajectory.")
         await fps.send_trajectory(trajectory)
 
-    return
-
 
 @jaeger.command()
 @click.argument("EXPLODE-DEG", type=float)
@@ -725,8 +706,6 @@ async def explode(
         log.info("Executing explode trajectory.")
         await fps.send_trajectory(trajectory)
 
-    return
-
 
 @jaeger.command()
 @click.argument("PATH", required=False, type=click.Path(exists=False, dir_okay=False))
@@ -735,7 +714,7 @@ async def explode(
 @cli_coro
 async def snapshot(
     fps_maker: FPSWrapper,
-    path: Optional[str] = None,
+    path: str | None = None,
     collision_buffer: float | None = None,
 ):
     """Takes a snapshot image."""

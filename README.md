@@ -35,6 +35,7 @@ jaeger is developed as an [asyncio](https://docs.python.org/3/library/asyncio.ht
 import asyncio
 from jaeger import FPS, log
 
+
 async def main():
 
     # Set logging level to DEBUG
@@ -52,6 +53,7 @@ async def main():
 
     # Cleanly finish all pending tasks and exit
     await fps.shutdown()
+
 
 asyncio.run(main())
 ```

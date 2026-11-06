@@ -32,7 +32,7 @@ def docs_live(session):
     else:
         docs_dir = "."
 
-    with cd(os.path.join(os.path.dirname(__file__), "docs/sphinx")):
+    with cd(os.path.join(os.path.dirname(__file__), "docs/sphinx")):  # noqa: SIM117
         with tempfile.TemporaryDirectory() as destination:
             session.run(
                 "sphinx-autobuild",

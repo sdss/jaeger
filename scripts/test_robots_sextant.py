@@ -11,8 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import pathlib
-
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy
 from rich.progress import (
@@ -81,7 +80,7 @@ async def test_robots_sextant(
             fps.pop(disabled_robot)
             fps.disabled.add(disabled_robot)
 
-    robot_ids = list(sorted(fps.keys()))
+    robot_ids = sorted(fps.keys())
 
     log.info("Robot status:")
     for pid in robot_ids:
