@@ -8,9 +8,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import cache
 
-from typing import TYPE_CHECKING, Any, Literal, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy
 import polars
@@ -52,7 +53,7 @@ class BaseAssignment:
     def __init__(
         self,
         configuration: Configuration | ManualConfiguration | DitheredConfiguration,
-        observatory: Optional[str] = None,
+        observatory: str | None = None,
         scale: float | None = None,
         boss_wavelength: float | None = None,
         apogee_wavelength: float | None = None,
@@ -102,7 +103,7 @@ class BaseAssignment:
 
         return self.configuration.epoch
 
-    def compute_coordinates(self, epoch: Optional[float] = None):
+    def compute_coordinates(self, epoch: float | None = None):
         """Computes coordinates in different systems.
 
         Parameters
@@ -114,7 +115,7 @@ class BaseAssignment:
 
         raise NotImplementedError("Must be overridden by subclasses.")
 
-    @cache
+    @cache  # noqa: B019
     def get_wavelength(self, fibre_type: str):
         """Returns the wavelength for a given fibre type."""
 
@@ -355,7 +356,7 @@ class Assignment(BaseAssignment):
                 self.compute_coordinates(epoch)
             log.debug(f"Computed coordinates in {timer.elapsed:.2f} s.")
 
-    def compute_coordinates(self, epoch: Optional[float] = None):
+    def compute_coordinates(self, epoch: float | None = None):
         """Computes coordinates in different systems.
 
         Parameters
@@ -556,10 +557,10 @@ class ManualAssignment(BaseAssignment):
         betas: list[float] = []
         for row in fdata.iter_rows(named=True):
             positioner_id = row["positioner_id"]
-            if positioner_id not in self.positions:
-                alpha = alpha0
-                beta = beta0
-            elif None in self.positions[positioner_id]:
+            if (
+                positioner_id not in self.positions
+                or None in self.positions[positioner_id]
+            ):
                 alpha = alpha0
                 beta = beta0
             else:

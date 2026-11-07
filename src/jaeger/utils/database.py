@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 
 __all__ = [
     "connect_database",
-    "load_holes",
-    "load_fields",
     "get_designid_from_queue",
+    "load_fields",
+    "load_holes",
     "match_assignment_hash",
 ]
 
@@ -49,9 +49,8 @@ def connect_database(database: PeeweeDatabaseConnection, force: bool = False):
 def check_database(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if targetdb.database.connected is False:
-            if connect_database(targetdb.database) is False:
-                raise RuntimeError("Database is not connected.")
+        if not targetdb.database.connected and not connect_database(targetdb.database):
+            raise RuntimeError("Database is not connected.")
         return f(*args, **kwargs)
 
     return wrapper
@@ -105,7 +104,7 @@ def get_designid_from_queue(
 
     design_hashes = (
         opsdb.Queue.select(opsdb.Queue.position)
-        .join(targetdb.Design, on=(targetdb.Design.design_id == opsdb.Queue.design_id))
+        .join(targetdb.Design, on=(targetdb.Design.design_id == opsdb.Queue.design_id))  # ty: ignore[unresolved-attribute]
         .where(targetdb.Design.assignment_hash == hash)
         .where(opsdb.Queue.position >= (1 if pop is False else -1))
         .order_by(opsdb.Queue.position)
@@ -115,7 +114,7 @@ def get_designid_from_queue(
     # This should not happen, but if the first entry does not have position 1,
     # just leave because something weird happened. Note that the position can be -1
     # if we have pop the design.
-    positions = list(zip(*design_hashes))[0]
+    positions = next(zip(*design_hashes))
     if positions[0] > 1:
         return (design.design_id, 0.0)
 
@@ -131,8 +130,7 @@ def get_designid_from_queue(
 
     # Cap to the number of designs after which we'll force a reconfiguration.
     max_designs_epoch: int = config["configuration"]["max_designs_epoch"]
-    if n_designs > max_designs_epoch:
-        n_designs = max_designs_epoch
+    n_designs = min(n_designs, max_designs_epoch)
 
     return (design.design_id, n_designs / 2 * 900.0)
 
@@ -159,12 +157,12 @@ def load_holes(observatory: str):
                 holeid = f"R{row:+}C{col}"
 
             holes.append(
-                dict(
-                    row=row,
-                    column=col,
-                    holeid=holeid,
-                    observatory_pk=observatory_pk,
-                )
+                {
+                    "row": row,
+                    "column": col,
+                    "holeid": holeid,
+                    "observatory_pk": observatory_pk,
+                }
             )
 
     targetdb.Hole.insert(holes).on_conflict(

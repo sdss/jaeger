@@ -16,7 +16,7 @@ import time
 import warnings
 from glob import glob
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy
 
@@ -40,14 +40,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "send_trajectory",
     "SendNewTrajectory",
-    "SendTrajectoryData",
-    "TrajectoryDataEnd",
     "SendTrajectoryAbort",
+    "SendTrajectoryData",
     "StartTrajectory",
     "StopTrajectory",
     "Trajectory",
+    "TrajectoryDataEnd",
+    "send_trajectory",
 ]
 
 
@@ -55,7 +55,7 @@ MOTOR_STEPS = config["positioner"]["motor_steps"]
 TIME_STEP = config["positioner"]["time_step"]
 
 
-TrajectoryDataType = Dict[int, Dict[str, List[Tuple[float, float]]]]
+TrajectoryDataType = dict[int, dict[str, list[tuple[float, float]]]]
 
 
 async def send_trajectory(
@@ -64,9 +64,9 @@ async def send_trajectory(
     use_sync_line: bool | None = None,
     send_trajectory: bool = True,
     start_trajectory: bool = True,
-    command: Optional[CluCommand[JaegerActor]] = None,
+    command: CluCommand[JaegerActor] | None = None,
     dump: bool | str = True,
-    extra_dump_data: dict[str, Any] = {},
+    extra_dump_data: dict[str, Any] | None = None,
     save_snapshot: bool = True,
 ) -> Trajectory:
     """Sends a set of trajectories to the positioners.
@@ -131,6 +131,8 @@ async def send_trajectory(
 
     """
 
+    if extra_dump_data is None:
+        extra_dump_data = {}
     traj = Trajectory(fps, trajectories, extra_dump_data=extra_dump_data)
 
     if dump is False:
@@ -247,7 +249,7 @@ def dump_trajectory(
         command.debug(trajectory_dump_file=str(path))
 
 
-class Trajectory(object):
+class Trajectory:
     """Prepares and sends a trajectory to the FPS.
 
     Most user will prefer using `.FPS.send_trajectory`, which automates the
@@ -293,15 +295,18 @@ class Trajectory(object):
         self,
         fps: FPS,
         trajectories: str | pathlib.Path | TrajectoryDataType,
-        extra_dump_data: dict[str, Any] = {},
+        extra_dump_data: dict[str, Any] | None = None,
     ):
+        if extra_dump_data is None:
+            extra_dump_data = {}
         self.fps = fps
         self.trajectories: TrajectoryDataType
 
         if isinstance(trajectories, (str, pathlib.Path)):
             path = pathlib.Path(trajectories)
             if path.suffix == ".json":
-                self.trajectories = json.loads(open(path, "r").read())["trajectory"]
+                with open(path, "r") as fd:
+                    self.trajectories = json.loads(fd.read())["trajectory"]
             else:
                 self.trajectories = cast(dict, read_yaml_file(trajectories))
         elif isinstance(trajectories, dict):
@@ -354,7 +359,7 @@ class Trajectory(object):
         mjd = str(get_sjd())
         dirname = pathlib.Path(dirname) / mjd
 
-        files = list(sorted(glob(os.path.join(dirname, "*.json"))))
+        files = sorted(glob(os.path.join(dirname, "*.json")))
         if len(files) == 0:
             seq = 1
         else:
@@ -384,21 +389,19 @@ class Trajectory(object):
                 )
 
             for arm in ["alpha", "beta"]:
-                data = numpy.array(list(zip(*trajectory[arm]))[0])
+                data = numpy.array(next(zip(*trajectory[arm])))
 
-                if arm == "beta":
-                    if config.get("safe_mode", False):
-                        if config["safe_mode"] is True:
-                            min_beta = 160
-                        else:
-                            min_beta = config["safe_mode"]["min_beta"]
-                        if numpy.any(data < min_beta):
-                            self.failed_positioners[pid] = "SAFE_MODE"
-                            raise TrajectoryError(
-                                f"Positioner {pid}: safe mode is on "
-                                f"and beta < {min_beta}.",
-                                self,
-                            )
+                if arm == "beta" and config.get("safe_mode", False):
+                    if config["safe_mode"] is True:
+                        min_beta = 160
+                    else:
+                        min_beta = config["safe_mode"]["min_beta"]
+                    if numpy.any(data < min_beta):
+                        self.failed_positioners[pid] = "SAFE_MODE"
+                        raise TrajectoryError(
+                            f"Positioner {pid}: safe mode is on and beta < {min_beta}.",
+                            self,
+                        )
 
     async def send(self, allow_retry: bool = True):
         """Sends the trajectory but does not start it."""
@@ -455,8 +458,7 @@ class Trajectory(object):
             )
 
             # Updates the global trajectory max time.
-            if max_time_pos > self.move_time:
-                self.move_time = max_time_pos
+            self.move_time = max(self.move_time, max_time_pos)
 
         new_traj_data = {}
         for pos_id in self.trajectories:
@@ -523,7 +525,7 @@ class Trajectory(object):
 
                     if status.timed_out:
                         sent_pid = set(send_trajectory_pids)
-                        replied_pid = set(reply.positioner_id for reply in replies)
+                        replied_pid = {reply.positioner_id for reply in replies}
                         not_responded = sent_pid - replied_pid
                         for pid in not_responded:
                             self.failed_positioners[pid] = "TIMED_OUT"
@@ -619,7 +621,7 @@ class Trajectory(object):
                 self.failed = True
                 raise TrajectoryError("START_TRAJECTORY failed", self)
 
-        restart_pollers = True if self.fps.pollers.running else False
+        restart_pollers = bool(self.fps.pollers.running)
         await self.fps.pollers.stop()
 
         self.start_time = time.time()

@@ -95,7 +95,7 @@ def add_targets_of_opportunity_to_design(design: Design):
     log.debug(f"[ToO]: {len(too_targets_field)} targets have not been observed.")
 
     # Filter out ToOs that are not valid for this design mode.
-    design_mode = design.design.design_mode_label
+    design_mode = design.design.design_mode_label  # ty: ignore[unresolved-attribute]
 
     bn_col = f"bn_{design_mode.lower()}_valid"
     mag_lim_col = f"mag_lim_{design_mode.lower()}_valid"

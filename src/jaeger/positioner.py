@@ -11,8 +11,6 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from typing import List, Optional, Tuple
-
 from packaging.version import Version
 
 import jaeger
@@ -49,7 +47,7 @@ class Positioner(StatusMixIn):
         self,
         positioner_id: int,
         fps: jaeger.FPS | None = None,
-        centre: Tuple[Optional[float], Optional[float]] = (None, None),
+        centre: tuple[float | None, float | None] = (None, None),
     ):
         self.fps = fps
 
@@ -90,10 +88,7 @@ class Positioner(StatusMixIn):
     def moving(self):
         """Returns `True` if the positioner is moving."""
 
-        if self.status.DISPLACEMENT_COMPLETED not in self.status:
-            return True
-
-        return False
+        return self.status.DISPLACEMENT_COMPLETED not in self.status
 
     @property
     def initialised(self):
@@ -106,9 +101,7 @@ class Positioner(StatusMixIn):
             return False
 
         if self.is_bootloader():
-            if self.status != maskbits.BootloaderStatus.UNKNOWN:
-                return True
-            return False
+            return self.status != maskbits.BootloaderStatus.UNKNOWN
 
         if (
             not self.status.initialised
@@ -117,10 +110,7 @@ class Positioner(StatusMixIn):
         ):
             return False
 
-        if self.status == self.flags.UNKNOWN:
-            return False
-
-        return True
+        return self.status != self.flags.UNKNOWN
 
     def reset(self):
         """Resets positioner values and statuses."""
@@ -135,7 +125,7 @@ class Positioner(StatusMixIn):
 
         log.log(level, f"Positioner {self.positioner_id}: {message}")
 
-    def get_bus(self) -> Tuple[int, int | None]:
+    def get_bus(self) -> tuple[int, int | None]:
         """Returns the interface index and bus."""
 
         if self.fps is None:
@@ -152,7 +142,7 @@ class Positioner(StatusMixIn):
 
         return (iface_idx, bus)
 
-    async def send_command(self, command, error: Optional[str] = None, **kwargs):
+    async def send_command(self, command, error: str | None = None, **kwargs):
         """Sends and awaits a command to the FPS for this positioner."""
 
         if not self.fps:
@@ -171,7 +161,7 @@ class Positioner(StatusMixIn):
 
     async def update_position(
         self,
-        position: Tuple[float, float] | None = None,
+        position: tuple[float, float] | None = None,
         timeout=1,
     ):
         """Updates the position of the alpha and beta arms."""
@@ -218,7 +208,7 @@ class Positioner(StatusMixIn):
             n_replies = len(command.replies)
 
             if n_replies == 1:
-                status = int(bytes_to_int(command.replies[0].data))
+                status = int(bytes_to_int(command.replies[0].data, "u8"))
             else:
                 self.status = self.flags.UNKNOWN
                 raise PositionerError(f"GET_STATUS received {n_replies} replies.")
@@ -239,10 +229,10 @@ class Positioner(StatusMixIn):
 
     async def wait_for_status(
         self,
-        status: List[maskbits.PositionerStatus],
+        status: list[maskbits.PositionerStatus],
         delay=1,
-        timeout: Optional[float] = None,
-    ) -> bool:
+        timeout: float | None = None,
+    ) -> bool:  # ty: ignore[invalid-method-override]
         """Polls the status until it reaches a certain value.
 
         Parameters
@@ -289,7 +279,7 @@ class Positioner(StatusMixIn):
 
         try:
             await asyncio.wait_for(status_waiter(wait_for_status), timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
         return True
@@ -452,7 +442,7 @@ class Positioner(StatusMixIn):
 
         cmds = await asyncio.gather(*cmds)
 
-        if any([cmd.status != maskbits.CommandStatus.DONE for cmd in cmds]):
+        if any(cmd.status != maskbits.CommandStatus.DONE for cmd in cmds):
             raise PositionerError("failed switching precise moves.")
 
         self.precise_moves = mode
@@ -569,19 +559,19 @@ class Positioner(StatusMixIn):
         else:
             motors = [motor]
 
-        for motor in motors:
-            command_name = motor.upper() + "_" + loop.upper() + "_LOOP"
+        for motor_ in motors:
+            command_name = motor_.upper() + "_" + loop.upper() + "_LOOP"
             if collisions:
                 command_name += "_COLLISION_DETECTION"
             else:
                 command_name += "_WITHOUT_COLLISION_DETECTION"
 
             await self.send_command(
-                command_name, error=f"failed setting loop for {motor}."
+                command_name, error=f"failed setting loop for {motor_}."
             )
 
             self._log(
-                f"set motor={motor!r}, loop={loop!r}, detect_collision={collisions}",
+                f"set motor={motor_!r}, loop={loop!r}, detect_collision={collisions}"
             )
 
         return True

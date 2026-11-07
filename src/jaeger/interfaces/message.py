@@ -2,7 +2,6 @@
 
 # Copied from the python-can package.
 
-from __future__ import absolute_import, division
 
 import warnings
 from copy import deepcopy
@@ -12,7 +11,7 @@ from math import isinf, isnan
 __all__ = ["Message"]
 
 
-class Message(object):
+class Message:
     """
     The ``Message`` object is used to represent CAN messages for
     sending, receiving and other purposes like converting between different
@@ -34,19 +33,19 @@ class Message(object):
     """
 
     __slots__ = (
-        "timestamp",
-        "arbitration_id",
-        "is_extended_id",
-        "is_remote_frame",
-        "is_error_frame",
-        "channel",
-        "dlc",
-        "data",
-        "is_fd",
-        "bitrate_switch",
-        "error_state_indicator",
         "__weakref__",  # support weak references to messages
         "_dict",  # see __getattr__
+        "arbitration_id",
+        "bitrate_switch",
+        "channel",
+        "data",
+        "dlc",
+        "error_state_indicator",
+        "is_error_frame",
+        "is_extended_id",
+        "is_fd",
+        "is_remote_frame",
+        "timestamp",
     )
 
     def __getattr__(self, key):
@@ -60,12 +59,12 @@ class Message(object):
             )
             return self._dict[key]
         except KeyError:
-            raise AttributeError("'message' object has no attribute '{}'".format(key))
+            raise AttributeError(f"'message' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
         # see __getattr__
         try:
-            super(Message, self).__setattr__(key, value)
+            super().__setattr__(key, value)
         except AttributeError:
             warnings.warn(
                 "Custom attributes of messages are deprecated "
@@ -116,7 +115,7 @@ class Message(object):
 
         """
 
-        self._dict = dict()  # see __getattr__
+        self._dict = {}  # see __getattr__
 
         self.timestamp = timestamp
         self.arbitration_id = arbitration_id
@@ -151,7 +150,7 @@ class Message(object):
             try:
                 self.data = bytearray(data)
             except TypeError:
-                err = "Couldn't create message from {} ({})".format(data, type(data))
+                err = f"Couldn't create message from {data} ({type(data)})"
                 raise TypeError(err)
 
         if dlc is None:
@@ -163,11 +162,11 @@ class Message(object):
             self._check()
 
     def __str__(self):
-        field_strings = ["Timestamp: {0:>15.6f}".format(self.timestamp)]
+        field_strings = [f"Timestamp: {self.timestamp:>15.6f}"]
         if self.is_extended_id:
-            arbitration_id_string = "ID: {0:08x}".format(self.arbitration_id)
+            arbitration_id_string = f"ID: {self.arbitration_id:08x}"
         else:
-            arbitration_id_string = "ID: {0:04x}".format(self.arbitration_id)
+            arbitration_id_string = f"ID: {self.arbitration_id:04x}"
         field_strings.append(arbitration_id_string.rjust(12, " "))
 
         flag_string = " ".join(
@@ -183,11 +182,11 @@ class Message(object):
 
         field_strings.append(flag_string)
 
-        field_strings.append("DLC: {0:2d}".format(self.dlc))
+        field_strings.append(f"DLC: {self.dlc:2d}")
         data_strings = []
         if self.data is not None:
-            for index in range(0, min(self.dlc, len(self.data))):
-                data_strings.append("{0:02x}".format(self.data[index]))
+            for index in range(min(self.dlc, len(self.data))):
+                data_strings.append(f"{self.data[index]:02x}")
         if data_strings:  # if not empty
             field_strings.append(" ".join(data_strings).ljust(24, " "))
         else:
@@ -198,7 +197,7 @@ class Message(object):
 
         if self.channel is not None:
             try:
-                field_strings.append("Channel: {}".format(self.channel))
+                field_strings.append(f"Channel: {self.channel}")
             except UnicodeEncodeError:
                 pass
 
@@ -218,27 +217,27 @@ class Message(object):
 
     def __repr__(self):
         args = [
-            "timestamp={}".format(self.timestamp),
-            "arbitration_id={:#x}".format(self.arbitration_id),
-            "extended_id={}".format(self.is_extended_id),
+            f"timestamp={self.timestamp}",
+            f"arbitration_id={self.arbitration_id:#x}",
+            f"extended_id={self.is_extended_id}",
         ]
 
         if self.is_remote_frame:
-            args.append("is_remote_frame={}".format(self.is_remote_frame))
+            args.append(f"is_remote_frame={self.is_remote_frame}")
 
         if self.is_error_frame:
-            args.append("is_error_frame={}".format(self.is_error_frame))
+            args.append(f"is_error_frame={self.is_error_frame}")
 
         if self.channel is not None:
-            args.append("channel={!r}".format(self.channel))
+            args.append(f"channel={self.channel!r}")
 
-        data = ["{:#02x}".format(byte) for byte in self.data]
-        args += ["dlc={}".format(self.dlc), "data=[{}]".format(", ".join(data))]
+        data = [f"{byte:#02x}" for byte in self.data]
+        args += [f"dlc={self.dlc}", "data=[{}]".format(", ".join(data))]
 
         if self.is_fd:
             args.append("is_fd=True")
-            args.append("bitrate_switch={}".format(self.bitrate_switch))
-            args.append("error_state_indicator={}".format(self.error_state_indicator))
+            args.append(f"bitrate_switch={self.bitrate_switch}")
+            args.append(f"error_state_indicator={self.error_state_indicator}")
 
         return "can.Message({})".format(", ".join(args))
 
@@ -318,15 +317,11 @@ class Message(object):
         if self.is_fd:
             if 64 < self.dlc:
                 raise ValueError(
-                    "DLC was {} but it should be <= 64 for CAN FD frames".format(
-                        self.dlc
-                    )
+                    f"DLC was {self.dlc} but it should be <= 64 for CAN FD frames"
                 )
         elif 8 < self.dlc:
             raise ValueError(
-                "DLC was {} but it should be <= 8 for normal CAN frames".format(
-                    self.dlc
-                )
+                f"DLC was {self.dlc} but it should be <= 8 for normal CAN frames"
             )
 
         if self.is_remote_frame:

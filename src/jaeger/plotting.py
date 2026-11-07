@@ -42,7 +42,7 @@ def _plot_wok_distance(data_F: polars.DataFrame, ax: Axes, is_dither: bool = Fal
 
         perc_90 = float(numpy.percentile(wok_distance, 90))
         ax.plot(
-            wok_distance_bin[1][1:] - wok_distance_bin[1][1] / 2.0,  # type: ignore
+            wok_distance_bin[1][1:] - wok_distance_bin[1][1] / 2.0,
             wok_distance_bin[0],
             linestyle="-",
             color=colours[ii],
@@ -90,7 +90,7 @@ def _plot_sky_distance(
 
         perc_90 = float(numpy.percentile(sky_distance, 90))
         ax.plot(
-            sky_distance_bin[1][1:] - sky_distance_bin[1][1] / 2.0,  # type: ignore
+            sky_distance_bin[1][1:] - sky_distance_bin[1][1] / 2.0,
             sky_distance_bin[0],
             linestyle="-",
             color=colours[ii],
@@ -210,7 +210,7 @@ def plot_fvc_distances(
         )
         data_F = data_F.with_columns(skycat_distance=polars.Series(skycat_distance))
 
-    with plt.ioff():  # type: ignore
+    with plt.ioff():
         seaborn.set_theme()
 
         fig, axes = plt.subplots(1, 3, figsize=(30, 10))

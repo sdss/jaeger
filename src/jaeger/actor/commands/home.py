@@ -89,7 +89,7 @@ async def home(
         ]
     else:
         for positioner_id in positioner_ids:
-            if positioner_id not in fps.positioners.keys():
+            if positioner_id not in fps.positioners:
                 return command.fail(f"Unknown positioner {positioner_id}.")
             if fps[positioner_id].disabled or fps[positioner_id].offline:
                 return command.fail(f"Cannot home disabled positioner {positioner_id}.")
@@ -266,8 +266,10 @@ async def _home_beta_phase(
     start_angle: float,
     from_destination: TrajectoryType,
     dry_run: bool = False,
-    extra_zero_positioner_ids: list[int] = [],
+    extra_zero_positioner_ids: list[int] | None = None,
 ):
+    if extra_zero_positioner_ids is None:
+        extra_zero_positioner_ids = []
     command.info(f"Moving robots to phase {phase} initial position.")
     try:
         await fps.send_trajectory(from_destination, command=command)
@@ -326,7 +328,7 @@ async def _home_beta_phase(
     # grid with zeroed offsets. We want to force-unwind to ensure that most of
     # the robots make it home and there are only a few deadlocked robots that
     # need manual intervention.
-    to_destination, _, did_fail, deadlocks = get_path_pair(
+    to_destination, _, _did_fail, deadlocks = get_path_pair(
         grid_unwind,
         path_generation_mode="greedy",
         ignore_did_fail=True,

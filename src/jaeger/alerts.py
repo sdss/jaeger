@@ -328,7 +328,7 @@ class AlertsBot(BaseBot):
 
         else:
             self._gfa_alerts[camera_name] = False
-            if all([value is False for value in self._gfa_alerts.values()]):
+            if all(value is False for value in self._gfa_alerts.values()):
                 self.set_keyword("alert_gfa_temp_critical", False)
                 self.set_keyword("alert_gfa_temp_warning", False)
 

@@ -10,12 +10,12 @@ import enum
 
 
 __all__ = [
+    "BootloaderStatus",
+    "CommandStatus",
+    "FPSStatus",
     "Maskbit",
     "PositionerStatus",
-    "CommandStatus",
     "ResponseCode",
-    "BootloaderStatus",
-    "FPSStatus",
 ]
 
 
@@ -38,7 +38,7 @@ class Maskbit(enum.IntFlag):
     def active_bits(self):
         """Returns a list of flags that match the value."""
 
-        return [bit for bit in self.__class__ if bit.value & self.value]  # type: ignore
+        return [bit for bit in self.__class__ if bit.value & self.value]
 
 
 class CommandStatus(Maskbit):
@@ -55,26 +55,26 @@ class CommandStatus(Maskbit):
     def is_done(self):
         """Returns True if the command is done (completed or failed)."""
 
-        return True if (self in [self.DONE, self.TIMEDOUT] or self.failed) else False
+        return bool(self in [self.DONE, self.TIMEDOUT] or self.failed)
 
     @property
     def is_running(self):
         """Returns True if the command is running."""
 
-        return True if self == CommandStatus.RUNNING else False
+        return self == CommandStatus.RUNNING
 
     @property
     def failed(self):
         """Returns True if the command failed (or got cancelled)."""
 
         failed_states = self.CANCELLED | self.FAILED
-        return True if self in failed_states else False
+        return self in failed_states
 
     @property
     def timed_out(self):
         """Returns True if the command timed out."""
 
-        return True if self.TIMEDOUT in self else False
+        return self.TIMEDOUT in self
 
 
 class PositionerStatusV4_1(Maskbit):
@@ -128,20 +128,16 @@ class PositionerStatusV4_1(Maskbit):
     def collision(self):
         """Returns `True` if the positioner is collided."""
 
-        return (
-            True
-            if (
-                PositionerStatusV4_1.COLLISION_ALPHA & self
-                or PositionerStatusV4_1.COLLISION_BETA & self
-            )
-            else False
+        return bool(
+            PositionerStatusV4_1.COLLISION_ALPHA & self
+            or PositionerStatusV4_1.COLLISION_BETA & self
         )
 
     @property
     def initialised(self):
         """Returns `True` if the positioner is initialised."""
 
-        return True if PositionerStatusV4_1.SYSTEM_INITIALIZED & self else False
+        return bool(PositionerStatusV4_1.SYSTEM_INITIALIZED & self)
 
 
 class PositionerStatusV4_0(Maskbit):
@@ -170,19 +166,15 @@ class PositionerStatusV4_0(Maskbit):
     def initialised(self):
         """Returns `True` if the positioner is initialised."""
 
-        return True if PositionerStatusV4_0.SYSTEM_INITIALIZATION & self else False
+        return bool(PositionerStatusV4_0.SYSTEM_INITIALIZATION & self)
 
     @property
     def collision(self):
         """Returns `True` if the positioner is collided."""
 
-        return (
-            True
-            if (
-                PositionerStatusV4_0.ALPHA_COLLISION & self
-                or PositionerStatusV4_0.BETA_COLLISION & self
-            )
-            else False
+        return bool(
+            PositionerStatusV4_0.ALPHA_COLLISION & self
+            or PositionerStatusV4_0.BETA_COLLISION & self
         )
 
 

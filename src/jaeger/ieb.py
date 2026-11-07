@@ -10,7 +10,7 @@ import math
 import os
 import warnings
 
-from typing import Any, Dict
+from typing import Any
 
 from drift import Drift, DriftError
 
@@ -18,7 +18,7 @@ from jaeger import config
 from jaeger.exceptions import JaegerUserWarning
 
 
-__all__ = ["IEB", "FVC_IEB", "_get_category_data"]
+__all__ = ["FVC_IEB", "IEB", "_get_category_data"]
 
 
 async def _get_category_data(command, category) -> list:
@@ -37,7 +37,7 @@ async def _get_category_data(command, category) -> list:
             device = ieb.get_device(name)
             value = (await device.read(connect=False))[0]
             if type_ == "boolean" and device.__type__ == "relay":
-                value = True if value == "closed" else False
+                value = value == "closed"
             elif type_ == "integer":
                 value = int(value)
             elif type_ == "number":
@@ -117,7 +117,7 @@ class IEB(Drift):
         self._n_failures = 0
         self.disabled = False
 
-    async def get_status(self) -> Dict[str, Any]:
+    async def get_status(self) -> dict[str, Any]:
         """Returns the status of the IEB components."""
 
         status = {}
@@ -125,7 +125,7 @@ class IEB(Drift):
             data = await self.read_category(category)
             for device in data:
                 if self.get_device(device).__type__ == "relay":
-                    value = False if data[device][0] == "open" else True
+                    value = data[device][0] != "open"
                 else:
                     value = data[device][0]
                 status[device] = value

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 import click
 
@@ -42,8 +42,6 @@ def ieb(ctx, command, fps):
     if not ieb or (ieb.disabled and ctx.invoked_subcommand != "enable"):
         command.fail(error="ieb not connected.")
         raise click.Abort()
-
-    return
 
 
 @ieb.command()
@@ -88,7 +86,7 @@ async def status(command, fps):
 @ieb.command()
 @click.argument("device_names", metavar="DEVICES", type=str, nargs=-1)
 @click.argument("VALUE", type=click.FloatRange(0, 100))
-async def fbi(command, fps: FPS, device_names: Tuple[str], value: float):
+async def fbi(command, fps: FPS, device_names: tuple[str], value: float):
     """Control the power output (0-100%) of the fibre back illuminator (FBI)."""
 
     raw_value = 32 * int(1023 * (value / 100))

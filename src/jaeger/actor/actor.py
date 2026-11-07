@@ -38,17 +38,18 @@ def merge_json(base: str, custom: str | None, write_temporary_file=False):
     if os.path.samefile(base, custom):
         return base
     else:
-        base_json = json.loads(open(base, "r").read())
-        custom_json = json.loads(open(custom, "r").read())
-        base_json["properties"].update(custom_json["properties"])
+        with open(base, "r") as base_fd, open(custom, "r") as custom_fd:
+            base_json = json.load(base_fd)
+            custom_json = json.load(custom_fd)
+            base_json["properties"].update(custom_json["properties"])
 
         if write_temporary_file is False:
             return base_json
         else:
-            tmpfile = NamedTemporaryFile(delete=False, mode="w+")
-            json.dump(base_json, tmpfile)
-            tmpfile.flush()
-            return tmpfile.name
+            with NamedTemporaryFile(delete=False, mode="w+") as tmpfile:
+                json.dump(base_json, tmpfile)
+                tmpfile.flush()
+                return tmpfile.name
 
 
 class JaegerActor(clu.LegacyActor):
@@ -155,7 +156,7 @@ class JaegerActor(clu.LegacyActor):
         status = await self.fps.report_status()
         status_json = json.dumps(status)
 
-        transport.write(status_json.encode() + "\n".encode())
+        transport.write(status_json.encode() + b"\n")
 
         return status
 

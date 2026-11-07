@@ -8,11 +8,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import cache
 
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any
 
-import nptyping as npt
 import numpy
 import polars
 from astropy.time import Time
@@ -32,14 +32,12 @@ from jaeger.target.tools import get_wok_data
 
 
 if TYPE_CHECKING:
-    BoresightType = (
-        npt.NDArray[npt.Shape["2"], npt.Float64] | tuple[float, float] | Observed
-    )
+    BoresightType = numpy.typing.ArrayLike | tuple[float, float] | Observed
 
 
 __all__ = [
-    "positioner_from_icrs_dataframe",
     "icrs_from_positioner_dataframe",
+    "positioner_from_icrs_dataframe",
     "wok_to_positioner",
 ]
 

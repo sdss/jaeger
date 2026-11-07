@@ -19,17 +19,11 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
+    Self,
 )
 
 import numpy
 from astropy.time import Time
-from typing_extensions import Self
 from zc.lockfile import LockFile
 
 import jaeger
@@ -72,16 +66,16 @@ except NameError:
     IPYTHON = None
 
 
-__all__ = ["BaseFPS", "FPS"]
+__all__ = ["FPS", "BaseFPS"]
 
 
 MIN_BETA = 160
 LOCK_FILE = "/var/tmp/sdss/jaeger.lock"
 
-_FPS_INSTANCES: dict[Type[BaseFPS], BaseFPS] = {}
+_FPS_INSTANCES: dict[type[BaseFPS], BaseFPS] = {}
 
 
-class BaseFPS(Dict[int, Positioner]):
+class BaseFPS(dict[int, Positioner]):
     """A class describing the Focal Plane System.
 
     This class includes methods to read the layout and construct positioner
@@ -101,7 +95,7 @@ class BaseFPS(Dict[int, Positioner]):
 
     """
 
-    positioner_class: ClassVar[Type[Positioner]] = Positioner
+    positioner_class: ClassVar[type[Positioner]] = Positioner
 
     initialised: bool
 
@@ -215,7 +209,7 @@ class FPS(BaseFPS):
     """
 
     can: JaegerCAN | str | None = None
-    ieb: Union[bool, IEB, dict, str, pathlib.Path, None] = None
+    ieb: bool | IEB | dict | str | pathlib.Path | None = None
     status: FPSStatus = FPSStatus.IDLE | FPSStatus.TEMPERATURE_NORMAL
 
     def __post_init__(self):
@@ -232,16 +226,16 @@ class FPS(BaseFPS):
             loop.set_exception_handler(log.asyncio_exception_handler)
 
         # The mapping between positioners and buses.
-        self.positioner_to_bus: Dict[int, Tuple[BusABC, int | None]] = {}
+        self.positioner_to_bus: dict[int, tuple[BusABC, int | None]] = {}
 
         self.pid_lock: LockFile | None = None
 
         self._locked = False
-        self.locked_by: List[int] = []
+        self.locked_by: list[int] = []
 
         self.observatory = config["observatory"]
 
-        self.disabled: set[int] = set([])
+        self.disabled: set[int] = set()
 
         if IPYTHON:
             log.warning("IEB cannot run inside IPython.")
@@ -304,7 +298,7 @@ class FPS(BaseFPS):
         initialise=True,
         start_pollers: bool | None = None,
         check_low_temperature: bool = True,
-    ) -> "FPS":
+    ) -> FPS:
         """Starts the CAN bus and initialises it.
 
         Note that ``FPS.create()`` always returns a new instance. If you want to
@@ -322,8 +316,7 @@ class FPS(BaseFPS):
         """
 
         # FPS.create() always returns a new instance.
-        if cls in _FPS_INSTANCES:
-            del _FPS_INSTANCES[cls]
+        _FPS_INSTANCES.pop(cls, None)
 
         instance = cls.get_instance(can=can, ieb=ieb)
         assert isinstance(instance, FPS)
@@ -366,8 +359,8 @@ class FPS(BaseFPS):
         self,
         positioner: int | Positioner,
         centre=(None, None),
-        interface: Optional[BusABC | int] = None,
-        bus: Optional[int] = None,
+        interface: BusABC | int | None = None,
+        bus: int | None = None,
     ) -> Positioner:
         positioner = super().add_positioner(positioner, centre=centre)
         positioner.fps = self
@@ -442,7 +435,7 @@ class FPS(BaseFPS):
                 elif positioner.positioner_id in self.disabled:
                     self.disabled.remove(positioner.positioner_id)
         else:
-            self.disabled = set([])
+            self.disabled = set()
 
         # Clear all robots
         self.clear()
@@ -538,7 +531,7 @@ class FPS(BaseFPS):
             warnings.warn("No positioners found.", JaegerUserWarning)
             return self
 
-        if len(set([pos.firmware for pos in self.values() if not pos.offline])) > 1:
+        if len({pos.firmware for pos in self.values() if not pos.offline}) > 1:
             warnings.warn(
                 "Found positioners with different firmware versions.",
                 JaegerUserWarning,
@@ -563,7 +556,7 @@ class FPS(BaseFPS):
             raise JaegerError(f"Some positioners failed to initialise: {err}")
 
         if disable_precise_moves is True and any(
-            [self[i].precise_moves for i in self if self[i].offline is False]
+            self[i].precise_moves for i in self if self[i].offline is False
         ):
             log.error("Unable to disable precise moves for some positioners.")
 
@@ -659,7 +652,7 @@ class FPS(BaseFPS):
         # any of the robots is collided.
         if not self.locked:
             closed_loop_positioners = list(
-                set([pid for pid in self.positioners if not self[pid].disabled])
+                {pid for pid in self.positioners if not self[pid].disabled}
                 - set(disable_collision)
                 - set(open_loop_positioners)
             )
@@ -790,12 +783,12 @@ class FPS(BaseFPS):
     def is_bootloader(self):
         """Returns `True` if any positioner is in bootloader mode."""
 
-        return any([pos.is_bootloader() is not False for pos in self.values()])
+        return any(pos.is_bootloader() is not False for pos in self.values())
 
     def send_command(
         self,
         command: str | int | CommandID | Command,
-        positioner_ids: int | List[int] | None = None,
+        positioner_ids: int | list[int] | None = None,
         data: Any = None,
         now: bool = False,
         **kwargs,
@@ -858,13 +851,13 @@ class FPS(BaseFPS):
         pids = command.positioner_ids
 
         if broadcast:
-            if any([self[pos].disabled for pos in self]) and not command.safe:
+            if any(self[pos].disabled for pos in self) and not command.safe:
                 raise JaegerError("Some positioners are disabled.")
         else:
-            if any([self[pid].disabled for pid in pids]) and not command.safe:
+            if any(self[pid].disabled for pid in pids) and not command.safe:
                 raise JaegerError("Some commanded positioners are disabled.")
 
-        if not broadcast and not all([p in self for p in pids]):
+        if not broadcast and not all(p in self for p in pids):
             raise JaegerError("Some positioners are not connected.")
 
         # Check if we are in bootloader mode.
@@ -911,7 +904,7 @@ class FPS(BaseFPS):
     async def lock(
         self,
         stop_trajectories: bool = True,
-        by: Optional[List[int]] = None,
+        by: list[int] | None = None,
         do_warn: bool = True,
         snapshot: bool = True,
     ):
@@ -1021,7 +1014,7 @@ class FPS(BaseFPS):
 
     async def update_status(
         self,
-        positioner_ids: Optional[int | List[int]] = None,
+        positioner_ids: int | list[int] | None = None,
         timeout: float = 2,
         is_retry: bool = False,
     ) -> bool:
@@ -1105,7 +1098,7 @@ class FPS(BaseFPS):
 
     async def update_position(
         self,
-        positioner_ids: Optional[int | List[int]] = None,
+        positioner_ids: int | list[int] | None = None,
         timeout: float = 2,
         is_retry: bool = False,
     ) -> numpy.ndarray | bool:
@@ -1281,7 +1274,7 @@ class FPS(BaseFPS):
     async def goto(
         self,
         new_positions: dict[int, tuple[float, float]],
-        speed: Optional[float] = None,
+        speed: float | None = None,
         relative=False,
         use_sync_line: bool | None = None,
         go_cowboy: bool = False,
@@ -1318,8 +1311,6 @@ class FPS(BaseFPS):
                 go_cowboy=go_cowboy,
                 save_snapshot=save_snapshot,
             )
-        except Exception:
-            raise
         finally:
             await self.update_status()
             await self.update_position()
@@ -1361,10 +1352,10 @@ class FPS(BaseFPS):
 
         raise JaegerError("send_to_all has been deprecated. Use send_command instead.")
 
-    async def report_status(self) -> Dict[str, Any]:
+    async def report_status(self) -> dict[str, Any]:
         """Returns a dict with the position and status of each positioner."""
 
-        status: Dict[str, Any] = {"positioners": {}}
+        status: dict[str, Any] = {"positioners": {}}
 
         for positioner in self.positioners.values():
             pos_status = positioner.status
@@ -1395,7 +1386,7 @@ class FPS(BaseFPS):
 
     async def save_snapshot(
         self,
-        path: Optional[str | pathlib.Path] = None,
+        path: str | pathlib.Path | None = None,
         collision_buffer: float | None = None,
         positions: dict | None = None,
         highlight: int | list | None = None,
@@ -1546,7 +1537,7 @@ class FPS(BaseFPS):
     async def shutdown(self):
         """Stops pollers and shuts down all remaining tasks."""
 
-        if not self.is_bootloader:
+        if not self.is_bootloader():
             log.info("Stopping positioners and shutting down.")
             await self.stop_trajectory()
 
@@ -1563,7 +1554,7 @@ class FPS(BaseFPS):
             for task in asyncio.all_tasks(loop=loop)
             if task is not asyncio.current_task(loop=loop)
         ]
-        list(map(lambda task: task.cancel(), tasks))
+        [task.cancel() for task in tasks]
 
         await asyncio.gather(*tasks, return_exceptions=True)
 

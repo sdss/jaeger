@@ -8,8 +8,7 @@
 
 import asyncio
 import zlib
-
-from typing import Mapping, Optional, Tuple
+from collections.abc import Mapping
 
 import numpy
 
@@ -23,7 +22,7 @@ from jaeger.target.tools import get_wok_data
 from jaeger.utils.helpers import StatusMixIn
 
 
-__all__ = ["VirtualFPS", "VirtualPositioner", "MockFPS"]
+__all__ = ["MockFPS", "VirtualFPS", "VirtualPositioner"]
 
 
 TIME_STEP = config["positioner"]["time_step"]
@@ -124,10 +123,10 @@ class VirtualPositioner(StatusMixIn):
     def __init__(
         self,
         positioner_id: int,
-        bus: Optional[VirtualBus] = None,
-        centre: Optional[tuple] = None,
-        position: Tuple[float, float] = (0.0, 0.0),
-        speed: Optional[tuple] = None,
+        bus: VirtualBus | None = None,
+        centre: tuple | None = None,
+        position: tuple[float, float] = (0.0, 0.0),
+        speed: tuple | None = None,
         firmware: str = "10.11.12",
     ):
         self.positioner_id = positioner_id
@@ -181,7 +180,7 @@ class VirtualPositioner(StatusMixIn):
             self.reply(command_id, uid, data=data_firmware)
 
         elif command_id == CommandID.GET_STATUS:
-            data_status = utils.int_to_bytes(self.status.value)
+            data_status = utils.int_to_bytes(self.status.value, "u8")
             self.reply(command_id, uid, data=data_status)
 
         elif command_id == CommandID.GET_NUMBER_TRAJECTORIES:
@@ -287,7 +286,7 @@ class VirtualPositioner(StatusMixIn):
                 response_code=ResponseCode.VALUE_OUT_OF_RANGE,
             )
         elif fw_size == self._firmware_size:
-            if not zlib.crc32(self._firmware_received) == self._crc32:
+            if zlib.crc32(self._firmware_received) != self._crc32:
                 self.reply(
                     command_id,
                     uid,

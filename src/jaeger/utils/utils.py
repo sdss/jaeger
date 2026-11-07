@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import time
 
-from typing import Tuple
-
 import numpy
 
 from jaeger import config
@@ -19,14 +17,14 @@ from jaeger.maskbits import ResponseCode
 
 
 __all__ = [
-    "get_dtype_str",
-    "int_to_bytes",
-    "bytes_to_int",
-    "get_identifier",
-    "parse_identifier",
-    "motor_steps_to_angle",
-    "get_goto_move_time",
     "Timer",
+    "bytes_to_int",
+    "get_dtype_str",
+    "get_goto_move_time",
+    "get_identifier",
+    "int_to_bytes",
+    "motor_steps_to_angle",
+    "parse_identifier",
 ]
 
 
@@ -207,7 +205,7 @@ def get_identifier(positioner_id, command_id, uid=0, response_code=0):
     return int(identifier, 2)
 
 
-def parse_identifier(identifier: int) -> Tuple[int, int, int, ResponseCode]:
+def parse_identifier(identifier: int) -> tuple[int, int, int, ResponseCode]:
     """Parses an extended frame identifier and returns its components.
 
     The 29-bit extended frame identifier is composed of a positioner id,

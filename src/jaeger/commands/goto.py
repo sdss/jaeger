@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import warnings
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import jaeger
 from jaeger import config
@@ -41,14 +41,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "GoToDatums",
     "GoToDatumAlpha",
     "GoToDatumBeta",
+    "GoToDatums",
     "GotoAbsolutePosition",
     "GotoRelativePosition",
     "SetActualPosition",
-    "SetSpeed",
     "SetCurrent",
+    "SetSpeed",
     "goto",
 ]
 
@@ -89,7 +89,7 @@ class GotoAbsolutePosition(Command):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
+        positioner_ids: int | list[int],
         alpha: float | None = None,
         beta: float | None = None,
         **kwargs,
@@ -114,7 +114,7 @@ class GotoAbsolutePosition(Command):
 
         return motor_steps_to_angle(alpha_steps, beta_steps)
 
-    def get_replies(self) -> Dict[int, Tuple[float, float]]:
+    def get_replies(self) -> dict[int, tuple[float, float]]:
         return self.get_move_time()
 
     def get_move_time(self):
@@ -127,14 +127,14 @@ class GotoAbsolutePosition(Command):
 
         """
 
-        move_times = {}
+        move_times: dict[int, tuple[float, float]] = {}
         for reply in self.replies:
             data = reply.data
 
             alpha = bytes_to_int(data[0:4], dtype="i4")
             beta = bytes_to_int(data[4:], dtype="i4")
 
-            move_times[reply.positioner_id] = [alpha * TIME_STEP, beta * TIME_STEP]
+            move_times[reply.positioner_id] = (alpha * TIME_STEP, beta * TIME_STEP)
 
         return move_times
 
@@ -158,7 +158,7 @@ class SetActualPosition(Command):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
+        positioner_ids: int | list[int],
         alpha: float | None = None,
         beta: float | None = None,
         **kwargs,
@@ -186,7 +186,7 @@ class SetSpeed(Command):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
+        positioner_ids: int | list[int],
         alpha: float | None = None,
         beta: float | None = None,
         **kwargs,
@@ -218,7 +218,7 @@ class SetCurrent(Command):
 
     def __init__(
         self,
-        positioner_ids: int | List[int],
+        positioner_ids: int | list[int],
         alpha: float | None = None,
         beta: float | None = None,
         **kwargs,
@@ -235,7 +235,7 @@ class SetCurrent(Command):
 async def goto(
     fps: FPS,
     new_positions: dict[int, tuple[float, float]],
-    speed: Optional[float] = None,
+    speed: float | None = None,
     relative: bool = False,
     use_sync_line: bool | None = None,
     go_cowboy: bool = False,

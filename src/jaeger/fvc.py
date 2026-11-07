@@ -13,9 +13,10 @@ import logging
 import os
 import pathlib
 import warnings
+from collections.abc import Mapping
 from functools import partial
 
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from typing import TYPE_CHECKING, Any
 
 import numpy
 import polars
@@ -57,8 +58,6 @@ FVC_CONFIG = config["fvc"]
 class NoLightInImage(FVCError):
     """Raised when no light is detected in an image."""
 
-    pass
-
 
 # Create a coroutine out of the original plotFVCResults.
 async def plotFVCResultsCo(*args, **kwargs):
@@ -66,7 +65,7 @@ async def plotFVCResultsCo(*args, **kwargs):
 
 
 def plotFVCResultsMP(loop: asyncio.AbstractEventLoop, *args, **kwargs):
-    loop.create_task(plotFVCResultsCo(*args, **kwargs))  # type: ignore
+    loop.create_task(plotFVCResultsCo(*args, **kwargs))
 
 
 def get_transform(observatory: str):
@@ -89,25 +88,23 @@ def get_transform(observatory: str):
 class FVC:
     """Focal View Camera class."""
 
-    configuration: Optional[BaseConfiguration]
-    fibre_data: Optional[polars.DataFrame]
-    measurements: Optional[polars.DataFrame]
-    centroids: Optional[polars.DataFrame]
-    offsets: Optional[polars.DataFrame]
-    fvc_transform: Optional[FVCTransformAPO | FVCTransformLCO]
+    configuration: BaseConfiguration | None
+    fibre_data: polars.DataFrame | None
+    measurements: polars.DataFrame | None
+    centroids: polars.DataFrame | None
+    offsets: polars.DataFrame | None
+    fvc_transform: FVCTransformAPO | FVCTransformLCO | None
 
-    image_path: Optional[str]
-    proc_image_path: Optional[str]
-    raw_hdu: Optional[fits.ImageHDU]
-    proc_hdu: Optional[fits.ImageHDU]
+    image_path: str | None
+    proc_image_path: str | None
+    raw_hdu: fits.ImageHDU | None
+    proc_hdu: fits.ImageHDU | None
 
     centroid_method: str | None
     fitrms: float
     k: float
 
-    ieb_data: dict[str, Any] = {}
-
-    def __init__(self, site: str, command: Optional[Command[JaegerActor]] = None):
+    def __init__(self, site: str, command: Command[JaegerActor] | None = None):
         if len(calibration.positionerTable) == 0:
             warnings.warn(
                 "FPS calibrations not loaded or the array is empty.",
@@ -118,7 +115,12 @@ class FVC:
         self.correction_applied: bool = False
 
         self.command = command
-        self.fps = FPS.get_instance()
+
+        fps = FPS.get_instance()
+        assert isinstance(fps, FPS)
+        self.fps = fps
+
+        self.ieb_data: dict[str, Any] = {}
 
         # To be updated manually by the actor command.
         self.iteration: int = 1
@@ -244,8 +246,8 @@ class FVC:
         self,
         path: pathlib.Path | str,
         positioner_coords: Mapping[int, tuple[float, float]],
-        configuration: Optional[BaseConfiguration] = None,
-        fibre_data: Optional[polars.DataFrame] = None,
+        configuration: BaseConfiguration | None = None,
+        fibre_data: polars.DataFrame | None = None,
         fibre_type: str = "Metrology",
         centroid_method: str | None = None,
         use_new_invkin: bool = True,
@@ -254,7 +256,7 @@ class FVC:
         outdir: str | None = None,
         rot_ref_angle: float | None = None,
         loop: asyncio.AbstractEventLoop | None = None,
-        fvc_transform_kwargs: dict[str, Any] = {},
+        fvc_transform_kwargs: dict[str, Any] | None = None,
     ) -> tuple[fits.ImageHDU, polars.DataFrame, polars.DataFrame | None]:
         """Processes a raw FVC image.
 
@@ -310,6 +312,8 @@ class FVC:
         """
 
         # Reset the instance
+        if fvc_transform_kwargs is None:
+            fvc_transform_kwargs = {}
         self.reset()
 
         centroid_method = centroid_method or self.centroid_method
@@ -560,9 +564,9 @@ class FVC:
     def calculate_offsets(
         self,
         reported_positions: numpy.ndarray,
-        fibre_data: Optional[polars.DataFrame] = None,
-        k: Optional[float] = None,
-        max_correction: Optional[float] = None,
+        fibre_data: polars.DataFrame | None = None,
+        k: float | None = None,
+        max_correction: float | None = None,
     ) -> polars.DataFrame:
         """Determines the offset to apply to the currently reported positions.
 
@@ -798,7 +802,7 @@ class FVC:
 
     async def write_proc_image(
         self,
-        new_filename: Optional[str | pathlib.Path] = None,
+        new_filename: str | pathlib.Path | None = None,
         broadcast: bool = False,
     ) -> fits.HDUList:
         """Writes the processed image along with additional table data.
@@ -903,7 +907,7 @@ class FVC:
                 _start_alpha = []
                 _start_beta = []
 
-                if len(list(robot_grid.robotDict.values())[0].alphaPath) > 0:
+                if len(next(iter(robot_grid.robotDict.values())).alphaPath) > 0:
                     for pid in current_positions["positionerID"]:
                         robot = robot_grid.robotDict[pid]
                         _cmd_alpha.append(robot.alphaPath[0][1])
@@ -939,7 +943,7 @@ class FVC:
 
         return proc_hdus
 
-    async def apply_correction(self, offsets: Optional[polars.DataFrame] = None):
+    async def apply_correction(self, offsets: polars.DataFrame | None = None):
         """Applies the offsets. Fails if the trajectory is collided or deadlock."""
 
         if self.fps.locked:
@@ -1023,11 +1027,13 @@ class FVC:
         self,
         path: str | pathlib.Path | None = None,
         plot: bool = True,
-        extra_headers: dict = {},
+        extra_headers: dict | None = None,
         broadcast: bool = False,
     ):
         """Updates data with the last measured positions and write confSummaryF."""
 
+        if extra_headers is None:
+            extra_headers = {}
         if self.configuration is None:
             raise FVCError("write_summary_F can only be called with a configuration.")
 
@@ -1164,6 +1170,8 @@ async def reprocess_configuration(
     )
 
     fps = FPS.get_instance()
+    assert isinstance(fps, FPS), "FPS instance not found."
+
     assert not fps.can, "This function cannot be called on a running FPS instance."
 
     configuration = design.configuration

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from jaeger.fps import FPS
 
 
-__all__ = ["unwind_command", "explode_command"]
+__all__ = ["explode_command", "unwind_command"]
 
 
 @jaeger_parser.command(name="unwind")

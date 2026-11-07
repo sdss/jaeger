@@ -30,8 +30,6 @@ __all__ = ["chiller"]
 def chiller(*args):
     """Shows the status and controlls the chiller."""
 
-    pass
-
 
 @chiller.command()
 async def status(command: JaegerCommandType, fps: FPS):

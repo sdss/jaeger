@@ -15,9 +15,11 @@ import pathlib
 import time
 import warnings
 import zlib
+from collections.abc import Callable
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
+import anyio
 import numpy
 
 from jaeger import can_log, config, log
@@ -32,21 +34,21 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "load_firmware",
-    "StartFirmwareUpgrade",
     "GetFirmwareVersion",
     "SendFirmwareData",
+    "StartFirmwareUpgrade",
+    "load_firmware",
 ]
 
 
 async def load_firmware(
     fps: FPS,
     firmware_file: str | pathlib.Path,
-    positioners: Optional[List[int]] = None,
-    messages_per_positioner: Optional[int] = None,
+    positioners: list[int] | None = None,
+    messages_per_positioner: int | None = None,
     force: bool = False,
     show_progressbar: bool = False,
-    progress_callback: Optional[Callable[[int, int], Any]] = None,
+    progress_callback: Callable[[int, int], Any] | None = None,
     stop_logging: bool = True,
 ):
     """Convenience function to run through the steps of loading a new firmware.
@@ -104,8 +106,9 @@ async def load_firmware(
     log.info(f"firmware file {firmware_file!s} found.")
 
     # Open firmware data as binary.
-    firmware_data = open(firmware_file, "rb")
-    crc32 = zlib.crc32(firmware_data.read())
+    firmware_fd = await anyio.open_file(firmware_file, "rb")
+
+    crc32 = zlib.crc32(await firmware_fd.read())
     filesize = os.path.getsize(firmware_file)
 
     # Check to make sure all positioners are in bootloader mode.
@@ -163,7 +166,7 @@ async def load_firmware(
         return False
 
     # Restore pointer to start of file
-    firmware_data.seek(0)
+    await firmware_fd.seek(0)
 
     log.info("starting data send.")
 
@@ -190,7 +193,7 @@ async def load_firmware(
             cmds = []
             stop = False
             for __ in range(messages_per_positioner):
-                chunk = firmware_data.read(chunk_size)
+                chunk = await firmware_fd.read(chunk_size)
                 packetdata = bytearray(chunk)
                 # packetdata.reverse()  # IMPORTANT! no longer needed for P1
 
@@ -217,9 +220,8 @@ async def load_firmware(
 
             ii += messages_per_positioner
 
-            if show_progressbar and bar:
-                if ii < n_chunks:
-                    bar.update(ii)
+            if show_progressbar and bar and ii < n_chunks:
+                bar.update(ii)
 
             if progress_callback:
                 progress_callback(ii, n_chunks)
@@ -244,10 +246,10 @@ class GetFirmwareVersion(Command):
     safe = True
     bootloader = True
 
-    def get_replies(self) -> Dict[int, Any]:
+    def get_replies(self) -> dict[int, Any]:
         return self.get_firmware()
 
-    def get_firmware(self, positioner_id=None) -> Dict[int, str]:
+    def get_firmware(self, positioner_id=None) -> dict[int, str]:
         """Returns the firmware version string.
 
         Parameters

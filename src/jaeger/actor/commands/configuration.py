@@ -163,7 +163,7 @@ async def _load_design(
                 # Try using the scale-temperature relationship instead.
                 try:
                     if not isinstance(command.actor.fps.ieb, IEB):
-                        raise ValueError("IEB not connected")
+                        raise TypeError("IEB not connected")
 
                     temperature = (await command.actor.fps.ieb.read_device("T3"))[0]
                     if not isinstance(temperature, float) or temperature < -100:
@@ -238,7 +238,6 @@ async def _load_design(
 @jaeger_parser.group()
 def configuration():
     """Allows to load a configuration, ingest it to the database, and execute it."""
-    pass
 
 
 @configuration.command(cancellable=True)
@@ -506,7 +505,7 @@ async def load(
         try:
             queue_instance = (
                 opsdb.Queue.select()
-                .where(opsdb.Queue.design_id == design_id)
+                .where(opsdb.Queue.design_id == design_id)  # type: ignore
                 .order_by(opsdb.Queue.position)
                 .first()
             )
@@ -886,6 +885,8 @@ async def dither(
         radius,
         epoch=dither_epoch,
     )
+    assert fps.configuration is not None
+
     await fps.configuration.get_paths()
 
     fps.configuration.write_to_database()
